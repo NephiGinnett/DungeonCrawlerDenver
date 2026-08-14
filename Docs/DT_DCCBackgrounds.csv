@@ -1,0 +1,25 @@
+Name,BackgroundId,Stage,DisplayName,Description,SkillOptions,SkillsToChoose,GrantRank
+Youth_Latchkey,Youth_Latchkey,Youth,Latchkey,"Nobody was home until six. You learned which appliances were load-bearing.","(""Handiwoman"",""QuickWit"",""Troubleshooting"")",2,1
+Youth_Suburban,Youth_Suburban,Youth,Cul-de-sac,"A childhood of garage tournaments and negotiated bedtimes. Excellent preparation, as it turns out.","(""Parenting"",""GameEnthusiast"",""TCGExpert"")",2,1
+Youth_MountainTown,Youth_MountainTown,Youth,Up The Canyon,"Raised at altitude, where the water is cold and the entertainment is whatever is in the river.","(""Ichthyologist"",""Vault"",""Coaching"")",2,1
+Youth_OnlyChild,Youth_OnlyChild,Youth,Only Child,"You became your own committee. The minutes were extensive.","(""Crafting"",""NumberCruncher"",""MediaAnalyst"")",2,1
+Youth_RinkRat,Youth_RinkRat,Youth,Rink Rat,"Six a.m. ice time for eleven years. You have been hit before and found it survivable.","(""MartialArts"",""ShoulderCharge"",""Coaching"")",2,1
+Youth_ChurchBasement,Youth_ChurchBasement,Youth,Church Basement,"Folding chairs, weak coffee, and your first audience. They were a tough room.","(""Mentorship"",""FirstImpressions"",""HypeTheCrowd"")",2,1
+Train_CommunityCollege,Train_CommunityCollege,Training,Community College,"Two years, one certificate, and a working understanding of how systems fail.","(""NumberCruncher"",""MediaAnalyst"",""Troubleshooting"")",2,1
+Train_Apprenticed,Train_Apprenticed,Training,Apprenticed,"Someone older showed you which end to hold. You have not needed telling since.","(""Handiwoman"",""Crafting"",""KickItOver"")",2,1
+Train_RetailFloor,Train_RetailFloor,Training,The Floor,"Retail. You have been screamed at by a stranger over a coupon and did not flinch.","(""Salesman"",""FirstImpressions"",""Critic"")",2,1
+Train_DojoAdjacent,Train_DojoAdjacent,Training,Dojo-Adjacent,"You went for eight months. It was enough to be dangerous, mostly to yourself.","(""MartialArts"",""Headbutt"",""Vault"")",2,1
+Train_TheatreKid,Train_TheatreKid,Training,Theatre Kid,"Projection, blocking, and an unshakeable belief that the room is watching. It is.","(""Model"",""HypeTheCrowd"",""Mentorship"")",2,1
+Train_SelfTaught,Train_SelfTaught,Training,Self-Taught,"Forums, tutorials, and an unreasonable number of hours. Credentials are a formality.","(""TCGExpert"",""GameEnthusiast"",""QuickWit"")",2,1
+Adult_MiddleManagement,Adult_MiddleManagement,Adult,Middle Management,"You ran a team of nine. The System AI regards this as directly transferable experience.","(""Mentorship"",""NumberCruncher"",""Critic"")",2,3
+Adult_Trades,Adult_Trades,Adult,The Trades,"Licensed, bonded, and entirely unimpressed by structural claims.","(""Handiwoman"",""KickItOver"",""Crafting"")",2,3
+Adult_ServiceIndustry,Adult_ServiceIndustry,Adult,Service Industry,"Doubles on weekends. You can read a room in four seconds and defuse it in six.","(""FirstImpressions"",""Salesman"",""QuickWit"")",2,3
+Adult_Caregiver,Adult_Caregiver,Adult,Caregiver,"Someone depended on you daily. The dungeon finds this quaint and the audience does not.","(""Parenting"",""FieldDressing"",""Coaching"")",2,3
+Adult_MediaProfessional,Adult_MediaProfessional,Adult,Media Professional,"You know what a cut does to a story. Management considers you a compliance risk.","(""MediaAnalyst"",""Critic"",""Model"")",2,3
+Adult_Municipal,Adult_Municipal,Adult,Municipal Employee,"Years inside a bureaucracy. You have met worse systems than this one and outlasted them.","(""Troubleshooting"",""NumberCruncher"",""Salesman"")",2,3
+Quirk_WeekendAngler,Quirk_WeekendAngler,Quirk,Weekend Angler,"A hobby nobody asked about. Statistically certain to become relevant on a water floor.","(""Ichthyologist"",""Vault"",""QuickWit"")",2,2
+Quirk_TournamentRegular,Quirk_TournamentRegular,Quirk,Tournament Regular,"You have read the card. You have read every card. You know what happens next.","(""TCGExpert"",""GameEnthusiast"",""NumberCruncher"")",2,2
+Quirk_AmateurOccultist,Quirk_AmateurOccultist,Quirk,Amateur Occultist,"It was a phase. The phase has been retroactively approved and is now load-bearing.","(""SoulCollector"",""SummonInterns"",""FireFingers"")",2,2
+Quirk_GymPerson,Quirk_GymPerson,Quirk,Gym Person,"You did in fact go. Repeatedly. Everyone is about to be very glad about this.","(""MartialArts"",""ShoulderCharge"",""Headbutt"")",2,2
+Quirk_CraftsFair,Quirk_CraftsFair,Quirk,Crafts Fair Vendor,"A folding table, a card reader, and ninety minutes to make something sellable.","(""Crafting"",""Salesman"",""Model"")",2,2
+Quirk_Loudmouth,Quirk_Loudmouth,Quirk,Neighbourhood Loudmouth,"You have opinions and a parking lot in which to share them. Chat is already on your side.","(""Critic"",""HypeTheCrowd"",""ParkingLotSpecial"")",2,2

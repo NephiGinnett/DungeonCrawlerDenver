@@ -324,21 +324,46 @@ HP/MP; enemies carry `WBP_EnemyHealthBar` on a screen-space widget component.
    content to run. A DataTable of `FDCCSkillDef` rows is the intended path.
 3. **Re-theme Room 01 with the Fab packs** (see below).
 
-### Fab packs installed (2026-08-13)
+### Fab packs installed
 
-`Cave_Camp` (242 assets), `Sci_FI_Valley_Village` (338), `Ancient_civilization` (175),
-`Medieval_ruins` (159), `Hidden_temple` (136), `SciFi_Cliff` (107).
+**~30 packs, not the 6 originally listed.** Enumerate with `AssetTools.list_folders("/Game")`
+rather than trusting any written list — Zoe adds packs between sessions.
 
-`Cave_Camp` is the chosen dressing for Room 01 — rock walls, stalactites, crates/barrels for
-cover, tents, bedrolls, and a `P_Fire` particle. It also gives a visual language for Safe Rooms
-later. **Not yet placed.**
+Sci-fi options worth knowing: **`Ice_Station`** (the best interior kit — crates, computers,
+generator, tanks, pipes, doors, walls, holograms), **`Modular_Sewer_Kit`** (a true modular dungeon
+kit: tunnels, large rooms, arches, stairs), `Megastructure_Scifi_World` (grand hallways),
+`Sci_Fi_city`, `Synthwave_city`, `Alien_Portal`, `Evil_planet`, `Abandonned_Brutalist`.
+
+`Cave_Camp` **is already placed** in Room 01 — stalactites, tent, bedroll, table, campfire emitter,
+crates and two point lights. Room 01 is committed to a cave look; sci-fi went into Room 02 rather
+than re-theming over it.
+
+VFX inventory is thin: the only fire is `Legendary_Forge/Fx/Fire/NS_fire`, plus `NS_sparks` there
+and `Variant_Combat/VFX/NS_Damage`. Everything else is smoke, snow, leaves and waterfalls. **There
+is no purpose-built spell VFX in any pack** — a spell-effects pack is the one asset purchase that
+would actually pay for itself.
 
 Note: Claude cannot browse Zoe's Fab *library* — that is account-side behind Epic auth. Only
 packs already downloaded into `Content/` are visible. Ask her to download; don't attempt to fetch.
 
 Not yet verified: the **server target has never been built.** Launcher installs don't ship
 precompiled server binaries, so expect that to be its own piece of work. Per the design doc,
-hosting is secondary and must not block playtesting.
+hosting is secondary and must not block playtesting. (Attempting it as a compile-check workaround
+does **not** work — see below.)
+
+### The Live Coding lock blocks *all* builds, not just the editor target
+
+Confirmed 2026-08-14. With the editor open, UBT refuses immediately with *"Unable to build while
+Live Coding is active"* and never reaches compilation. This applies to the **Server target too**,
+so there is no way to compile-check C++ while the editor runs — not even against a different
+binary. Batch C++ work and accept it is unverified until the next close.
+
+### Large uncompiled batch pending (2026-08-14)
+
+`Docs/POST_BUILD_TASKS.md` is the checklist. Written but **never compiled**: pickups and throwing,
+the Skill Rank/advancement system, the five-stat conversion, NPC skill casting, skill Niagara VFX,
+and the background/recommendation system. Expect first-build errors; the enum change to
+`EDCCAbility` also invalidates every existing stat block's index order.
 
 ## Working style
 
