@@ -272,6 +272,26 @@ flaming hockey jersey. 170cm, correct scale against the mannequin, textures inta
 single looping clip via `AnimationSingleNode` rather than an AnimBlueprint, so it has no
 idle/walk blending and no attack montage. A proper ABP for this skeleton is the next step.
 
+## MCP level-editing gotchas
+
+- **`ActorTools.set_actor_transform` resets any field you omit.** Passing only `location` silently
+  sets rotation to zero and **scale to 1**. A 20×20 scaled floor cube becomes a 1m cube and the room
+  vanishes. The "unset means don't change" note in its docs applies to blueprint defaults, not to
+  placed actors. **Always pass location, rotation and scale together.**
+- **`SceneTools.save_actor` fails on World Partition actors** ("Asset does not exist" for the
+  `__ExternalActors__` path). Save the level instead: `save_assets(["/Game/ThirdPerson/Lvl_ThirdPerson"])`.
+- **`CaptureViewport` requires `captureTransform` and `annotations` explicitly** — both error if
+  omitted rather than defaulting. Its PNG always blows the tool-output limit; decode the spilled
+  tool-result file with `Tools/decode_tool_image.py`.
+- **`snap_to_ground` snaps to whatever is under the point**, including the Cave_Camp rocks that
+  surround Room 01 — it put a test actor at z=551 rather than on the floor. Prefer explicit Z.
+- **Check for existing geometry before placing a room.** `find_actors` with a `bounds` box reports
+  what already overlaps. Room 02 was first built at x≈7800,y=0 and landed inside cave rock; it now
+  lives at **y≈5000**, which `find_actors` confirmed was empty apart from the sky sphere.
+- **Ice_Station assets are station-scale, not room-scale.** `SM_large_floor_module` is 55×58 **metres**;
+  `SM_pipe_group_01` is 20m wide. Measure with `StaticMeshTools.get_bounds` before placing. The
+  crates (≈6m) and computers (≈3m) are the human-scale ones.
+
 ## Content / tone
 
 `Docs/dungeon-tone-bible.md` — the System AI's voice, Denver-flavoured floor themes, room
