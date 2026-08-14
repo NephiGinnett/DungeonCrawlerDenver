@@ -169,6 +169,44 @@ Two follow-ups for you:
 
 ---
 
+## Source control
+
+**Repo:** <https://github.com/NephiGinnett/DungeonCrawlerDenver> — **private**.
+
+### What is and isn't committed
+
+Committed: `Source/`, `Config/`, `Docs/`, the `.uproject`, `.mcp.json`, the notes files, `SourceArt/`
+originals, and **our own** `Content/` folders (`DCC`, `ThirdPerson`, `Characters`, `Input`,
+`LevelPrototyping`, `Variant_Combat`, and the World Partition actor folders). About 184MB.
+
+**Not committed: the ~27GB of Fab marketplace packs.** They're licensed to your Epic account rather
+than ours to redistribute, and four of them contain single files over GitHub's hard 100MB limit.
+`.gitignore` ignores everything under `Content/` and then re-includes our folders by name — an
+allow-list, so **any new Fab pack you download is ignored automatically** without anyone remembering
+to add it.
+
+Consequence worth knowing: a fresh clone on another machine will open, compile and run, but Room 01
+won't render fully until the Fab packs are re-downloaded from Fab.
+
+### Git LFS
+
+`.uasset`, `.umap`, `.glb`, `.fbx` and image files go through **Git LFS**, so editing a Blueprint
+fifty times doesn't leave fifty full copies in history forever.
+
+⚠️ **GitHub's free LFS allowance is 1GB of storage and 1GB of bandwidth per month.** The initial push
+used ~192MB of it. Binary assets consume quota on *every* changed version, so heavy Blueprint or level
+churn will creep toward the cap. If pushes ever start failing with a quota error, that's why — the fix
+is a paid data pack or pruning old LFS versions, not anything wrong with the repo.
+
+### Committing work
+
+```bash
+git add -A && git commit -m "your message" && git push
+```
+
+Level edits live in `Content/__ExternalActors__/` (World Partition, one file per actor), so a level
+change shows up as many small files rather than one `.umap` — that's expected, not a bug.
+
 ## Next up
 
 `CLAUDE.md` lists three wiring tasks. #1 is now done. Remaining:
