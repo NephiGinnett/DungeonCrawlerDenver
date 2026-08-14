@@ -1,0 +1,30 @@
+using UnrealBuildTool;
+
+public class DungeonCrawlerDenver : ModuleRules
+{
+	public DungeonCrawlerDenver(ReadOnlyTargetRules Target) : base(Target)
+	{
+		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+
+		PublicDependencyModuleNames.AddRange(new string[] {
+			"Core",
+			"CoreUObject",
+			"Engine",
+			"InputCore",
+			"EnhancedInput",
+			"AIModule",
+			"StateTreeModule",
+			"GameplayStateTreeModule",
+			"UMG",
+			"Slate",
+			"SlateCore",
+			"NetCore"
+		});
+
+		PrivateDependencyModuleNames.AddRange(new string[] { });
+
+		PublicIncludePaths.AddRange(new string[] {
+			"DungeonCrawlerDenver"
+		});
+	}
+}

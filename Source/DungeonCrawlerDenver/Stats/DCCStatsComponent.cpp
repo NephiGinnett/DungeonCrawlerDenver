@@ -1,0 +1,223 @@
+#include "Stats/DCCStatsComponent.h"
+
+#include "Stats/DCCRuleset.h"
+#include "Net/UnrealNetwork.h"
+
+UDCCStatsComponent::UDCCStatsComponent()
+{
+	PrimaryComponentTick.bCanEverTick = false;
+	bWantsInitializeComponent = true;
+	SetIsReplicatedByDefault(true);
+
+	RulesetClass = UDCCRuleset::StaticClass();
+}
+
+void UDCCStatsComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(UDCCStatsComponent, AbilityScores);
+	DOREPLIFETIME(UDCCStatsComponent, CurrentHitPoints);
+	DOREPLIFETIME(UDCCStatsComponent, MaxHitPoints);
+	DOREPLIFETIME(UDCCStatsComponent, CurrentManaPoints);
+	DOREPLIFETIME(UDCCStatsComponent, MaxManaPoints);
+}
+
+void UDCCStatsComponent::InitializeComponent()
+{
+	Super::InitializeComponent();
+
+	// Only the server establishes starting values; clients get them by replication.
+	if (GetOwnerRole() == ROLE_Authority)
+	{
+		RecalculateDerivedStats(/*bRefillToFull=*/true);
+	}
+}
+
+UDCCRuleset* UDCCStatsComponent::GetRuleset() const
+{
+	if (CachedRuleset)
+	{
+		return CachedRuleset;
+	}
+
+	// Both branches are spelled as TSubclassOf on purpose: a bare StaticClass()
+	// returns UClass*, and the mixed ternary is ambiguous under MSVC.
+	const TSubclassOf<UDCCRuleset> FallbackClass = UDCCRuleset::StaticClass();
+	const TSubclassOf<UDCCRuleset> ClassToUse = RulesetClass ? RulesetClass : FallbackClass;
+
+	// Const-cast is contained here so callers get a clean BlueprintPure getter.
+	// The ruleset is stateless, so caching it lazily is safe.
+	UDCCStatsComponent* MutableThis = const_cast<UDCCStatsComponent*>(this);
+	MutableThis->CachedRuleset = NewObject<UDCCRuleset>(MutableThis, ClassToUse);
+
+	return MutableThis->CachedRuleset;
+}
+
+int32 UDCCStatsComponent::GetAbilityModifier(EDCCAbility Ability) const
+{
+	return GetRuleset()->GetAbilityModifier(AbilityScores.GetScore(Ability));
+}
+
+void UDCCStatsComponent::RecalculateDerivedStats(bool bRefillToFull)
+{
+	const int32 PreviousHitPoints = CurrentHitPoints;
+	const int32 PreviousManaPoints = CurrentManaPoints;
+
+	MaxHitPoints = GetRuleset()->GetMaxHitPoints(AbilityScores, Level);
+	CurrentHitPoints = bRefillToFull ? MaxHitPoints : FMath::Clamp(CurrentHitPoints, 0, MaxHitPoints);
+
+	MaxManaPoints = GetRuleset()->GetMaxManaPoints(AbilityScores, Level);
+	CurrentManaPoints = bRefillToFull ? MaxManaPoints : FMath::Clamp(CurrentManaPoints, 0, MaxManaPoints);
+
+	if (CurrentHitPoints != PreviousHitPoints)
+	{
+		OnHealthChanged.Broadcast(this, CurrentHitPoints, CurrentHitPoints - PreviousHitPoints);
+	}
+
+	if (CurrentManaPoints != PreviousManaPoints)
+	{
+		OnManaChanged.Broadcast(this, CurrentManaPoints, CurrentManaPoints - PreviousManaPoints);
+	}
+}
+
+bool UDCCStatsComponent::SpendMana(int32 Amount)
+{
+	if (GetOwnerRole() != ROLE_Authority)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("DCCStatsComponent::SpendMana called on a client; ignoring. Mana is server-authoritative."));
+		return false;
+	}
+
+	if (Amount < 0 || !CanAffordMana(Amount))
+	{
+		return false;
+	}
+
+	const int32 PreviousManaPoints = CurrentManaPoints;
+	CurrentManaPoints -= Amount;
+
+	if (CurrentManaPoints != PreviousManaPoints)
+	{
+		OnManaChanged.Broadcast(this, CurrentManaPoints, CurrentManaPoints - PreviousManaPoints);
+	}
+
+	return true;
+}
+
+void UDCCStatsComponent::RestoreMana(int32 Amount)
+{
+	if (GetOwnerRole() != ROLE_Authority)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("DCCStatsComponent::RestoreMana called on a client; ignoring. Mana is server-authoritative."));
+		return;
+	}
+
+	if (Amount <= 0)
+	{
+		return;
+	}
+
+	const int32 PreviousManaPoints = CurrentManaPoints;
+	CurrentManaPoints = FMath::Min(MaxManaPoints, CurrentManaPoints + Amount);
+
+	if (CurrentManaPoints != PreviousManaPoints)
+	{
+		OnManaChanged.Broadcast(this, CurrentManaPoints, CurrentManaPoints - PreviousManaPoints);
+	}
+}
+
+void UDCCStatsComponent::OnRep_CurrentManaPoints(int32 PreviousManaPoints)
+{
+	OnManaChanged.Broadcast(this, CurrentManaPoints, CurrentManaPoints - PreviousManaPoints);
+}
+
+void UDCCStatsComponent::ApplyDamage(int32 Amount)
+{
+	if (GetOwnerRole() != ROLE_Authority)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("DCCStatsComponent::ApplyDamage called on a client; ignoring. Damage is server-authoritative."));
+		return;
+	}
+
+	if (Amount <= 0 || !IsAlive())
+	{
+		return;
+	}
+
+	const int32 PreviousHitPoints = CurrentHitPoints;
+	CurrentHitPoints = FMath::Max(0, CurrentHitPoints - Amount);
+
+	// The server does not receive its own OnRep, so broadcast here. Clients get
+	// the equivalent broadcast from OnRep_CurrentHitPoints.
+	OnHealthChanged.Broadcast(this, CurrentHitPoints, CurrentHitPoints - PreviousHitPoints);
+
+	if (CurrentHitPoints == 0 && PreviousHitPoints > 0)
+	{
+		OnDied.Broadcast(this);
+	}
+}
+
+void UDCCStatsComponent::Heal(int32 Amount)
+{
+	if (GetOwnerRole() != ROLE_Authority)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("DCCStatsComponent::Heal called on a client; ignoring. Healing is server-authoritative."));
+		return;
+	}
+
+	if (Amount <= 0 || !IsAlive())
+	{
+		return;
+	}
+
+	const int32 PreviousHitPoints = CurrentHitPoints;
+	CurrentHitPoints = FMath::Min(MaxHitPoints, CurrentHitPoints + Amount);
+
+	if (CurrentHitPoints != PreviousHitPoints)
+	{
+		OnHealthChanged.Broadcast(this, CurrentHitPoints, CurrentHitPoints - PreviousHitPoints);
+	}
+}
+
+FDCCCheckResult UDCCStatsComponent::ResolveCheck(EDCCAbility Ability, int32 DifficultyClass, int32 SituationalBonus)
+{
+	if (GetOwnerRole() != ROLE_Authority)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("DCCStatsComponent::ResolveCheck called on a client; ignoring. Rolls are server-authoritative."));
+		return FDCCCheckResult();
+	}
+
+	return GetRuleset()->ResolveCheck(AbilityScores, Ability, DifficultyClass, SituationalBonus);
+}
+
+void UDCCStatsComponent::RefreshDerivedStats(bool bRefillToFull)
+{
+	if (GetOwnerRole() != ROLE_Authority)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("DCCStatsComponent::RefreshDerivedStats called on a client; ignoring. Derived stats are server-authoritative."));
+		return;
+	}
+
+	// A ruleset swap or a stat change can both invalidate the cache.
+	CachedRuleset = nullptr;
+
+	RecalculateDerivedStats(bRefillToFull);
+}
+
+void UDCCStatsComponent::OnRep_CurrentHitPoints(int32 PreviousHitPoints)
+{
+	OnHealthChanged.Broadcast(this, CurrentHitPoints, CurrentHitPoints - PreviousHitPoints);
+
+	if (CurrentHitPoints == 0 && PreviousHitPoints > 0)
+	{
+		OnDied.Broadcast(this);
+	}
+}
+
+void UDCCStatsComponent::OnRep_AbilityScores()
+{
+	// Clients mirror the server's derived values rather than recomputing them,
+	// so a ruleset change can never desync max HP between machines.
+	CachedRuleset = nullptr;
+}

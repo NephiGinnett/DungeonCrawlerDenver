@@ -1,0 +1,60 @@
+# ---------------------------------------------------------------------------
+# Unreal Engine generated / derived directories.
+# All of these are rebuilt from source and must never be committed.
+# ---------------------------------------------------------------------------
+Binaries/
+Build/
+DerivedDataCache/
+Intermediate/
+Saved/
+Platforms/*/Binaries/
+Platforms/*/Intermediate/
+
+# Visual Studio / Rider / VS Code project files, all regenerated from the .uproject
+.vs/
+.idea/
+.vscode/
+*.sln
+*.suo
+*.opensdf
+*.sdf
+*.VC.db
+*.VC.opendb
+
+# ---------------------------------------------------------------------------
+# Content: allow-list, not deny-list.
+#
+# Content/ is ~27GB, almost entirely Fab marketplace packs. Those are licensed
+# to Zoe's Epic account and are not ours to redistribute - and several single
+# files exceed GitHub's hard 100MB limit anyway. So everything under Content/ is
+# ignored by default and our own folders are re-included explicitly.
+#
+# Written this way round on purpose: a deny-list would silently start committing
+# the next Fab pack that gets downloaded. This way new packs are ignored by
+# default and adding OUR content is a deliberate act.
+#
+# A fresh clone therefore needs the Fab packs re-downloaded from Epic before
+# Lvl_ThirdPerson will render fully. That is expected.
+# ---------------------------------------------------------------------------
+/Content/*
+!/Content/DCC/
+!/Content/ThirdPerson/
+!/Content/Characters/
+!/Content/Input/
+!/Content/LevelPrototyping/
+!/Content/Variant_Combat/
+!/Content/Collections/
+!/Content/__ExternalActors__/
+!/Content/__ExternalObjects__/
+
+# ---------------------------------------------------------------------------
+# Source art: keep the originals, drop anything regenerated from them.
+# The per-animation FBX files are Blender output and can be rebuilt at any time
+# from the .glb originals (see CLAUDE.md, "Importing character models").
+# ---------------------------------------------------------------------------
+/SourceArt/**/fbx/
+
+# OS noise
+Thumbs.db
+desktop.ini
+.DS_Store
