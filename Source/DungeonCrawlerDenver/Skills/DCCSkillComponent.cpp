@@ -7,6 +7,9 @@
 #include "Engine/DataTable.h"
 #include "EngineUtils.h"
 #include "Net/UnrealNetwork.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraSystem.h"
 
 UDCCSkillComponent::UDCCSkillComponent()
 {
@@ -212,6 +215,186 @@ int32 UDCCSkillComponent::RunSkillAdvancement()
 	}
 
 	return AdvancedCount;
+}
+
+TArray<FDCCBackgroundDef> UDCCSkillComponent::GetBackgroundOptions(EDCCBackgroundStage Stage) const
+{
+	TArray<FDCCBackgroundDef> Options;
+
+	if (!BackgroundTable)
+	{
+		return Options;
+	}
+
+	static const FString ContextString(TEXT("DCCSkillComponent::GetBackgroundOptions"));
+
+	for (const FName& RowName : BackgroundTable->GetRowNames())
+	{
+		const FDCCBackgroundDef* Row = BackgroundTable->FindRow<FDCCBackgroundDef>(RowName, ContextString, false);
+		if (!Row || Row->Stage != Stage)
+		{
+			continue;
+		}
+
+		FDCCBackgroundDef Background = *Row;
+		if (Background.BackgroundId.IsNone())
+		{
+			Background.BackgroundId = RowName;
+		}
+
+		Options.Add(Background);
+	}
+
+	return Options;
+}
+
+int32 UDCCSkillComponent::ApplyBackground(FName BackgroundId, const TArray<FName>& ChosenSkillIds)
+{
+	if (GetOwnerRole() != ROLE_Authority)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("DCCSkillComponent::ApplyBackground called on a client; ignoring."));
+		return 0;
+	}
+
+	if (!BackgroundTable || BackgroundId.IsNone())
+	{
+		return 0;
+	}
+
+	static const FString ContextString(TEXT("DCCSkillComponent::ApplyBackground"));
+
+	const FDCCBackgroundDef* Background = BackgroundTable->FindRow<FDCCBackgroundDef>(BackgroundId, ContextString, false);
+	if (!Background)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("DCCSkillComponent::ApplyBackground: no background '%s'."),
+			*BackgroundId.ToString());
+		return 0;
+	}
+
+	int32 GrantedCount = 0;
+
+	for (const FName& ChosenId : ChosenSkillIds)
+	{
+		// Never trust the choice: the client picks from the menu, it does not get
+		// to invent menu items. Without this check a modified client could hand
+		// itself any skill in the table at the background's Rank.
+		if (!Background->SkillOptions.Contains(ChosenId))
+		{
+			UE_LOG(LogTemp, Warning,
+				TEXT("DCCSkillComponent::ApplyBackground: '%s' is not offered by background '%s'; refused."),
+				*ChosenId.ToString(), *BackgroundId.ToString());
+			continue;
+		}
+
+		if (GrantedCount >= Background->SkillsToChoose)
+		{
+			break;
+		}
+
+		if (GrantSkill(ChosenId, Background->GrantRank))
+		{
+			++GrantedCount;
+		}
+	}
+
+	return GrantedCount;
+}
+
+TArray<FDCCSkillRecommendation> UDCCSkillComponent::GetRecommendedSkills(int32 Count) const
+{
+	TArray<FDCCSkillRecommendation> Recommendations;
+
+	const UDCCStatsComponent* Stats = GetOwnerStats();
+	if (!SkillTable || !Stats)
+	{
+		return Recommendations;
+	}
+
+	// Which stat this character is actually best at, so the reason text can name
+	// it rather than vaguely gesturing at "your stats".
+	EDCCAbility BestAbility = EDCCAbility::Strength;
+	int32 BestScore = TNumericLimits<int32>::Lowest();
+	for (int32 Index = 0; Index < static_cast<int32>(EDCCAbility::MAX); ++Index)
+	{
+		const EDCCAbility Ability = static_cast<EDCCAbility>(Index);
+		const int32 Score = Stats->AbilityScores.GetScore(Ability);
+		if (Score > BestScore)
+		{
+			BestScore = Score;
+			BestAbility = Ability;
+		}
+	}
+
+	const UEnum* AbilityEnum = StaticEnum<EDCCAbility>();
+	static const FString ContextString(TEXT("DCCSkillComponent::GetRecommendedSkills"));
+
+	for (const FName& RowName : SkillTable->GetRowNames())
+	{
+		const FDCCSkillDef* Row = SkillTable->FindRow<FDCCSkillDef>(RowName, ContextString, false);
+		if (!Row || Row->bIsPassive)
+		{
+			continue;
+		}
+
+		const FName SkillId = Row->SkillId.IsNone() ? RowName : Row->SkillId;
+		if (IsSkillKnown(SkillId))
+		{
+			continue;
+		}
+
+		const int32 CastingScore = Stats->AbilityScores.GetScore(Row->CastingAbility);
+
+		FDCCSkillRecommendation Recommendation;
+		Recommendation.SkillId = SkillId;
+		Recommendation.DisplayName = Row->DisplayName;
+
+		// Scored on the raw score rather than the modifier: the banded modifier
+		// table flattens 3, 4 and 5 all to +2, which would leave most of a
+		// starting character's skills tied and the ordering arbitrary.
+		Recommendation.Score = CastingScore * 10;
+
+		const FText AbilityName = AbilityEnum
+			? AbilityEnum->GetDisplayNameTextByValue(static_cast<int64>(Row->CastingAbility))
+			: FText::GetEmpty();
+
+		if (Row->CastingAbility == BestAbility)
+		{
+			Recommendation.Score += 25;
+			Recommendation.Reason = FText::Format(
+				NSLOCTEXT("DCC", "RecBest", "{0} is your strongest stat."), AbilityName);
+		}
+		else
+		{
+			Recommendation.Reason = FText::Format(
+				NSLOCTEXT("DCC", "RecOk", "Uses {0}, where you score {1}."),
+				AbilityName, FText::AsNumber(CastingScore));
+		}
+
+		// Flagged rather than filtered out. A spell you cannot afford yet is still
+		// worth showing - it tells the player what raising Intelligence buys them.
+		if (Row->ManaCost > Stats->MaxManaPoints)
+		{
+			Recommendation.bUnaffordable = true;
+			Recommendation.Score -= 40;
+			Recommendation.Reason = FText::Format(
+				NSLOCTEXT("DCC", "RecCost", "Costs {0} Mana; your pool is {1}."),
+				FText::AsNumber(Row->ManaCost), FText::AsNumber(Stats->MaxManaPoints));
+		}
+
+		Recommendations.Add(Recommendation);
+	}
+
+	Recommendations.Sort([](const FDCCSkillRecommendation& A, const FDCCSkillRecommendation& B)
+	{
+		return A.Score > B.Score;
+	});
+
+	if (Count > 0 && Recommendations.Num() > Count)
+	{
+		Recommendations.SetNum(Count);
+	}
+
+	return Recommendations;
 }
 
 void UDCCSkillComponent::Multicast_SkillAdvanced_Implementation(FName SkillId, int32 NewRank)
@@ -548,7 +731,79 @@ void UDCCSkillComponent::Multicast_SkillActivated_Implementation(const FDCCSkill
 		OnSkillActivated.Broadcast(this, Result);
 	}
 
+	PlaySkillEffects(Result);
+
 	BP_OnSkillPlayed(Result);
+}
+
+void UDCCSkillComponent::PlaySkillEffects(const FDCCSkillResult& Result)
+{
+	// Cosmetic only. A dedicated server has no business spawning particles, and
+	// doing so would cost it work no one can see.
+	UWorld* World = GetWorld();
+	if (!World || World->GetNetMode() == NM_DedicatedServer)
+	{
+		return;
+	}
+
+	FDCCSkillDef Skill;
+	if (!FindSkill(Result.SkillId, Skill))
+	{
+		return;
+	}
+
+	ADCCCharacterBase* Caster = GetOwningCharacter();
+
+	if (Caster)
+	{
+		// LoadSynchronous rather than an async request: the effect is wanted on
+		// this frame, and a spell whose flames arrive half a second late reads as
+		// a bug. The systems involved are small, and the first cast warms them.
+		if (UNiagaraSystem* CastSystem = Skill.CastEffect.LoadSynchronous())
+		{
+			USkeletalMeshComponent* Mesh = Caster->GetMesh();
+
+			if (Mesh && !Skill.CastSocketName.IsNone() && Mesh->DoesSocketExist(Skill.CastSocketName))
+			{
+				UNiagaraFunctionLibrary::SpawnSystemAttached(
+					CastSystem,
+					Mesh,
+					Skill.CastSocketName,
+					FVector::ZeroVector,
+					FRotator::ZeroRotator,
+					EAttachLocation::SnapToTarget,
+					true);
+			}
+			else
+			{
+				// No socket authored: fire from roughly chest height in front of
+				// the caster, which reads acceptably for every archetype.
+				const FVector Origin = Caster->GetActorLocation()
+					+ Caster->GetActorForwardVector() * 60.0f
+					+ FVector(0.0f, 0.0f, 40.0f);
+
+				UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+					World, CastSystem, Origin, Caster->GetActorRotation());
+			}
+		}
+	}
+
+	if (UNiagaraSystem* ImpactSystem = Skill.ImpactEffect.LoadSynchronous())
+	{
+		for (const TObjectPtr<AActor>& Affected : Result.AffectedActors)
+		{
+			if (!Affected)
+			{
+				continue;
+			}
+
+			const FVector ImpactLocation =
+				Affected->GetActorLocation() + FVector(0.0f, 0.0f, Skill.ImpactEffectZOffset);
+
+			UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+				World, ImpactSystem, ImpactLocation, FRotator::ZeroRotator);
+		}
+	}
 }
 
 bool UDCCSkillComponent::GrantSkill(FName SkillId, int32 InitialRank)

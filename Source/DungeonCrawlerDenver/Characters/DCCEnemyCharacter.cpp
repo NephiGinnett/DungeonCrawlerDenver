@@ -1,6 +1,7 @@
 #include "Characters/DCCEnemyCharacter.h"
 
 #include "Stats/DCCStatsComponent.h"
+#include "Skills/DCCSkillComponent.h"
 #include "Combat/DCCGameState.h"
 #include "AIController.h"
 #include "Navigation/PathFollowingComponent.h"
@@ -85,6 +86,76 @@ ADCCCharacterBase* ADCCEnemyCharacter::FindNearestPlayerTarget() const
 	return nullptr;
 }
 
+bool ADCCEnemyCharacter::TryUseSkill(ADCCCharacterBase* Target)
+{
+	if (!bUseSkills || !Skills || !Target || !HasAuthority())
+	{
+		return false;
+	}
+
+	const UWorld* World = GetWorld();
+	if (!World)
+	{
+		return false;
+	}
+
+	if ((World->GetTimeSeconds() - LastSkillAttemptTime) < SkillAttemptInterval)
+	{
+		return false;
+	}
+
+	const float DistanceToTarget = FVector::Dist(GetActorLocation(), Target->GetActorLocation());
+
+	FName BestSkillId = NAME_None;
+	float BestRange = -1.0f;
+
+	for (const FDCCKnownSkill& Known : Skills->KnownSkills)
+	{
+		FDCCSkillDef Skill;
+		if (!Skills->FindSkill(Known.SkillId, Skill) || Skill.bIsPassive)
+		{
+			continue;
+		}
+
+		// CanActivate only range-checks SingleTarget skills, so cones and areas
+		// need checking here or an enemy would happily breathe fire from across
+		// the room and hit nothing.
+		if (Skill.Targeting != EDCCSkillTargeting::Self && DistanceToTarget > Skill.Range)
+		{
+			continue;
+		}
+
+		if (Skills->CanActivate(Known.SkillId, Target) != EDCCSkillFailure::None)
+		{
+			continue;
+		}
+
+		if (Skill.Range > BestRange)
+		{
+			BestRange = Skill.Range;
+			BestSkillId = Known.SkillId;
+		}
+	}
+
+	if (BestSkillId.IsNone())
+	{
+		return false;
+	}
+
+	// Face the target first: cast effects spawn along the caster's forward
+	// vector, so a spell thrown by someone facing away looks like a bug.
+	const FVector ToTarget = Target->GetActorLocation() - GetActorLocation();
+	if (!ToTarget.IsNearlyZero())
+	{
+		SetActorRotation(FRotator(0.0f, ToTarget.Rotation().Yaw, 0.0f));
+	}
+
+	LastSkillAttemptTime = World->GetTimeSeconds();
+	Skills->TryActivateSkill(BestSkillId, Target);
+
+	return true;
+}
+
 void ADCCEnemyCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
@@ -131,6 +202,20 @@ void ADCCEnemyCharacter::Tick(float DeltaSeconds)
 
 	if (!CurrentTarget)
 	{
+		return;
+	}
+
+	// Skills come before melee and before movement. A caster whose spell outranges
+	// its fists should stand and use it rather than closing first - and stopping
+	// the chase here is what actually produces that behaviour.
+	if (TryUseSkill(CurrentTarget))
+	{
+		if (bIsChasing && AIController)
+		{
+			AIController->StopMovement();
+			bIsChasing = false;
+		}
+
 		return;
 	}
 

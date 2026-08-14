@@ -5,6 +5,8 @@
 #include "Stats/DCCAbilityTypes.h"
 #include "DCCSkillTypes.generated.h"
 
+class UNiagaraSystem;
+
 // -----------------------------------------------------------------------------
 // SKILL ARCHETYPE SYSTEM
 //
@@ -175,6 +177,39 @@ struct FDCCSkillDef : public FTableRowBase
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill|Advancement")
 	bool bIsPassive = false;
+
+	// -------------------------------------------------------------------------
+	// PRESENTATION
+	//
+	// Authored per skill rather than hardcoded per archetype, because the whole
+	// premise is that "Fire Fingers" and "Soul Collector" are the same Damage row
+	// wearing different clothes. The clothes therefore have to be data too.
+	//
+	// Soft references so that a DataTable of fifty skills does not drag fifty
+	// Niagara systems into memory the moment anything touches the table.
+	// -------------------------------------------------------------------------
+
+	/** Played on the caster when the skill goes off. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill|FX")
+	TSoftObjectPtr<UNiagaraSystem> CastEffect;
+
+	/** Played on each affected target. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill|FX")
+	TSoftObjectPtr<UNiagaraSystem> ImpactEffect;
+
+	/**
+	 * Socket on the caster's mesh to spawn CastEffect at.
+	 *
+	 * Falls back to the actor origin when the socket is missing, so a skill still
+	 * shows something on a skeleton that has no hand sockets - which is every
+	 * Meshy-imported character until sockets are added by hand.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill|FX")
+	FName CastSocketName;
+
+	/** Height above the target's origin to play ImpactEffect at. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill|FX")
+	float ImpactEffectZOffset = 60.0f;
 };
 
 /**

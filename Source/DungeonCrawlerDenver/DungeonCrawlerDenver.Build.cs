@@ -18,7 +18,11 @@ public class DungeonCrawlerDenver : ModuleRules
 			"UMG",
 			"Slate",
 			"SlateCore",
-			"NetCore"
+			"NetCore",
+			// Skill cast and impact effects. Niagara is enabled by default in UE5,
+			// and every VFX in the installed Fab packs is an NS_ Niagara system, so
+			// this is the format to target rather than legacy Cascade.
+			"Niagara"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });

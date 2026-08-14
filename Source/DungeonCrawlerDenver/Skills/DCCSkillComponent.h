@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "Skills/DCCSkillTypes.h"
+#include "Skills/DCCBackgroundTypes.h"
 #include "DCCSkillComponent.generated.h"
 
 class ADCCCharacterBase;
@@ -67,6 +68,35 @@ public:
 	/** Rank each starting skill is granted at. Enemies can be tuned by raising this alone. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skills", meta = (ClampMin = "0"))
 	int32 StartingSkillRank = 1;
+
+	/** Selectable life-stage backgrounds, for character creation. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skills|Creation")
+	TObjectPtr<UDataTable> BackgroundTable;
+
+	/** Every background authored for one life stage, for the creation UI to offer. */
+	UFUNCTION(BlueprintCallable, Category = "Skills|Creation")
+	TArray<FDCCBackgroundDef> GetBackgroundOptions(EDCCBackgroundStage Stage) const;
+
+	/**
+	 * Server only. Grants the chosen skills from a background at its Rank.
+	 *
+	 * Only ids the background actually offers are honoured, and no more than it
+	 * allows - the client picks, but it cannot pick something that was never on
+	 * the menu. Returns how many were granted.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Skills|Creation")
+	int32 ApplyBackground(FName BackgroundId, const TArray<FName>& ChosenSkillIds);
+
+	/**
+	 * Skills that suit this character's stats, best fit first, each with a
+	 * player-facing reason.
+	 *
+	 * The reason matters as much as the ordering: a recommendation a new player
+	 * does not understand is just a default, and the point of suggesting by stats
+	 * is to teach them what their numbers are for.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Skills|Creation")
+	TArray<FDCCSkillRecommendation> GetRecommendedSkills(int32 Count = 4) const;
 
 	/**
 	 * Server only. Grants everything in StartingSkillIds from SkillTable.
@@ -187,6 +217,15 @@ protected:
 	/** Cosmetic hook - montages, VFX, sound. Runs on every machine. */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Skills", meta = (DisplayName = "On Skill Played"))
 	void BP_OnSkillPlayed(const FDCCSkillResult& Result);
+
+	/**
+	 * Spawns the skill's authored cast and impact Niagara systems.
+	 *
+	 * Purely cosmetic and skipped entirely on a dedicated server. Called from the
+	 * multicast so every machine plays it, rather than from the server-side
+	 * resolution where only the host would see anything.
+	 */
+	void PlaySkillEffects(const FDCCSkillResult& Result);
 
 private:
 	ADCCCharacterBase* GetOwningCharacter() const;
