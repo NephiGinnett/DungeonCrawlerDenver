@@ -326,27 +326,77 @@ showrunner.
 
 ## Current state / next up
 
-The module **compiles** (first successful build; `Binaries/Win64/UnrealEditor-DungeonCrawlerDenver.dll`).
-Stats, rooms, encounters, and combat characters are all built but **not yet playtested** — nothing
-has been placed in a level.
+**Last updated 2026-08-15.** All C++ compiles and is cleanly linked — verified with the editor
+closed, single DLL, no numbered hot-reload artifacts.
 
-Milestone in progress: **vertical slice — one room, one encounter.** Chosen over the design
-doc's build order deliberately, for momentum and something to show the group.
+### What exists and works
 
-**The vertical slice is playable and has been played.** Room 01 exists in `Lvl_ThirdPerson`
-(outliner folder `DCC/Room01`, world origin ~x=6000): floor, walls with a doorway, entry apron,
-`NavMeshBoundsVolume`, a `DCCRoom` + `DCCEncounter` wired together, and three `BP_DCCEnemy`.
-Walking in arms the encounter, enemies path and swing, left-click fights back, montages and
-death animations play, and the encounter reports Cleared. Player HUD (`WBP_PlayerHUD`) shows
-HP/MP; enemies carry `WBP_EnemyHealthBar` on a screen-space widget component.
+The vertical slice is playable and has been played, including a **two-player PIE session**.
+Room 01 (`DCC/Room01`, x 5200–6800) and Room 02 (`DCC/Room02`, y≈5000) both exist, with a
+`DCCRoom`+`DCCEncounter`, navmesh, enemies that path and swing, ragdoll deaths, and a working
+clear condition.
 
-### Wiring still required (do these first next session)
+Systems built and compiled, roughly in the order they were added:
 
-1. ~~**Set the GameMode's `GameStateClass` to `ADCCGameState`**~~ — **DONE 2026-08-14** (set over MCP
-   and saved). The pause system is now wired; `P` in PIE should pause/queue. Not yet playtested.
-2. **Author starter skills.** Nothing populates `KnownSkills` yet, so the skill system has no
-   content to run. A DataTable of `FDCCSkillDef` rows is the intended path.
-3. **Re-theme Room 01 with the Fab packs** (see below).
+| System | Where | State |
+|---|---|---|
+| Stats, ruleset, five-stat DCC math | `Stats/` | Working |
+| Rooms, encounters, **staged waves** | `Rooms/` | Compiled, waves untested |
+| Skills, ranks, mark-and-advance | `Skills/` | Working |
+| AI Favor | `Favor/` | Working, DM-driven only |
+| Pickups, carry, throw, inventory | `Items/` | Working |
+| Pause / queue / initiative | `Combat/DCCGameState` | Wired, lightly tested |
+| **Boss phases** (charge, lien) | `Combat/DCCBossComponent` | Compiled, never run |
+| Climbing + sprint on shared stamina | `Characters/` | Testable — see below |
+| Nameplates, fist-bump friendship | `Characters/` | Working |
+| XP, levels, gold | `Stats/` | Working |
+| Achievements | `Progression/` | Compiled, **needs its table assigned** |
+| Quests, markers, HUD tracker | `Quests/` | Compiled, **needs its table assigned** |
+| Talking NPCs | `Dialogue/` | Compiled, never placed |
+| AI narrator (local LLM) | `Narration/` | Compiled, **off by default** |
+| Segmented health, mana regen | `Stats/`, `UI/DCCHUD` | Compiled, never seen |
+
+### The immediate next step
+
+**Nothing new should be written until the three DataTables are imported and assigned.** Quests,
+achievements and dialogue are all inert without them and fail *quiet* — no table means no rows
+means nothing ever fires, with no error. `Docs/POST_BUILD_TASKS.md` §8 is the checklist.
+
+After that, in order:
+
+1. **PIE and actually look at it.** Segmented health, the quest tracker, mana regen and the
+   nameplates have all been compiled but never once seen on screen.
+2. Place the two quest markers (`Orientation`, `EastLedge`) and one bartender NPC.
+3. Clear `HUDWidgetClass` on the player Blueprint — the old UMG HP bar draws over the new
+   Canvas one.
+4. Author the Voldemortgage encounter from `Docs/floor-01-design.md` and `DT_DCCEnemies.json`.
+
+### Design documents — read these before adding content
+
+- `Docs/floor-01-design.md` — **Floor 1 is the Cliff Diver Cantina under new management.**
+  Seven rooms with world coordinates, the Voldemortgage fight, what does not exist yet.
+- `Docs/dungeon-tone-bible.md` — the System AI's voice. Read before writing player-facing text.
+- `Docs/enemy-roster.md`, `Docs/DT_DCCEnemies.json` — stat blocks and boss phase structure.
+- `Docs/ai-narrator-integration.md` — how the local LLM connects and what it may never do.
+- `Docs/multiplayer-plan.md` — Enhanced Input migration, session model, predicted failures.
+- `Docs/POST_BUILD_TASKS.md` — the live wiring checklist.
+
+### Known-good test loop for climbing
+
+Tab → `1` arms Climbing → look at Room 01's east wall → click → `Y` → hold LMB to rise, RMB to
+descend, Space to let go. The player has `Climbing`, `Vault`, `MartialArts` at Rank 1 and there
+is a climb point plus a landing ledge already placed. **There is no climb animation for the
+player skeleton**, so it plays in an idle pose — that is cosmetic, not a bug.
+
+### Gotcha that cost real time this session
+
+**Blueprint defaults do not reach already-placed instances.** All four ally Blueprints had
+`bIsAlly = true` on the CDO while the four actors in the level had `false` serialised on them,
+so CJ, Scott, Kyle and Marcel spent a two-player playtest beating the player to death. Fixed and
+saved. **When checking whether placed actors behave a certain way, read the instances, not the
+class defaults** — and note that World Partition will not return unloaded actors from
+`find_actors` at all. Moving the viewport camera (`EditorAppToolset.SetCameraTransform`) to the
+region streams them in.
 
 ### Fab packs installed
 
@@ -382,12 +432,27 @@ Live Coding is active"* and never reaches compilation. This applies to the **Ser
 so there is no way to compile-check C++ while the editor runs — not even against a different
 binary. Batch C++ work and accept it is unverified until the next close.
 
-### Large uncompiled batch pending (2026-08-14)
+### Build workflow, as it actually stands (2026-08-15)
 
-`Docs/POST_BUILD_TASKS.md` is the checklist. Written but **never compiled**: pickups and throwing,
-the Skill Rank/advancement system, the five-stat conversion, NPC skill casting, skill Niagara VFX,
-and the background/recommendation system. Expect first-build errors; the enum change to
-`EDCCAbility` also invalidates every existing stat block's index order.
+There is **no uncompiled backlog** — everything in `Source/` is built and cleanly linked.
+
+The workflow constraint is unchanged and has now been probed twice:
+
+- Editor **open** → builds are unsafe. With Live Coding on, UBT refuses. With Live Coding off,
+  it silently hot-reloads instead (see the warning near the top of this file). Neither is a way
+  to verify C++.
+- Editor **closed** → clean builds work, but MCP dies with it, so no editor automation.
+
+The one idea not yet tested: with Live Coding **off** and the editor **open**, build the
+`DebugGame` configuration. It links to `UnrealEditor-DungeonCrawlerDenver-Win64-DebugGame.dll`,
+a filename the editor is not watching, so it should compile and link without triggering hot
+reload. If that works it is a genuine compile-check with the editor running. **Worth ten minutes
+next session** — it would remove the biggest friction in this project.
+
+MCP itself needs reconnecting after every editor restart. That is a session id the server
+forgets (`LogModelContextProtocol: Error: Unknown session id ...; client should reinitialize`),
+not a credential — the plugin has no authentication code at all, so there is nothing to
+configure and nothing to fix.
 
 ## Working style
 

@@ -3,39 +3,33 @@
 Editor-side wiring that the compiled C++ is waiting on. Nothing here needs another
 build — every item is data set through the editor or over MCP.
 
-## 0a. Everything is compiled (2026-08-15)
+## 0. START HERE (2026-08-15)
 
-The quest system and the dialogue NPC both built clean on the first attempt.
-Reflection data confirmed generated for `DCCQuestComponent`, `DCCQuestMarker`,
-`DCCQuestTypes`, `DCCDialogueNPC` and `DCCDialogueTypes`. **There is no outstanding
-build.** Everything in `Source/` is in the binary.
+**Everything compiles.** Clean relink verified with the editor closed — one DLL, no
+numbered hot-reload artifacts. There is no build owed.
 
-## 0b. Before reopening the editor: turn Live Coding off
+**The single most important task is §8a below: import and assign three DataTables.**
+Quests, achievements and dialogue are all built and all inert without them, and they
+fail *silently* — no table means no rows means nothing fires, with no error to notice.
+Nothing new should be written until those are in.
 
-`Editor Preferences → General → Live Coding → Enable Live Coding`, **off**.
+Then run PIE and look at it. Segmented health, the quest tracker, mana regeneration
+and the nameplates have all been compiled and none of them have ever been on screen.
 
-It is already banned by CLAUDE.md for anything touching reflection — it reported
-`Success` on a `UFUNCTION` change and crashed the editor twelve seconds later. So we
-pay its entire cost (it blocks *every* build target while the editor runs) for a
-benefit we are not allowed to use.
+### Reconnect MCP first
 
-With it off, test whether a build can run alongside the open editor:
+The connection drops on every editor restart. It is a session id the server forgets
+(`Unknown session id ...; client should reinitialize`), not a credential — the plugin
+has no auth code at all.
 
-```bash
-"D:/UE/UE_5.8/Engine/Build/BatchFiles/Build.bat" DungeonCrawlerDenverEditor Win64 DebugGame -Project="C:/Users/kmett/Documents/Unreal Projects/DungeonCrawlerDenver/DungeonCrawlerDenver.uproject" -WaitMutex
-```
+### Worth ten minutes: the DebugGame experiment
 
-`DebugGame` links to a *different* DLL than the running editor holds, so if Live
-Coding was the only objection this should compile and link with the editor open.
-If it works, C++ can be verified without closing anything.
+With Live Coding **off** and the editor **open**, run the build command below but with
+`DebugGame` instead of `Development`. It links to a filename the editor is not
+watching, so it should compile and link without triggering hot reload — which would
+give us a real compile-check without closing the editor. Untested.
 
-## 0c. MCP re-auth
-
-The `unreal-mcp` connection drops whenever the editor restarts — it is a session id
-the server forgets, not a credential (the plugin has no auth code at all). Reconnect
-after the editor is up.
-
-## 0. The build command
+## 0b. The build command
 
 Both batches are compiled and committed: the pickups/skill-rank/five-stat/NPC-casting
 batch, and the climbing/sprint batch on top of it. `Build.bat DungeonCrawlerDenverEditor`
@@ -210,6 +204,25 @@ does it correctly and can be copied.
   draws on top of the working Canvas one.
 - `FistBumpAnimation` on each character BP — the `AgreeGesture` clips are closest.
 - `ClimbAnimation` — only `A_DW_ClimbStairs` exists, DiceWinged skeleton only.
+- `EmoteChanceOnKill` on the four allies. Currently 0, so they never celebrate;
+  0.6 or so was the intent.
+
+### 8e. Author the Voldemortgage encounter
+
+Everything it needs is compiled. From `Docs/floor-01-design.md` and
+`Docs/DT_DCCEnemies.json`:
+
+1. `BP_DCCEnemy_DebtEater` from `ADCCEnemyCharacter` — `GoldStolenPerHit` 2,
+   `SummonerHealPerGold` 1.0. Model can wait; reskin something for now.
+2. `BP_Voldemortgage` with a `UDCCBossComponent`: `ChargeHealthThreshold` 0.5,
+   `ChargeDurationSeconds` 9, `ChargeBaseDamage` 6, `ChargeDamagePerMinion` 8,
+   `LienGold` 25, and the announcement lines from the roster.
+3. A `DCCEncounter` with three waves — wave 0 the boss plus three Debt Eaters
+   (`bIsBoss` ticked on the boss spawn), wave 1 five more on `HealthThreshold`
+   at 0.5, and the boss component drives the charge from the same threshold.
+
+The fight does not work at all without the `bIsBoss` flag — that is what the
+threshold wave watches and what `GetLivingMinionCount` subtracts.
 
 ### 8d. The asset-gallery level (not started)
 
