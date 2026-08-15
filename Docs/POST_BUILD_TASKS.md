@@ -1,23 +1,22 @@
 # Post-build tasks
 
-Everything queued behind one editor close. Written down because the C++ below is
-**written but never compiled** — UnrealBuildTool refuses to build at all while the
-editor holds the Live Coding lock, so none of it has been verified.
+Editor-side wiring that the compiled C++ is waiting on. Nothing here needs another
+build — every item is data set through the editor or over MCP.
 
-## 0. The build itself
+## 0. The build itself — DONE (2026-08-14)
 
-Close the editor completely, then:
+Both batches are compiled and committed: the pickups/skill-rank/five-stat/NPC-casting
+batch, and the climbing/sprint batch on top of it. `Build.bat DungeonCrawlerDenverEditor`
+succeeded clean.
+
+For reference, the command is:
 
 ```bash
 "D:/UE/UE_5.8/Engine/Build/BatchFiles/Build.bat" DungeonCrawlerDenverEditor Win64 Development -Project="C:/Users/kmett/Documents/Unreal Projects/DungeonCrawlerDenver/DungeonCrawlerDenver.uproject" -WaitMutex
 ```
 
-Expect compile errors on the first attempt — this is a large unverified batch touching
-reflection, a new module dependency (`Niagara`), and a breaking change to `EDCCAbility`.
-
-**Do not use Live Coding for any of it.** These are new `UCLASS`/`UPROPERTY`/`UFUNCTION`
-declarations and a changed enum; Live Coding reports success and then crashes the editor
-on PIE (see CLAUDE.md).
+**Do not use Live Coding for reflection changes.** It reports success and then crashes
+the editor on PIE (see CLAUDE.md).
 
 ## 1. Expect Blueprint fixups after the enum change
 
@@ -92,10 +91,37 @@ from `ADCCPickup`, mesh `/Game/Ice_Station/Meshes/Crates/SM_large_crate_01`,
 (60kg) can just lift it and STR 3 cannot** — the stat is immediately legible at the table.
 Add a lighter one (~30kg) so weaker crawlers still have something to throw.
 
-## 7. Verify
+## 7. Climbing and sprinting
+
+Both are compiled. What is missing is content.
+
+**A `Climbing` row in `DT_DCCSkills`.** Archetype `Utility - Movement`, governing
+ability Strength, `bIsPassive` false, `bCanAttemptUntrained` true. It is not cast
+through `ActivateSkill` — the climb path only reads its Rank and marks it — but it has
+to exist in the table or it cannot appear in the menu to be armed.
+
+Then add `Climbing` to every crawler's `StartingSkillIds` at Rank 1.
+
+**`ADCCClimbPoint` actors on the faces worth climbing.** The `Surface` box is the
+clickable face: size it to the rock, and set `ClimbTopZ`/`ClimbBottomZ` if the box does
+not already match the climbable span. `ReachDistance` defaults to 220cm.
+
+Rank matters here: `GetClimbSpeed` is `90 + Str×12 + Rank×6` cm/s and
+`GetClimbStaminaCost` falls from 12/s at Rank 0 to 3/s at Rank 15, so a trained climber
+covers roughly twice the height on the same pool.
+
+**Animation slots.** `ClimbAnimation` on each character Blueprint — `A_DW_ClimbStairs`
+is the only climb-ish clip in the set and only exists for the DiceWinged skeleton. The
+template player character has none, so a player will climb in their idle pose until a
+clip is imported. Everything still works; it just looks wrong.
+
+## 8. Verify
 
 - `P` pauses; queued actions resolve in initiative order
 - `E` picks up a crate, `R` throws it; a strong character throws further
 - Walk into Room 02 → CJ, Scott and a mannequin spawn
 - CJ casts Fire Fingers from range instead of closing to melee
 - Clearing an encounter rolls Skill Advancement (watch the log for `advanced to Rank`)
+- Hold Shift → sprint; the stamina bar appears and drains, and refuses at empty
+- Tab → `[1]` arms Climbing → click a rock face → `Y` → hold LMB to rise, RMB to
+  descend, Space to let go. Running the pool dry mid-face drops you.
