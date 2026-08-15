@@ -6,7 +6,10 @@
 #include "Combat/DCCGameState.h"
 #include "Favor/DCCFavorComponent.h"
 #include "Items/DCCCarryComponent.h"
+#include "Items/DCCInventoryComponent.h"
+#include "Items/DCCPickup.h"
 #include "UI/DCCFloatingText.h"
+#include "UI/DCCHUD.h"
 #include "UI/DCCEventLogTypes.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
@@ -29,6 +32,7 @@ ADCCCharacterBase::ADCCCharacterBase()
 	Skills = CreateDefaultSubobject<UDCCSkillComponent>(TEXT("Skills"));
 	Favor = CreateDefaultSubobject<UDCCFavorComponent>(TEXT("Favor"));
 	Carry = CreateDefaultSubobject<UDCCCarryComponent>(TEXT("Carry"));
+	Inventory = CreateDefaultSubobject<UDCCInventoryComponent>(TEXT("Inventory"));
 }
 
 void ADCCCharacterBase::BeginPlay()
@@ -96,6 +100,53 @@ void ADCCCharacterBase::AttemptThrow()
 	if (Carry)
 	{
 		Carry->TryThrow();
+	}
+}
+
+void ADCCCharacterBase::AttemptStow()
+{
+	if (HasAuthority())
+	{
+		Server_StowCarried_Implementation();
+		return;
+	}
+
+	Server_StowCarried();
+}
+
+void ADCCCharacterBase::Server_StowCarried_Implementation()
+{
+	if (!Carry || !Inventory)
+	{
+		return;
+	}
+
+	// Clears the hand and detaches before the inventory destroys the actor, so
+	// the carry component is never left pointing at a destroyed pickup.
+	ADCCPickup* Held = Carry->ReleaseCarried();
+	if (!Held)
+	{
+		return;
+	}
+
+	if (!Inventory->StowPickup(Held))
+	{
+		// Full. ReleaseCarried deliberately skipped the physics restore, so it has
+		// to happen here or the item hangs in mid-air with no collision - visibly
+		// broken, and worse than simply refusing the stow.
+		Held->OnDropped();
+
+		UE_LOG(LogTemp, Log, TEXT("DCCCharacterBase: inventory full, %s dropped instead."),
+			*GetNameSafe(Held));
+	}
+}
+
+void ADCCCharacterBase::ToggleCharacterMenu()
+{
+	const APlayerController* PC = Cast<APlayerController>(GetController());
+	if (ADCCHUD* DCCHUD = PC ? Cast<ADCCHUD>(PC->GetHUD()) : nullptr)
+	{
+		DCCHUD->ToggleMenu();
 	}
 }
 
@@ -263,6 +314,11 @@ void ADCCCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	// intentions, and a single key would guess wrong at the worst moment.
 	PlayerInputComponent->BindKey(EKeys::E, IE_Pressed, this, &ADCCCharacterBase::AttemptPickupOrDrop);
 	PlayerInputComponent->BindKey(EKeys::R, IE_Pressed, this, &ADCCCharacterBase::AttemptThrow);
+
+	// F stows what is in hand; Tab opens the character menu. Tab is the near
+	// universal convention for an inventory screen, so it costs no explaining.
+	PlayerInputComponent->BindKey(EKeys::F, IE_Pressed, this, &ADCCCharacterBase::AttemptStow);
+	PlayerInputComponent->BindKey(EKeys::Tab, IE_Pressed, this, &ADCCCharacterBase::ToggleCharacterMenu);
 }
 
 void ADCCCharacterBase::AttemptAttackNearest()

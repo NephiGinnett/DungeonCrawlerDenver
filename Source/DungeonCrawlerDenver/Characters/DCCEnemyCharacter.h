@@ -59,14 +59,34 @@ public:
 	UFUNCTION(BlueprintPure, Category = "DCC|AI")
 	ADCCCharacterBase* GetCurrentTarget() const { return CurrentTarget; }
 
-	/** Dungeon-side. Enemies never count as room occupants for encounter triggering. */
-	virtual bool IsCrawler() const override { return false; }
+	/**
+	 * Flips this character to the crawlers' side: an ally NPC rather than a mob.
+	 *
+	 * One flag rather than a separate ally class, because the behaviour is
+	 * identical - find the nearest hostile, close, swing. Only the definition of
+	 * "hostile" changes, and IsHostileTo already derives that from IsCrawler.
+	 *
+	 * Allies do count as room occupants, so a room full of friendly NPCs can arm
+	 * an encounter. That is deliberate: the party's own NPCs walking into a trap
+	 * should spring it.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DCC|AI")
+	bool bIsAlly = false;
+
+	/** Dungeon-side unless bIsAlly flips it. Drives the whole faction check. */
+	virtual bool IsCrawler() const override { return bIsAlly; }
 
 protected:
 	virtual void BeginPlay() override;
 
-	/** Nearest living player-controlled character inside AggroRadius, or null. */
-	ADCCCharacterBase* FindNearestPlayerTarget() const;
+	/**
+	 * Nearest living hostile inside AggroRadius, or null.
+	 *
+	 * Asks IsHostileTo rather than looking for a PlayerController, which is what
+	 * makes allies work at all: a friendly NPC hunts mobs, a mob hunts crawlers
+	 * and their allies, and neither needs to know which is player-controlled.
+	 */
+	ADCCCharacterBase* FindNearestHostileTarget() const;
 
 	/**
 	 * Server only. Casts the longest-range currently-usable skill at Target.

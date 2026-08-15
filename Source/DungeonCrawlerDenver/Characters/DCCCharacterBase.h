@@ -9,6 +9,7 @@ class UDCCStatsComponent;
 class UDCCSkillComponent;
 class UDCCFavorComponent;
 class UDCCCarryComponent;
+class UDCCInventoryComponent;
 class ADCCCharacterBase;
 class UUserWidget;
 
@@ -56,6 +57,10 @@ public:
 	 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "DCC")
 	TObjectPtr<UDCCCarryComponent> Carry;
+
+	/** Stowed items - the rucksack, as opposed to what is in your hands. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "DCC")
+	TObjectPtr<UDCCInventoryComponent> Inventory;
 
 	/** Which ability drives this character's attacks. Reskinnable per archetype. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Combat")
@@ -121,6 +126,19 @@ public:
 	/** Throw the carried prop, hard as this character's Strength allows. */
 	UFUNCTION(BlueprintCallable, Category = "DCC|Carry")
 	void AttemptThrow();
+
+	/**
+	 * Stow what is being held into the inventory, freeing the hands.
+	 *
+	 * Routed to the server, since it destroys a world actor and edits replicated
+	 * state - a client deciding this locally would desync immediately.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DCC|Carry")
+	void AttemptStow();
+
+	/** Opens or closes the character menu. Local and cosmetic. */
+	UFUNCTION(BlueprintCallable, Category = "DCC|UI")
+	void ToggleCharacterMenu();
 
 	UFUNCTION(BlueprintPure, Category = "DCC|Combat")
 	bool IsAttackReady() const;
@@ -199,6 +217,9 @@ protected:
 
 	UFUNCTION(Server, Reliable)
 	void Server_TogglePause();
+
+	UFUNCTION(Server, Reliable)
+	void Server_StowCarried();
 
 	/** Server-side: swing now, or park the intent if the world is paused. */
 	void ResolveOrQueueAttack();

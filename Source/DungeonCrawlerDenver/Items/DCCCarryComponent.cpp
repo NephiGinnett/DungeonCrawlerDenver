@@ -158,6 +158,28 @@ void UDCCCarryComponent::DoDrop()
 	OnCarryChanged.Broadcast(this, nullptr);
 }
 
+ADCCPickup* UDCCCarryComponent::ReleaseCarried()
+{
+	if (GetOwnerRole() != ROLE_Authority)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("DCCCarryComponent::ReleaseCarried called on a client; ignoring."));
+		return nullptr;
+	}
+
+	ADCCPickup* Pickup = CarriedPickup;
+	if (!Pickup)
+	{
+		return nullptr;
+	}
+
+	CarriedPickup = nullptr;
+	Pickup->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+
+	OnCarryChanged.Broadcast(this, nullptr);
+
+	return Pickup;
+}
+
 void UDCCCarryComponent::TryThrow()
 {
 	if (GetOwnerRole() == ROLE_Authority)

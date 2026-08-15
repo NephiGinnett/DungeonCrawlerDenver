@@ -8,6 +8,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
 
 ADCCEnemyCharacter::ADCCEnemyCharacter()
 {
@@ -42,9 +43,9 @@ void ADCCEnemyCharacter::BeginPlay()
 	}
 }
 
-ADCCCharacterBase* ADCCEnemyCharacter::FindNearestPlayerTarget() const
+ADCCCharacterBase* ADCCEnemyCharacter::FindNearestHostileTarget() const
 {
-	const UWorld* World = GetWorld();
+	UWorld* World = GetWorld();
 	if (!World)
 	{
 		return nullptr;
@@ -53,19 +54,13 @@ ADCCCharacterBase* ADCCEnemyCharacter::FindNearestPlayerTarget() const
 	ADCCCharacterBase* Best = nullptr;
 	float BestDistanceSquared = TNumericLimits<float>::Max();
 
-	// Iterating player controllers rather than all pawns keeps enemies from
-	// aggroing onto each other, which is the behaviour we want for a first
-	// encounter and costs nothing to revisit later.
-	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+	// Every combatant, filtered by faction. This replaced a player-controller
+	// scan: that version could only ever hunt the human player, so a friendly NPC
+	// had nothing to attack and mobs ignored allies standing next to them.
+	for (TActorIterator<ADCCCharacterBase> It(World); It; ++It)
 	{
-		const APlayerController* PC = It->Get();
-		if (!PC)
-		{
-			continue;
-		}
-
-		ADCCCharacterBase* Candidate = Cast<ADCCCharacterBase>(PC->GetPawn());
-		if (!Candidate || !Candidate->IsAlive())
+		ADCCCharacterBase* Candidate = *It;
+		if (!Candidate || !Candidate->IsAlive() || !IsHostileTo(Candidate))
 		{
 			continue;
 		}
@@ -196,7 +191,7 @@ void ADCCEnemyCharacter::Tick(float DeltaSeconds)
 
 	if (!CurrentTarget)
 	{
-		CurrentTarget = FindNearestPlayerTarget();
+		CurrentTarget = FindNearestHostileTarget();
 		bIsChasing = false;
 	}
 

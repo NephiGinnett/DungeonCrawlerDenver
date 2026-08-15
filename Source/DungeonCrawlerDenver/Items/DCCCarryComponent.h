@@ -85,6 +85,18 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Carry")
 	void TryThrow();
 
+	/**
+	 * Server only. Empties the hand and hands back what was held, detached but
+	 * still in the world.
+	 *
+	 * Exists for stowing, which needs the pickup released without the physics
+	 * restore a normal drop performs - the item is about to be destroyed and
+	 * recorded, so waking its rigid body first is wasted work and a frame of
+	 * visible falling. Returns null when nothing was held.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Carry")
+	ADCCPickup* ReleaseCarried();
+
 protected:
 	UFUNCTION(Server, Reliable)
 	void Server_PickupOrDrop();
