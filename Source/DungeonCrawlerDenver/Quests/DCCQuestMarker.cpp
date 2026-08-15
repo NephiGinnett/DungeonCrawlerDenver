@@ -7,6 +7,7 @@
 #include "Components/TextRenderComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "Engine/World.h"
+#include "Engine/Engine.h"
 
 ADCCQuestMarker::ADCCQuestMarker()
 {
@@ -129,9 +130,12 @@ void ADCCQuestMarker::Tick(float DeltaSeconds)
 
 	// Billboarded on each machine towards its own viewer, for the same reason the
 	// nameplates are: the server's idea of "facing the camera" means nothing.
+	//
+	// Local, not first: GetFirstPlayerController returns the host on a listen
+	// server and would point every client's marker label at the host's camera.
 	if (Label)
 	{
-		if (const APlayerController* PC = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr)
+		if (const APlayerController* PC = GEngine ? GEngine->GetFirstLocalPlayerController(GetWorld()) : nullptr)
 		{
 			FVector ViewLocation;
 			FRotator ViewRotation;

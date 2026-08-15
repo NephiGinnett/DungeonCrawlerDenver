@@ -524,6 +524,15 @@ protected:
 	/** Server only. Credits this character for putting Victim down. */
 	void AwardKillExperience(ADCCCharacterBase* Victim);
 
+	/**
+	 * Server only. Called after a landed attack applies its damage.
+	 *
+	 * Empty here on purpose. It exists so on-hit behaviours - a Debt Eater biting
+	 * gold loose and feeding it to its summoner - can be added on the subclass
+	 * that needs them, rather than as properties every character drags around.
+	 */
+	virtual void OnDamageDealt(ADCCCharacterBase* Target, int32 Damage) {}
+
 public:
 	/**
 	 * Logs the level and records it against achievements.

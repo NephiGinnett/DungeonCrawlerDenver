@@ -3,6 +3,8 @@
 #include "Stats/DCCStatsComponent.h"
 #include "Skills/DCCSkillComponent.h"
 #include "Combat/DCCGameState.h"
+#include "Rooms/DCCEncounter.h"
+#include "UI/DCCEventLogTypes.h"
 #include "AIController.h"
 #include "Navigation/PathFollowingComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -281,4 +283,47 @@ void ADCCEnemyCharacter::Tick(float DeltaSeconds)
 			AIController->MoveToActor(CurrentTarget, AttackRange * 0.5f);
 		}
 	}
+}
+
+void ADCCEnemyCharacter::OnDamageDealt(ADCCCharacterBase* Target, int32 Damage)
+{
+	Super::OnDamageDealt(Target, Damage);
+
+	if (!HasAuthority() || GoldStolenPerHit <= 0 || !Target || !Target->Stats)
+	{
+		return;
+	}
+
+	const int32 Taken = Target->Stats->StealGold(GoldStolenPerHit);
+	if (Taken <= 0)
+	{
+		// A party with nothing left to take starves the boss. That is a real and
+		// intentional outcome, not a failure worth logging every swing.
+		return;
+	}
+
+	// Resolved lazily rather than at spawn: waves summon minions without knowing
+	// which spawn was flagged as the boss, so the first bite is what looks it up.
+	if (!LeechBeneficiary)
+	{
+		if (const ADCCEncounter* Encounter = Cast<ADCCEncounter>(GetOwner()))
+		{
+			LeechBeneficiary = Encounter->GetBoss();
+		}
+	}
+
+	if (LeechBeneficiary && LeechBeneficiary->IsAlive() && LeechBeneficiary->Stats)
+	{
+		const int32 Healed = FMath::RoundToInt32(Taken * SummonerHealPerGold);
+		if (Healed > 0)
+		{
+			LeechBeneficiary->Stats->Heal(Healed);
+		}
+	}
+
+	ADCCGameState::Log(this, EDCCLogCategory::Combat, FText::Format(
+		NSLOCTEXT("DCC", "RepossessionNip", "{0} takes {1} gold from {2}. It does not go far."),
+		FText::FromString(GetActorNameOrLabel()),
+		FText::AsNumber(Taken),
+		FText::FromString(Target->GetActorNameOrLabel())));
 }

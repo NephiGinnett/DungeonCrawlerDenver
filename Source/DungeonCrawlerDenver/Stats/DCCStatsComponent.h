@@ -13,6 +13,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FDCCManaChanged, UDCCStatsCompone
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDCCDied, UDCCStatsComponent*, Stats);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDCCExperienceChanged, UDCCStatsComponent*, Stats, int32, Gained);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDCCLevelUp, UDCCStatsComponent*, Stats, int32, NewLevel);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDCCGoldChanged, UDCCStatsComponent*, Stats, int32, Delta);
 
 /**
  * Holds one character's ability scores and hit points, and is the single place
@@ -141,6 +142,43 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Stats")
 	void AddExperience(int32 Amount);
 
+	// -------------------------------------------------------------------------
+	// GOLD
+	//
+	// A real resource rather than a score, because Floor 1's boss spends the whole
+	// fight taking it: Repossession Nip steals gold and feeds it to Voldemortgage
+	// as healing, and his death lien is repaid in gold. A number that only goes up
+	// could not carry either of those.
+	// -------------------------------------------------------------------------
+
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_Gold, Category = "Stats")
+	int32 Gold = 0;
+
+	UPROPERTY(BlueprintAssignable, Category = "Stats")
+	FDCCGoldChanged OnGoldChanged;
+
+	/** Server only. Negative amounts are ignored; use SpendGold or StealGold. */
+	UFUNCTION(BlueprintCallable, Category = "Stats")
+	void AddGold(int32 Amount);
+
+	/**
+	 * Server only. Returns false and spends nothing if unaffordable, so callers
+	 * can use it directly as the gate on a purchase.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Stats")
+	bool SpendGold(int32 Amount);
+
+	/**
+	 * Server only. Takes up to Amount and reports how much was actually taken.
+	 *
+	 * Partial rather than all-or-nothing on purpose: a Debt Eater biting a crawler
+	 * who has three gold left should get three, not fail. Returning the real figure
+	 * is what lets the thief convert it - Voldemortgage heals for exactly what was
+	 * taken, so an almost-broke party starves him.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Stats")
+	int32 StealGold(int32 Amount);
+
 	UPROPERTY(BlueprintAssignable, Category = "Stats")
 	FDCCExperienceChanged OnExperienceChanged;
 
@@ -226,6 +264,9 @@ protected:
 
 	UFUNCTION()
 	void OnRep_ExperiencePoints(int32 PreviousExperience);
+
+	UFUNCTION()
+	void OnRep_Gold(int32 PreviousGold);
 
 private:
 	/** Recalculates MaxHitPoints from the ruleset, clamping current HP to fit. */

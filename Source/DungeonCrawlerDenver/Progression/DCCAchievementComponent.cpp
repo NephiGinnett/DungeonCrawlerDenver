@@ -1,5 +1,6 @@
 #include "Progression/DCCAchievementComponent.h"
 
+#include "Characters/DCCCharacterBase.h"
 #include "Stats/DCCStatsComponent.h"
 #include "Favor/DCCFavorComponent.h"
 #include "Combat/DCCGameState.h"
@@ -22,6 +23,23 @@ void UDCCAchievementComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProper
 void UDCCAchievementComponent::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// Achievements belong to players. They are global and personal - "put down 200
+	// things", not "cleared room 3" - so a mob accumulating its own kill count is
+	// replicated state nobody will ever read.
+	//
+	// Decided once here rather than checked in Record, because the answer cannot
+	// change during a life and Record is called several times per swing.
+	const ADCCCharacterBase* Character = Cast<ADCCCharacterBase>(GetOwner());
+	bTracksAchievements = Character && Character->IsCrawler();
+
+	if (!bTracksAchievements)
+	{
+		// Left empty rather than zero-filled, so a mob replicates two empty arrays
+		// instead of a ten-element one.
+		SetIsReplicated(false);
+		return;
+	}
 
 	// Sized once so Record never has to grow it mid-fight, and so a stat added to
 	// the enum later cannot index past the end of a save made before it existed.
@@ -50,7 +68,7 @@ int32 UDCCAchievementComponent::GetStatTotal(EDCCAchievementStat Stat) const
 
 void UDCCAchievementComponent::Record(EDCCAchievementStat Stat, int32 Amount)
 {
-	if (GetOwnerRole() != ROLE_Authority || Amount <= 0)
+	if (GetOwnerRole() != ROLE_Authority || Amount <= 0 || !bTracksAchievements)
 	{
 		return;
 	}

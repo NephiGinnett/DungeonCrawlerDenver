@@ -87,6 +87,44 @@ public:
 	/** Dungeon-side unless bIsAlly flips it. Drives the whole faction check. */
 	virtual bool IsCrawler() const override { return bIsAlly; }
 
+	// -------------------------------------------------------------------------
+	// REPOSSESSION NIP
+	//
+	// The Debt Eaters' actual threat. Their damage is trivial and always will be -
+	// what makes them dangerous is that every bite converts the party's gold into
+	// the boss's health, so ignoring them to focus the boss is a losing trade even
+	// though it looks like the obvious play.
+	// -------------------------------------------------------------------------
+
+	/** Gold taken from the target on every landed hit. Zero disables it. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Leech", meta = (ClampMin = "0"))
+	int32 GoldStolenPerHit = 0;
+
+	/**
+	 * Hit points the summoner gains per gold stolen.
+	 *
+	 * Separate from the amount taken so the exchange rate is tunable: at 1.0 a
+	 * broke party neuters the boss entirely, which is a legitimate and funny
+	 * outcome the fight should be allowed to have.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Leech", meta = (ClampMin = "0.0"))
+	float SummonerHealPerGold = 1.0f;
+
+	/**
+	 * Who the stolen gold feeds. Resolved from the encounter's boss when unset.
+	 *
+	 * Held as a soft reference rather than set at spawn because minions are
+	 * summoned by waves that do not know which spawn was flagged as the boss.
+	 */
+	UPROPERTY(BlueprintReadOnly, Category = "DCC|Leech")
+	TObjectPtr<ADCCCharacterBase> LeechBeneficiary;
+
+protected:
+	/** Applies Repossession Nip. Server only, called from PerformAttack. */
+	virtual void OnDamageDealt(ADCCCharacterBase* Target, int32 Damage) override;
+
+public:
+
 protected:
 	virtual void BeginPlay() override;
 

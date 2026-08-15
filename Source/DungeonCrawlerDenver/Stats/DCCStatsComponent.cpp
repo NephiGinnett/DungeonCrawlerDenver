@@ -26,6 +26,54 @@ void UDCCStatsComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	DOREPLIFETIME(UDCCStatsComponent, bIsPlayerCharacter);
 	DOREPLIFETIME(UDCCStatsComponent, ExperiencePoints);
 	DOREPLIFETIME(UDCCStatsComponent, ExperienceToNextLevel);
+	DOREPLIFETIME(UDCCStatsComponent, Gold);
+}
+
+void UDCCStatsComponent::AddGold(int32 Amount)
+{
+	if (GetOwnerRole() != ROLE_Authority || Amount <= 0)
+	{
+		return;
+	}
+
+	Gold += Amount;
+	OnGoldChanged.Broadcast(this, Amount);
+}
+
+bool UDCCStatsComponent::SpendGold(int32 Amount)
+{
+	if (GetOwnerRole() != ROLE_Authority || Amount <= 0 || Amount > Gold)
+	{
+		return false;
+	}
+
+	Gold -= Amount;
+	OnGoldChanged.Broadcast(this, -Amount);
+
+	return true;
+}
+
+int32 UDCCStatsComponent::StealGold(int32 Amount)
+{
+	if (GetOwnerRole() != ROLE_Authority || Amount <= 0 || Gold <= 0)
+	{
+		return 0;
+	}
+
+	// Takes what is there rather than failing. A bite that does nothing because
+	// the victim is nearly broke reads as a bug; a bite that gets their last three
+	// coins reads as the point.
+	const int32 Taken = FMath::Min(Amount, Gold);
+
+	Gold -= Taken;
+	OnGoldChanged.Broadcast(this, -Taken);
+
+	return Taken;
+}
+
+void UDCCStatsComponent::OnRep_Gold(int32 PreviousGold)
+{
+	OnGoldChanged.Broadcast(this, Gold - PreviousGold);
 }
 
 void UDCCStatsComponent::InitializeComponent()

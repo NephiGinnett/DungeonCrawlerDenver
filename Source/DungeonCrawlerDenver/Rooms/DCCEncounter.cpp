@@ -16,7 +16,11 @@
 
 ADCCEncounter::ADCCEncounter()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	// Ticks only to evaluate wave triggers, and only on the server while a fight
+	// is live. Four times a second is ample - a wave arriving up to 250ms late is
+	// imperceptible, and it keeps a level full of dormant encounters near-free.
+	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.TickInterval = 0.25f;
 
 	bReplicates = true;
 	bAlwaysRelevant = true;
@@ -32,6 +36,163 @@ void ADCCEncounter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(ADCCEncounter, State);
+}
+
+const TArray<FDCCEnemySpawn>& ADCCEncounter::GetWaveSpawns(int32 WaveIndex, TArray<FDCCEnemySpawn>& Scratch) const
+{
+	if (Waves.IsValidIndex(WaveIndex))
+	{
+		return Waves[WaveIndex].Enemies;
+	}
+
+	// No waves authored: the legacy Enemies list is wave 0 and there is nothing
+	// after it. Scratch exists only so this can return a reference in both cases.
+	Scratch = (WaveIndex == 0) ? Enemies : TArray<FDCCEnemySpawn>();
+
+	return Scratch;
+}
+
+ADCCEnemyCharacter* ADCCEncounter::GetBoss() const
+{
+	return (Boss && Boss->IsAlive()) ? Boss.Get() : nullptr;
+}
+
+void ADCCEncounter::SpawnWave(int32 WaveIndex)
+{
+	UWorld* World = GetWorld();
+	if (!HasAuthority() || !World)
+	{
+		return;
+	}
+
+	TArray<FDCCEnemySpawn> Scratch;
+	const TArray<FDCCEnemySpawn>& Spawns = GetWaveSpawns(WaveIndex, Scratch);
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = this;
+	// Enemies are placed by hand at authored points, so nudge them out of any
+	// geometry they clip rather than refusing to spawn and silently emptying
+	// the fight.
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+	for (const FDCCEnemySpawn& Spawn : Spawns)
+	{
+		if (!Spawn.EnemyClass)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("DCCEncounter '%s' wave %d has a spawn entry with no EnemyClass; skipping it."),
+				*GetName(), WaveIndex);
+			continue;
+		}
+
+		const FVector SpawnLocation = GetActorTransform().TransformPosition(Spawn.RelativeLocation);
+
+		ADCCEnemyCharacter* Enemy = World->SpawnActor<ADCCEnemyCharacter>(
+			Spawn.EnemyClass,
+			SpawnLocation,
+			GetActorRotation(),
+			SpawnParams);
+
+		if (!Enemy)
+		{
+			continue;
+		}
+
+		if (UDCCStatsComponent* EnemyStats = Enemy->Stats)
+		{
+			EnemyStats->Level = Spawn.Level;
+			if (Spawn.bOverrideAbilityScores)
+			{
+				EnemyStats->AbilityScores = Spawn.AbilityScores;
+			}
+
+			// Stats were already initialised from the class defaults when the
+			// component spawned, so re-derive max HP against what we just set.
+			EnemyStats->RefreshDerivedStats(/*bRefillToFull=*/true);
+		}
+
+		Enemy->OnCharacterDied.AddDynamic(this, &ADCCEncounter::HandleEnemyDied);
+
+		SpawnedEnemies.Add(Enemy);
+
+		if (Spawn.bIsBoss)
+		{
+			Boss = Enemy;
+		}
+	}
+
+	LastWaveTime = World->GetTimeSeconds();
+	NextWaveIndex = FMath::Max(NextWaveIndex, WaveIndex + 1);
+
+	if (Waves.IsValidIndex(WaveIndex) && !Waves[WaveIndex].Announcement.IsEmpty())
+	{
+		ADCCGameState::Log(this, EDCCLogCategory::Encounter, Waves[WaveIndex].Announcement);
+	}
+
+	OnWaveSpawned.Broadcast(WaveIndex);
+}
+
+void ADCCEncounter::EvaluateNextWave()
+{
+	UWorld* World = GetWorld();
+	if (!World || !Waves.IsValidIndex(NextWaveIndex))
+	{
+		return;
+	}
+
+	const FDCCEncounterWave& Wave = Waves[NextWaveIndex];
+
+	// The delay is a floor for every trigger, not just Delay itself. Without it a
+	// PreviousCleared wave lands on the same frame as the last kill, which reads
+	// as the game cheating rather than as reinforcements.
+	if (World->GetTimeSeconds() - LastWaveTime < Wave.DelaySeconds)
+	{
+		return;
+	}
+
+	switch (Wave.Trigger)
+	{
+	case EDCCWaveTrigger::Immediate:
+	case EDCCWaveTrigger::Delay:
+		SpawnWave(NextWaveIndex);
+		break;
+
+	case EDCCWaveTrigger::PreviousCleared:
+		if (GetLivingEnemyCount() == 0)
+		{
+			SpawnWave(NextWaveIndex);
+		}
+		break;
+
+	case EDCCWaveTrigger::HealthThreshold:
+	{
+		// Deliberately reads the boss even once it is dead-but-not-destroyed, via
+		// SpawnedEnemies rather than GetBoss - a boss killed in one burst past the
+		// threshold should still have paid its summon, or the fight loses its
+		// second half to a lucky crit.
+		const UDCCStatsComponent* BossStats = Boss ? Boss->Stats : nullptr;
+		if (BossStats && BossStats->GetHealthFraction() <= Wave.HealthThresholdFraction)
+		{
+			SpawnWave(NextWaveIndex);
+		}
+		break;
+	}
+
+	case EDCCWaveTrigger::Manual:
+	default:
+		break;
+	}
+}
+
+void ADCCEncounter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	if (!HasAuthority() || State != EDCCEncounterState::Active)
+	{
+		return;
+	}
+
+	EvaluateNextWave();
 }
 
 int32 ADCCEncounter::GetLivingEnemyCount() const
@@ -67,50 +228,14 @@ void ADCCEncounter::StartEncounter()
 		return;
 	}
 
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.Owner = this;
-	// Enemies are placed by hand at authored points, so nudge them out of any
-	// geometry they clip rather than refusing to spawn and silently emptying
-	// the fight.
-	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+	NextWaveIndex = 0;
+	SpawnWave(0);
 
-	for (const FDCCEnemySpawn& Spawn : Enemies)
+	// Any further Immediate waves land in the same frame, so a fight can open with
+	// several distinct groups without one of them arriving a tick late.
+	while (Waves.IsValidIndex(NextWaveIndex) && Waves[NextWaveIndex].Trigger == EDCCWaveTrigger::Immediate)
 	{
-		if (!Spawn.EnemyClass)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("DCCEncounter '%s' has a spawn entry with no EnemyClass set; skipping it."), *GetName());
-			continue;
-		}
-
-		const FVector SpawnLocation = GetActorTransform().TransformPosition(Spawn.RelativeLocation);
-
-		ADCCEnemyCharacter* Enemy = World->SpawnActor<ADCCEnemyCharacter>(
-			Spawn.EnemyClass,
-			SpawnLocation,
-			GetActorRotation(),
-			SpawnParams);
-
-		if (!Enemy)
-		{
-			continue;
-		}
-
-		if (UDCCStatsComponent* EnemyStats = Enemy->Stats)
-		{
-			EnemyStats->Level = Spawn.Level;
-			if (Spawn.bOverrideAbilityScores)
-			{
-				EnemyStats->AbilityScores = Spawn.AbilityScores;
-			}
-
-			// Stats were already initialised from the class defaults when the
-			// component spawned, so re-derive max HP against what we just set.
-			EnemyStats->RefreshDerivedStats(/*bRefillToFull=*/true);
-		}
-
-		Enemy->OnCharacterDied.AddDynamic(this, &ADCCEncounter::HandleEnemyDied);
-
-		SpawnedEnemies.Add(Enemy);
+		SpawnWave(NextWaveIndex);
 	}
 
 	// Captured now rather than read off SpawnedEnemies at clear time, because by
@@ -130,7 +255,7 @@ void ADCCEncounter::StartEncounter()
 		LastSpawnedAverageLevel = FMath::Max(1, LevelTotal / SpawnedEnemies.Num());
 	}
 
-	if (SpawnedEnemies.Num() == 0)
+	if (SpawnedEnemies.Num() == 0 && NextWaveIndex >= GetWaveCount())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("DCCEncounter '%s' started with no enemies; marking cleared immediately."), *GetName());
 		SetState(EDCCEncounterState::Cleared);
@@ -149,11 +274,21 @@ void ADCCEncounter::HandleEnemyDied(ADCCCharacterBase* Character)
 		return;
 	}
 
-	if (GetLivingEnemyCount() == 0)
+	if (GetLivingEnemyCount() > 0)
 	{
-		UE_LOG(LogTemp, Log, TEXT("DCCEncounter '%s' cleared."), *GetName());
-		SetState(EDCCEncounterState::Cleared);
+		return;
 	}
+
+	// An empty field is not a cleared fight while waves are still owed. Without
+	// this check, killing the opening group would end a boss encounter before the
+	// boss ever appeared.
+	if (NextWaveIndex < GetWaveCount())
+	{
+		return;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("DCCEncounter '%s' cleared after %d wave(s)."), *GetName(), NextWaveIndex);
+	SetState(EDCCEncounterState::Cleared);
 }
 
 void ADCCEncounter::ResetEncounter()
@@ -174,6 +309,12 @@ void ADCCEncounter::ResetEncounter()
 	}
 
 	SpawnedEnemies.Reset();
+
+	// Rewound too, or a re-armed encounter would think every wave had already
+	// been paid and clear itself the moment the first group died.
+	Boss = nullptr;
+	NextWaveIndex = 0;
+	LastWaveTime = 0.0f;
 
 	SetState(EDCCEncounterState::Dormant);
 }

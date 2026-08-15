@@ -96,4 +96,11 @@ protected:
 	void Unlock(const FDCCAchievementDef& Achievement);
 
 	FDCCAchievementProgress& FindOrAddProgress(FName AchievementId);
+
+private:
+	/**
+	 * False on anything that is not a crawler, which switches the whole component
+	 * off. Resolved once at BeginPlay - see the comment there.
+	 */
+	bool bTracksAchievements = false;
 };

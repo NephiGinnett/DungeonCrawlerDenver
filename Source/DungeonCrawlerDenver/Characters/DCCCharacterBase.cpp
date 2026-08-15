@@ -838,6 +838,11 @@ FDCCAttackResult ADCCCharacterBase::PerformAttack(ADCCCharacterBase* Target, boo
 		UDCCAchievementComponent::RecordFor(this, EDCCAchievementStat::DamageDealt, Result.Damage);
 		UDCCAchievementComponent::RecordFor(Target, EDCCAchievementStat::DamageTaken, Result.Damage);
 
+		// The hook that lets a Debt Eater bite gold out of whoever it hit. Virtual
+		// and empty here rather than a property, so nothing that is not an enemy
+		// carries the concept at all.
+		OnDamageDealt(Target, Result.Damage);
+
 		// Everything below is credited immediately after the damage lands, which is
 		// the only moment this character can be tied to the kill - ApplyDamage does
 		// not report who dealt it, so attribution has to happen here.
@@ -1259,9 +1264,13 @@ void ADCCCharacterBase::Tick(float DeltaSeconds)
 	// The nameplate is billboarded here rather than through a rotating component,
 	// because it only ever needs to face whoever is looking at this machine - the
 	// server's idea of "towards the camera" is meaningless.
+	//
+	// GetFirstLocalPlayerController, not GetFirstPlayerController: the latter
+	// returns the HOST on a listen server, so every remote client's nameplates
+	// would turn to face the host's camera instead of their own.
 	if (Nameplate && Nameplate->IsVisible())
 	{
-		if (const APlayerController* PC = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr)
+		if (const APlayerController* PC = GEngine ? GEngine->GetFirstLocalPlayerController(GetWorld()) : nullptr)
 		{
 			FVector ViewLocation;
 			FRotator ViewRotation;
