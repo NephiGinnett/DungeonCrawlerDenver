@@ -222,6 +222,69 @@ public:
 		float ImpactSpeed) const;
 
 	// -------------------------------------------------------------------------
+	// SEGMENTED HEALTH
+	//
+	// DCC health is not a bar, it is ten blocks. Damage inside a block comes back
+	// on its own after a moment; damage that breaks a block is real and stays
+	// broken until something heals it.
+	//
+	// That single rule changes how a fight reads. Chip damage stops mattering, so
+	// the party stops flinching at scratches - but every block lost is a visible,
+	// permanent step towards the floor, and everyone at the table can count them
+	// from across the room. It is the whole reason to show health as blocks rather
+	// than as a percentage.
+	// -------------------------------------------------------------------------
+
+	/** Always ten in the published rules, whatever the hit point total is. */
+	UFUNCTION(BlueprintCallable, Category = "Ruleset|Health")
+	virtual int32 GetHealthSegmentCount() const;
+
+	/**
+	 * Hit points per block.
+	 *
+	 * A float because hit point totals are not obliged to divide by ten. A 30 HP
+	 * crawler has blocks of 3; a 45 HP one has blocks of 4.5, and the bar still
+	 * shows exactly ten of them.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Ruleset|Health")
+	virtual float GetHealthSegmentSize(int32 MaxHitPoints) const;
+
+	/**
+	 * The hit point total natural regeneration climbs back to, and stops at.
+	 *
+	 * The top of the block currently being stood in. At 22 of 30 - seven whole
+	 * blocks and a third of the eighth - this returns 24, so the eighth block
+	 * refills and the fight resumes with eight blocks rather than seven. Already
+	 * sitting exactly on a boundary returns that boundary, so nothing regenerates.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Ruleset|Health")
+	virtual int32 GetSegmentRegenCeiling(int32 CurrentHitPoints, int32 MaxHitPoints) const;
+
+	/**
+	 * Regeneration speed, in hit points per second.
+	 *
+	 * Defined in *blocks* per second and converted, so refilling a block takes the
+	 * same time for everyone. A tank with 200 hit points and a crawler with 30
+	 * watch the same animation take the same length of time, which is what keeps
+	 * the bar readable as a shared language at the table.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Ruleset|Health")
+	virtual float GetHealthRegenRate(int32 MaxHitPoints) const;
+
+	/** Quiet seconds required after taking damage before regeneration starts. */
+	UFUNCTION(BlueprintCallable, Category = "Ruleset|Health")
+	virtual float GetRegenDelaySeconds() const;
+
+	/**
+	 * Mana per second recovered out of combat.
+	 *
+	 * Mana previously never came back at all, which meant every caster in the game
+	 * was permanently dry two spells into the first fight.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Ruleset|Health")
+	virtual float GetManaRegenRate(int32 MaxManaPoints) const;
+
+	// -------------------------------------------------------------------------
 	// EXPERIENCE AND LEVELS
 	//
 	// A DIVERGENCE FROM THE PUBLISHED RULES, ON PURPOSE.

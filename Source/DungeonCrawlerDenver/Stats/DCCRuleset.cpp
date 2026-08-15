@@ -262,6 +262,66 @@ bool UDCCRuleset::ResolveAdvancementCheck(int32 CurrentRank) const
 	return FMath::RandRange(1, DieSides) >= CurrentRank;
 }
 
+int32 UDCCRuleset::GetHealthSegmentCount() const
+{
+	return 10;
+}
+
+float UDCCRuleset::GetHealthSegmentSize(int32 MaxHitPoints) const
+{
+	const int32 Segments = FMath::Max(1, GetHealthSegmentCount());
+
+	return FMath::Max(1.0f, static_cast<float>(FMath::Max(1, MaxHitPoints))) / Segments;
+}
+
+int32 UDCCRuleset::GetSegmentRegenCeiling(int32 CurrentHitPoints, int32 MaxHitPoints) const
+{
+	// The dead do not top up.
+	if (CurrentHitPoints <= 0 || MaxHitPoints <= 0)
+	{
+		return FMath::Max(0, CurrentHitPoints);
+	}
+
+	const float SegmentSize = GetHealthSegmentSize(MaxHitPoints);
+
+	// The epsilon matters. Sitting exactly on a boundary - 21 of 30, blocks of 3 -
+	// divides to exactly 7.0, and float error nudging that to 7.0000001 would
+	// round up to block 8 and hand out a free block every time.
+	const float Blocks = FMath::CeilToFloat((CurrentHitPoints / SegmentSize) - KINDA_SMALL_NUMBER);
+
+	const int32 Ceiling = FMath::FloorToInt32(Blocks * SegmentSize);
+
+	return FMath::Clamp(Ceiling, CurrentHitPoints, MaxHitPoints);
+}
+
+float UDCCRuleset::GetHealthRegenRate(int32 MaxHitPoints) const
+{
+	// Five seconds to refill one block, for everybody. Expressed in blocks and
+	// converted to hit points so that the bar animates at the same speed whether
+	// the character has 30 hit points or 300 - the block is the unit players read,
+	// so the block is the unit the timing should be authored in.
+	constexpr float SecondsPerSegment = 5.0f;
+
+	return GetHealthSegmentSize(MaxHitPoints) / SecondsPerSegment;
+}
+
+float UDCCRuleset::GetRegenDelaySeconds() const
+{
+	// Long enough that it never ticks mid-exchange, short enough that the party
+	// gets their block back before the next room.
+	return 4.0f;
+}
+
+float UDCCRuleset::GetManaRegenRate(int32 MaxManaPoints) const
+{
+	// A full pool in twenty-five seconds. Mana totals are small - Intelligence is
+	// on the 2-6 band, so a caster holds single digits - which means a flat rate
+	// would either be instant for a dull caster or useless for a bright one.
+	constexpr float SecondsToFull = 25.0f;
+
+	return FMath::Max(1, MaxManaPoints) / SecondsToFull;
+}
+
 int32 UDCCRuleset::GetExperienceToNextLevel(int32 CurrentLevel) const
 {
 	const int32 Level = FMath::Max(1, CurrentLevel);

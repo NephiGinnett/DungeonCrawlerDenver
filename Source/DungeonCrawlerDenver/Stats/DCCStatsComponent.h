@@ -99,6 +99,37 @@ public:
 		return MaxManaPoints > 0 ? FMath::Clamp(static_cast<float>(CurrentManaPoints) / MaxManaPoints, 0.0f, 1.0f) : 0.0f;
 	}
 
+	// -------------------------------------------------------------------------
+	// SEGMENTED HEALTH
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Server only. Regenerates health toward the top of the current block, and
+	 * mana toward full.
+	 *
+	 * Called from the owning character's Tick. Both accumulate fractionally and
+	 * only commit whole points, because hit points are integers and a rate below
+	 * one per second would otherwise round to nothing forever.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Stats")
+	void TickRegeneration(float DeltaSeconds);
+
+	/** Whole blocks currently filled. */
+	UFUNCTION(BlueprintPure, Category = "Stats")
+	int32 GetFullHealthSegments() const;
+
+	/** How full the partially-drained block is, 0-1. Zero when sitting on a boundary. */
+	UFUNCTION(BlueprintPure, Category = "Stats")
+	float GetPartialHealthSegmentFraction() const;
+
+	/** What natural regeneration will climb back to. Drives the HUD's ghost fill. */
+	UFUNCTION(BlueprintPure, Category = "Stats")
+	int32 GetRegenCeiling() const;
+
+	/** True while the post-damage delay is still running. */
+	UFUNCTION(BlueprintPure, Category = "Stats")
+	bool IsRegenSuppressed() const;
+
 	/**
 	 * Whether the ruleset's player toughness bonus applies to this character.
 	 *
@@ -274,4 +305,11 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UDCCRuleset> CachedRuleset;
+
+	/** Seconds since the last damage. Gates regeneration. */
+	float TimeSinceDamage = 0.0f;
+
+	/** Sub-point regeneration carried between ticks. */
+	float HealthRegenCarry = 0.0f;
+	float ManaRegenCarry = 0.0f;
 };

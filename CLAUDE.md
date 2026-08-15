@@ -31,6 +31,16 @@ Most work needs **no** restart. Only ask when the change is one of the bottom tw
 So batch reflection-level C++ changes into one pass rather than trickling them out; each one costs a
 close/build/reopen cycle. **Always `save_assets` before asking her to close** — unsaved level work is lost.
 
+> **Turning Live Coding OFF does not make building-with-the-editor-open safe.** Confirmed
+> 2026-08-15. With Live Coding disabled, UBT no longer refuses — it compiles to a numbered
+> `UnrealEditor-DungeonCrawlerDenver-0001.dll` and the editor picks it up via **legacy Hot
+> Reload** (`LogHotReload: Starting Hot-Reload from IDE`), reporting success in under a second.
+> That is the mechanism Live Coding was built to *replace*, and it is worse at exactly the same
+> thing: new `UFUNCTION`/`UPROPERTY`/`UCLASS` reflection data. So the trap did not go away, it
+> only changed hats, and `Result: Succeeded` still is not evidence the editor is running your
+> code. **Check `Binaries/Win64/` for numbered DLLs after any build — if one appeared, the build
+> hot-reloaded rather than relinked, and a clean build with the editor closed is still owed.**
+
 > **Do not use Live Coding to dodge that last rule — it lies.** Running `CompileLiveCoding` after
 > adding a `UFUNCTION` returned `Result: Success` with only a mild warning about packaging, then
 > crashed the editor 12 seconds later on PIE start with
@@ -256,7 +266,21 @@ Getting them in has two gotchas that cost a while to find:
    mesh. Each import therefore also spits out a throwaway SkeletalMesh; delete it afterwards.
    Naming: importing as `TMP_X` produces `TMP_X` (junk mesh) and `TMP_X_Anim` (the animation).
 
-Conversion scripts are disposable; the extracted source art lives in `SourceArt/`.
+Conversion scripts live in `Tools/` (`glb_to_fbx.py`, `split_glb_anims.py`); extracted
+source art lives in `SourceArt/`.
+
+**Two import warnings are expected and harmless:**
+- *"Found texture name clash, `texture_0_001` was renamed…"* — every Meshy character ships a
+  texture called `texture_0`, so the second and later imports get suffixed. Cosmetic; each
+  character's material still points at its own texture. Verify by capturing the material
+  thumbnail rather than the mesh thumbnail, which caches before textures finish importing.
+- *"No smoothing group information was found"* — the per-animation FBX files carry a throwaway
+  mesh whose normals are never used. `mesh_smooth_type='FACE'` is now set in both scripts to
+  silence it, because the noise obscures real import errors.
+
+**Grey character thumbnails are usually a stale cache, not missing textures.** The mesh thumbnail
+renders before the material and textures finish importing. Check `CaptureAssetImage` on the
+*material* — if the sphere is textured, the character is fine in-world.
 
 **Verifying an import without opening the editor UI:** `EditorAppToolset.CaptureAssetImage` renders
 an asset thumbnail and `CaptureViewport` grabs the level view. Both return base64 PNG that blows the

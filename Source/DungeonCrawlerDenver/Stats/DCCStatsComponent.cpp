@@ -29,6 +29,112 @@ void UDCCStatsComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	DOREPLIFETIME(UDCCStatsComponent, Gold);
 }
 
+int32 UDCCStatsComponent::GetFullHealthSegments() const
+{
+	if (CurrentHitPoints <= 0 || MaxHitPoints <= 0)
+	{
+		return 0;
+	}
+
+	const float SegmentSize = GetRuleset()->GetHealthSegmentSize(MaxHitPoints);
+
+	return FMath::FloorToInt32((CurrentHitPoints / SegmentSize) + KINDA_SMALL_NUMBER);
+}
+
+float UDCCStatsComponent::GetPartialHealthSegmentFraction() const
+{
+	if (CurrentHitPoints <= 0 || MaxHitPoints <= 0)
+	{
+		return 0.0f;
+	}
+
+	const float SegmentSize = GetRuleset()->GetHealthSegmentSize(MaxHitPoints);
+	const float Filled = CurrentHitPoints - (GetFullHealthSegments() * SegmentSize);
+
+	return FMath::Clamp(Filled / SegmentSize, 0.0f, 1.0f);
+}
+
+int32 UDCCStatsComponent::GetRegenCeiling() const
+{
+	return GetRuleset()->GetSegmentRegenCeiling(CurrentHitPoints, MaxHitPoints);
+}
+
+bool UDCCStatsComponent::IsRegenSuppressed() const
+{
+	return TimeSinceDamage < GetRuleset()->GetRegenDelaySeconds();
+}
+
+void UDCCStatsComponent::TickRegeneration(float DeltaSeconds)
+{
+	if (GetOwnerRole() != ROLE_Authority || DeltaSeconds <= 0.0f)
+	{
+		return;
+	}
+
+	UDCCRuleset* Ruleset = GetRuleset();
+	if (!Ruleset)
+	{
+		return;
+	}
+
+	TimeSinceDamage += DeltaSeconds;
+
+	// Mana comes back regardless of recent damage. It is a casting resource, not a
+	// wound, and gating it behind combat silence would mean a caster under
+	// sustained pressure is exactly the caster who can never cast.
+	if (CurrentManaPoints < MaxManaPoints)
+	{
+		ManaRegenCarry += Ruleset->GetManaRegenRate(MaxManaPoints) * DeltaSeconds;
+
+		const int32 Whole = FMath::FloorToInt32(ManaRegenCarry);
+		if (Whole > 0)
+		{
+			ManaRegenCarry -= Whole;
+			RestoreMana(Whole);
+		}
+	}
+	else
+	{
+		ManaRegenCarry = 0.0f;
+	}
+
+	if (!IsAlive() || IsRegenSuppressed())
+	{
+		// Carry is dropped rather than banked, so a long fight cannot store up a
+		// burst of healing that lands the instant the party disengages.
+		HealthRegenCarry = 0.0f;
+		return;
+	}
+
+	const int32 Ceiling = GetRegenCeiling();
+	if (CurrentHitPoints >= Ceiling)
+	{
+		HealthRegenCarry = 0.0f;
+		return;
+	}
+
+	HealthRegenCarry += Ruleset->GetHealthRegenRate(MaxHitPoints) * DeltaSeconds;
+
+	const int32 WholePoints = FMath::FloorToInt32(HealthRegenCarry);
+	if (WholePoints <= 0)
+	{
+		return;
+	}
+
+	HealthRegenCarry -= WholePoints;
+
+	// Clamped to the block ceiling, never to MaxHitPoints. This is the rule that
+	// makes a lost block stay lost: regeneration finishes the block you are
+	// standing in and then stops dead.
+	const int32 PreviousHitPoints = CurrentHitPoints;
+	CurrentHitPoints = FMath::Min(CurrentHitPoints + WholePoints, Ceiling);
+
+	if (CurrentHitPoints != PreviousHitPoints)
+	{
+		OnHealthChanged.Broadcast(this, CurrentHitPoints, CurrentHitPoints - PreviousHitPoints);
+	}
+}
+
 void UDCCStatsComponent::AddGold(int32 Amount)
 {
 	if (GetOwnerRole() != ROLE_Authority || Amount <= 0)
@@ -244,6 +350,11 @@ void UDCCStatsComponent::ApplyDamage(int32 Amount)
 
 	const int32 PreviousHitPoints = CurrentHitPoints;
 	CurrentHitPoints = FMath::Max(0, CurrentHitPoints - Amount);
+
+	// Restarts the quiet period. Sustained pressure therefore suppresses
+	// regeneration entirely, which is what stops a block refilling mid-exchange.
+	TimeSinceDamage = 0.0f;
+	HealthRegenCarry = 0.0f;
 
 	// The server does not receive its own OnRep, so broadcast here. Clients get
 	// the equivalent broadcast from OnRep_CurrentHitPoints.

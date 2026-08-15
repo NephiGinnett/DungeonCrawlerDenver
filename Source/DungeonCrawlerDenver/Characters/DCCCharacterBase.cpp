@@ -1259,6 +1259,11 @@ void ADCCCharacterBase::Tick(float DeltaSeconds)
 	if (HasAuthority())
 	{
 		TickStamina(DeltaSeconds);
+
+		if (Stats)
+		{
+			Stats->TickRegeneration(DeltaSeconds);
+		}
 	}
 
 	// The nameplate is billboarded here rather than through a rotating component,

@@ -230,23 +230,84 @@ void ADCCHUD::DrawVitals(ADCCCharacterBase* Crawler)
 		return;
 	}
 
+	// ---------------------------------------------------------------------
+	// The segmented health bar, across the top.
+	//
+	// Ten blocks, whatever the hit point total is. Given the top of the screen
+	// and real width because it is the single most important thing on screen -
+	// and because blocks are countable at a glance from across a room, which a
+	// percentage bar never is. That is the entire point of the mechanic.
+	// ---------------------------------------------------------------------
+	{
+		UDCCRuleset* Ruleset = Stats->GetRuleset();
+		const int32 SegmentCount = Ruleset ? Ruleset->GetHealthSegmentCount() : 10;
+
+		const float TotalW = FMath::Min(Canvas->SizeX * 0.62f, 760.0f);
+		constexpr float Gap = 5.0f;
+		constexpr float SegH = 26.0f;
+
+		const float SegW = (TotalW - (Gap * (SegmentCount - 1))) / SegmentCount;
+		const float StartX = (Canvas->SizeX - TotalW) * 0.5f;
+		constexpr float TopY = 22.0f;
+
+		const int32 FullSegments = Stats->GetFullHealthSegments();
+		const float PartialFraction = Stats->GetPartialHealthSegmentFraction();
+
+		// How far the partial block will refill on its own. Drawn as a dim ghost so
+		// the player can see what is coming back versus what is genuinely gone -
+		// which is the difference the mechanic is built on.
+		const float RegenFraction = Stats->IsRegenSuppressed() ? PartialFraction : 1.0f;
+
+		DrawRect(FLinearColor(0.02f, 0.03f, 0.06f, 0.70f),
+			StartX - 8.0f, TopY - 8.0f, TotalW + 16.0f, SegH + 16.0f);
+
+		for (int32 Index = 0; Index < SegmentCount; ++Index)
+		{
+			const float SegX = StartX + Index * (SegW + Gap);
+
+			// Empty socket first, so a lost block still reads as a block rather
+			// than as absence.
+			DrawRect(FLinearColor(0.10f, 0.11f, 0.15f, 0.95f), SegX, TopY, SegW, SegH);
+
+			if (Index < FullSegments)
+			{
+				// Reddens as the row empties, so "hurt" and "nearly dead" differ
+				// without anyone reading a number.
+				const float Health = SegmentCount > 0 ? static_cast<float>(FullSegments) / SegmentCount : 0.0f;
+				const FLinearColor Fill = FMath::Lerp(
+					FLinearColor(0.88f, 0.16f, 0.12f),
+					FLinearColor(0.28f, 0.86f, 0.36f),
+					Health);
+
+				DrawRect(Fill, SegX, TopY, SegW, SegH);
+			}
+			else if (Index == FullSegments && PartialFraction > 0.0f)
+			{
+				if (RegenFraction > PartialFraction)
+				{
+					DrawRect(FLinearColor(0.30f, 0.45f, 0.35f, 0.55f),
+						SegX, TopY, SegW * RegenFraction, SegH);
+				}
+
+				DrawRect(FLinearColor(0.85f, 0.70f, 0.20f), SegX, TopY, SegW * PartialFraction, SegH);
+			}
+		}
+
+		const FString HealthLabel = FString::Printf(TEXT("%d / %d"),
+			FMath::Max(0, Stats->CurrentHitPoints), Stats->MaxHitPoints);
+
+		float LabelW = 0.0f, LabelH = 0.0f;
+		GetTextSize(HealthLabel, LabelW, LabelH, GEngine->GetMediumFont(), 1.0f);
+
+		DrawText(HealthLabel, BodyColour,
+			Canvas->SizeX * 0.5f - LabelW * 0.5f, TopY + SegH + 6.0f, GEngine->GetMediumFont(), 1.0f);
+	}
+
 	constexpr float BarW = 240.0f;
 	constexpr float BarH = 16.0f;
 
 	const float X = 24.0f;
-	float Y = Canvas->SizeY - 150.0f;
-
-	// Health reddens as it drops rather than being flat red, so the difference
-	// between "hurt" and "about to die" is visible without reading the number.
-	const float HealthFraction = Stats->GetHealthFraction();
-	const FLinearColor HealthFill = FMath::Lerp(
-		FLinearColor(0.85f, 0.10f, 0.10f),
-		FLinearColor(0.30f, 0.85f, 0.35f),
-		HealthFraction);
-
-	DrawMeter(X, Y, BarW, BarH, HealthFraction, HealthFill,
-		FString::Printf(TEXT("HP  %d / %d"), FMath::Max(0, Stats->CurrentHitPoints), Stats->MaxHitPoints));
-	Y += BarH + 8.0f;
+	float Y = Canvas->SizeY - 132.0f;
 
 	if (Stats->MaxManaPoints > 0)
 	{
