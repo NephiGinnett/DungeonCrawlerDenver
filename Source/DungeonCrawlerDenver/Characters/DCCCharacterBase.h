@@ -32,6 +32,8 @@ class DUNGEONCRAWLERDENVER_API ADCCCharacterBase : public ACharacter
 public:
 	ADCCCharacterBase();
 
+	virtual void Tick(float DeltaSeconds) override;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "DCC")
 	TObjectPtr<UDCCStatsComponent> Stats;
 
@@ -116,9 +118,53 @@ public:
 	// and that action simply keeps the loop playing.
 	// -------------------------------------------------------------------------
 
-	/** The looping clip to return to. Usually the run or idle cycle. */
+	/**
+	 * Locomotion clips, chosen by ground speed each frame.
+	 *
+	 * Any of them may be left unset and the selection falls back through
+	 * Run -> Walk -> Idle, so a character with only a run cycle still works - it
+	 * just never stands still. This is a hand-rolled substitute for a locomotion
+	 * blendspace, which would need an AnimBlueprint per skeleton.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Animation")
-	TObjectPtr<UAnimationAsset> LocomotionAnimation;
+	TObjectPtr<UAnimationAsset> IdleAnimation;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Animation")
+	TObjectPtr<UAnimationAsset> WalkAnimation;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Animation")
+	TObjectPtr<UAnimationAsset> RunAnimation;
+
+	/** Above this ground speed the character is considered moving at all. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Animation", meta = (ClampMin = "0.0"))
+	float WalkSpeedThreshold = 20.0f;
+
+	/** Above this ground speed the run cycle is used instead of the walk. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Animation", meta = (ClampMin = "0.0"))
+	float RunSpeedThreshold = 320.0f;
+
+	/**
+	 * Victory emotes. One is picked at random when this character lands a kill.
+	 *
+	 * The showrunner fiction rewards playing to the crowd, so a kill that ends in
+	 * a dance is mechanically pointless and tonally exactly right.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Animation")
+	TArray<TObjectPtr<UAnimationAsset>> EmoteAnimations;
+
+	/**
+	 * Chance from 0 to 1 that a kill triggers an emote.
+	 *
+	 * Zero by default so mobs stay businesslike; allies are turned up, because a
+	 * teammate celebrating is characterful and a mob doing it every time would
+	 * quickly become noise.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Animation", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float EmoteChanceOnKill = 0.0f;
+
+	/** Picks and plays a random emote. Does nothing without any configured. */
+	UFUNCTION(BlueprintCallable, Category = "DCC|Animation")
+	void PlayEmote();
 
 	/** Played once per swing. Without this, attacks are invisible. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Animation")
@@ -133,7 +179,7 @@ public:
 	TObjectPtr<UAnimationAsset> CastAnimation;
 
 	/**
-	 * Plays a clip once and returns to LocomotionAnimation afterwards.
+	 * Plays a clip once; Tick restores the right locomotion loop afterwards.
 	 *
 	 * Cosmetic only and safe to call anywhere; it no-ops without a mesh or a
 	 * clip. RateScale squeezes the clip into a known duration, which is what lets
@@ -293,6 +339,16 @@ protected:
 	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_PlayAttack(ADCCCharacterBase* Target, bool bHit);
 
+	/**
+	 * Plays the victory emote on every machine.
+	 *
+	 * Multicast rather than local, because the server rolls the chance - letting
+	 * each client roll separately would have half the table watching a dance the
+	 * others never saw.
+	 */
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_PlayEmote();
+
 	UFUNCTION(BlueprintImplementableEvent, Category = "DCC|Combat", meta = (DisplayName = "On Attack Performed"))
 	void BP_OnAttackPerformed(ADCCCharacterBase* Target, bool bHit);
 
@@ -304,8 +360,24 @@ protected:
 	float CorpseLifeSpan = 0.0f;
 
 private:
-	/** Restores LocomotionAnimation when a one-shot clip finishes. */
-	FTimerHandle AnimationResetTimer;
+	/**
+	 * World time until which a one-shot clip owns the mesh.
+	 *
+	 * A timestamp rather than a timer handle: Tick already runs for locomotion,
+	 * so comparing a deadline is simpler than juggling timer callbacks, and it
+	 * cannot fire against a half-destroyed actor.
+	 */
+	float OneShotAnimationUntil = 0.0f;
+
+	/** The loop currently playing, so Tick only swaps clips when it must. */
+	UPROPERTY(Transient)
+	TObjectPtr<UAnimationAsset> ActiveLoopAnimation;
+
+	/** Run/Walk/Idle for the current ground speed, with fallbacks. */
+	UAnimationAsset* SelectLocomotionAnimation() const;
+
+	/** Puts the right loop on the mesh unless a one-shot is still playing. */
+	void UpdateLocomotionAnimation();
 
 	/** Server-side only; clients never gate on this. */
 	float LastAttackTime = TNumericLimits<float>::Lowest();

@@ -23,7 +23,10 @@
 
 ADCCCharacterBase::ADCCCharacterBase()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	// Ticks for locomotion animation selection. Cheap - a velocity check and a
+	// comparison - and it has to run on clients too, so it cannot live in the
+	// server-only enemy AI tick.
+	PrimaryActorTick.bCanEverTick = true;
 
 	// Everything mechanical about a character has to exist on the server and
 	// reach clients by replication, so the actor itself must replicate.
@@ -278,6 +281,17 @@ FDCCAttackResult ADCCCharacterBase::PerformAttack(ADCCCharacterBase* Target, boo
 	if (Result.bHit)
 	{
 		TargetStats->ApplyDamage(Result.Damage);
+
+		// Checked immediately after the damage lands, which is the only moment
+		// this character can be credited with the kill - ApplyDamage does not
+		// report who dealt it, so attribution has to happen here.
+		if (!TargetStats->IsAlive() && EmoteChanceOnKill > 0.0f && !EmoteAnimations.IsEmpty())
+		{
+			if (FMath::FRand() <= EmoteChanceOnKill)
+			{
+				Multicast_PlayEmote();
+			}
+		}
 	}
 
 	// Narrate what the dice already decided. Per the tone bible the System AI is a
@@ -472,7 +486,8 @@ ADCCCharacterBase* ADCCCharacterBase::FindNearestHostileInRange() const
 void ADCCCharacterBase::PlayOneShotAnimation(UAnimationAsset* Animation, float OverrideDurationSeconds)
 {
 	USkeletalMeshComponent* MeshComponent = GetMesh();
-	if (!MeshComponent || !Animation)
+	UWorld* World = GetWorld();
+	if (!MeshComponent || !Animation || !World)
 	{
 		return;
 	}
@@ -504,33 +519,103 @@ void ADCCCharacterBase::PlayOneShotAnimation(UAnimationAsset* Animation, float O
 		MeshComponent->SetPlayRate(1.0f);
 	}
 
-	// Restore the loop afterwards. Without this the character freezes on the last
-	// frame of the swing, which looks far worse than never animating at all.
-	if (UWorld* World = GetWorld())
-	{
-		World->GetTimerManager().ClearTimer(AnimationResetTimer);
+	// Tick restores the loop once this deadline passes. Clearing the cached loop
+	// forces it to re-apply rather than deciding nothing has changed.
+	OneShotAnimationUntil = World->GetTimeSeconds() + Duration;
+	ActiveLoopAnimation = nullptr;
+}
 
-		if (LocomotionAnimation)
-		{
-			TWeakObjectPtr<ADCCCharacterBase> WeakThis(this);
-			World->GetTimerManager().SetTimer(AnimationResetTimer, [WeakThis]()
-			{
-				if (ADCCCharacterBase* Self = WeakThis.Get())
-				{
-					if (USkeletalMeshComponent* Mesh = Self->GetMesh())
-					{
-						Mesh->SetPlayRate(1.0f);
-						Mesh->PlayAnimation(Self->LocomotionAnimation, true);
-					}
-				}
-			}, Duration, false);
-		}
+void ADCCCharacterBase::PlayEmote()
+{
+	if (EmoteAnimations.IsEmpty())
+	{
+		return;
 	}
+
+	const int32 Index = FMath::RandRange(0, EmoteAnimations.Num() - 1);
+	PlayOneShotAnimation(EmoteAnimations[Index]);
+}
+
+UAnimationAsset* ADCCCharacterBase::SelectLocomotionAnimation() const
+{
+	// Horizontal speed only: falling should not read as sprinting.
+	const float Speed = GetVelocity().Size2D();
+
+	if (Speed >= RunSpeedThreshold && RunAnimation)
+	{
+		return RunAnimation;
+	}
+
+	if (Speed >= WalkSpeedThreshold)
+	{
+		// Fall through to the run cycle when no walk clip exists, so a character
+		// that only has a run still animates while moving.
+		return WalkAnimation ? WalkAnimation.Get() : RunAnimation.Get();
+	}
+
+	// Standing still. Idle if authored, otherwise walk, otherwise run - something
+	// looping is better than a frozen T-pose.
+	if (IdleAnimation)
+	{
+		return IdleAnimation;
+	}
+
+	return WalkAnimation ? WalkAnimation.Get() : RunAnimation.Get();
+}
+
+void ADCCCharacterBase::UpdateLocomotionAnimation()
+{
+	USkeletalMeshComponent* MeshComponent = GetMesh();
+	UWorld* World = GetWorld();
+	if (!MeshComponent || !World)
+	{
+		return;
+	}
+
+	if (MeshComponent->GetAnimationMode() != EAnimationMode::AnimationSingleNode)
+	{
+		return;
+	}
+
+	// A one-shot owns the mesh until it finishes.
+	if (World->GetTimeSeconds() < OneShotAnimationUntil)
+	{
+		return;
+	}
+
+	UAnimationAsset* Desired = SelectLocomotionAnimation();
+	if (!Desired || Desired == ActiveLoopAnimation)
+	{
+		return;
+	}
+
+	MeshComponent->SetPlayRate(1.0f);
+	MeshComponent->PlayAnimation(Desired, true);
+	ActiveLoopAnimation = Desired;
+}
+
+void ADCCCharacterBase::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	// Runs on every machine: locomotion is cosmetic and each client should pick
+	// its clip from the movement it can already see, rather than replicating a
+	// state that velocity already implies.
+	UpdateLocomotionAnimation();
 }
 
 void ADCCCharacterBase::PlayClimbAnimation(float DurationSeconds)
 {
 	PlayOneShotAnimation(ClimbAnimation, DurationSeconds);
+}
+
+void ADCCCharacterBase::Multicast_PlayEmote_Implementation()
+{
+	PlayEmote();
+
+	ADCCGameState::Log(this, EDCCLogCategory::Combat, FText::Format(
+		NSLOCTEXT("DCC", "LogEmote", "{0} plays to the cameras. Chat approves."),
+		FText::FromString(GetName())));
 }
 
 void ADCCCharacterBase::Multicast_PlayAttack_Implementation(ADCCCharacterBase* Target, bool bHit)
