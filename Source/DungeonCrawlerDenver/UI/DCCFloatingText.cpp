@@ -16,6 +16,12 @@ ADCCFloatingText::ADCCFloatingText()
 	Text = CreateDefaultSubobject<UTextRenderComponent>(TEXT("Text"));
 	SetRootComponent(Text);
 
+	// Movable is load-bearing, not tidiness. Scene components default to Static,
+	// and a Static root silently refuses both the spawn transform and the
+	// per-frame rise - the number ends up stranded at the world origin, buried
+	// under the level, spawning correctly and visible to nobody.
+	Text->SetMobility(EComponentMobility::Movable);
+
 	Text->SetHorizontalAlignment(EHTA_Center);
 	Text->SetVerticalAlignment(EVRTA_TextCenter);
 	Text->SetWorldSize(48.0f);
