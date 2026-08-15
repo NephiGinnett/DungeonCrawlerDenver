@@ -1,0 +1,128 @@
+[
+	{
+		"Name": "Server_Break_01",
+		"LineId": "Server_Break_01",
+		"SpeakerId": "ServerOnBreak",
+		"Room": "Grotto",
+		"Tier": 1,
+		"Text": "I'm on break. Legally. You can't make me do anything and neither can he.",
+		"Notes": "First grievance on the floor. He is not named yet - 'he' does the work."
+	},
+	{
+		"Name": "Server_Break_02",
+		"LineId": "Server_Break_02",
+		"SpeakerId": "ServerOnBreak",
+		"Room": "Grotto",
+		"Tier": 1,
+		"Text": "Fifteen minutes. That's what I get. Fifteen minutes out of a shift that started in March.",
+		"Notes": "Establishes that time works wrong here without stating it."
+	},
+	{
+		"Name": "Server_Break_03",
+		"LineId": "Server_Break_03",
+		"SpeakerId": "ServerOnBreak",
+		"Room": "Grotto",
+		"Tier": 1,
+		"Text": "New guy bought the building. Suit. Floats. Real chatty about interest.",
+		"Notes": "First physical detail. Still no name."
+	},
+	{
+		"Name": "Server_Break_04",
+		"LineId": "Server_Break_04",
+		"SpeakerId": "ServerOnBreak",
+		"Room": "Grotto",
+		"Tier": 1,
+		"Text": "Don't sign anything. I signed something. Look where I am.",
+		"Notes": "Irritation, not fear. The escalation starts low on purpose."
+	},
+	{
+		"Name": "Cook_01",
+		"LineId": "Cook_01",
+		"SpeakerId": "LineCook",
+		"Room": "Kitchens",
+		"Tier": 2,
+		"Text": "They came through the tills first. Not the safe. The tills. Petty.",
+		"Notes": "Debt Eaters characterised through what they bothered to steal."
+	},
+	{
+		"Name": "Cook_02",
+		"LineId": "Cook_02",
+		"SpeakerId": "LineCook",
+		"Room": "Kitchens",
+		"Tier": 2,
+		"Text": "Voldemortgage. That's the name on the paperwork. I'm not saying it twice, it's a lot of syllables for a guy who owns a briefcase.",
+		"Notes": "THE NAME DROP. Deliberately delivered as an annoyance rather than a revelation - the joke dies if anyone treats it as ominous."
+	},
+	{
+		"Name": "Cook_03",
+		"LineId": "Cook_03",
+		"SpeakerId": "LineCook",
+		"Room": "Kitchens",
+		"Tier": 2,
+		"Text": "He doesn't kill you. That's the thing everyone gets wrong. He just makes it so you can't leave.",
+		"Notes": "First line with real fear under it. Still delivered flat."
+	},
+	{
+		"Name": "Bartender_01",
+		"LineId": "Bartender_01",
+		"SpeakerId": "Bartender",
+		"Room": "Bar",
+		"Tier": 3,
+		"Text": "Sit. You're bleeding on a floor I still have to mop, contract or no contract.",
+		"Notes": "Establishes the tonal opposite of the System AI: slow, sincere, unbothered."
+	},
+	{
+		"Name": "Bartender_02",
+		"LineId": "Bartender_02",
+		"SpeakerId": "Bartender",
+		"Room": "Bar",
+		"Tier": 3,
+		"Text": "I met him. Once. He shook my hand and my hand was cold for a week.",
+		"Notes": "The only NPC on the floor who has met him. Pays off two rooms of hearsay."
+	},
+	{
+		"Name": "Bartender_03",
+		"LineId": "Bartender_03",
+		"SpeakerId": "Bartender",
+		"Room": "Bar",
+		"Tier": 3,
+		"Text": "He's not the worst thing down here. He's just the one with the authority. Those aren't the same and I wish people would stop confusing them.",
+		"Notes": "Widens the world. Implies floors below without naming anything."
+	},
+	{
+		"Name": "Bartender_Hint_01",
+		"LineId": "Bartender_Hint_01",
+		"SpeakerId": "Bartender",
+		"Room": "Bar",
+		"Tier": 3,
+		"Text": "The little ones feed him. You've seen it. Kill the little ones and the big number stops going up. That's the whole trick and I'm not saying it again.",
+		"Notes": "The genuinely useful hint, and the one that teaches the boss fight. Gated behind patience - only offered after several other lines, per the Safe Room posture."
+	},
+	{
+		"Name": "Bartender_04",
+		"LineId": "Bartender_04",
+		"SpeakerId": "Bartender",
+		"Room": "Bar",
+		"Tier": 3,
+		"Text": "Sopapillas are still good. Whatever else changed, the sopapillas held.",
+		"Notes": "Straight from the tone bible. The one uncomplicated thing on the floor, and funnier for being sincere."
+	},
+	{
+		"Name": "Diver_01",
+		"LineId": "Diver_01",
+		"SpeakerId": "HeadDiver",
+		"Room": "DivingPool",
+		"Tier": 4,
+		"Text": "Twenty past. I go at twenty past. I have gone at twenty past for longer than you have been alive.",
+		"Notes": "Non-hostile until attacked. Resignation, the end of the escalation ladder."
+	},
+	{
+		"Name": "Diver_02",
+		"LineId": "Diver_02",
+		"SpeakerId": "HeadDiver",
+		"Room": "DivingPool",
+		"Tier": 4,
+		"Text": "You could stop him. I couldn't. I have a contract and you have a health bar. Different tools.",
+		"Notes": "Points at the boss without a quest marker. If the party kills him instead, that should cost AI Favor - he was the entertainment."
+	}
+]

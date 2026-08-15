@@ -1,0 +1,106 @@
+[
+	{
+		"Name": "DebtEater",
+		"EnemyId": "DebtEater",
+		"DisplayName": "Debt Eater",
+		"Flavor": "A wraith hooded in robes stitched from past-due notices and junk mail. Individually pathetic. Never sent individually.",
+		"Level": 1,
+		"AbilityScores": { "Strength": 2, "Intelligence": 3, "Constitution": 2, "Dexterity": 5, "Charisma": 2 },
+		"WeaponDamageDie": 4,
+		"AttackCooldownSeconds": 1.2,
+		"AttackRange": 180,
+		"AggroRadius": 1400,
+		"Notes": "Two hits and gone, on purpose. Their threat is arithmetic, not damage: Repossession Nip steals gold and feeds it to Voldemortgage as healing, and every one still alive when Balloon Payment completes adds to it. They are the fight's clock."
+	},
+	{
+		"Name": "Waitstaff",
+		"EnemyId": "Waitstaff",
+		"DisplayName": "Cantina Waitstaff",
+		"Flavor": "Not a monster. An employee. Respawns because the schedule says so, and the schedule is load-bearing.",
+		"Level": 1,
+		"AbilityScores": { "Strength": 3, "Intelligence": 3, "Constitution": 3, "Dexterity": 5, "Charisma": 4 },
+		"WeaponDamageDie": 4,
+		"AttackCooldownSeconds": 1.4,
+		"AttackRange": 190,
+		"AggroRadius": 1200,
+		"Notes": "The Grotto's trash mob. Reskin of BP_DCCEnemy_Courier. Deliberately the weakest thing on the floor - the party should win this fight comfortably and only later work out they were fighting people."
+	},
+	{
+		"Name": "Collections",
+		"EnemyId": "Collections",
+		"DisplayName": "Collections Associate",
+		"Flavor": "Middle management of the afterlife. Carries a clipboard and will read from it while you bleed.",
+		"Level": 2,
+		"AbilityScores": { "Strength": 3, "Intelligence": 6, "Constitution": 4, "Dexterity": 4, "Charisma": 3 },
+		"WeaponDamageDie": 6,
+		"AttackCooldownSeconds": 2.0,
+		"AttackRange": 900,
+		"AggroRadius": 1600,
+		"Notes": "The Kitchens' ranged threat. Reskin of BP_DCCEnemy_Analyst. Intelligence 6 gives 6 Mana, which is exactly one Fire Fingers - so it casts once, meaningfully, and then has to close like everything else."
+	},
+	{
+		"Name": "HeadDiver",
+		"EnemyId": "HeadDiver",
+		"DisplayName": "The Head Diver",
+		"Flavor": "He has been performing since before the dungeon took the building. He is very good at it. He cannot stop.",
+		"Level": 3,
+		"AbilityScores": { "Strength": 5, "Intelligence": 3, "Constitution": 5, "Dexterity": 6, "Charisma": 6 },
+		"WeaponDamageDie": 8,
+		"AttackCooldownSeconds": 1.8,
+		"AttackRange": 220,
+		"AggroRadius": 2000,
+		"Notes": "Optional mini-boss on the diving platforms, reachable only by climbing. Rewards the Falls being explored rather than survived. Non-hostile until attacked - killing him is a choice, and per the tone bible's favor beats it should cost AI Favor, because he was the entertainment."
+	},
+	{
+		"Name": "Voldemortgage",
+		"EnemyId": "Voldemortgage",
+		"DisplayName": "Lord Voldemortgage",
+		"Flavor": "He did not die from dark magic gone wrong. He died from a 30-year adjustable rate. Mid, petty, and endlessly condescending.",
+		"Level": 4,
+		"AbilityScores": { "Strength": 3, "Intelligence": 8, "Constitution": 7, "Dexterity": 3, "Charisma": 6 },
+		"WeaponDamageDie": 8,
+		"AttackCooldownSeconds": 2.2,
+		"AttackRange": 1100,
+		"AggroRadius": 3000,
+		"Notes": "Neighborhood boss, tier 1-2, NOT the books' tier-6 Floor Boss - the party will be level 2 and this is a tutorial floor. Strength 3 and Dexterity 3 are deliberate: he is not physically dangerous and never pretends to be. Constitution 7 is what makes the fight long enough for its structure to play out, and Intelligence 8 pays for the summoning.",
+		"Phases": [
+			{
+				"Phase": "OpeningStatement",
+				"Trigger": "Encounter start",
+				"Summons": 3,
+				"SummonId": "DebtEater",
+				"Behaviour": "Hangs back at max range throwing foreclosure notices. Talkative and smug; most barks land here."
+			},
+			{
+				"Phase": "LateNotice",
+				"Trigger": "50% HP",
+				"Summons": 5,
+				"SummonId": "DebtEater",
+				"Behaviour": "Stops attacking, straightens tie, monologues, then immediately begins the Balloon Payment charge."
+			},
+			{
+				"Phase": "BalloonPayment",
+				"Trigger": "Immediately after Late Notice",
+				"ChargeTurns": 3,
+				"Behaviour": "Numbers stack visibly above his head, climbing each turn. Defence reduced while channelling. Every living Debt Eater at completion adds bonus damage. Clearing them all first downgrades it to Minimum Payment.",
+				"DesignNote": "This is the pause system's showcase. Five players assigning five targets during a three-turn timer, resolving in initiative order, is the first fight where pausing is correct play rather than convenience."
+			},
+			{
+				"Phase": "Aftermath",
+				"Trigger": "Balloon Payment resolves",
+				"DurationTurns": 2,
+				"Behaviour": "Defence down, cannot summon. The party's real window."
+			}
+		],
+		"DeathEffect": {
+			"Name": "The Lien",
+			"Behaviour": "Transfers to a random crawler on death - a small recurring debt tax at the start of future battles until repaid in gold. Fires even if he dies before ever casting Balloon Payment, so a fast aggressive party still meets his gimmick."
+		},
+		"Barks": [
+			"Let's talk about your... payment history.",
+			"I have your file. I have everyone's file.",
+			"This is a courtesy contact. The next one will not be.",
+			"You are not in trouble. You are in arrears. There is a difference and it is worse."
+		]
+	}
+]
