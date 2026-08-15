@@ -7,6 +7,7 @@
 #include "Items/DCCInventoryComponent.h"
 #include "Items/DCCCarryComponent.h"
 #include "Items/DCCPickup.h"
+#include "Progression/DCCAchievementComponent.h"
 #include "Combat/DCCGameState.h"
 #include "Rooms/DCCClimbPoint.h"
 #include "Engine/Canvas.h"
@@ -43,6 +44,11 @@ void ADCCHUD::DrawHUD()
 	// hiding it behind a menu would defeat the point.
 	DrawFeed(24.0f, Canvas->SizeY - (FeedLineCount + 1) * LineHeight - 24.0f);
 
+	// Drawn before the death check, so the bars are still on screen underneath the
+	// GAME OVER overlay showing exactly zero. Watching it sit empty is the point -
+	// a bar that vanishes at the moment it matters teaches the player nothing.
+	DrawVitals(Crawler);
+
 	// Death takes over the screen. Checked on the stats rather than on a null
 	// pawn, because the corpse is still possessed for a moment after dying.
 	if (Crawler && Crawler->Stats && !Crawler->Stats->IsAlive())
@@ -77,6 +83,130 @@ void ADCCHUD::DrawHUD()
 	Y = DrawSkills(X, Y, Crawler);
 	Y += SectionGap;
 	Y = DrawInventory(X, Y, Crawler);
+	Y += SectionGap;
+	Y = DrawAchievements(X, Y, Crawler);
+}
+
+void ADCCHUD::DrawMeter(float X, float Y, float Width, float Height, float Fraction,
+	const FLinearColor& Fill, const FString& Label)
+{
+	const float Clamped = FMath::Clamp(Fraction, 0.0f, 1.0f);
+
+	// The empty track is always drawn at full width, so an empty bar still reads
+	// as "this meter exists and it is empty" rather than as nothing at all.
+	DrawRect(FLinearColor(0.03f, 0.04f, 0.07f, 0.80f), X - 2.0f, Y - 2.0f, Width + 4.0f, Height + 4.0f);
+	DrawRect(FLinearColor(0.12f, 0.13f, 0.18f, 0.90f), X, Y, Width, Height);
+
+	if (Clamped > 0.0f)
+	{
+		DrawRect(Fill, X, Y, Width * Clamped, Height);
+	}
+
+	DrawText(Label, BodyColour, X + Width + 10.0f, Y - 2.0f);
+}
+
+void ADCCHUD::DrawVitals(ADCCCharacterBase* Crawler)
+{
+	UDCCStatsComponent* Stats = Crawler ? Crawler->Stats : nullptr;
+	if (!Stats)
+	{
+		return;
+	}
+
+	constexpr float BarW = 240.0f;
+	constexpr float BarH = 16.0f;
+
+	const float X = 24.0f;
+	float Y = Canvas->SizeY - 150.0f;
+
+	// Health reddens as it drops rather than being flat red, so the difference
+	// between "hurt" and "about to die" is visible without reading the number.
+	const float HealthFraction = Stats->GetHealthFraction();
+	const FLinearColor HealthFill = FMath::Lerp(
+		FLinearColor(0.85f, 0.10f, 0.10f),
+		FLinearColor(0.30f, 0.85f, 0.35f),
+		HealthFraction);
+
+	DrawMeter(X, Y, BarW, BarH, HealthFraction, HealthFill,
+		FString::Printf(TEXT("HP  %d / %d"), FMath::Max(0, Stats->CurrentHitPoints), Stats->MaxHitPoints));
+	Y += BarH + 8.0f;
+
+	if (Stats->MaxManaPoints > 0)
+	{
+		DrawMeter(X, Y, BarW, BarH, Stats->GetManaFraction(), FLinearColor(0.30f, 0.55f, 0.95f),
+			FString::Printf(TEXT("MP  %d / %d"), Stats->CurrentManaPoints, Stats->MaxManaPoints));
+		Y += BarH + 8.0f;
+	}
+
+	DrawMeter(X, Y, BarW, BarH * 0.6f, Stats->GetExperienceFraction(), FLinearColor(0.85f, 0.70f, 0.25f),
+		FString::Printf(TEXT("LVL %d   %d / %d XP"),
+			Stats->Level, Stats->ExperiencePoints, Stats->ExperienceToNextLevel));
+}
+
+float ADCCHUD::DrawAchievements(float X, float Y, ADCCCharacterBase* Crawler)
+{
+	UDCCAchievementComponent* Achievements = Crawler->Achievements;
+	if (!Achievements)
+	{
+		return Y;
+	}
+
+	TArray<FDCCAchievementDef> Visible;
+	Achievements->GetVisibleAchievements(Visible);
+
+	DrawText(FString::Printf(TEXT("Achievements  (%d)"), Achievements->GetUnlockedCount()),
+		HeadingColour, X, Y);
+	Y += LineHeight;
+
+	if (Visible.IsEmpty())
+	{
+		DrawText(TEXT("  (no achievement table assigned)"), DimColour, X, Y);
+		return Y + LineHeight;
+	}
+
+	// Unlocked first, then the closest to unlocking. A flat list would bury the
+	// one the player is two kills away from under twenty they will never see.
+	Visible.Sort([Achievements](const FDCCAchievementDef& A, const FDCCAchievementDef& B)
+	{
+		const bool bAUnlocked = Achievements->IsUnlocked(A.AchievementId);
+		const bool bBUnlocked = Achievements->IsUnlocked(B.AchievementId);
+
+		if (bAUnlocked != bBUnlocked)
+		{
+			return bAUnlocked;
+		}
+
+		const float AProgress = A.Threshold > 0
+			? static_cast<float>(Achievements->GetStatTotal(A.Stat)) / A.Threshold : 0.0f;
+		const float BProgress = B.Threshold > 0
+			? static_cast<float>(Achievements->GetStatTotal(B.Stat)) / B.Threshold : 0.0f;
+
+		return AProgress > BProgress;
+	});
+
+	int32 Shown = 0;
+	for (const FDCCAchievementDef& Definition : Visible)
+	{
+		if (Shown++ >= 8)
+		{
+			DrawText(FString::Printf(TEXT("  ... and %d more"), Visible.Num() - 8), DimColour, X, Y);
+			Y += LineHeight;
+			break;
+		}
+
+		const bool bUnlocked = Achievements->IsUnlocked(Definition.AchievementId);
+		const int32 Total = Achievements->GetStatTotal(Definition.Stat);
+
+		const FString Line = bUnlocked
+			? FString::Printf(TEXT("  [X] %s"), *Definition.DisplayName.ToString())
+			: FString::Printf(TEXT("  [ ] %-26s %d / %d"),
+				*Definition.DisplayName.ToString(), FMath::Min(Total, Definition.Threshold), Definition.Threshold);
+
+		DrawText(Line, bUnlocked ? HeadingColour : DimColour, X, Y);
+		Y += LineHeight;
+	}
+
+	return Y;
 }
 
 void ADCCHUD::DrawDeathScreen()
@@ -91,7 +221,7 @@ void ADCCHUD::DrawDeathScreen()
 	// Per the tone bible the System AI never breaks to sincerity - when something
 	// genuinely bad happens it gets quieter and more corporate, and that contrast
 	// does the emotional work.
-	const FString Headline = TEXT("YOU ARE DOWN");
+	const FString Headline = TEXT("GAME OVER");
 	const FString Subtitle = TEXT("Your viewership has ended. Thank you for participating.");
 	const FString Footer   = TEXT("A complimentary difficulty adjustment has been scheduled.");
 

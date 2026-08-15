@@ -23,6 +23,9 @@ void UDCCStatsComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	DOREPLIFETIME(UDCCStatsComponent, MaxManaPoints);
 	DOREPLIFETIME(UDCCStatsComponent, CurrentStamina);
 	DOREPLIFETIME(UDCCStatsComponent, MaxStamina);
+	DOREPLIFETIME(UDCCStatsComponent, bIsPlayerCharacter);
+	DOREPLIFETIME(UDCCStatsComponent, ExperiencePoints);
+	DOREPLIFETIME(UDCCStatsComponent, ExperienceToNextLevel);
 }
 
 void UDCCStatsComponent::InitializeComponent()
@@ -67,7 +70,19 @@ void UDCCStatsComponent::RecalculateDerivedStats(bool bRefillToFull)
 	const int32 PreviousManaPoints = CurrentManaPoints;
 
 	MaxHitPoints = GetRuleset()->GetMaxHitPoints(AbilityScores, Level);
+
+	// The player's cushion is applied here rather than inside GetMaxHitPoints so
+	// that the ruleset's own curve stays the honest answer to "how tough is this
+	// character", and the concession to playability is visible as a separate step.
+	if (bIsPlayerCharacter)
+	{
+		MaxHitPoints = FMath::Max(1,
+			FMath::RoundToInt32(MaxHitPoints * GetRuleset()->GetPlayerToughnessMultiplier()));
+	}
+
 	CurrentHitPoints = bRefillToFull ? MaxHitPoints : FMath::Clamp(CurrentHitPoints, 0, MaxHitPoints);
+
+	ExperienceToNextLevel = GetRuleset()->GetExperienceToNextLevel(Level);
 
 	MaxManaPoints = GetRuleset()->GetMaxManaPoints(AbilityScores, Level);
 	CurrentManaPoints = bRefillToFull ? MaxManaPoints : FMath::Clamp(CurrentManaPoints, 0, MaxManaPoints);
@@ -247,6 +262,57 @@ void UDCCStatsComponent::OnRep_CurrentHitPoints(int32 PreviousHitPoints)
 	{
 		OnDied.Broadcast(this);
 	}
+}
+
+void UDCCStatsComponent::SetIsPlayerCharacter(bool bNewIsPlayerCharacter)
+{
+	if (GetOwnerRole() != ROLE_Authority || bIsPlayerCharacter == bNewIsPlayerCharacter)
+	{
+		return;
+	}
+
+	bIsPlayerCharacter = bNewIsPlayerCharacter;
+
+	// The health fraction is preserved rather than refilled. Possession happens at
+	// spawn where the two are the same, but a mid-match possession change - the DM
+	// taking over an NPC, say - must not read as a free full heal.
+	const float PreviousFraction = GetHealthFraction();
+
+	RecalculateDerivedStats(/*bRefillToFull=*/false);
+
+	CurrentHitPoints = FMath::Clamp(
+		FMath::RoundToInt32(MaxHitPoints * PreviousFraction), 1, MaxHitPoints);
+}
+
+void UDCCStatsComponent::AddExperience(int32 Amount)
+{
+	if (GetOwnerRole() != ROLE_Authority || Amount <= 0)
+	{
+		return;
+	}
+
+	ExperiencePoints += Amount;
+	OnExperienceChanged.Broadcast(this, Amount);
+
+	// Loop, because a floor-clear bonus can be worth more than one level and the
+	// remainder has to carry rather than evaporate.
+	while (ExperienceToNextLevel > 0 && ExperiencePoints >= ExperienceToNextLevel)
+	{
+		ExperiencePoints -= ExperienceToNextLevel;
+		++Level;
+
+		// Levelling restores the character to full. It is the one moment the books
+		// treat as a genuine reward rather than a number going up, and healing on
+		// it is what makes clearing a floor feel like a checkpoint.
+		RecalculateDerivedStats(/*bRefillToFull=*/true);
+
+		OnLevelUp.Broadcast(this, Level);
+	}
+}
+
+void UDCCStatsComponent::OnRep_ExperiencePoints(int32 PreviousExperience)
+{
+	OnExperienceChanged.Broadcast(this, ExperiencePoints - PreviousExperience);
 }
 
 void UDCCStatsComponent::OnRep_AbilityScores()

@@ -10,8 +10,10 @@ class UDCCSkillComponent;
 class UDCCFavorComponent;
 class UDCCCarryComponent;
 class UDCCInventoryComponent;
+class UDCCAchievementComponent;
 class ADCCCharacterBase;
 class UUserWidget;
+class UTextRenderComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDCCCharacterDied, ADCCCharacterBase*, Character);
 
@@ -34,10 +36,34 @@ public:
 
 	virtual void Tick(float DeltaSeconds) override;
 
+	/**
+	 * Server only. Where a character learns it belongs to a person.
+	 *
+	 * The toughness bonus is applied here rather than authored on the Blueprint
+	 * because the same Blueprint can be both: BP_DCCEnemy_HockeyWings is CJ as an
+	 * AI ally today and CJ as a player's crawler the moment he joins.
+	 */
+	virtual void PossessedBy(AController* NewController) override;
+
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "DCC")
 	TObjectPtr<UDCCStatsComponent> Stats;
+
+	/**
+	 * Floating name and allegiance, drawn above the head.
+	 *
+	 * A UTextRenderComponent rather than a UMG widget, for the same reason the
+	 * damage tickers are: no asset to author, works the moment it compiles, and
+	 * the colour is one call rather than a binding. It is what makes an ally
+	 * legible at a glance instead of "the one in the hockey jersey".
+	 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "DCC")
+	TObjectPtr<UTextRenderComponent> Nameplate;
+
+	/** Tracks the party's achievements. Only meaningful on a crawler. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "DCC")
+	TObjectPtr<UDCCAchievementComponent> Achievements;
 
 	/**
 	 * Known skills and spells. On enemies too, so a boss casts through exactly
@@ -179,6 +205,66 @@ public:
 	/** Played once when casting, so a spell reads as deliberate. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Animation")
 	TObjectPtr<UAnimationAsset> CastAnimation;
+
+	/**
+	 * Played by both parties to a fist bump.
+	 *
+	 * No pack ships a fist-bump clip, so this falls back to a random emote when
+	 * unset - an ally throwing a celebration at you reads close enough to a
+	 * greeting that the moment still lands.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Animation")
+	TObjectPtr<UAnimationAsset> FistBumpAnimation;
+
+	// -------------------------------------------------------------------------
+	// ALLEGIANCE
+	//
+	// Two separate ideas, deliberately not collapsed into one. IsCrawler decides
+	// who may hit whom and is authored on the actor. Befriending is a thing a
+	// player *does* in the world, and only ever applies to someone already on
+	// your side - you cannot make friends with something trying to eat you.
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Whether the party has fist-bumped this character.
+	 *
+	 * Party-wide rather than per-player: in a five-player co-op two clients
+	 * disagreeing about whether CJ is a friend would show two different colours
+	 * over the same head, and nothing in the fiction wants that.
+	 */
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_Befriended, Category = "DCC|Allegiance")
+	bool bBefriended = false;
+
+	UFUNCTION(BlueprintPure, Category = "DCC|Allegiance")
+	bool IsBefriended() const { return bBefriended; }
+
+	/**
+	 * How close you have to be to offer a fist bump. Generous, because missing a
+	 * social interaction by 20cm is only ever annoying.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Allegiance", meta = (ClampMin = "0.0"))
+	float FistBumpRange = 320.0f;
+
+	/**
+	 * Looks down the crosshair for a friendly face and bumps it.
+	 *
+	 * Returns true if it found one, so the caller knows whether the click was
+	 * consumed or should fall through to an attack.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DCC|Allegiance")
+	bool TryFistBumpUnderCursor();
+
+	/** Colour this character's nameplate and health bar should use. */
+	UFUNCTION(BlueprintPure, Category = "DCC|Allegiance")
+	FLinearColor GetAllegianceColour() const;
+
+	/** Nameplate text: the character's name plus its standing with the party. */
+	UFUNCTION(BlueprintPure, Category = "DCC|Allegiance")
+	FText GetNameplateText() const;
+
+	/** Shown above the head. Defaults to the actor label when left empty. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Allegiance")
+	FText DisplayName;
 
 	/**
 	 * Plays a clip once; Tick restores the right locomotion loop afterwards.
@@ -422,6 +508,34 @@ protected:
 	UFUNCTION()
 	void OnRep_ActiveClimbPoint();
 
+	UFUNCTION(Server, Reliable)
+	void Server_FistBump(ADCCCharacterBase* Target);
+
+	/** Cosmetic half of the bump: both parties turn and play the clip. */
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_PlayFistBump(ADCCCharacterBase* Partner);
+
+	UFUNCTION()
+	void OnRep_Befriended();
+
+	/** Re-applies the nameplate's text and colour. Cheap; call whenever either moves. */
+	void RefreshNameplate();
+
+	/** Server only. Credits this character for putting Victim down. */
+	void AwardKillExperience(ADCCCharacterBase* Victim);
+
+public:
+	/**
+	 * Logs the level and records it against achievements.
+	 *
+	 * Public because XP arrives from several places - kills here, clear bonuses
+	 * from the encounter - and all of them should announce it identically.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DCC|Experience")
+	void AnnounceLevelUp(int32 PreviousLevel);
+
+protected:
+
 	UFUNCTION()
 	void OnRep_Sprinting();
 
@@ -491,6 +605,9 @@ private:
 	/** Held climb input, mirrored to the server. */
 	bool bClimbInputUp = false;
 	bool bClimbInputDown = false;
+
+	/** Centimetres climbed since the last whole metre was recorded. */
+	float ClimbDistanceAccumulator = 0.0f;
 
 	/** Server-side only; clients never gate on this. */
 	float LastAttackTime = TNumericLimits<float>::Lowest();

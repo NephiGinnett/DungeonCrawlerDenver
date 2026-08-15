@@ -76,6 +76,15 @@ int32 UDCCRuleset::GetMaxHitPoints(const FDCCAbilityScoreSet& AbilityScores, int
 	return FMath::Max(1, 10 + (ConstitutionScore * 2) + (EffectiveLevel - 1) * 2);
 }
 
+float UDCCRuleset::GetPlayerToughnessMultiplier() const
+{
+	// 2.5x. Enough that a player survives a fight they misjudged and learns from
+	// it, not so much that the enemies stop being frightening - at 1.0 the
+	// starting 18 HP is two solid hits from a Brute, which is not a fight, it is
+	// a coin flip.
+	return 2.5f;
+}
+
 int32 UDCCRuleset::GetMaxManaPoints(const FDCCAbilityScoreSet& AbilityScores, int32 Level) const
 {
 	// Straight Intelligence score, not the modifier - the real ruleset spends
@@ -251,6 +260,60 @@ bool UDCCRuleset::ResolveAdvancementCheck(int32 CurrentRank) const
 	// Meet-or-beat your own Rank. At Rank 1 this is a near certainty; at Rank 14
 	// it is a 7-in-20 shot, which is the grind curve the books describe.
 	return FMath::RandRange(1, DieSides) >= CurrentRank;
+}
+
+int32 UDCCRuleset::GetExperienceToNextLevel(int32 CurrentLevel) const
+{
+	const int32 Level = FMath::Max(1, CurrentLevel);
+
+	// Gently superlinear: 100, 250, 450, 700... Steep enough that a level feels
+	// earned, shallow enough that it does not turn into a second job. The books
+	// pace a level at roughly two hours of play, and this is tuned to land near
+	// that for a party actually fighting things.
+	return 100 * Level + 50 * Level * (Level - 1);
+}
+
+int32 UDCCRuleset::GetExperienceForKill(int32 VictimLevel, int32 KillerLevel) const
+{
+	const int32 Victim = FMath::Max(1, VictimLevel);
+	const int32 Killer = FMath::Max(1, KillerLevel);
+
+	const int32 Base = 25 * Victim;
+
+	// Each level you outrank the victim by halves the payout, floored at a
+	// tenth. Something far beneath you is still worth swinging at - it just
+	// stops being worth seeking out.
+	const int32 Gap = Killer - Victim;
+	if (Gap <= 0)
+	{
+		return Base;
+	}
+
+	const float Scale = FMath::Max(0.1f, FMath::Pow(0.5f, static_cast<float>(Gap)));
+
+	return FMath::Max(1, FMath::RoundToInt32(Base * Scale));
+}
+
+int32 UDCCRuleset::GetExperienceForEncounterClear(int32 EnemyCount, int32 AverageEnemyLevel) const
+{
+	const int32 Count = FMath::Max(1, EnemyCount);
+	const int32 EnemyLevel = FMath::Max(1, AverageEnemyLevel);
+
+	// Paid to every survivor, not split between them. Splitting would punish the
+	// party for bringing everyone, which is the exact opposite of what a
+	// five-player co-op game should be teaching.
+	return 40 * Count * EnemyLevel;
+}
+
+int32 UDCCRuleset::GetExperienceForFloorClear(int32 FloorNumber, int32 EncounterCount) const
+{
+	const int32 Floor = FMath::Max(1, FloorNumber);
+	const int32 Encounters = FMath::Max(1, EncounterCount);
+
+	// Roughly a full level on floor 1, and it grows with depth. The floor is the
+	// unit the books care about, so it is the grant that should feel like an
+	// event rather than a trickle.
+	return 250 * Floor * Encounters;
 }
 
 float UDCCRuleset::GetCarryMassLimit(const FDCCAbilityScoreSet& AbilityScores) const

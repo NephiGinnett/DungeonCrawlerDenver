@@ -1,0 +1,21 @@
+Name,AchievementId,DisplayName,Announcement,Stat,Threshold,ExperienceReward,FavorReward,bSecret
+FirstBlood,FirstBlood,First Blood,"A first kill has been recorded. The audience has been notified. Someone, somewhere, has already made a highlight reel.",Kills,1,50,5,False
+Regular,Regular,Regular,"Ten retirements processed. You are officially a recurring segment rather than a guest.",Kills,10,150,10,False
+Headliner,Headliner,Headliner,"Fifty. Production has moved you to a better time slot. Do not ask which one.",Kills,50,500,25,False
+DenverBloodbath,DenverBloodbath,Denver Bloodbath,"Two hundred. There is now a graphic with your name on it. It animates.",Kills,200,2000,60,False
+RoomService,RoomService,Room Service,"A room has been cleared. The cleaning crew are contractors and they are not happy about it.",EncountersCleared,1,75,5,False
+ThoroughlyCleaned,ThoroughlyCleaned,Thoroughly Cleaned,"Five rooms. At this rate we will run out of rooms before we run out of you. Management considers this a problem.",EncountersCleared,5,400,20,False
+GoingDown,GoingDown,Going Down,"A floor is clear. The elevator is not an elevator and the next floor is worse. Congratulations.",FloorsCleared,1,300,25,False
+Bruiser,Bruiser,Bruiser,"One thousand damage dealt. The physics are not remarkable but the commitment is.",DamageDealt,1000,300,15,False
+Sponge,Sponge,Sponge,"Five hundred damage absorbed. Our medical sponsor would like a word. It is not a kind word.",DamageTaken,500,300,10,False
+StillStanding,StillStanding,Still Standing,"Two thousand damage taken and still upright. This is either impressive or a data error. We are running it as impressive.",DamageTaken,2000,900,40,False
+Autodidact,Autodidact,Autodidact,"A skill has improved through use. The old way. The slow way. The way that sticks.",SkillRanksGained,1,50,5,False
+Practised,Practised,Practised,"Ten ranks earned the hard way. Nobody taught you any of that.",SkillRanksGained,10,500,20,False
+MovingUp,MovingUp,Moving Up,"A level. Your contract has been renegotiated in your absence and without your input.",LevelsGained,1,0,10,False
+Established,Established,Established,"Level five. You have a demographic now. They are loyal and slightly concerning.",LevelsGained,4,0,30,False
+FreeClimber,FreeClimber,Free Climber,"Ten metres of unassisted climbing. No rope. No sponsor. No sense.",MetresClimbed,10,100,10,False
+Mountaineer,Mountaineer,Mountaineer,"One hundred metres climbed. The rock is starting to take it personally.",MetresClimbed,100,600,30,False
+Introductions,Introductions,Introductions,"A fist has been bumped. Alliance logged. The audience enjoys this more than the fighting and nobody knows why.",FistBumps,1,50,15,False
+Networking,Networking,Networking,"Four alliances. You are building something down here. Production is monitoring it with interest.",FistBumps,4,300,40,False
+Setback,Setback,Setback,"A crawler has died. This has been logged as content. Your sponsors are reviewing their position.",Deaths,1,0,-20,False
+Persistent,Persistent,Persistent,"Five deaths. The audience has grown fond of the sound. We have isolated it for the remix.",Deaths,5,0,-50,True

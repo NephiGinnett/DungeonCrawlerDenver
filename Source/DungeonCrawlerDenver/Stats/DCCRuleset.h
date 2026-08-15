@@ -52,6 +52,20 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Ruleset")
 	virtual int32 GetMaxHitPoints(const FDCCAbilityScoreSet& AbilityScores, int32 Level) const;
 
+	/**
+	 * Multiplier applied to a player-controlled character's hit points.
+	 *
+	 * Not a rule from any book - it is a concession to the fact that an NPC ally
+	 * dying is a story beat while the player dying ends their evening. Until
+	 * revives exist, the player's margin for a misread fight has to come from
+	 * somewhere, and hit points are the least surprising place to put it.
+	 *
+	 * Lives on the ruleset rather than on the character so that turning it off
+	 * later - when downed-and-revivable exists - is one override, not a hunt.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Ruleset")
+	virtual float GetPlayerToughnessMultiplier() const;
+
 	/** How hard this character is to hit. The DC an incoming attack must beat. */
 	UFUNCTION(BlueprintCallable, Category = "Ruleset")
 	virtual int32 GetDefenceValue(const FDCCAbilityScoreSet& AbilityScores, int32 Level) const;
@@ -206,6 +220,50 @@ public:
 		const FDCCAbilityScoreSet& AbilityScores,
 		int32 ImpactDamageDie,
 		float ImpactSpeed) const;
+
+	// -------------------------------------------------------------------------
+	// EXPERIENCE AND LEVELS
+	//
+	// A DIVERGENCE FROM THE PUBLISHED RULES, ON PURPOSE.
+	//
+	// The books are explicit that DCC has no experience points: levels come from
+	// playtime (one per two hours), quests, and boss tier. That is a rule built
+	// for a table where the GM is watching the clock, and it gives a video game
+	// nothing to show a player who just won a fight.
+	//
+	// So XP exists here as the *mechanism* and the published sources are simply
+	// the largest grants. Anyone wanting the book behaviour back overrides
+	// GetExperienceForKill to return zero and drives levels from playtime alone;
+	// nothing else has to change.
+	// -------------------------------------------------------------------------
+
+	/** Total XP needed to advance from the given level to the next one. */
+	UFUNCTION(BlueprintCallable, Category = "Ruleset|Experience")
+	virtual int32 GetExperienceToNextLevel(int32 CurrentLevel) const;
+
+	/**
+	 * XP for putting a character down.
+	 *
+	 * Scaled by the level gap so that farming things far below you stops paying,
+	 * which is the only thing keeping a kill-based curve from rewarding the most
+	 * boring possible play.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Ruleset|Experience")
+	virtual int32 GetExperienceForKill(int32 VictimLevel, int32 KillerLevel) const;
+
+	/** XP for every survivor when an encounter is cleared. */
+	UFUNCTION(BlueprintCallable, Category = "Ruleset|Experience")
+	virtual int32 GetExperienceForEncounterClear(int32 EnemyCount, int32 AverageEnemyLevel) const;
+
+	/**
+	 * XP for clearing every encounter on a floor.
+	 *
+	 * Deliberately much larger than the sum of its parts. The books make the
+	 * floor the unit of progress, and a bonus that dwarfs the individual kills
+	 * is what keeps "finish the floor" more attractive than "grind the room".
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Ruleset|Experience")
+	virtual int32 GetExperienceForFloorClear(int32 FloorNumber, int32 EncounterCount) const;
 
 	/**
 	 * Multiplier applied to walk speed, from Dexterity.

@@ -4,6 +4,8 @@
 #include "Characters/DCCCharacterBase.h"
 #include "Stats/DCCStatsComponent.h"
 #include "Skills/DCCSkillComponent.h"
+#include "Stats/DCCRuleset.h"
+#include "Progression/DCCAchievementComponent.h"
 #include "Combat/DCCGameState.h"
 #include "UI/DCCEventLogTypes.h"
 #include "Components/SceneComponent.h"
@@ -110,6 +112,23 @@ void ADCCEncounter::StartEncounter()
 		SpawnedEnemies.Add(Enemy);
 	}
 
+	// Captured now rather than read off SpawnedEnemies at clear time, because by
+	// then every enemy is dead and some have already been destroyed by lifespan -
+	// the payout would shrink depending on how long the party took.
+	LastSpawnedCount = SpawnedEnemies.Num();
+	LastSpawnedAverageLevel = 1;
+
+	if (SpawnedEnemies.Num() > 0)
+	{
+		int32 LevelTotal = 0;
+		for (const ADCCEnemyCharacter* Enemy : SpawnedEnemies)
+		{
+			LevelTotal += (Enemy && Enemy->Stats) ? Enemy->Stats->Level : 1;
+		}
+
+		LastSpawnedAverageLevel = FMath::Max(1, LevelTotal / SpawnedEnemies.Num());
+	}
+
 	if (SpawnedEnemies.Num() == 0)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("DCCEncounter '%s' started with no enemies; marking cleared immediately."), *GetName());
@@ -181,6 +200,7 @@ void ADCCEncounter::SetState(EDCCEncounterState NewState)
 			FText::FromString(GetName())));
 
 		AwardSkillAdvancement();
+		AwardClearExperience();
 	}
 
 	// The server does not receive its own OnRep, so mirror the notification here.
@@ -212,10 +232,107 @@ void ADCCEncounter::AwardSkillAdvancement()
 			const int32 Advanced = Skills->RunSkillAdvancement();
 			if (Advanced > 0)
 			{
+				UDCCAchievementComponent::RecordFor(Character, EDCCAchievementStat::SkillRanksGained, Advanced);
+
 				UE_LOG(LogTemp, Log, TEXT("DCCEncounter '%s': %s advanced %d skill(s)."),
 					*GetName(), *GetNameSafe(Character), Advanced);
 			}
 		}
+	}
+}
+
+bool ADCCEncounter::IsFloorCleared() const
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return false;
+	}
+
+	// Every encounter on the same floor number, not just this room's. With one
+	// floor that is all of them, and it already reads correctly once floors exist.
+	for (TActorIterator<ADCCEncounter> It(World); It; ++It)
+	{
+		const ADCCEncounter* Other = *It;
+		if (!Other || Other->FloorNumber != FloorNumber)
+		{
+			continue;
+		}
+
+		if (Other->GetState() != EDCCEncounterState::Cleared)
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+void ADCCEncounter::AwardClearExperience()
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	const bool bFloorCleared = IsFloorCleared();
+
+	// Gathered before paying anyone, so that a level-up from the clear bonus
+	// cannot change what the floor bonus is worth partway through the loop.
+	TArray<ADCCCharacterBase*> Survivors;
+	for (TActorIterator<ADCCCharacterBase> It(World); It; ++It)
+	{
+		ADCCCharacterBase* Character = *It;
+		if (Character && Character->IsCrawler() && Character->IsAlive() && Character->Stats)
+		{
+			Survivors.Add(Character);
+		}
+	}
+
+	for (ADCCCharacterBase* Character : Survivors)
+	{
+		UDCCRuleset* Ruleset = Character->Stats->GetRuleset();
+		if (!Ruleset)
+		{
+			continue;
+		}
+
+		UDCCAchievementComponent::RecordFor(Character, EDCCAchievementStat::EncountersCleared);
+
+		const int32 LevelBefore = Character->Stats->Level;
+
+		// Paid in full to each survivor rather than split. Splitting would punish
+		// the party for bringing everyone, which is backwards for a co-op game.
+		int32 Gained = Ruleset->GetExperienceForEncounterClear(
+			FMath::Max(1, LastSpawnedCount), LastSpawnedAverageLevel);
+
+		if (bFloorCleared)
+		{
+			Gained += Ruleset->GetExperienceForFloorClear(FloorNumber, /*EncounterCount=*/1);
+			UDCCAchievementComponent::RecordFor(Character, EDCCAchievementStat::FloorsCleared);
+		}
+
+		Character->Stats->AddExperience(Gained);
+
+		if (Character->Stats->Level > LevelBefore)
+		{
+			Character->AnnounceLevelUp(LevelBefore);
+		}
+	}
+
+	ADCCGameState::Log(this, EDCCLogCategory::Experience, FText::Format(
+		NSLOCTEXT("DCC", "LogClearXP", "Clear bonus paid to {0} survivor(s)."),
+		FText::AsNumber(Survivors.Num())));
+
+	if (bFloorCleared)
+	{
+		// The floor is the unit the books care about, so it gets the announcement
+		// voice rather than a line in the combat feed.
+		ADCCGameState::Log(this, EDCCLogCategory::Announcement, FText::Format(
+			NSLOCTEXT("DCC", "LogFloorCleared",
+				"Floor {0} is clear. Production thanks you for your cooperation, and reminds you there are more floors."),
+			FText::AsNumber(FloorNumber)));
 	}
 }
 

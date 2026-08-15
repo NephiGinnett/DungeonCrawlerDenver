@@ -49,10 +49,24 @@ protected:
 	/** Stamina meter, shown only while it matters. */
 	void DrawStaminaBar(ADCCCharacterBase* Crawler);
 
+	/**
+	 * Always-on health, mana and XP bars.
+	 *
+	 * Drawn here rather than in WBP_PlayerHUD because a Canvas bar is recomputed
+	 * from the replicated value every frame, so it cannot get stuck showing a
+	 * stale fraction - which is exactly what the widget version did at zero HP.
+	 */
+	void DrawVitals(ADCCCharacterBase* Crawler);
+
+	/** Shared bar drawing, so every meter on screen lines up and behaves alike. */
+	void DrawMeter(float X, float Y, float Width, float Height, float Fraction,
+		const FLinearColor& Fill, const FString& Label);
+
 	/** Panel sections. Each returns the Y it finished at, so they stack. */
 	float DrawStats(float X, float Y, ADCCCharacterBase* Crawler);
 	float DrawSkills(float X, float Y, ADCCCharacterBase* Crawler);
 	float DrawInventory(float X, float Y, ADCCCharacterBase* Crawler);
+	float DrawAchievements(float X, float Y, ADCCCharacterBase* Crawler);
 	float DrawFeed(float X, float Y);
 
 private:

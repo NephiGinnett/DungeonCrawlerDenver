@@ -51,6 +51,12 @@ enum class EDCCLogCategory : uint8
 	/** AI Favor moved. */
 	Favor       UMETA(DisplayName = "Favor"),
 
+	/** An achievement fired. Its own category so the HUD can make a fuss of it. */
+	Achievement UMETA(DisplayName = "Achievement"),
+
+	/** XP and levels. */
+	Experience  UMETA(DisplayName = "Experience"),
+
 	/** The System AI talking to the room. */
 	Announcement UMETA(DisplayName = "Announcement"),
 

@@ -105,6 +105,35 @@ private:
 	 */
 	void AwardSkillAdvancement();
 
+	/**
+	 * Pays every surviving crawler for the clear, then checks whether that was the
+	 * last encounter on the floor and pays the floor bonus too.
+	 */
+	void AwardClearExperience();
+
+	/** True when no encounter anywhere in the level is still unfinished. */
+	bool IsFloorCleared() const;
+
+public:
+	/**
+	 * Which floor this encounter sits on. Drives the floor-clear bonus.
+	 *
+	 * Authored rather than derived because floors are not modelled as objects yet
+	 * - there is one level containing everything. When they are, this reads from
+	 * the floor instead and nothing else changes.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Encounter", meta = (ClampMin = "1"))
+	int32 FloorNumber = 1;
+
+	/** Average level of what this encounter spawned. Used for the clear payout. */
+	UPROPERTY(BlueprintReadOnly, Category = "Encounter")
+	int32 LastSpawnedAverageLevel = 1;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Encounter")
+	int32 LastSpawnedCount = 0;
+
+protected:
+
 	/** Server-side only. Clients never need the roster, just the state. */
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<ADCCEnemyCharacter>> SpawnedEnemies;

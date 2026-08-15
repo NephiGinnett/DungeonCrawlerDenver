@@ -11,6 +11,8 @@ class UDCCStatsComponent;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FDCCHealthChanged, UDCCStatsComponent*, Stats, int32, NewHitPoints, int32, Delta);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FDCCManaChanged, UDCCStatsComponent*, Stats, int32, NewManaPoints, int32, Delta);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDCCDied, UDCCStatsComponent*, Stats);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDCCExperienceChanged, UDCCStatsComponent*, Stats, int32, Gained);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDCCLevelUp, UDCCStatsComponent*, Stats, int32, NewLevel);
 
 /**
  * Holds one character's ability scores and hit points, and is the single place
@@ -76,6 +78,74 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Stats")
 	float GetStaminaFraction() const { return MaxStamina > 0.0f ? CurrentStamina / MaxStamina : 0.0f; }
+
+	/**
+	 * Clamped at both ends on purpose.
+	 *
+	 * Damage overkill drives CurrentHitPoints negative, and an unclamped fraction
+	 * would hand the HUD a negative width - which draws as nothing, or worse, as
+	 * a bar that never visibly empties. Dead reads as exactly zero here.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Stats")
+	float GetHealthFraction() const
+	{
+		return MaxHitPoints > 0 ? FMath::Clamp(static_cast<float>(CurrentHitPoints) / MaxHitPoints, 0.0f, 1.0f) : 0.0f;
+	}
+
+	UFUNCTION(BlueprintPure, Category = "Stats")
+	float GetManaFraction() const
+	{
+		return MaxManaPoints > 0 ? FMath::Clamp(static_cast<float>(CurrentManaPoints) / MaxManaPoints, 0.0f, 1.0f) : 0.0f;
+	}
+
+	/**
+	 * Whether the ruleset's player toughness bonus applies to this character.
+	 *
+	 * Set from ADCCCharacterBase::PossessedBy rather than authored, so a
+	 * Blueprint cannot forget it and an NPC ally cannot accidentally claim it by
+	 * being placed with the wrong flag ticked.
+	 */
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Stats")
+	bool bIsPlayerCharacter = false;
+
+	/** Server only. Marks this as a player's character and re-derives hit points. */
+	UFUNCTION(BlueprintCallable, Category = "Stats")
+	void SetIsPlayerCharacter(bool bNewIsPlayerCharacter);
+
+	// -------------------------------------------------------------------------
+	// EXPERIENCE
+	// -------------------------------------------------------------------------
+
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_ExperiencePoints, Category = "Stats")
+	int32 ExperiencePoints = 0;
+
+	/** XP needed to reach the next level. Derived, replicated so the HUD can draw a bar. */
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Stats")
+	int32 ExperienceToNextLevel = 0;
+
+	UFUNCTION(BlueprintPure, Category = "Stats")
+	float GetExperienceFraction() const
+	{
+		return ExperienceToNextLevel > 0
+			? FMath::Clamp(static_cast<float>(ExperiencePoints) / ExperienceToNextLevel, 0.0f, 1.0f)
+			: 0.0f;
+	}
+
+	/**
+	 * Server only. Adds XP and levels up as many times as the total allows.
+	 *
+	 * Loops rather than levelling once because a floor-clear bonus can legitimately
+	 * be worth more than a single level, and swallowing the remainder would quietly
+	 * lose progress the party earned.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Stats")
+	void AddExperience(int32 Amount);
+
+	UPROPERTY(BlueprintAssignable, Category = "Stats")
+	FDCCExperienceChanged OnExperienceChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "Stats")
+	FDCCLevelUp OnLevelUp;
 
 	/**
 	 * Server only. Spends stamina and reports whether any was left.
@@ -153,6 +223,9 @@ protected:
 
 	UFUNCTION()
 	void OnRep_AbilityScores();
+
+	UFUNCTION()
+	void OnRep_ExperiencePoints(int32 PreviousExperience);
 
 private:
 	/** Recalculates MaxHitPoints from the ruleset, clamping current HP to fit. */

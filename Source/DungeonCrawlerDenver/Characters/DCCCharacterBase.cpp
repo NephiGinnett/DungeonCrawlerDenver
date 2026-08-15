@@ -11,6 +11,8 @@
 #include "UI/DCCFloatingText.h"
 #include "UI/DCCHUD.h"
 #include "Rooms/DCCClimbPoint.h"
+#include "Progression/DCCAchievementComponent.h"
+#include "Components/TextRenderComponent.h"
 #include "Animation/AnimSequenceBase.h"
 #include "Net/UnrealNetwork.h"
 #include "UI/DCCEventLogTypes.h"
@@ -39,6 +41,25 @@ ADCCCharacterBase::ADCCCharacterBase()
 	Favor = CreateDefaultSubobject<UDCCFavorComponent>(TEXT("Favor"));
 	Carry = CreateDefaultSubobject<UDCCCarryComponent>(TEXT("Carry"));
 	Inventory = CreateDefaultSubobject<UDCCInventoryComponent>(TEXT("Inventory"));
+	Achievements = CreateDefaultSubobject<UDCCAchievementComponent>(TEXT("Achievements"));
+
+	Nameplate = CreateDefaultSubobject<UTextRenderComponent>(TEXT("Nameplate"));
+	Nameplate->SetupAttachment(RootComponent);
+	Nameplate->SetRelativeLocation(FVector(0.0f, 0.0f, 110.0f));
+	Nameplate->SetHorizontalAlignment(EHTA_Center);
+	Nameplate->SetVerticalAlignment(EVRTA_TextCenter);
+	Nameplate->SetWorldSize(22.0f);
+	Nameplate->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	// Movable for the same reason the damage tickers are: a Static text component
+	// ignores runtime transform changes, so it would stay at the origin and never
+	// follow the head.
+	Nameplate->SetMobility(EComponentMobility::Movable);
+
+	// Unlit, so an ally standing in a dark cave is still readable - the nameplate
+	// is UI that happens to live in the world, and UI does not take shadows.
+	Nameplate->SetTextRenderColor(FColor::White);
+	Nameplate->bHiddenInGame = false;
 }
 
 void ADCCCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -47,6 +68,22 @@ void ADCCCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 
 	DOREPLIFETIME(ADCCCharacterBase, ActiveClimbPoint);
 	DOREPLIFETIME(ADCCCharacterBase, bIsSprinting);
+	DOREPLIFETIME(ADCCCharacterBase, bBefriended);
+}
+
+void ADCCCharacterBase::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+
+	// A person is behind this one now, so the ruleset's toughness cushion applies.
+	// Checked against the controller rather than an authored flag because the same
+	// Blueprint is an AI ally today and a player's crawler the moment they join.
+	if (Stats && Cast<APlayerController>(NewController))
+	{
+		Stats->SetIsPlayerCharacter(true);
+	}
+
+	RefreshNameplate();
 }
 
 void ADCCCharacterBase::BeginPlay()
@@ -66,6 +103,15 @@ void ADCCCharacterBase::BeginPlay()
 	// client-side movement prediction, so each machine deriving the same value
 	// from the already-replicated ability scores keeps prediction in agreement.
 	ApplyDerivedMovementSpeed();
+
+	RefreshNameplate();
+
+	// The local player never needs to read their own nameplate, and it sits
+	// directly in front of a third-person camera.
+	if (Nameplate && IsLocallyControlled() && Cast<APlayerController>(GetController()))
+	{
+		Nameplate->SetVisibility(false);
+	}
 }
 
 void ADCCCharacterBase::HandleHealthChangedForTicker(UDCCStatsComponent* InStats, int32 NewHitPoints, int32 Delta)
@@ -185,6 +231,14 @@ void ADCCCharacterBase::OnPrimaryPressed()
 		return;
 	}
 
+	// A friendly under the crosshair turns the click into a greeting. Checked
+	// before the attack because IsHostileTo already refuses to swing at an ally,
+	// so this consumes a click that would otherwise have done nothing at all.
+	if (TryFistBumpUnderCursor())
+	{
+		return;
+	}
+
 	AttemptAttackNearest();
 }
 
@@ -224,6 +278,167 @@ void ADCCCharacterBase::SelectSkillSlot(int32 Index)
 	// Pressing the same slot again disarms, so there is a way out of targeting
 	// mode that does not involve clicking something.
 	SelectSkill(SelectedSkillId == SkillId ? NAME_None : SkillId);
+}
+
+FLinearColor ADCCCharacterBase::GetAllegianceColour() const
+{
+	// Three states rather than two, because "on your side" and "you have actually
+	// met" are different things and the fist bump has to visibly change something
+	// or it is just an animation.
+	if (!IsCrawler())
+	{
+		return FLinearColor(0.90f, 0.25f, 0.20f);
+	}
+
+	return bBefriended
+		? FLinearColor(0.25f, 0.90f, 0.35f)
+		: FLinearColor(0.80f, 0.84f, 0.95f);
+}
+
+FText ADCCCharacterBase::GetNameplateText() const
+{
+	const FText Name = DisplayName.IsEmpty()
+		? FText::FromString(GetActorNameOrLabel())
+		: DisplayName;
+
+	if (!IsCrawler())
+	{
+		return Name;
+	}
+
+	// Only allies carry a tag. Labelling every mob "HOSTILE" would be noise - the
+	// red is already saying it, and the nameplate is competing with the fight.
+	return FText::Format(
+		bBefriended
+			? NSLOCTEXT("DCC", "NameplateFriend", "{0}\nFRIEND")
+			: NSLOCTEXT("DCC", "NameplateAlly", "{0}\nALLY"),
+		Name);
+}
+
+void ADCCCharacterBase::RefreshNameplate()
+{
+	if (!Nameplate)
+	{
+		return;
+	}
+
+	Nameplate->SetText(GetNameplateText());
+	Nameplate->SetTextRenderColor(GetAllegianceColour().ToFColor(/*bSRGB=*/true));
+}
+
+void ADCCCharacterBase::OnRep_Befriended()
+{
+	RefreshNameplate();
+}
+
+bool ADCCCharacterBase::TryFistBumpUnderCursor()
+{
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	UWorld* World = GetWorld();
+	if (!PC || !World || !IsAlive())
+	{
+		return false;
+	}
+
+	FVector CameraLocation;
+	FRotator CameraRotation;
+	PC->GetPlayerViewPoint(CameraLocation, CameraRotation);
+
+	const FVector TraceEnd = CameraLocation + CameraRotation.Vector() * 2000.0f;
+
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+
+	// A sphere sweep rather than a line: a character is a moving target and
+	// demanding pixel accuracy on a friendly greeting is a bad trade.
+	FHitResult Hit;
+	if (!World->SweepSingleByChannel(
+		Hit, CameraLocation, TraceEnd, FQuat::Identity, ECC_Pawn,
+		FCollisionShape::MakeSphere(40.0f), Params))
+	{
+		return false;
+	}
+
+	ADCCCharacterBase* Target = Cast<ADCCCharacterBase>(Hit.GetActor());
+
+	// Only someone already on your side, already alive, and not already a friend.
+	// You cannot befriend a mob; that is what makes the tag mean something.
+	if (!Target || Target == this || !Target->IsAlive()
+		|| Target->IsHostileTo(this) || Target->IsBefriended())
+	{
+		return false;
+	}
+
+	if (FVector::Dist(GetActorLocation(), Target->GetActorLocation()) > FistBumpRange)
+	{
+		return false;
+	}
+
+	if (HasAuthority())
+	{
+		Server_FistBump_Implementation(Target);
+	}
+	else
+	{
+		Server_FistBump(Target);
+	}
+
+	return true;
+}
+
+void ADCCCharacterBase::Server_FistBump_Implementation(ADCCCharacterBase* Target)
+{
+	// Re-validated server-side, exactly like the climb: the client's click asks,
+	// the server decides.
+	if (!Target || Target == this || !Target->IsAlive() || !IsAlive()
+		|| Target->IsHostileTo(this) || Target->IsBefriended())
+	{
+		return;
+	}
+
+	if (FVector::Dist(GetActorLocation(), Target->GetActorLocation()) > FistBumpRange)
+	{
+		return;
+	}
+
+	Target->bBefriended = true;
+	Target->OnRep_Befriended();
+
+	UDCCAchievementComponent::RecordFor(this, EDCCAchievementStat::FistBumps);
+
+	Multicast_PlayFistBump(Target);
+	Target->Multicast_PlayFistBump(this);
+
+	ADCCGameState::Log(this, EDCCLogCategory::Announcement, FText::Format(
+		NSLOCTEXT("DCC", "LogFistBump", "{0} and {1} bump fists. The audience logs a new alliance."),
+		FText::FromString(GetActorNameOrLabel()),
+		FText::FromString(Target->GetActorNameOrLabel())));
+}
+
+void ADCCCharacterBase::Multicast_PlayFistBump_Implementation(ADCCCharacterBase* Partner)
+{
+	if (Partner)
+	{
+		// Turn to face each other first, or two characters bump fists while looking
+		// in opposite directions, which reads as a bug rather than a greeting.
+		FRotator Facing = (Partner->GetActorLocation() - GetActorLocation()).Rotation();
+		Facing.Pitch = 0.0f;
+		Facing.Roll = 0.0f;
+
+		SetActorRotation(Facing);
+	}
+
+	// Falls back to an emote, since no pack ships a fist-bump clip.
+	if (FistBumpAnimation)
+	{
+		PlayOneShotAnimation(FistBumpAnimation);
+	}
+	else
+	{
+		PlayEmote();
+	}
+
+	RefreshNameplate();
 }
 
 void ADCCCharacterBase::SelectSkill(FName SkillId)
@@ -453,10 +668,23 @@ void ADCCCharacterBase::TickStamina(float DeltaSeconds)
 			const float Speed = Ruleset->GetClimbSpeed(Stats->AbilityScores, ClimbRank);
 			const float Direction = bClimbInputUp ? 1.0f : -1.0f;
 
-			float NewZ = GetActorLocation().Z + (Speed * Direction * DeltaSeconds);
+			const float PreviousZ = GetActorLocation().Z;
+
+			float NewZ = PreviousZ + (Speed * Direction * DeltaSeconds);
 			NewZ = FMath::Clamp(NewZ, ActiveClimbPoint->GetBottomZ(), ActiveClimbPoint->GetTopZ());
 
 			SetActorLocation(ActiveClimbPoint->GetAttachLocationFor(this, NewZ));
+
+			// Accumulated in centimetres and banked a metre at a time, because
+			// recording a fractional metre every frame would only ever add zero.
+			ClimbDistanceAccumulator += FMath::Abs(NewZ - PreviousZ);
+			if (ClimbDistanceAccumulator >= 100.0f)
+			{
+				const int32 WholeMetres = FMath::FloorToInt32(ClimbDistanceAccumulator / 100.0f);
+
+				UDCCAchievementComponent::RecordFor(this, EDCCAchievementStat::MetresClimbed, WholeMetres);
+				ClimbDistanceAccumulator -= WholeMetres * 100.0f;
+			}
 
 			// Reaching the lip finishes the climb rather than leaving the player
 			// stuck at the top holding a button with nothing left to climb.
@@ -602,12 +830,17 @@ FDCCAttackResult ADCCCharacterBase::PerformAttack(ADCCCharacterBase* Target, boo
 	{
 		TargetStats->ApplyDamage(Result.Damage);
 
-		// Checked immediately after the damage lands, which is the only moment
-		// this character can be credited with the kill - ApplyDamage does not
-		// report who dealt it, so attribution has to happen here.
-		if (!TargetStats->IsAlive() && EmoteChanceOnKill > 0.0f && !EmoteAnimations.IsEmpty())
+		UDCCAchievementComponent::RecordFor(this, EDCCAchievementStat::DamageDealt, Result.Damage);
+		UDCCAchievementComponent::RecordFor(Target, EDCCAchievementStat::DamageTaken, Result.Damage);
+
+		// Everything below is credited immediately after the damage lands, which is
+		// the only moment this character can be tied to the kill - ApplyDamage does
+		// not report who dealt it, so attribution has to happen here.
+		if (!TargetStats->IsAlive())
 		{
-			if (FMath::FRand() <= EmoteChanceOnKill)
+			AwardKillExperience(Target);
+
+			if (EmoteChanceOnKill > 0.0f && !EmoteAnimations.IsEmpty() && FMath::FRand() <= EmoteChanceOnKill)
 			{
 				Multicast_PlayEmote();
 			}
@@ -648,6 +881,55 @@ FDCCAttackResult ADCCCharacterBase::PerformAttack(ADCCCharacterBase* Target, boo
 	Multicast_PlayAttack(Target, Result.bHit);
 
 	return Result;
+}
+
+void ADCCCharacterBase::AwardKillExperience(ADCCCharacterBase* Victim)
+{
+	if (!HasAuthority() || !Victim || !Stats || !Victim->Stats)
+	{
+		return;
+	}
+
+	UDCCAchievementComponent::RecordFor(this, EDCCAchievementStat::Kills);
+
+	UDCCRuleset* Ruleset = Stats->GetRuleset();
+	if (!Ruleset)
+	{
+		return;
+	}
+
+	const int32 Gained = Ruleset->GetExperienceForKill(Victim->Stats->Level, Stats->Level);
+	if (Gained <= 0)
+	{
+		return;
+	}
+
+	const int32 LevelBefore = Stats->Level;
+	Stats->AddExperience(Gained);
+
+	ADCCGameState::Log(this, EDCCLogCategory::Experience, FText::Format(
+		NSLOCTEXT("DCC", "LogKillXP", "{0} banks {1} XP. The sponsors noticed."),
+		FText::FromString(GetActorNameOrLabel()), FText::AsNumber(Gained)));
+
+	if (Stats->Level > LevelBefore)
+	{
+		AnnounceLevelUp(LevelBefore);
+	}
+}
+
+void ADCCCharacterBase::AnnounceLevelUp(int32 PreviousLevel)
+{
+	if (!Stats)
+	{
+		return;
+	}
+
+	UDCCAchievementComponent::RecordFor(this, EDCCAchievementStat::LevelsGained,
+		Stats->Level - PreviousLevel);
+
+	ADCCGameState::Log(this, EDCCLogCategory::Experience, FText::Format(
+		NSLOCTEXT("DCC", "LogLevelUp", "{0} reaches level {1}. Contract terms improve accordingly."),
+		FText::FromString(GetActorNameOrLabel()), FText::AsNumber(Stats->Level)));
 }
 
 void ADCCCharacterBase::PawnClientRestart()
@@ -962,6 +1244,21 @@ void ADCCCharacterBase::Tick(float DeltaSeconds)
 	{
 		TickStamina(DeltaSeconds);
 	}
+
+	// The nameplate is billboarded here rather than through a rotating component,
+	// because it only ever needs to face whoever is looking at this machine - the
+	// server's idea of "towards the camera" is meaningless.
+	if (Nameplate && Nameplate->IsVisible())
+	{
+		if (const APlayerController* PC = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr)
+		{
+			FVector ViewLocation;
+			FRotator ViewRotation;
+			PC->GetPlayerViewPoint(ViewLocation, ViewRotation);
+
+			Nameplate->SetWorldRotation((Nameplate->GetComponentLocation() - ViewLocation).Rotation());
+		}
+	}
 }
 
 void ADCCCharacterBase::PlayClimbAnimation(float DurationSeconds)
@@ -996,6 +1293,13 @@ void ADCCCharacterBase::HandleDied(UDCCStatsComponent* InStats)
 		return;
 	}
 	bHasDied = true;
+
+	// The nameplate outlives the character otherwise, hanging in the air over a
+	// ragdoll and still cheerfully reading "ALLY".
+	if (Nameplate)
+	{
+		Nameplate->SetVisibility(false);
+	}
 
 	if (UCapsuleComponent* Capsule = GetCapsuleComponent())
 	{
@@ -1041,6 +1345,8 @@ void ADCCCharacterBase::HandleDied(UDCCStatsComponent* InStats)
 			: FText::Format(
 				NSLOCTEXT("DCC", "LogMobDown", "{0} has been retired."),
 				FText::FromString(GetName())));
+
+		UDCCAchievementComponent::RecordFor(this, EDCCAchievementStat::Deaths);
 
 		DetachFromControllerPendingDestroy();
 
