@@ -3,7 +3,23 @@
 Editor-side wiring that the compiled C++ is waiting on. Nothing here needs another
 build — every item is data set through the editor or over MCP.
 
-## 0. The build itself — DONE (2026-08-14)
+## 0a. ONE BUILD IS OUTSTANDING (2026-08-15)
+
+The **quest system** is written and committed but **never compiled** — the editor
+was open and holds the Live Coding lock, which blocks every target, not just the
+editor one. Close the editor and run the command in §0 below. Do not use Live
+Coding for it: it adds new `UCLASS`/`USTRUCT`/`UENUM` types.
+
+Everything before the quest system *is* compiled and working.
+
+## 0b. MCP needs re-authorising
+
+The `unreal-mcp` connection expired mid-session (`token expired`), which is why
+the asset-gallery level and the wiring in §8 are not done — none of it can be
+driven without the editor connection. Re-auth in an interactive session, then
+the remaining work is quick.
+
+## 0. The build itself — DONE for everything except the quest system
 
 Both batches are compiled and committed: the pickups/skill-rank/five-stat/NPC-casting
 batch, and the climbing/sprint batch on top of it. `Build.bat DungeonCrawlerDenverEditor`
@@ -115,7 +131,67 @@ is the only climb-ish clip in the set and only exists for the DiceWinged skeleto
 template player character has none, so a player will climb in their idle pose until a
 clip is imported. Everything still works; it just looks wrong.
 
-## 8. Verify
+## 8. Quests, achievements and the asset gallery (editor work, after the build)
+
+### 8a. Import the two tables
+
+| File | Import as | Row struct |
+|---|---|---|
+| `Docs/DT_DCCAchievements.csv` | `/Game/DCC/Progression/DT_DCCAchievements` | `DCCAchievementDef` |
+| `Docs/DT_DCCQuests.json` | `/Game/DCC/Quests/DT_DCCQuests` | `DCCQuestDef` |
+
+Quests are **JSON, not CSV**, on purpose — a quest's `Objectives` is an array of
+structs and the CSV row format cannot express one.
+
+Then assign them:
+- `DT_DCCAchievements` → the `Achievements` component on each crawler Blueprint
+- `DT_DCCQuests` → the `Quests` component on `ADCCGameState`
+
+Without those two assignments both systems are inert. They fail quiet, not loud:
+no table means no rows means nothing ever fires.
+
+### 8b. Place the quest markers
+
+`ADCCQuestMarker` actors, one per `ReachLocation` objective. The starter
+questline needs exactly two:
+
+| `ObjectiveTag` | `MarkerLabel` | Where |
+|---|---|---|
+| `Orientation` | `ORIENTATION` | Room 01 floor, near the west doorway (~x 5400, y 0, z 0) |
+| `EastLedge` | `THE LEDGE` | On the climb ledge (~x 6700, y 0, z 400) |
+
+Give `Beacon` a mesh — `/Game/LevelPrototyping/Meshes/SM_Cube` scaled tall and
+thin works, ideally with an emissive material. A marker with no beacon mesh still
+functions; it is just invisible, which defeats the point.
+
+Markers hide themselves whenever no active objective carries their tag, so the
+level can be pre-populated with every marker a floor will ever need.
+
+### 8c. Remaining wiring
+
+- Clear `HUDWidgetClass` on the player Blueprint, or the old broken UMG HP bar
+  draws on top of the working Canvas one.
+- `FistBumpAnimation` on each character BP — the `AgreeGesture` clips are closest.
+- `ClimbAnimation` — only `A_DW_ClimbStairs` exists, DiceWinged skeleton only.
+
+### 8d. The asset-gallery level (not started)
+
+Blocked on the MCP re-auth, not on anything else. The plan:
+
+1. New empty level at `/Game/DCC/Maps/Lvl_AssetGallery` — **not** a duplicate of
+   a pack showcase map (that approach was rejected and should not be retried).
+2. A flat prototyping floor, one `DirectionalLight`, one `SkyAtmosphere`, one
+   `PlayerStart`.
+3. Meshes laid out in labelled rows, one row per Fab pack, spaced by measured
+   bounds rather than guessed ones — `Ice_Station`'s "floor module" is 55x58
+   **metres** and `Evil_planet/SM_large_module_01` is 38,500 units wide.
+4. A `UTextRenderComponent` sign per row naming the pack, so the row can be
+   identified without hunting through the outliner.
+
+Enumerate packs with `AssetTools.list_folders("/Game")` rather than trusting any
+written list — packs get added between sessions.
+
+## 9. Verify
 
 - `P` pauses; queued actions resolve in initiative order
 - `E` picks up a crate, `R` throws it; a strong character throws further
@@ -125,3 +201,8 @@ clip is imported. Everything still works; it just looks wrong.
 - Hold Shift → sprint; the stamina bar appears and drains, and refuses at empty
 - Tab → `[1]` arms Climbing → click a rock face → `Y` → hold LMB to rise, RMB to
   descend, Space to let go. Running the pool dry mid-face drops you.
+- Nameplates: red on mobs, pale blue `ALLY`, green `FRIEND` after a fist bump
+- Click a living ally at close range → both turn and animate → they go green
+- Take a killing blow → the HP bar sits visibly at empty under **GAME OVER**
+- The objective tracker fills the top right and the first quest auto-starts;
+  walking into the `Orientation` marker completes it and chains to the next

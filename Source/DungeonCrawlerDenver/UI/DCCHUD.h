@@ -62,6 +62,15 @@ protected:
 	void DrawMeter(float X, float Y, float Width, float Height, float Fraction,
 		const FLinearColor& Fill, const FString& Label);
 
+	/**
+	 * Always-on objective tracker, top right.
+	 *
+	 * Deliberately opposite the feed rather than inside the Tab menu: a goal you
+	 * have to open a menu to remember is a goal the party forgets. It draws over
+	 * the world because that is the price of it being useful.
+	 */
+	void DrawQuestTracker();
+
 	/** Panel sections. Each returns the Y it finished at, so they stack. */
 	float DrawStats(float X, float Y, ADCCCharacterBase* Crawler);
 	float DrawSkills(float X, float Y, ADCCCharacterBase* Crawler);

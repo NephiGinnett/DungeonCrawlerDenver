@@ -4,6 +4,7 @@
 #include "Characters/DCCCharacterBase.h"
 #include "Stats/DCCStatsComponent.h"
 #include "Stats/DCCRuleset.h"
+#include "Quests/DCCQuestComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "EngineUtils.h"
@@ -135,6 +136,11 @@ void UDCCCarryComponent::DoPickup(ADCCPickup* Pickup)
 
 	CarriedPickup = Pickup;
 	Pickup->OnPickedUp(GetOwningCharacter());
+
+	// Reported by class so a quest can ask for a particular prop - "recover the
+	// generator core" - while an empty TargetId counts anything liftable.
+	UDCCQuestComponent::NotifyEvent(this, EDCCObjectiveType::Collect,
+		Pickup->GetClass() ? Pickup->GetClass()->GetFName() : NAME_None);
 
 	ApplyAttachment();
 	OnCarryChanged.Broadcast(this, Pickup);

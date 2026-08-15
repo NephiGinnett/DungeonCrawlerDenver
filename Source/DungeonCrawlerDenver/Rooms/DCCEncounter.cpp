@@ -6,6 +6,7 @@
 #include "Skills/DCCSkillComponent.h"
 #include "Stats/DCCRuleset.h"
 #include "Progression/DCCAchievementComponent.h"
+#include "Quests/DCCQuestComponent.h"
 #include "Combat/DCCGameState.h"
 #include "UI/DCCEventLogTypes.h"
 #include "Components/SceneComponent.h"
@@ -324,6 +325,16 @@ void ADCCEncounter::AwardClearExperience()
 	ADCCGameState::Log(this, EDCCLogCategory::Experience, FText::Format(
 		NSLOCTEXT("DCC", "LogClearXP", "Clear bonus paid to {0} survivor(s)."),
 		FText::AsNumber(Survivors.Num())));
+
+	// Reported by actor name so a quest can name a specific room, while an
+	// objective with no TargetId counts any encounter anywhere.
+	UDCCQuestComponent::NotifyEvent(this, EDCCObjectiveType::ClearEncounter, GetFName());
+
+	if (bFloorCleared)
+	{
+		UDCCQuestComponent::NotifyEvent(this, EDCCObjectiveType::ClearFloor,
+			FName(*FString::FromInt(FloorNumber)));
+	}
 
 	if (bFloorCleared)
 	{

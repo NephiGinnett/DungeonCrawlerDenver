@@ -1,0 +1,121 @@
+[
+	{
+		"Name": "Orientation",
+		"QuestId": "Orientation",
+		"Title": "Orientation",
+		"Summary": "Reach the marked point. Management insists this counts as training.",
+		"StartAnnouncement": "Welcome to Floor One. Your orientation consists of walking somewhere. We have marked it, because the last group could not manage it unmarked.",
+		"CompletionAnnouncement": "Orientation complete. You walked to a place. The bar was low and you cleared it. Barely.",
+		"Objectives": [
+			{
+				"Description": "Reach the orientation point",
+				"Type": "ReachLocation",
+				"TargetId": "Orientation",
+				"RequiredCount": 1,
+				"bHidden": false
+			}
+		],
+		"ExperienceReward": 100,
+		"FavorReward": 10,
+		"NextQuestId": "MakeFriends",
+		"bAutoStart": true
+	},
+	{
+		"Name": "MakeFriends",
+		"QuestId": "MakeFriends",
+		"Title": "Making Friends",
+		"Summary": "Fist-bump an ally. The audience likes this more than the violence.",
+		"StartAnnouncement": "Our data shows viewers respond to camaraderie at four times the rate of dismemberment. Go and bump a fist. This is not optional, it is content.",
+		"CompletionAnnouncement": "Alliance logged. Somewhere a graph went up and a producer got a bonus. Not you. A producer.",
+		"Objectives": [
+			{
+				"Description": "Fist-bump an ally",
+				"Type": "Befriend",
+				"TargetId": "None",
+				"RequiredCount": 1,
+				"bHidden": false
+			}
+		],
+		"ExperienceReward": 150,
+		"FavorReward": 25,
+		"NextQuestId": "ClearTheRoom",
+		"bAutoStart": false
+	},
+	{
+		"Name": "ClearTheRoom",
+		"QuestId": "ClearTheRoom",
+		"Title": "Clear the Room",
+		"Summary": "Clear the encounter. Everything in it wants the same slot you do.",
+		"StartAnnouncement": "There is a room. There are things in the room. Only one of those facts is negotiable, and it is not the room.",
+		"CompletionAnnouncement": "Room cleared. Housekeeping has been notified and has, once again, declined to attend.",
+		"Objectives": [
+			{
+				"Description": "Clear an encounter",
+				"Type": "ClearEncounter",
+				"TargetId": "None",
+				"RequiredCount": 1,
+				"bHidden": false
+			},
+			{
+				"Description": "Put down three of them",
+				"Type": "Kill",
+				"TargetId": "None",
+				"RequiredCount": 3,
+				"bHidden": false
+			}
+		],
+		"ExperienceReward": 300,
+		"FavorReward": 20,
+		"NextQuestId": "GoUp",
+		"bAutoStart": false
+	},
+	{
+		"Name": "GoUp",
+		"QuestId": "GoUp",
+		"Title": "Higher Ground",
+		"Summary": "Climb the wall to the ledge. Ten metres will do it.",
+		"StartAnnouncement": "There is a wall. Above the wall there is a ledge. Between them there is only your Constitution score and your optimism. We are broadcasting either way.",
+		"CompletionAnnouncement": "You are on the ledge. The view is not better. Nothing down here has a better view. But you climbed, and that is measurable.",
+		"Objectives": [
+			{
+				"Description": "Climb ten metres",
+				"Type": "Climb",
+				"TargetId": "None",
+				"RequiredCount": 10,
+				"bHidden": false
+			},
+			{
+				"Description": "Reach the east ledge",
+				"Type": "ReachLocation",
+				"TargetId": "EastLedge",
+				"RequiredCount": 1,
+				"bHidden": false
+			}
+		],
+		"ExperienceReward": 400,
+		"FavorReward": 30,
+		"NextQuestId": "FloorOne",
+		"bAutoStart": false
+	},
+	{
+		"Name": "FloorOne",
+		"QuestId": "FloorOne",
+		"Title": "Floor One",
+		"Summary": "Clear every encounter on Floor One.",
+		"StartAnnouncement": "All remaining encounters on this floor are now your responsibility. Production has scheduled the celebration regardless of outcome.",
+		"CompletionAnnouncement": "Floor One is clear. Your contract advances to the next tier automatically and without your consent. Congratulations.",
+		"Objectives": [
+			{
+				"Description": "Clear every encounter on the floor",
+				"Type": "ClearFloor",
+				"TargetId": "None",
+				"RequiredCount": 1,
+				"bHidden": false
+			}
+		],
+		"ExperienceReward": 800,
+		"FavorReward": 60,
+		"NextQuestId": "None",
+		"bAutoStart": false
+	}
+]

@@ -12,6 +12,7 @@
 #include "UI/DCCHUD.h"
 #include "Rooms/DCCClimbPoint.h"
 #include "Progression/DCCAchievementComponent.h"
+#include "Quests/DCCQuestComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "Animation/AnimSequenceBase.h"
 #include "Net/UnrealNetwork.h"
@@ -405,6 +406,8 @@ void ADCCCharacterBase::Server_FistBump_Implementation(ADCCCharacterBase* Target
 	Target->OnRep_Befriended();
 
 	UDCCAchievementComponent::RecordFor(this, EDCCAchievementStat::FistBumps);
+	UDCCQuestComponent::NotifyEvent(this, EDCCObjectiveType::Befriend,
+		Target->GetClass() ? Target->GetClass()->GetFName() : NAME_None);
 
 	Multicast_PlayFistBump(Target);
 	Target->Multicast_PlayFistBump(this);
@@ -683,6 +686,8 @@ void ADCCCharacterBase::TickStamina(float DeltaSeconds)
 				const int32 WholeMetres = FMath::FloorToInt32(ClimbDistanceAccumulator / 100.0f);
 
 				UDCCAchievementComponent::RecordFor(this, EDCCAchievementStat::MetresClimbed, WholeMetres);
+				UDCCQuestComponent::NotifyEvent(this, EDCCObjectiveType::Climb, NAME_None, WholeMetres);
+
 				ClimbDistanceAccumulator -= WholeMetres * 100.0f;
 			}
 
@@ -891,6 +896,12 @@ void ADCCCharacterBase::AwardKillExperience(ADCCCharacterBase* Victim)
 	}
 
 	UDCCAchievementComponent::RecordFor(this, EDCCAchievementStat::Kills);
+
+	// Reported by class name so a quest can ask for a specific kind of enemy -
+	// "put down three Brutes" - while an objective with an empty TargetId still
+	// counts anything at all.
+	UDCCQuestComponent::NotifyEvent(this, EDCCObjectiveType::Kill,
+		Victim->GetClass() ? Victim->GetClass()->GetFName() : NAME_None);
 
 	UDCCRuleset* Ruleset = Stats->GetRuleset();
 	if (!Ruleset)

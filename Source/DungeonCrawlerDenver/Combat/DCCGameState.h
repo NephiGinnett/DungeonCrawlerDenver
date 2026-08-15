@@ -7,6 +7,7 @@
 
 class ADCCCharacterBase;
 class ADCCGameState;
+class UDCCQuestComponent;
 
 /**
  * One character's intent, parked until the world resumes.
@@ -67,6 +68,10 @@ public:
 	ADCCGameState();
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	/** The party's shared quest log. Assign its QuestTable to give the game goals. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "DCC|Quests")
+	TObjectPtr<UDCCQuestComponent> Quests;
 
 	UFUNCTION(BlueprintPure, Category = "Combat")
 	bool IsCombatPaused() const { return bCombatPaused; }

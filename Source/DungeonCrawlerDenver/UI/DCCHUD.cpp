@@ -8,6 +8,8 @@
 #include "Items/DCCCarryComponent.h"
 #include "Items/DCCPickup.h"
 #include "Progression/DCCAchievementComponent.h"
+#include "Quests/DCCQuestComponent.h"
+#include "Quests/DCCQuestMarker.h"
 #include "Combat/DCCGameState.h"
 #include "Rooms/DCCClimbPoint.h"
 #include "Engine/Canvas.h"
@@ -57,6 +59,7 @@ void ADCCHUD::DrawHUD()
 		return;
 	}
 
+	DrawQuestTracker();
 	DrawInteractionPrompt(Crawler);
 	DrawStaminaBar(Crawler);
 
@@ -85,6 +88,120 @@ void ADCCHUD::DrawHUD()
 	Y = DrawInventory(X, Y, Crawler);
 	Y += SectionGap;
 	Y = DrawAchievements(X, Y, Crawler);
+}
+
+void ADCCHUD::DrawQuestTracker()
+{
+	const UDCCQuestComponent* QuestLog = UDCCQuestComponent::Get(this);
+	if (!QuestLog)
+	{
+		return;
+	}
+
+	TArray<FDCCQuestDef> Active;
+	QuestLog->GetActiveQuests(Active);
+
+	if (Active.IsEmpty())
+	{
+		return;
+	}
+
+	constexpr float PanelW = 340.0f;
+
+	const float X = Canvas->SizeX - PanelW - 24.0f;
+	float Y = 28.0f;
+
+	// Measured before drawing so the backing panel is exactly as tall as the
+	// content. A fixed-height panel either clips objectives or leaves a slab of
+	// dead black over the play area.
+	int32 Lines = 0;
+	for (const FDCCQuestDef& Quest : Active)
+	{
+		++Lines;
+		for (const FDCCQuestObjective& Objective : Quest.Objectives)
+		{
+			Lines += Objective.bHidden ? 0 : 1;
+		}
+	}
+
+	DrawRect(FLinearColor(0.02f, 0.03f, 0.06f, 0.72f),
+		X - 12.0f, Y - 10.0f, PanelW + 24.0f, (Lines + 1) * LineHeight + 24.0f);
+
+	DrawText(TEXT("OBJECTIVES"), HeadingColour, X, Y);
+	Y += LineHeight + 4.0f;
+
+	for (const FDCCQuestDef& Quest : Active)
+	{
+		DrawText(Quest.Title.ToString(), HeadingColour, X, Y);
+		Y += LineHeight;
+
+		const FDCCQuestState* State = QuestLog->FindState(Quest.QuestId);
+
+		for (int32 Index = 0; Index < Quest.Objectives.Num(); ++Index)
+		{
+			const FDCCQuestObjective& Objective = Quest.Objectives[Index];
+			if (Objective.bHidden)
+			{
+				continue;
+			}
+
+			const bool bComplete = State && State->Objectives.IsValidIndex(Index)
+				&& State->Objectives[Index].bComplete;
+
+			const int32 Count = State && State->Objectives.IsValidIndex(Index)
+				? State->Objectives[Index].Count : 0;
+
+			// The count is only shown when there is more than one to do. "Reach
+			// the ledge  0/1" is noise; "Kill interns  3/5" is the whole point.
+			const FString Line = Objective.RequiredCount > 1
+				? FString::Printf(TEXT("  %s %s  %d/%d"),
+					bComplete ? TEXT("[X]") : TEXT("[ ]"),
+					*Objective.Description.ToString(),
+					FMath::Min(Count, Objective.RequiredCount), Objective.RequiredCount)
+				: FString::Printf(TEXT("  %s %s"),
+					bComplete ? TEXT("[X]") : TEXT("[ ]"),
+					*Objective.Description.ToString());
+
+			DrawText(Line, bComplete ? DimColour : BodyColour, X, Y);
+			Y += LineHeight;
+		}
+	}
+
+	// Distance to the nearest live marker, so "go there" has a direction even
+	// before the beacon is on screen.
+	const ADCCCharacterBase* Crawler = GetOwningCrawler();
+	if (!Crawler || !GetWorld())
+	{
+		return;
+	}
+
+	float NearestDistance = TNumericLimits<float>::Max();
+	FText NearestLabel;
+
+	for (TActorIterator<ADCCQuestMarker> It(GetWorld()); It; ++It)
+	{
+		const ADCCQuestMarker* Marker = *It;
+		if (!Marker || !Marker->IsMarkerActive())
+		{
+			continue;
+		}
+
+		const float Distance = FVector::Dist(Crawler->GetActorLocation(), Marker->GetGoalLocation());
+		if (Distance < NearestDistance)
+		{
+			NearestDistance = Distance;
+			NearestLabel = Marker->MarkerLabel;
+		}
+	}
+
+	if (NearestDistance < TNumericLimits<float>::Max())
+	{
+		Y += 4.0f;
+
+		// Metres, not centimetres. Nobody has ever wanted to read "4820 uu".
+		DrawText(FString::Printf(TEXT("  -> %s  (%.0f m)"),
+			*NearestLabel.ToString(), NearestDistance / 100.0f), HeadingColour, X, Y);
+	}
 }
 
 void ADCCHUD::DrawMeter(float X, float Y, float Width, float Height, float Fraction,

@@ -1,5 +1,7 @@
 #include "Combat/DCCGameState.h"
 
+#include "Quests/DCCQuestComponent.h"
+
 #include "Characters/DCCCharacterBase.h"
 #include "Skills/DCCSkillComponent.h"
 #include "GameFramework/WorldSettings.h"
@@ -9,6 +11,11 @@
 ADCCGameState::ADCCGameState()
 {
 	PrimaryActorTick.bCanEverTick = false;
+
+	// The quest log lives here rather than on a character because quests are
+	// party-wide: five crawlers in one dungeon share one objective list, and a
+	// per-player log would show the same objective at four different counts.
+	Quests = CreateDefaultSubobject<UDCCQuestComponent>(TEXT("Quests"));
 }
 
 void ADCCGameState::AddLogEntry(EDCCLogCategory Category, const FText& Text)
