@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameStateBase.h"
+#include "UI/DCCEventLogTypes.h"
 #include "DCCGameState.generated.h"
 
 class ADCCCharacterBase;
@@ -42,6 +43,7 @@ struct FDCCQueuedAction
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDCCCombatPauseChanged, ADCCGameState*, GameState, bool, bPaused);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDCCActionsResolved, int32, NumResolved);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDCCEventLogged, const FDCCEventLogEntry&, Entry);
 
 /**
  * Match-wide combat state: the real-time-with-pause loop.
@@ -102,6 +104,45 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Combat")
 	FDCCActionsResolved OnActionsResolved;
 
+	// -------------------------------------------------------------------------
+	// EVENT FEED
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Server only. Appends a line to the shared feed.
+	 *
+	 * Safe to call from anywhere on the server; it no-ops on clients rather than
+	 * asserting, because the call sites are ordinary gameplay code that should not
+	 * have to check authority before narrating something.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Log")
+	void AddLogEntry(EDCCLogCategory Category, const FText& Text);
+
+	/**
+	 * Convenience for gameplay code: finds the GameState and logs in one call,
+	 * tolerating a null world or a GameState of the wrong class.
+	 *
+	 * Exists so that call sites in characters, skills and encounters stay a single
+	 * readable line instead of four lines of lookup and null-checking each time.
+	 */
+	static void Log(const UObject* WorldContext, EDCCLogCategory Category, const FText& Text);
+
+	UFUNCTION(BlueprintPure, Category = "Log")
+	const TArray<FDCCEventLogEntry>& GetEventLog() const { return EventLog; }
+
+	/** Fires on the server and on every client as entries arrive. */
+	UPROPERTY(BlueprintAssignable, Category = "Log")
+	FDCCEventLogged OnEventLogged;
+
+	/**
+	 * Longest the feed grows before the oldest lines are dropped.
+	 *
+	 * Capped because the whole array replicates on change: unbounded history would
+	 * mean an ever-growing payload for a HUD that only ever shows the last few.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Log", meta = (ClampMin = "1"))
+	int32 MaxLogEntries = 50;
+
 	/**
 	 * How far time is slowed while paused. Not zero by default: a hard stop
 	 * looks like a crash and upsets systems that divide by delta time, whereas a
@@ -122,8 +163,18 @@ protected:
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Combat")
 	TArray<FDCCQueuedAction> QueuedActions;
 
+	/**
+	 * The feed. Replicated as a whole array so a client joining mid-fight gets the
+	 * recent history rather than starting blank.
+	 */
+	UPROPERTY(ReplicatedUsing = OnRep_EventLog, BlueprintReadOnly, Category = "Log")
+	TArray<FDCCEventLogEntry> EventLog;
+
 	UFUNCTION()
 	void OnRep_CombatPaused();
+
+	UFUNCTION()
+	void OnRep_EventLog();
 
 	/** Server only. Runs every queued action in initiative order, then clears. */
 	void ResolveQueuedActions();
@@ -132,4 +183,13 @@ protected:
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Combat", meta = (DisplayName = "On Combat Pause Changed"))
 	void BP_OnCombatPauseChanged(bool bPaused);
+
+private:
+	/**
+	 * How many entries this machine has already announced.
+	 *
+	 * OnRep hands over the whole array, not the delta, so without this a client
+	 * would re-broadcast every historical line each time one new entry arrived.
+	 */
+	int32 LastAnnouncedEntryCount = 0;
 };

@@ -6,6 +6,8 @@
 #include "Combat/DCCGameState.h"
 #include "Favor/DCCFavorComponent.h"
 #include "Items/DCCCarryComponent.h"
+#include "UI/DCCFloatingText.h"
+#include "UI/DCCEventLogTypes.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -38,12 +40,30 @@ void ADCCCharacterBase::BeginPlay()
 		// Bound on every machine: the server reaches this through ApplyDamage,
 		// clients through OnRep. Both sides want the cosmetic death.
 		Stats->OnDied.AddDynamic(this, &ADCCCharacterBase::HandleDied);
+
+		Stats->OnHealthChanged.AddDynamic(this, &ADCCCharacterBase::HandleHealthChangedForTicker);
 	}
 
 	// Applied on every machine rather than replicated: MaxWalkSpeed is an input to
 	// client-side movement prediction, so each machine deriving the same value
 	// from the already-replicated ability scores keeps prediction in agreement.
 	ApplyDerivedMovementSpeed();
+}
+
+void ADCCCharacterBase::HandleHealthChangedForTicker(UDCCStatsComponent* InStats, int32 NewHitPoints, int32 Delta)
+{
+	if (Delta == 0)
+	{
+		return;
+	}
+
+	// Spawned at head height rather than the actor origin, which sits at the feet
+	// on a Character - a number appearing at the ankles reads as belonging to the
+	// floor rather than to the character.
+	const float HalfHeight = GetCapsuleComponent() ? GetCapsuleComponent()->GetScaledCapsuleHalfHeight() : 90.0f;
+	const FVector SpawnLocation = GetActorLocation() + FVector(0.0f, 0.0f, HalfHeight + 30.0f);
+
+	ADCCFloatingText::Spawn(this, SpawnLocation, Delta, IsCrawler());
 }
 
 void ADCCCharacterBase::ApplyDerivedMovementSpeed()
@@ -159,6 +179,37 @@ FDCCAttackResult ADCCCharacterBase::PerformAttack(ADCCCharacterBase* Target, boo
 	if (Result.bHit)
 	{
 		TargetStats->ApplyDamage(Result.Damage);
+	}
+
+	// Narrate what the dice already decided. Per the tone bible the System AI is a
+	// commentator, never a referee - so this restates the resolved outcome and
+	// never influences it.
+	{
+		const FText AttackerName = FText::FromString(GetName());
+		const FText TargetName = FText::FromString(Target->GetName());
+
+		FText Line;
+		if (Result.Check.bCriticalSuccess)
+		{
+			Line = FText::Format(
+				NSLOCTEXT("DCC", "LogCrit", "{0} crits {1} for {2}. Chat is going to replay that one."),
+				AttackerName, TargetName, FText::AsNumber(Result.Damage));
+		}
+		else if (Result.bHit)
+		{
+			Line = FText::Format(
+				NSLOCTEXT("DCC", "LogHit", "{0} hits {1} for {2}."),
+				AttackerName, TargetName, FText::AsNumber(Result.Damage));
+		}
+		else
+		{
+			Line = FText::Format(
+				NSLOCTEXT("DCC", "LogMiss", "{0} misses {1}. Rolled {2} against {3}."),
+				AttackerName, TargetName,
+				FText::AsNumber(Result.Check.Total), FText::AsNumber(Result.Check.DifficultyClass));
+		}
+
+		ADCCGameState::Log(this, EDCCLogCategory::Combat, Line);
 	}
 
 	Multicast_PlayAttack(Target, Result.bHit);
@@ -340,6 +391,17 @@ void ADCCCharacterBase::HandleDied(UDCCStatsComponent* InStats)
 	// corpse, and stops a dead player from steering it.
 	if (HasAuthority())
 	{
+		// A crawler going down is a bigger beat than a mob dying, and the tone
+		// bible is explicit that the AI gets more corporate rather than warmer
+		// when something actually matters.
+		ADCCGameState::Log(this, EDCCLogCategory::Death, IsCrawler()
+			? FText::Format(
+				NSLOCTEXT("DCC", "LogCrawlerDown", "{0} is down. Our thoughts are with their sponsors."),
+				FText::FromString(GetName()))
+			: FText::Format(
+				NSLOCTEXT("DCC", "LogMobDown", "{0} has been retired."),
+				FText::FromString(GetName())));
+
 		DetachFromControllerPendingDestroy();
 
 		if (CorpseLifeSpan > 0.0f)

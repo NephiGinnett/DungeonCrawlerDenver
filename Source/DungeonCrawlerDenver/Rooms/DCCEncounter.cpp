@@ -4,6 +4,8 @@
 #include "Characters/DCCCharacterBase.h"
 #include "Stats/DCCStatsComponent.h"
 #include "Skills/DCCSkillComponent.h"
+#include "Combat/DCCGameState.h"
+#include "UI/DCCEventLogTypes.h"
 #include "Components/SceneComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Engine/World.h"
@@ -174,6 +176,10 @@ void ADCCEncounter::SetState(EDCCEncounterState NewState)
 	// already looking at the new Ranks.
 	if (HasAuthority() && NewState == EDCCEncounterState::Cleared)
 	{
+		ADCCGameState::Log(this, EDCCLogCategory::Encounter, FText::Format(
+			NSLOCTEXT("DCC", "LogCleared", "{0} cleared. Viewership was adequate."),
+			FText::FromString(GetName())));
+
 		AwardSkillAdvancement();
 	}
 

@@ -8,6 +8,8 @@
 #include "EngineUtils.h"
 #include "Net/UnrealNetwork.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Combat/DCCGameState.h"
+#include "UI/DCCEventLogTypes.h"
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraSystem.h"
 
@@ -181,6 +183,12 @@ int32 UDCCSkillComponent::RunSkillAdvancement()
 
 			OnSkillAdvanced.Broadcast(this, Known.SkillId, Known.Rank);
 			Multicast_SkillAdvanced(Known.SkillId, Known.Rank);
+
+			ADCCGameState::Log(this, EDCCLogCategory::Advancement, FText::Format(
+				NSLOCTEXT("DCC", "LogAdvance", "{0} is now Rank {1} in {2}. Growth is permitted."),
+				FText::FromString(GetNameSafe(GetOwner())),
+				FText::AsNumber(Known.Rank),
+				FText::FromName(Known.SkillId)));
 
 			UE_LOG(LogTemp, Log, TEXT("DCCSkill '%s' advanced to Rank %d for %s."),
 				*Known.SkillId.ToString(), Known.Rank, *GetNameSafe(GetOwner()));
@@ -636,6 +644,43 @@ FDCCSkillResult UDCCSkillComponent::ActivateSkillInternal(const FDCCSkillDef& Sk
 
 			BP_OnSkillEffect(Skill, AsActors);
 		}
+	}
+
+	{
+		const FText CasterName = FText::FromString(GetNameSafe(GetOwner()));
+		const FText SkillName = Skill.DisplayName.IsEmpty()
+			? FText::FromName(Skill.SkillId)
+			: Skill.DisplayName;
+
+		FText Line;
+		if (!bSucceeded)
+		{
+			// A failed cast still burned the mana, which is the whole reason a bad
+			// roll hurts - so the feed says so explicitly.
+			Line = FText::Format(
+				NSLOCTEXT("DCC", "LogSkillFail", "{0}'s {1} fizzles. {2} Mana, gone."),
+				CasterName, SkillName, FText::AsNumber(Result.ManaSpent));
+		}
+		else if (Result.TotalMagnitude > 0)
+		{
+			Line = FText::Format(
+				NSLOCTEXT("DCC", "LogSkillHit", "{0} lands {1} for {2}."),
+				CasterName, SkillName, FText::AsNumber(Result.TotalMagnitude));
+		}
+		else
+		{
+			Line = FText::Format(
+				NSLOCTEXT("DCC", "LogSkillUse", "{0} uses {1}."),
+				CasterName, SkillName);
+		}
+
+		if (Result.bWasUntrained)
+		{
+			Line = FText::Format(
+				NSLOCTEXT("DCC", "LogSkillUntrained", "{0} (untrained, and it showed)"), Line);
+		}
+
+		ADCCGameState::Log(this, EDCCLogCategory::Skill, Line);
 	}
 
 	OnSkillActivated.Broadcast(this, Result);

@@ -206,6 +206,16 @@ protected:
 	UFUNCTION()
 	virtual void HandleDied(UDCCStatsComponent* InStats);
 
+	/**
+	 * Spawns a floating damage or healing number over this character.
+	 *
+	 * Bound to the stats component's OnHealthChanged, which already fires on every
+	 * machine - the server through ApplyDamage and clients through OnRep - so each
+	 * machine produces its own local ticker and nothing is replicated.
+	 */
+	UFUNCTION()
+	void HandleHealthChangedForTicker(UDCCStatsComponent* InStats, int32 NewHitPoints, int32 Delta);
+
 	/** Cosmetic only - never gates or resolves anything. Hook animation here. */
 	UFUNCTION(NetMulticast, Unreliable)
 	void Multicast_PlayAttack(ADCCCharacterBase* Target, bool bHit);

@@ -11,12 +11,74 @@ ADCCGameState::ADCCGameState()
 	PrimaryActorTick.bCanEverTick = false;
 }
 
+void ADCCGameState::AddLogEntry(EDCCLogCategory Category, const FText& Text)
+{
+	// Clients simply ignore the call rather than warning. Narrating is something
+	// gameplay code does incidentally, and making every call site check authority
+	// first would add noise to a dozen places for no benefit.
+	if (!HasAuthority() || Text.IsEmpty())
+	{
+		return;
+	}
+
+	FDCCEventLogEntry Entry;
+	Entry.Category = Category;
+	Entry.Text = Text;
+	Entry.TimeSeconds = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
+
+	EventLog.Add(Entry);
+
+	// Oldest first out. RemoveAt on a small array is cheaper than the churn of a
+	// ring buffer, and keeps the array in display order for the HUD.
+	while (EventLog.Num() > FMath::Max(1, MaxLogEntries))
+	{
+		EventLog.RemoveAt(0);
+	}
+
+	LastAnnouncedEntryCount = EventLog.Num();
+
+	// The server never receives its own OnRep, so announce here.
+	OnEventLogged.Broadcast(Entry);
+
+	UE_LOG(LogTemp, Log, TEXT("DCCLog: %s"), *Entry.Text.ToString());
+}
+
+void ADCCGameState::Log(const UObject* WorldContext, EDCCLogCategory Category, const FText& Text)
+{
+	const UWorld* World = GEngine ? GEngine->GetWorldFromContextObject(WorldContext, EGetWorldErrorMode::ReturnNull) : nullptr;
+	if (!World)
+	{
+		return;
+	}
+
+	if (ADCCGameState* GameState = World->GetGameState<ADCCGameState>())
+	{
+		GameState->AddLogEntry(Category, Text);
+	}
+}
+
+void ADCCGameState::OnRep_EventLog()
+{
+	// Replication hands over the whole array, so announce only what is new since
+	// the last update. Entries dropped off the front would otherwise make the
+	// count go backwards and replay the entire history.
+	const int32 FirstNew = FMath::Clamp(LastAnnouncedEntryCount, 0, EventLog.Num());
+
+	for (int32 Index = FirstNew; Index < EventLog.Num(); ++Index)
+	{
+		OnEventLogged.Broadcast(EventLog[Index]);
+	}
+
+	LastAnnouncedEntryCount = EventLog.Num();
+}
+
 void ADCCGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(ADCCGameState, bCombatPaused);
 	DOREPLIFETIME(ADCCGameState, QueuedActions);
+	DOREPLIFETIME(ADCCGameState, EventLog);
 }
 
 void ADCCGameState::SetCombatPaused(bool bNewPaused)
