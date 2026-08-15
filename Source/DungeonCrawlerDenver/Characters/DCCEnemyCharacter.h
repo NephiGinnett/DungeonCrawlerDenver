@@ -56,6 +56,17 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|AI", meta = (ClampMin = "0.0"))
 	float SkillAttemptInterval = 2.5f;
 
+	/**
+	 * Seconds a caster stands still after casting, rooted in place.
+	 *
+	 * Casting on the move reads as nothing happening at all - the spell effect
+	 * slides along behind a running character and the moment is lost. Holding
+	 * still also gives the party a readable window: you can see who is casting
+	 * and go and interrupt them.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|AI", meta = (ClampMin = "0.0"))
+	float CastHoldSeconds = 1.5f;
+
 	UFUNCTION(BlueprintPure, Category = "DCC|AI")
 	ADCCCharacterBase* GetCurrentTarget() const { return CurrentTarget; }
 
@@ -110,4 +121,7 @@ private:
 
 	/** World seconds of the last skill attempt. Server-side only. */
 	float LastSkillAttemptTime = TNumericLimits<float>::Lowest();
+
+	/** World time until which this character is rooted mid-cast. */
+	float CastHoldUntilTime = 0.0f;
 };

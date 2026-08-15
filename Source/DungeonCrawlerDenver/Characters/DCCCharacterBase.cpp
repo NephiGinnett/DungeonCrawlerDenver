@@ -10,6 +10,8 @@
 #include "Items/DCCPickup.h"
 #include "UI/DCCFloatingText.h"
 #include "UI/DCCHUD.h"
+#include "Rooms/DCCClimbPoint.h"
+#include "Animation/AnimSequenceBase.h"
 #include "UI/DCCEventLogTypes.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
@@ -138,6 +140,52 @@ void ADCCCharacterBase::Server_StowCarried_Implementation()
 
 		UE_LOG(LogTemp, Log, TEXT("DCCCharacterBase: inventory full, %s dropped instead."),
 			*GetNameSafe(Held));
+	}
+}
+
+void ADCCCharacterBase::AttemptClimb()
+{
+	if (HasAuthority())
+	{
+		Server_AttemptClimb_Implementation();
+		return;
+	}
+
+	Server_AttemptClimb();
+}
+
+void ADCCCharacterBase::Server_AttemptClimb_Implementation()
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	// Nearest first, so standing between two climb points picks the obvious one
+	// rather than whichever the iterator happened to reach first.
+	ADCCClimbPoint* Best = nullptr;
+	float BestDistanceSquared = TNumericLimits<float>::Max();
+
+	for (TActorIterator<ADCCClimbPoint> It(World); It; ++It)
+	{
+		ADCCClimbPoint* Point = *It;
+		if (!Point || !Point->IsCharacterInRange(this))
+		{
+			continue;
+		}
+
+		const float DistanceSquared = FVector::DistSquared(GetActorLocation(), Point->GetActorLocation());
+		if (DistanceSquared < BestDistanceSquared)
+		{
+			BestDistanceSquared = DistanceSquared;
+			Best = Point;
+		}
+	}
+
+	if (Best)
+	{
+		Best->TryClimb(this);
 	}
 }
 
@@ -319,6 +367,10 @@ void ADCCCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	// universal convention for an inventory screen, so it costs no explaining.
 	PlayerInputComponent->BindKey(EKeys::F, IE_Pressed, this, &ADCCCharacterBase::AttemptStow);
 	PlayerInputComponent->BindKey(EKeys::Tab, IE_Pressed, this, &ADCCCharacterBase::ToggleCharacterMenu);
+
+	// G for climbing, kept off E so that standing at a climb point next to a
+	// crate does not make one key mean two different things.
+	PlayerInputComponent->BindKey(EKeys::G, IE_Pressed, this, &ADCCCharacterBase::AttemptClimb);
 }
 
 void ADCCCharacterBase::AttemptAttackNearest()
@@ -417,8 +469,76 @@ ADCCCharacterBase* ADCCCharacterBase::FindNearestHostileInRange() const
 	return Best;
 }
 
+void ADCCCharacterBase::PlayOneShotAnimation(UAnimationAsset* Animation, float OverrideDurationSeconds)
+{
+	USkeletalMeshComponent* MeshComponent = GetMesh();
+	if (!MeshComponent || !Animation)
+	{
+		return;
+	}
+
+	// Only meaningful in single-node mode. With an AnimBlueprint driving the mesh
+	// this call would be ignored anyway, so bail rather than fight it.
+	if (MeshComponent->GetAnimationMode() != EAnimationMode::AnimationSingleNode)
+	{
+		return;
+	}
+
+	MeshComponent->PlayAnimation(Animation, false);
+
+	float Duration = 1.0f;
+	if (const UAnimSequenceBase* Sequence = Cast<UAnimSequenceBase>(Animation))
+	{
+		Duration = FMath::Max(0.05f, Sequence->GetPlayLength());
+	}
+
+	// Squeeze or stretch the clip to fill a required window - a two second climb
+	// should not play a half second animation and then stand still.
+	if (OverrideDurationSeconds > 0.0f)
+	{
+		MeshComponent->SetPlayRate(Duration / OverrideDurationSeconds);
+		Duration = OverrideDurationSeconds;
+	}
+	else
+	{
+		MeshComponent->SetPlayRate(1.0f);
+	}
+
+	// Restore the loop afterwards. Without this the character freezes on the last
+	// frame of the swing, which looks far worse than never animating at all.
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(AnimationResetTimer);
+
+		if (LocomotionAnimation)
+		{
+			TWeakObjectPtr<ADCCCharacterBase> WeakThis(this);
+			World->GetTimerManager().SetTimer(AnimationResetTimer, [WeakThis]()
+			{
+				if (ADCCCharacterBase* Self = WeakThis.Get())
+				{
+					if (USkeletalMeshComponent* Mesh = Self->GetMesh())
+					{
+						Mesh->SetPlayRate(1.0f);
+						Mesh->PlayAnimation(Self->LocomotionAnimation, true);
+					}
+				}
+			}, Duration, false);
+		}
+	}
+}
+
+void ADCCCharacterBase::PlayClimbAnimation(float DurationSeconds)
+{
+	PlayOneShotAnimation(ClimbAnimation, DurationSeconds);
+}
+
 void ADCCCharacterBase::Multicast_PlayAttack_Implementation(ADCCCharacterBase* Target, bool bHit)
 {
+	// Runs on every machine, which is what finally makes swings visible: the
+	// attack itself resolves server-side, but the clip has to play locally.
+	PlayOneShotAnimation(AttackAnimation);
+
 	BP_OnAttackPerformed(Target, bHit);
 }
 
@@ -441,6 +561,25 @@ void ADCCCharacterBase::HandleDied(UDCCStatsComponent* InStats)
 	{
 		Movement->StopMovementImmediately();
 		Movement->DisableMovement();
+	}
+
+	// Ragdoll rather than a death animation. None of the imported characters ship
+	// one, and physics gives a different fall every time - which reads better
+	// than the same canned collapse on every mob in the room. Every skeletal mesh
+	// already has a physics asset from import, so this costs nothing extra.
+	if (USkeletalMeshComponent* MeshComponent = GetMesh())
+	{
+		// Detach from the capsule first: while attached, the capsule's transform
+		// keeps overriding the simulation and the body twitches in place instead
+		// of falling.
+		MeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		MeshComponent->SetCollisionObjectType(ECC_PhysicsBody);
+		MeshComponent->SetCollisionResponseToAllChannels(ECR_Block);
+		MeshComponent->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
+
+		MeshComponent->SetAllBodiesSimulatePhysics(true);
+		MeshComponent->SetSimulatePhysics(true);
+		MeshComponent->WakeAllRigidBodies();
 	}
 
 	// Detaching the controller stops AI from continuing to issue orders to a

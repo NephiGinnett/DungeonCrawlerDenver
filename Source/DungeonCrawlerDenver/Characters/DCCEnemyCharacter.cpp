@@ -146,6 +146,23 @@ bool ADCCEnemyCharacter::TryUseSkill(ADCCCharacterBase* Target)
 	}
 
 	LastSkillAttemptTime = World->GetTimeSeconds();
+	CastHoldUntilTime = World->GetTimeSeconds() + CastHoldSeconds;
+
+	// Rooted for the cast: stop dead now, and Tick refuses to move or re-path
+	// until the hold expires.
+	if (UCharacterMovementComponent* Movement = GetCharacterMovement())
+	{
+		Movement->StopMovementImmediately();
+	}
+
+	if (AAIController* AIController = Cast<AAIController>(GetController()))
+	{
+		AIController->StopMovement();
+	}
+	bIsChasing = false;
+
+	PlayOneShotAnimation(CastAnimation, CastHoldSeconds);
+
 	Skills->TryActivateSkill(BestSkillId, Target);
 
 	return true;
@@ -197,6 +214,18 @@ void ADCCEnemyCharacter::Tick(float DeltaSeconds)
 
 	if (!CurrentTarget)
 	{
+		return;
+	}
+
+	// Mid-cast: hold position. Facing still tracks the target so the spell does
+	// not fire off into empty space, but no movement is issued.
+	if (GetWorld()->GetTimeSeconds() < CastHoldUntilTime)
+	{
+		const FVector ToTargetHeld = CurrentTarget->GetActorLocation() - GetActorLocation();
+		if (!ToTargetHeld.IsNearlyZero())
+		{
+			SetActorRotation(FRotator(0.0f, ToTargetHeld.Rotation().Yaw, 0.0f));
+		}
 		return;
 	}
 

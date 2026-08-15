@@ -40,6 +40,12 @@ protected:
 	/** Returns the pawn this HUD describes, or null when not possessing one. */
 	ADCCCharacterBase* GetOwningCrawler() const;
 
+	/** Full-screen overlay shown once the local crawler is down. */
+	void DrawDeathScreen();
+
+	/** Prompt for the nearest climb point in range, or nothing. */
+	void DrawInteractionPrompt(ADCCCharacterBase* Crawler);
+
 	/** Panel sections. Each returns the Y it finished at, so they stack. */
 	float DrawStats(float X, float Y, ADCCCharacterBase* Crawler);
 	float DrawSkills(float X, float Y, ADCCCharacterBase* Crawler);

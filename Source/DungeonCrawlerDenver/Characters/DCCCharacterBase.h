@@ -106,6 +106,46 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Movement", meta = (ClampMin = "0.0"))
 	float BaseWalkSpeed = 500.0f;
 
+	// -------------------------------------------------------------------------
+	// ANIMATION
+	//
+	// These drive the AnimationSingleNode path, not an AnimBlueprint. The
+	// Meshy-imported skeletons have no AnimBP and authoring one per character
+	// over MCP is not practical, so one-shot clips are played directly on the
+	// mesh and the looping clip is restored afterwards. Leave any of them unset
+	// and that action simply keeps the loop playing.
+	// -------------------------------------------------------------------------
+
+	/** The looping clip to return to. Usually the run or idle cycle. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Animation")
+	TObjectPtr<UAnimationAsset> LocomotionAnimation;
+
+	/** Played once per swing. Without this, attacks are invisible. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Animation")
+	TObjectPtr<UAnimationAsset> AttackAnimation;
+
+	/** Played while ascending a climb point, time-scaled to the ascent. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Animation")
+	TObjectPtr<UAnimationAsset> ClimbAnimation;
+
+	/** Played once when casting, so a spell reads as deliberate. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Animation")
+	TObjectPtr<UAnimationAsset> CastAnimation;
+
+	/**
+	 * Plays a clip once and returns to LocomotionAnimation afterwards.
+	 *
+	 * Cosmetic only and safe to call anywhere; it no-ops without a mesh or a
+	 * clip. RateScale squeezes the clip into a known duration, which is what lets
+	 * a fixed-length climb animation match an authored ascent time.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DCC|Animation")
+	void PlayOneShotAnimation(UAnimationAsset* Animation, float OverrideDurationSeconds = 0.0f);
+
+	/** Convenience wrapper used by the climb point. */
+	UFUNCTION(BlueprintCallable, Category = "DCC|Animation")
+	void PlayClimbAnimation(float DurationSeconds);
+
 	UFUNCTION(BlueprintPure, Category = "DCC")
 	bool IsAlive() const;
 
@@ -139,6 +179,15 @@ public:
 	/** Opens or closes the character menu. Local and cosmetic. */
 	UFUNCTION(BlueprintCallable, Category = "DCC|UI")
 	void ToggleCharacterMenu();
+
+	/**
+	 * Attempt the nearest climb point in reach.
+	 *
+	 * Routes to the server, which owns the roll. Anyone standing at the wall may
+	 * try, which is the point - the table decides who risks it, not the game.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DCC|Climb")
+	void AttemptClimb();
 
 	UFUNCTION(BlueprintPure, Category = "DCC|Combat")
 	bool IsAttackReady() const;
@@ -221,6 +270,9 @@ protected:
 	UFUNCTION(Server, Reliable)
 	void Server_StowCarried();
 
+	UFUNCTION(Server, Reliable)
+	void Server_AttemptClimb();
+
 	/** Server-side: swing now, or park the intent if the world is paused. */
 	void ResolveOrQueueAttack();
 
@@ -252,6 +304,9 @@ protected:
 	float CorpseLifeSpan = 0.0f;
 
 private:
+	/** Restores LocomotionAnimation when a one-shot clip finishes. */
+	FTimerHandle AnimationResetTimer;
+
 	/** Server-side only; clients never gate on this. */
 	float LastAttackTime = TNumericLimits<float>::Lowest();
 

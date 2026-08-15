@@ -8,8 +8,10 @@
 #include "Items/DCCCarryComponent.h"
 #include "Items/DCCPickup.h"
 #include "Combat/DCCGameState.h"
+#include "Rooms/DCCClimbPoint.h"
 #include "Engine/Canvas.h"
 #include "Engine/Engine.h"
+#include "EngineUtils.h"
 
 namespace
 {
@@ -39,7 +41,17 @@ void ADCCHUD::DrawHUD()
 
 	// The feed is always on: it is the only way to see what the dice did, and
 	// hiding it behind a menu would defeat the point.
-	float FeedY = DrawFeed(24.0f, Canvas->SizeY - (FeedLineCount + 1) * LineHeight - 24.0f);
+	DrawFeed(24.0f, Canvas->SizeY - (FeedLineCount + 1) * LineHeight - 24.0f);
+
+	// Death takes over the screen. Checked on the stats rather than on a null
+	// pawn, because the corpse is still possessed for a moment after dying.
+	if (Crawler && Crawler->Stats && !Crawler->Stats->IsAlive())
+	{
+		DrawDeathScreen();
+		return;
+	}
+
+	DrawInteractionPrompt(Crawler);
 
 	if (!bShowMenu || !Crawler)
 	{
@@ -64,6 +76,72 @@ void ADCCHUD::DrawHUD()
 	Y = DrawSkills(X, Y, Crawler);
 	Y += SectionGap;
 	Y = DrawInventory(X, Y, Crawler);
+}
+
+void ADCCHUD::DrawDeathScreen()
+{
+	// Dim the whole screen rather than clear it: the fight carrying on behind the
+	// overlay is the point, since the rest of the party is still in it.
+	DrawRect(FLinearColor(0.35f, 0.02f, 0.02f, 0.45f), 0.0f, 0.0f, Canvas->SizeX, Canvas->SizeY);
+
+	const float CentreX = Canvas->SizeX * 0.5f;
+	const float CentreY = Canvas->SizeY * 0.5f;
+
+	// Per the tone bible the System AI never breaks to sincerity - when something
+	// genuinely bad happens it gets quieter and more corporate, and that contrast
+	// does the emotional work.
+	const FString Headline = TEXT("YOU ARE DOWN");
+	const FString Subtitle = TEXT("Your viewership has ended. Thank you for participating.");
+	const FString Footer   = TEXT("A complimentary difficulty adjustment has been scheduled.");
+
+	float HeadW = 0.0f, HeadH = 0.0f;
+	GetTextSize(Headline, HeadW, HeadH, GEngine->GetLargeFont(), 2.0f);
+
+	DrawText(Headline, FLinearColor(1.0f, 0.92f, 0.92f),
+		CentreX - HeadW * 0.5f, CentreY - 60.0f, GEngine->GetLargeFont(), 2.0f);
+
+	float SubW = 0.0f, SubH = 0.0f;
+	GetTextSize(Subtitle, SubW, SubH, GEngine->GetMediumFont(), 1.0f);
+	DrawText(Subtitle, FLinearColor(0.95f, 0.85f, 0.85f),
+		CentreX - SubW * 0.5f, CentreY + 10.0f, GEngine->GetMediumFont(), 1.0f);
+
+	float FootW = 0.0f, FootH = 0.0f;
+	GetTextSize(Footer, FootW, FootH, GEngine->GetMediumFont(), 1.0f);
+	DrawText(Footer, FLinearColor(0.8f, 0.7f, 0.7f),
+		CentreX - FootW * 0.5f, CentreY + 40.0f, GEngine->GetMediumFont(), 1.0f);
+}
+
+void ADCCHUD::DrawInteractionPrompt(ADCCCharacterBase* Crawler)
+{
+	if (!Crawler || !GetWorld())
+	{
+		return;
+	}
+
+	// Nearest climb point whose trigger we are standing in. Scanning here rather
+	// than tracking overlap state keeps the prompt correct after teleports and
+	// after the climb itself moves the character.
+	for (TActorIterator<ADCCClimbPoint> It(GetWorld()); It; ++It)
+	{
+		ADCCClimbPoint* Point = *It;
+		if (!Point || !Point->IsCharacterInRange(Crawler))
+		{
+			continue;
+		}
+
+		const FString Prompt = Point->PromptText.ToString();
+
+		float W = 0.0f, H = 0.0f;
+		GetTextSize(Prompt, W, H, GEngine->GetMediumFont(), 1.0f);
+
+		const float BoxX = Canvas->SizeX * 0.5f - W * 0.5f - 20.0f;
+		const float BoxY = Canvas->SizeY * 0.62f;
+
+		DrawRect(FLinearColor(0.02f, 0.03f, 0.06f, 0.78f), BoxX, BoxY - 8.0f, W + 40.0f, H + 20.0f);
+		DrawText(Prompt, HeadingColour, BoxX + 20.0f, BoxY, GEngine->GetMediumFont(), 1.0f);
+
+		return;
+	}
 }
 
 float ADCCHUD::DrawStats(float X, float Y, ADCCCharacterBase* Crawler)
