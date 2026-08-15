@@ -133,12 +133,17 @@ clip is imported. Everything still works; it just looks wrong.
 
 ## 8. Quests, achievements and the asset gallery (editor work, after the build)
 
-### 8a. Import the two tables
+### 8a. Import the tables
 
 | File | Import as | Row struct |
 |---|---|---|
 | `Docs/DT_DCCAchievements.csv` | `/Game/DCC/Progression/DT_DCCAchievements` | `DCCAchievementDef` |
 | `Docs/DT_DCCQuests.json` | `/Game/DCC/Quests/DT_DCCQuests` | `DCCQuestDef` |
+| `Docs/DT_DCCDialogue.json` | `/Game/DCC/Dialogue/DT_DCCDialogue` | `DCCDialogueLine` |
+
+`Docs/DT_DCCEnemies.json` is **reference, not an import** — it has no matching row
+struct and is not meant to have one. Enemy stat blocks are set on the Blueprints;
+that file is where the numbers and the boss phase structure are written down.
 
 Quests are **JSON, not CSV**, on purpose — a quest's `Objectives` is an array of
 structs and the CSV row format cannot express one.
@@ -166,6 +171,22 @@ functions; it is just invisible, which defeats the point.
 
 Markers hide themselves whenever no active objective carries their tag, so the
 level can be pre-populated with every marker a floor will ever need.
+
+### 8b2. Two known bugs worth fixing in the same pass
+
+**Achievement components are on every character, including mobs.**
+`ADCCCharacterBase` creates one, so every spawned Brute and Courier carries
+replicated achievement state it will never use. Achievements are player
+accomplishments — global and personal, not per-room and not per-mob. Harmless today
+because mobs have no table assigned, but it should be crawler-only before enemy
+counts go up.
+
+**Nameplates and quest markers billboard to the wrong camera in multiplayer.**
+`ADCCCharacterBase::Tick` and `ADCCQuestMarker::Tick` both call
+`GetWorld()->GetFirstPlayerController()`, which on a listen server returns the
+*host*. Every remote client's nameplates would face Zoe's camera. Fix is
+`GEngine->GetFirstLocalPlayerController(GetWorld())` — `ADCCDialogueNPC` already
+does it correctly and can be copied.
 
 ### 8c. Remaining wiring
 
