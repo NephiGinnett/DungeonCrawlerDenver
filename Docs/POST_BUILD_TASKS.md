@@ -3,23 +3,39 @@
 Editor-side wiring that the compiled C++ is waiting on. Nothing here needs another
 build — every item is data set through the editor or over MCP.
 
-## 0a. ONE BUILD IS OUTSTANDING (2026-08-15)
+## 0a. Everything is compiled (2026-08-15)
 
-The **quest system** is written and committed but **never compiled** — the editor
-was open and holds the Live Coding lock, which blocks every target, not just the
-editor one. Close the editor and run the command in §0 below. Do not use Live
-Coding for it: it adds new `UCLASS`/`USTRUCT`/`UENUM` types.
+The quest system and the dialogue NPC both built clean on the first attempt.
+Reflection data confirmed generated for `DCCQuestComponent`, `DCCQuestMarker`,
+`DCCQuestTypes`, `DCCDialogueNPC` and `DCCDialogueTypes`. **There is no outstanding
+build.** Everything in `Source/` is in the binary.
 
-Everything before the quest system *is* compiled and working.
+## 0b. Before reopening the editor: turn Live Coding off
 
-## 0b. MCP needs re-authorising
+`Editor Preferences → General → Live Coding → Enable Live Coding`, **off**.
 
-The `unreal-mcp` connection expired mid-session (`token expired`), which is why
-the asset-gallery level and the wiring in §8 are not done — none of it can be
-driven without the editor connection. Re-auth in an interactive session, then
-the remaining work is quick.
+It is already banned by CLAUDE.md for anything touching reflection — it reported
+`Success` on a `UFUNCTION` change and crashed the editor twelve seconds later. So we
+pay its entire cost (it blocks *every* build target while the editor runs) for a
+benefit we are not allowed to use.
 
-## 0. The build itself — DONE for everything except the quest system
+With it off, test whether a build can run alongside the open editor:
+
+```bash
+"D:/UE/UE_5.8/Engine/Build/BatchFiles/Build.bat" DungeonCrawlerDenverEditor Win64 DebugGame -Project="C:/Users/kmett/Documents/Unreal Projects/DungeonCrawlerDenver/DungeonCrawlerDenver.uproject" -WaitMutex
+```
+
+`DebugGame` links to a *different* DLL than the running editor holds, so if Live
+Coding was the only objection this should compile and link with the editor open.
+If it works, C++ can be verified without closing anything.
+
+## 0c. MCP re-auth
+
+The `unreal-mcp` connection drops whenever the editor restarts — it is a session id
+the server forgets, not a credential (the plugin has no auth code at all). Reconnect
+after the editor is up.
+
+## 0. The build command
 
 Both batches are compiled and committed: the pickups/skill-rank/five-stat/NPC-casting
 batch, and the climbing/sprint batch on top of it. `Build.bat DungeonCrawlerDenverEditor`
