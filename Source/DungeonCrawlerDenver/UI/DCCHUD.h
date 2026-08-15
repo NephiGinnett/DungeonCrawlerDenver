@@ -43,8 +43,11 @@ protected:
 	/** Full-screen overlay shown once the local crawler is down. */
 	void DrawDeathScreen();
 
-	/** Prompt for the nearest climb point in range, or nothing. */
+	/** Climb confirmation, climb controls, or targeting hint - whichever applies. */
 	void DrawInteractionPrompt(ADCCCharacterBase* Crawler);
+
+	/** Stamina meter, shown only while it matters. */
+	void DrawStaminaBar(ADCCCharacterBase* Crawler);
 
 	/** Panel sections. Each returns the Y it finished at, so they stack. */
 	float DrawStats(float X, float Y, ADCCCharacterBase* Crawler);

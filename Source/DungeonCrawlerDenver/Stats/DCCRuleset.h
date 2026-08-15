@@ -96,6 +96,43 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Ruleset|Skills")
 	virtual int32 GetMaxSkillRank() const;
 
+	// -------------------------------------------------------------------------
+	// STAMINA
+	//
+	// Not a published DCC resource - it is ours, added so that sustained physical
+	// effort like climbing has a cost that is not a dice roll. Constitution
+	// governs it, which matches how the books already use Con for Health and for
+	// the Endurance checks that gate long grinding sessions.
+	// -------------------------------------------------------------------------
+
+	/** Total stamina. Constitution-driven, on the same 2-6 score scale. */
+	UFUNCTION(BlueprintCallable, Category = "Ruleset|Stamina")
+	virtual float GetMaxStamina(const FDCCAbilityScoreSet& AbilityScores, int32 Level) const;
+
+	/** Stamina per second spent while hanging on a surface doing nothing. */
+	UFUNCTION(BlueprintCallable, Category = "Ruleset|Stamina")
+	virtual float GetClingStaminaCost(int32 ClimbSkillRank) const;
+
+	/** Stamina per second spent while actively moving up or down. */
+	UFUNCTION(BlueprintCallable, Category = "Ruleset|Stamina")
+	virtual float GetClimbStaminaCost(int32 ClimbSkillRank) const;
+
+	/** Vertical climb speed in cm/s, improved by Rank. */
+	UFUNCTION(BlueprintCallable, Category = "Ruleset|Stamina")
+	virtual float GetClimbSpeed(const FDCCAbilityScoreSet& AbilityScores, int32 ClimbSkillRank) const;
+
+	/** Stamina per second recovered when not exerting. */
+	UFUNCTION(BlueprintCallable, Category = "Ruleset|Stamina")
+	virtual float GetStaminaRegenRate(const FDCCAbilityScoreSet& AbilityScores) const;
+
+	/** Walk-speed multiplier while sprinting. Dexterity-driven. */
+	UFUNCTION(BlueprintCallable, Category = "Ruleset|Stamina")
+	virtual float GetSprintSpeedMultiplier(const FDCCAbilityScoreSet& AbilityScores) const;
+
+	/** Stamina per second spent while actually sprinting. */
+	UFUNCTION(BlueprintCallable, Category = "Ruleset|Stamina")
+	virtual float GetSprintStaminaCost(const FDCCAbilityScoreSet& AbilityScores) const;
+
 	/**
 	 * Server-only. A skill check: the core check plus the character's Rank.
 	 *

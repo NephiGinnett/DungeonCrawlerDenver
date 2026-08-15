@@ -52,6 +52,7 @@ void ADCCHUD::DrawHUD()
 	}
 
 	DrawInteractionPrompt(Crawler);
+	DrawStaminaBar(Crawler);
 
 	if (!bShowMenu || !Crawler)
 	{
@@ -118,30 +119,76 @@ void ADCCHUD::DrawInteractionPrompt(ADCCCharacterBase* Crawler)
 		return;
 	}
 
-	// Nearest climb point whose trigger we are standing in. Scanning here rather
-	// than tracking overlap state keeps the prompt correct after teleports and
-	// after the climb itself moves the character.
-	for (TActorIterator<ADCCClimbPoint> It(GetWorld()); It; ++It)
+	// Three mutually exclusive states, checked most-committed first: already on a
+	// wall, being asked about one, or looking for one.
+	FString Prompt;
+	FLinearColor Colour = HeadingColour;
+
+	if (Crawler->IsClimbing())
 	{
-		ADCCClimbPoint* Point = *It;
-		if (!Point || !Point->IsCharacterInRange(Crawler))
-		{
-			continue;
-		}
-
-		const FString Prompt = Point->PromptText.ToString();
-
-		float W = 0.0f, H = 0.0f;
-		GetTextSize(Prompt, W, H, GEngine->GetMediumFont(), 1.0f);
-
-		const float BoxX = Canvas->SizeX * 0.5f - W * 0.5f - 20.0f;
-		const float BoxY = Canvas->SizeY * 0.62f;
-
-		DrawRect(FLinearColor(0.02f, 0.03f, 0.06f, 0.78f), BoxX, BoxY - 8.0f, W + 40.0f, H + 20.0f);
-		DrawText(Prompt, HeadingColour, BoxX + 20.0f, BoxY, GEngine->GetMediumFont(), 1.0f);
-
+		Prompt = TEXT("Hold [LMB] to climb up, [RMB] to descend.  [Space] to let go.");
+		Colour = BodyColour;
+	}
+	else if (const ADCCClimbPoint* Pending = Crawler->GetPendingClimbPoint())
+	{
+		// The question itself is authored on the climb point, so a particular
+		// cliff can ask in its own voice.
+		Prompt = FString::Printf(TEXT("%s   [Y] yes   [N] no"), *Pending->PromptText.ToString());
+	}
+	else if (!Crawler->GetSelectedSkillId().IsNone())
+	{
+		Prompt = TEXT("Click a surface to use the armed skill.");
+		Colour = DimColour;
+	}
+	else
+	{
 		return;
 	}
+
+	float W = 0.0f, H = 0.0f;
+	GetTextSize(Prompt, W, H, GEngine->GetMediumFont(), 1.0f);
+
+	const float BoxX = Canvas->SizeX * 0.5f - W * 0.5f - 20.0f;
+	const float BoxY = Canvas->SizeY * 0.62f;
+
+	DrawRect(FLinearColor(0.02f, 0.03f, 0.06f, 0.78f), BoxX, BoxY - 8.0f, W + 40.0f, H + 20.0f);
+	DrawText(Prompt, Colour, BoxX + 20.0f, BoxY, GEngine->GetMediumFont(), 1.0f);
+}
+
+void ADCCHUD::DrawStaminaBar(ADCCCharacterBase* Crawler)
+{
+	UDCCStatsComponent* Stats = Crawler ? Crawler->Stats : nullptr;
+	if (!Stats || Stats->MaxStamina <= 0.0f)
+	{
+		return;
+	}
+
+	const float Fraction = Stats->GetStaminaFraction();
+
+	// Hidden at full stamina unless it is actively being spent. A bar that is
+	// always there while nothing is draining it just teaches players to ignore it.
+	if (Fraction >= 0.999f && !Crawler->IsSprinting() && !Crawler->IsClimbing())
+	{
+		return;
+	}
+
+	constexpr float BarW = 260.0f;
+	constexpr float BarH = 12.0f;
+
+	const float BarX = Canvas->SizeX * 0.5f - BarW * 0.5f;
+	const float BarY = Canvas->SizeY * 0.86f;
+
+	DrawRect(FLinearColor(0.02f, 0.03f, 0.06f, 0.72f), BarX - 2.0f, BarY - 2.0f, BarW + 4.0f, BarH + 4.0f);
+
+	// Reddens as it empties, so the "you are about to fall off this cliff"
+	// warning is peripheral and does not need reading.
+	const FLinearColor Fill = FMath::Lerp(
+		FLinearColor(0.85f, 0.25f, 0.15f),
+		FLinearColor(0.35f, 0.80f, 0.95f),
+		FMath::Clamp(Fraction, 0.0f, 1.0f));
+
+	DrawRect(Fill, BarX, BarY, BarW * FMath::Clamp(Fraction, 0.0f, 1.0f), BarH);
+	DrawText(TEXT("Stamina"), DimColour, BarX, BarY - LineHeight);
 }
 
 float ADCCHUD::DrawStats(float X, float Y, ADCCCharacterBase* Crawler)
@@ -179,6 +226,8 @@ float ADCCHUD::DrawStats(float X, float Y, ADCCCharacterBase* Crawler)
 	Y += LineHeight;
 	DrawText(FString::Printf(TEXT("  Mana     %d / %d"), Stats->CurrentManaPoints, Stats->MaxManaPoints), BodyColour, X, Y);
 	Y += LineHeight;
+	DrawText(FString::Printf(TEXT("  Stamina  %.0f / %.0f"), Stats->CurrentStamina, Stats->MaxStamina), BodyColour, X, Y);
+	Y += LineHeight;
 
 	if (Ruleset)
 	{
@@ -209,8 +258,10 @@ float ADCCHUD::DrawSkills(float X, float Y, ADCCCharacterBase* Crawler)
 		return Y + LineHeight;
 	}
 
-	for (const FDCCKnownSkill& Known : Skills->KnownSkills)
+	for (int32 Index = 0; Index < Skills->KnownSkills.Num(); ++Index)
 	{
+		const FDCCKnownSkill& Known = Skills->KnownSkills[Index];
+
 		FDCCSkillDef Definition;
 		const bool bResolved = Skills->FindSkill(Known.SkillId, Definition);
 
@@ -218,17 +269,33 @@ float ADCCHUD::DrawSkills(float X, float Y, ADCCCharacterBase* Crawler)
 			? Definition.DisplayName.ToString()
 			: Known.SkillId.ToString();
 
+		// The number is the key that arms this skill, so the list doubles as the
+		// keybind reference rather than needing a second one somewhere else.
+		const FString Slot = Index < 9
+			? FString::Printf(TEXT("[%d]"), Index + 1)
+			: TEXT("   ");
+
 		// The advancement mark is shown because it is otherwise invisible state
 		// that decides whether this skill can rank up at the next interval.
-		const FString Line = FString::Printf(TEXT("  %-22s Rank %-2d %s"),
-			*Name, Known.Rank, Known.bAdvancementMark ? TEXT("*") : TEXT(""));
+		const FString Line = FString::Printf(TEXT("  %s %-22s Rank %-2d %s"),
+			*Slot, *Name, Known.Rank, Known.bAdvancementMark ? TEXT("*") : TEXT(""));
 
-		DrawText(Line, BodyColour, X, Y);
+		const bool bArmed = Crawler->GetSelectedSkillId() == Known.SkillId;
+
+		DrawText(Line, bArmed ? HeadingColour : BodyColour, X, Y);
 		Y += LineHeight;
 	}
 
 	DrawText(TEXT("  * used since last advancement"), DimColour, X, Y);
-	return Y + LineHeight;
+	Y += LineHeight;
+
+	if (!Crawler->GetSelectedSkillId().IsNone())
+	{
+		DrawText(TEXT("  Armed - click a target in the world"), HeadingColour, X, Y);
+		Y += LineHeight;
+	}
+
+	return Y;
 }
 
 float ADCCHUD::DrawInventory(float X, float Y, ADCCCharacterBase* Crawler)

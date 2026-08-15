@@ -34,6 +34,8 @@ public:
 
 	virtual void Tick(float DeltaSeconds) override;
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "DCC")
 	TObjectPtr<UDCCStatsComponent> Stats;
 
@@ -226,14 +228,103 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DCC|UI")
 	void ToggleCharacterMenu();
 
+	// -------------------------------------------------------------------------
+	// CLIMBING
+	//
+	// Player-driven rather than prompted: open the menu, select the skill, click
+	// a face, confirm, then hold to climb until stamina runs out. No roll gates
+	// the attempt - anyone may try anything, and stamina decides how far they get.
+	// -------------------------------------------------------------------------
+
+	/** Skill armed from the character menu, awaiting a click on a target. */
+	UPROPERTY(BlueprintReadOnly, Category = "DCC|Climb")
+	FName SelectedSkillId;
+
+	/** Surface clicked and awaiting a yes/no answer. Null when nothing is pending. */
+	UPROPERTY(BlueprintReadOnly, Category = "DCC|Climb")
+	TObjectPtr<ADCCClimbPoint> PendingClimbPoint;
+
+	/** The surface currently being climbed, or null. */
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_ActiveClimbPoint, Category = "DCC|Climb")
+	TObjectPtr<ADCCClimbPoint> ActiveClimbPoint;
+
+	UFUNCTION(BlueprintPure, Category = "DCC|Climb")
+	bool IsClimbing() const { return ActiveClimbPoint != nullptr; }
+
+	UFUNCTION(BlueprintPure, Category = "DCC|Climb")
+	FName GetSelectedSkillId() const { return SelectedSkillId; }
+
+	UFUNCTION(BlueprintPure, Category = "DCC|Climb")
+	ADCCClimbPoint* GetPendingClimbPoint() const { return PendingClimbPoint; }
+
+	/** Arms a skill for targeting. Passing None clears the selection. */
+	UFUNCTION(BlueprintCallable, Category = "DCC|Climb")
+	void SelectSkill(FName SkillId);
+
 	/**
-	 * Attempt the nearest climb point in reach.
+	 * Traces from the camera through the crosshair and, if it lands on a
+	 * climbable face within reach, raises the confirmation box.
 	 *
-	 * Routes to the server, which owns the roll. Anyone standing at the wall may
-	 * try, which is the point - the table decides who risks it, not the game.
+	 * Local: it only decides what to ask. The answer is what goes to the server.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "DCC|Climb")
-	void AttemptClimb();
+	void TrySelectClimbTargetUnderCursor();
+
+	/** Answers the confirmation box. */
+	UFUNCTION(BlueprintCallable, Category = "DCC|Climb")
+	void ConfirmPendingClimb(bool bAccept);
+
+	/** Held-input state, set by the climb keys and read on the server each tick. */
+	UFUNCTION(BlueprintCallable, Category = "DCC|Climb")
+	void SetClimbInput(bool bUp, bool bDown);
+
+	/** Lets go and drops. Also called automatically when stamina runs out. */
+	UFUNCTION(BlueprintCallable, Category = "DCC|Climb")
+	void ReleaseClimb();
+
+	// -------------------------------------------------------------------------
+	// SPRINTING
+	//
+	// Shares the stamina pool with climbing on purpose. Sprinting to a wall and
+	// then climbing it should cost more than doing either alone - one budget
+	// makes that trade-off real without any extra rules.
+	// -------------------------------------------------------------------------
+
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_Sprinting, Category = "DCC|Movement")
+	bool bIsSprinting = false;
+
+	/** Held-input setter, bound to Shift. Safe to call from a client. */
+	UFUNCTION(BlueprintCallable, Category = "DCC|Movement")
+	void SetSprintInput(bool bWantsToSprint);
+
+	UFUNCTION(BlueprintPure, Category = "DCC|Movement")
+	bool IsSprinting() const { return bIsSprinting; }
+
+protected:
+	// Input handlers. Left click means three different things depending on
+	// state, so the routing lives here rather than in the binding.
+	void OnPrimaryPressed();
+	void OnPrimaryReleased();
+	void OnSecondaryPressed();
+	void OnSecondaryReleased();
+
+	void ReleaseClimbIfClimbing() { if (IsClimbing()) { ReleaseClimb(); } }
+
+	void AcceptPrompt() { ConfirmPendingClimb(true); }
+	void DeclinePrompt() { ConfirmPendingClimb(false); }
+
+	void StartSprint() { SetSprintInput(true); }
+	void StopSprint() { SetSprintInput(false); }
+
+	/** Arms the Nth known skill. One handler per key; BindKey carries no payload. */
+	void SelectSkillSlot(int32 Index);
+	void SelectSkillSlot1() { SelectSkillSlot(0); }
+	void SelectSkillSlot2() { SelectSkillSlot(1); }
+	void SelectSkillSlot3() { SelectSkillSlot(2); }
+	void SelectSkillSlot4() { SelectSkillSlot(3); }
+	void SelectSkillSlot5() { SelectSkillSlot(4); }
+
+public:
 
 	UFUNCTION(BlueprintPure, Category = "DCC|Combat")
 	bool IsAttackReady() const;
@@ -317,7 +408,25 @@ protected:
 	void Server_StowCarried();
 
 	UFUNCTION(Server, Reliable)
-	void Server_AttemptClimb();
+	void Server_BeginClimb(ADCCClimbPoint* Point);
+
+	UFUNCTION(Server, Reliable)
+	void Server_SetClimbInput(bool bUp, bool bDown);
+
+	UFUNCTION(Server, Reliable)
+	void Server_ReleaseClimb();
+
+	UFUNCTION(Server, Reliable)
+	void Server_SetSprinting(bool bNewSprinting);
+
+	UFUNCTION()
+	void OnRep_ActiveClimbPoint();
+
+	UFUNCTION()
+	void OnRep_Sprinting();
+
+	/** Server only. Runs the climb and sprint stamina economy for one frame. */
+	void TickStamina(float DeltaSeconds);
 
 	/** Server-side: swing now, or park the intent if the world is paused. */
 	void ResolveOrQueueAttack();
@@ -378,6 +487,10 @@ private:
 
 	/** Puts the right loop on the mesh unless a one-shot is still playing. */
 	void UpdateLocomotionAnimation();
+
+	/** Held climb input, mirrored to the server. */
+	bool bClimbInputUp = false;
+	bool bClimbInputDown = false;
 
 	/** Server-side only; clients never gate on this. */
 	float LastAttackTime = TNumericLimits<float>::Lowest();

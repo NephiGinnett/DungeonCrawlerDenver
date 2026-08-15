@@ -2,28 +2,28 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Stats/DCCAbilityTypes.h"
 #include "DCCClimbPoint.generated.h"
 
 class ADCCCharacterBase;
 class UBoxComponent;
 class UStaticMeshComponent;
-class UAnimationAsset;
 
 // -----------------------------------------------------------------------------
 // A CLIMBABLE SURFACE
 //
-// The first piece of the design doc's "anything is possible" promise that is not
-// combat: an obstacle the fiction says you might get over, offered to the whole
-// table rather than to whoever happens to be standing closest.
+// Not a skill check. Anyone may attempt any climbable face; what decides how far
+// they get is STAMINA, and how efficiently they spend it is their Climbing Rank.
 //
-// Deliberately an authorable actor with two configurable points rather than a
-// hardcoded spot, because every rock face and wall in the level is a different
-// height. Drop one, set where the climb ends, and it works.
+// That is a deliberate design choice over a pass/fail roll. A roll answers "are
+// you allowed to try", which is the least interesting question at the table -
+// and a failed roll is just a lost turn. Stamina answers "how far can you get
+// before your arms give out", which the whole party can watch happening and
+// shout advice about. Rank still matters: it makes every second cheaper and the
+// climb faster, so a practised climber goes further on the same lungs.
 //
-// Server-authoritative: the roll happens on the server and the outcome reaches
-// everyone by replicated movement. A client may ASK to climb and cannot decide
-// whether it worked.
+// The flow is deliberately player-driven: open the menu, pick the skill, click
+// the face, confirm. Nothing happens by walking near it, because the design doc
+// wants players choosing to do things rather than being prompted into them.
 // -----------------------------------------------------------------------------
 
 UCLASS(Blueprintable)
@@ -34,84 +34,59 @@ class DUNGEONCRAWLERDENVER_API ADCCClimbPoint : public AActor
 public:
 	ADCCClimbPoint();
 
-	virtual void Tick(float DeltaSeconds) override;
-
-	/** Where the prompt appears and the climb can be started from. */
+	/**
+	 * The climbable volume. Clicking anywhere on it starts the flow, and it also
+	 * bounds where a climber may move.
+	 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
-	TObjectPtr<UBoxComponent> Trigger;
+	TObjectPtr<UBoxComponent> Surface;
 
-	/** Optional visual marker, so the opportunity is visible and not just a hint. */
+	/** Optional visual marker so the opportunity is visible, not just discoverable. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Climb")
 	TObjectPtr<UStaticMeshComponent> Marker;
 
-	/** Shown to any crawler standing in the trigger. */
+	/** Shown in the confirmation box. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Climb", meta = (MultiLine = "true"))
 	FText PromptText;
 
-	/** Where a successful climb puts the character, relative to this actor. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Climb")
-	FVector ClimbEndOffset = FVector(0.0f, 0.0f, 500.0f);
-
-	/** Which stat the attempt rolls. Strength by default; Dexterity suits a scramble. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Climb")
-	EDCCAbility ClimbAbility = EDCCAbility::Strength;
-
-	/** Difficulty to beat. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Climb", meta = (ClampMin = "1"))
-	int32 DifficultyClass = 12;
-
-	/**
-	 * Skill whose Rank is added, if the climber knows it.
-	 *
-	 * Left as a plain name rather than a hard reference so a table that has no
-	 * Climbing row yet still works - the check simply runs on the stat alone.
-	 */
+	/** Skill whose Rank makes climbing cheaper and faster. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Climb")
 	FName ClimbSkillId = TEXT("Climbing");
 
-	/** Seconds the ascent takes. The climb animation is scaled to fit. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Climb", meta = (ClampMin = "0.1"))
-	float ClimbDurationSeconds = 2.5f;
+	/** How far from the surface a character may be and still start a climb. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Climb", meta = (ClampMin = "0.0"))
+	float ReachDistance = 220.0f;
 
-	/**
-	 * Whether a character who already failed may try again.
-	 *
-	 * On by default: the published rules mark a skill on any attempt, pass or
-	 * fail, so repeated tries are how a bad climber eventually gets better at
-	 * climbing. Turn off for a one-shot story obstacle.
-	 */
+	/** Highest point a climber may reach, in world Z. Derived from the box if zero. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Climb")
-	bool bAllowRetry = true;
+	float ClimbTopZ = 0.0f;
 
-	/** True while at least one crawler is inside the trigger. */
+	/** Lowest point, in world Z. Derived from the box if zero. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Climb")
+	float ClimbBottomZ = 0.0f;
+
+	/** True when the character is close enough to start. */
 	UFUNCTION(BlueprintPure, Category = "Climb")
-	bool IsCharacterInRange(const ADCCCharacterBase* Character) const;
+	bool IsWithinReach(const ADCCCharacterBase* Character) const;
+
+	/** World Z the climber may not pass, accounting for the unset-means-derive rule. */
+	UFUNCTION(BlueprintPure, Category = "Climb")
+	float GetTopZ() const;
+
+	UFUNCTION(BlueprintPure, Category = "Climb")
+	float GetBottomZ() const;
 
 	/**
-	 * Server only. Rolls the check and starts the ascent on success.
+	 * Where a climber should sit while attached: pulled against the face, at the
+	 * given height.
 	 *
-	 * Returns false when refused - out of range, already climbing, or the roll
-	 * failed. The reason is narrated to the event feed either way, because a
-	 * failed climb the table can see is a better beat than a silent no.
+	 * Keeps the climber visually on the surface rather than floating in front of
+	 * it, and gives a consistent anchor when the face is approached from an angle.
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Climb")
-	bool TryClimb(ADCCCharacterBase* Character);
+	UFUNCTION(BlueprintPure, Category = "Climb")
+	FVector GetAttachLocationFor(const ADCCCharacterBase* Character, float WorldZ) const;
 
-protected:
-	virtual void BeginPlay() override;
-
-	/** One in-progress ascent. Several characters may climb at once. */
-	struct FActiveClimb
-	{
-		TWeakObjectPtr<ADCCCharacterBase> Character;
-		FVector Start = FVector::ZeroVector;
-		FVector End = FVector::ZeroVector;
-		float Elapsed = 0.0f;
-	};
-
-	TArray<FActiveClimb> ActiveClimbs;
-
-	/** Characters that have already succeeded, so the prompt stops nagging them. */
-	UPROPERTY(Transient)
-	TArray<TObjectPtr<ADCCCharacterBase>> Succeeded;
+	/** Somewhere safe to step off at the top, just inland of the lip. */
+	UFUNCTION(BlueprintPure, Category = "Climb")
+	FVector GetDismountLocation(const ADCCCharacterBase* Character) const;
 };

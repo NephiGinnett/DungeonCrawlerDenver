@@ -135,6 +135,70 @@ int32 UDCCRuleset::GetMaxSkillRank() const
 	return 15;
 }
 
+float UDCCRuleset::GetMaxStamina(const FDCCAbilityScoreSet& AbilityScores, int32 Level) const
+{
+	// The SCORE, not the modifier - the banded modifier flattens 3, 4 and 5 all
+	// to +2, which would give most of the party identical stamina and make the
+	// stat invisible exactly where it should be felt.
+	const int32 ConstitutionScore = FMath::Max(1, AbilityScores.GetScore(EDCCAbility::Constitution));
+
+	// 40 base + 20 per point. On the 2-6 band that is 80 to 160, so Vaughn
+	// (Con 6) climbs roughly twice as long as Nephi (Con 2).
+	return 40.0f + (ConstitutionScore * 20.0f);
+}
+
+float UDCCRuleset::GetClingStaminaCost(int32 ClimbSkillRank) const
+{
+	// Hanging still is cheap but never free, so a climber cannot park on a wall
+	// indefinitely and wait out a fight below them.
+	return FMath::Max(0.5f, 3.0f - (ClimbSkillRank * 0.15f));
+}
+
+float UDCCRuleset::GetClimbStaminaCost(int32 ClimbSkillRank) const
+{
+	// Rank makes climbing cheaper rather than making it succeed. That is the
+	// whole point of dropping the pass/fail roll: a novice can attempt anything,
+	// they just run out of arms sooner.
+	return FMath::Max(3.0f, 12.0f - (ClimbSkillRank * 0.6f));
+}
+
+float UDCCRuleset::GetClimbSpeed(const FDCCAbilityScoreSet& AbilityScores, int32 ClimbSkillRank) const
+{
+	const int32 StrengthScore = FMath::Max(1, AbilityScores.GetScore(EDCCAbility::Strength));
+
+	// Strength sets the baseline, Rank refines it - a strong novice hauls
+	// themselves up, a practised climber moves efficiently.
+	return 90.0f + (StrengthScore * 12.0f) + (ClimbSkillRank * 6.0f);
+}
+
+float UDCCRuleset::GetStaminaRegenRate(const FDCCAbilityScoreSet& AbilityScores) const
+{
+	const int32 ConstitutionScore = FMath::Max(1, AbilityScores.GetScore(EDCCAbility::Constitution));
+
+	return 6.0f + (ConstitutionScore * 2.0f);
+}
+
+float UDCCRuleset::GetSprintSpeedMultiplier(const FDCCAbilityScoreSet& AbilityScores) const
+{
+	const int32 DexterityScore = FMath::Max(1, AbilityScores.GetScore(EDCCAbility::Dexterity));
+
+	// 1.5x at the middle of the starting band, rising to about 1.7x at Dex 6.
+	// Kept modest because base walk speed is already Dexterity-scaled - stacking
+	// a large multiplier on top would make a nimble crawler outrun the AI's
+	// ability to path after them.
+	return 1.5f + ((DexterityScore - 4) * 0.05f);
+}
+
+float UDCCRuleset::GetSprintStaminaCost(const FDCCAbilityScoreSet& AbilityScores) const
+{
+	const int32 ConstitutionScore = FMath::Max(1, AbilityScores.GetScore(EDCCAbility::Constitution));
+
+	// Tuned so a Constitution 4 crawler sprints roughly 12 seconds from full and
+	// recovers it in about 10 - long enough to cross a room or escape a fight,
+	// far too short to travel the map on.
+	return FMath::Max(4.0f, 12.0f - (ConstitutionScore * 1.0f));
+}
+
 FDCCCheckResult UDCCRuleset::ResolveSkillCheck(
 	const FDCCAbilityScoreSet& AbilityScores,
 	EDCCAbility Ability,

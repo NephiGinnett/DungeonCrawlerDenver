@@ -12,6 +12,7 @@
 #include "UI/DCCHUD.h"
 #include "Rooms/DCCClimbPoint.h"
 #include "Animation/AnimSequenceBase.h"
+#include "Net/UnrealNetwork.h"
 #include "UI/DCCEventLogTypes.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
@@ -38,6 +39,14 @@ ADCCCharacterBase::ADCCCharacterBase()
 	Favor = CreateDefaultSubobject<UDCCFavorComponent>(TEXT("Favor"));
 	Carry = CreateDefaultSubobject<UDCCCarryComponent>(TEXT("Carry"));
 	Inventory = CreateDefaultSubobject<UDCCInventoryComponent>(TEXT("Inventory"));
+}
+
+void ADCCCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ADCCCharacterBase, ActiveClimbPoint);
+	DOREPLIFETIME(ADCCCharacterBase, bIsSprinting);
 }
 
 void ADCCCharacterBase::BeginPlay()
@@ -89,7 +98,14 @@ void ADCCCharacterBase::ApplyDerivedMovementSpeed()
 		return;
 	}
 
-	Movement->MaxWalkSpeed = BaseWalkSpeed * Ruleset->GetMoveSpeedMultiplier(Stats->AbilityScores);
+	float Speed = BaseWalkSpeed * Ruleset->GetMoveSpeedMultiplier(Stats->AbilityScores);
+
+	if (bIsSprinting)
+	{
+		Speed *= Ruleset->GetSprintSpeedMultiplier(Stats->AbilityScores);
+	}
+
+	Movement->MaxWalkSpeed = Speed;
 }
 
 void ADCCCharacterBase::AttemptPickupOrDrop()
@@ -146,49 +162,353 @@ void ADCCCharacterBase::Server_StowCarried_Implementation()
 	}
 }
 
-void ADCCCharacterBase::AttemptClimb()
+void ADCCCharacterBase::OnPrimaryPressed()
+{
+	// Climbing wins: while on a wall the button is the climb, not a swing.
+	if (IsClimbing())
+	{
+		SetClimbInput(/*bUp=*/true, /*bDown=*/bClimbInputDown);
+		return;
+	}
+
+	// A pending question owns the click too, so the player cannot attack past a
+	// prompt they have not answered.
+	if (PendingClimbPoint)
+	{
+		return;
+	}
+
+	// With a skill armed from the menu, the click is aimed at the world.
+	if (!SelectedSkillId.IsNone())
+	{
+		TrySelectClimbTargetUnderCursor();
+		return;
+	}
+
+	AttemptAttackNearest();
+}
+
+void ADCCCharacterBase::OnPrimaryReleased()
+{
+	if (IsClimbing())
+	{
+		SetClimbInput(/*bUp=*/false, /*bDown=*/bClimbInputDown);
+	}
+}
+
+void ADCCCharacterBase::OnSecondaryPressed()
+{
+	if (IsClimbing())
+	{
+		SetClimbInput(/*bUp=*/bClimbInputUp, /*bDown=*/true);
+	}
+}
+
+void ADCCCharacterBase::OnSecondaryReleased()
+{
+	if (IsClimbing())
+	{
+		SetClimbInput(/*bUp=*/bClimbInputUp, /*bDown=*/false);
+	}
+}
+
+void ADCCCharacterBase::SelectSkillSlot(int32 Index)
+{
+	if (!Skills || !Skills->KnownSkills.IsValidIndex(Index))
+	{
+		return;
+	}
+
+	const FName SkillId = Skills->KnownSkills[Index].SkillId;
+
+	// Pressing the same slot again disarms, so there is a way out of targeting
+	// mode that does not involve clicking something.
+	SelectSkill(SelectedSkillId == SkillId ? NAME_None : SkillId);
+}
+
+void ADCCCharacterBase::SelectSkill(FName SkillId)
+{
+	SelectedSkillId = SkillId;
+
+	// Choosing a different skill abandons any question already on screen, so the
+	// player cannot answer a prompt they have since changed their mind about.
+	PendingClimbPoint = nullptr;
+}
+
+void ADCCCharacterBase::TrySelectClimbTargetUnderCursor()
+{
+	// Purely local: this decides what to *ask*, never what happens.
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	UWorld* World = GetWorld();
+	if (!PC || !World || IsClimbing())
+	{
+		return;
+	}
+
+	// Only meaningful once a skill is armed from the menu. Without this, every
+	// left click in the game would start probing for walls.
+	if (SelectedSkillId.IsNone())
+	{
+		return;
+	}
+
+	FVector CameraLocation;
+	FRotator CameraRotation;
+	PC->GetPlayerViewPoint(CameraLocation, CameraRotation);
+
+	const FVector TraceEnd = CameraLocation + CameraRotation.Vector() * 5000.0f;
+
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+
+	FHitResult Hit;
+	if (!World->LineTraceSingleByChannel(Hit, CameraLocation, TraceEnd, ECC_Visibility, Params))
+	{
+		return;
+	}
+
+	ADCCClimbPoint* Point = Cast<ADCCClimbPoint>(Hit.GetActor());
+	if (!Point || !Point->IsWithinReach(this))
+	{
+		return;
+	}
+
+	PendingClimbPoint = Point;
+}
+
+void ADCCCharacterBase::ConfirmPendingClimb(bool bAccept)
+{
+	ADCCClimbPoint* Point = PendingClimbPoint;
+	PendingClimbPoint = nullptr;
+
+	if (!bAccept || !Point)
+	{
+		return;
+	}
+
+	if (HasAuthority())
+	{
+		Server_BeginClimb_Implementation(Point);
+		return;
+	}
+
+	Server_BeginClimb(Point);
+}
+
+void ADCCCharacterBase::Server_BeginClimb_Implementation(ADCCClimbPoint* Point)
+{
+	// Re-validated server-side: the client's click is a request, never a
+	// permission. A modified client can ask to climb a face across the map.
+	if (!Point || IsClimbing() || !IsAlive() || !Point->IsWithinReach(this))
+	{
+		return;
+	}
+
+	if (!Stats || Stats->CurrentStamina <= 0.0f)
+	{
+		return;
+	}
+
+	ActiveClimbPoint = Point;
+	OnRep_ActiveClimbPoint();
+
+	// Attempting marks the skill, and here there is no failure state - simply
+	// trying to climb is what trains Climbing.
+	if (Skills && Skills->IsSkillKnown(Point->ClimbSkillId))
+	{
+		Skills->MarkSkillUsed(Point->ClimbSkillId);
+	}
+
+	SetActorLocation(Point->GetAttachLocationFor(this, GetActorLocation().Z));
+
+	ADCCGameState::Log(this, EDCCLogCategory::Encounter, FText::Format(
+		NSLOCTEXT("DCC", "ClimbBegin", "{0} takes hold of the rock."),
+		FText::FromString(GetName())));
+}
+
+void ADCCCharacterBase::SetClimbInput(bool bUp, bool bDown)
+{
+	bClimbInputUp = bUp;
+	bClimbInputDown = bDown;
+
+	if (!HasAuthority())
+	{
+		Server_SetClimbInput(bUp, bDown);
+	}
+}
+
+void ADCCCharacterBase::Server_SetClimbInput_Implementation(bool bUp, bool bDown)
+{
+	bClimbInputUp = bUp;
+	bClimbInputDown = bDown;
+}
+
+void ADCCCharacterBase::ReleaseClimb()
 {
 	if (HasAuthority())
 	{
-		Server_AttemptClimb_Implementation();
+		Server_ReleaseClimb_Implementation();
 		return;
 	}
 
-	Server_AttemptClimb();
+	Server_ReleaseClimb();
 }
 
-void ADCCCharacterBase::Server_AttemptClimb_Implementation()
+void ADCCCharacterBase::Server_ReleaseClimb_Implementation()
 {
-	UWorld* World = GetWorld();
-	if (!World)
+	if (!ActiveClimbPoint)
 	{
 		return;
 	}
 
-	// Nearest first, so standing between two climb points picks the obvious one
-	// rather than whichever the iterator happened to reach first.
-	ADCCClimbPoint* Best = nullptr;
-	float BestDistanceSquared = TNumericLimits<float>::Max();
+	ActiveClimbPoint = nullptr;
+	OnRep_ActiveClimbPoint();
 
-	for (TActorIterator<ADCCClimbPoint> It(World); It; ++It)
+	bClimbInputUp = false;
+	bClimbInputDown = false;
+}
+
+void ADCCCharacterBase::OnRep_ActiveClimbPoint()
+{
+	UCharacterMovementComponent* Movement = GetCharacterMovement();
+	if (!Movement)
 	{
-		ADCCClimbPoint* Point = *It;
-		if (!Point || !Point->IsCharacterInRange(this))
+		return;
+	}
+
+	if (ActiveClimbPoint)
+	{
+		// Flying rather than a custom movement mode: gravity has to stop pulling,
+		// but the capsule must still sweep so the climber cannot pass through the
+		// cliff or the ground.
+		Movement->StopMovementImmediately();
+		Movement->SetMovementMode(MOVE_Flying);
+	}
+	else
+	{
+		// Falling, not walking - letting go halfway up a rock face should drop
+		// the climber, and MOVE_Walking at that height would leave them standing
+		// on nothing until something nudged them.
+		Movement->SetMovementMode(MOVE_Falling);
+	}
+}
+
+void ADCCCharacterBase::SetSprintInput(bool bWantsToSprint)
+{
+	if (HasAuthority())
+	{
+		Server_SetSprinting_Implementation(bWantsToSprint);
+		return;
+	}
+
+	// Applied locally as well as sent, so the local player's movement responds on
+	// the frame they pressed the key rather than after a round trip.
+	bIsSprinting = bWantsToSprint;
+	ApplyDerivedMovementSpeed();
+
+	Server_SetSprinting(bWantsToSprint);
+}
+
+void ADCCCharacterBase::Server_SetSprinting_Implementation(bool bNewSprinting)
+{
+	if (bIsSprinting == bNewSprinting)
+	{
+		return;
+	}
+
+	bIsSprinting = bNewSprinting;
+	ApplyDerivedMovementSpeed();
+}
+
+void ADCCCharacterBase::OnRep_Sprinting()
+{
+	ApplyDerivedMovementSpeed();
+}
+
+void ADCCCharacterBase::TickStamina(float DeltaSeconds)
+{
+	UDCCRuleset* Ruleset = Stats ? Stats->GetRuleset() : nullptr;
+	if (!Stats || !Ruleset)
+	{
+		return;
+	}
+
+	const int32 ClimbRank = (Skills && ActiveClimbPoint)
+		? Skills->GetSkillRank(ActiveClimbPoint->ClimbSkillId)
+		: 0;
+
+	bool bExerting = false;
+
+	if (ActiveClimbPoint)
+	{
+		bExerting = true;
+
+		const bool bMoving = bClimbInputUp != bClimbInputDown;
+		const float Cost = bMoving
+			? Ruleset->GetClimbStaminaCost(ClimbRank)
+			: Ruleset->GetClingStaminaCost(ClimbRank);
+
+		if (bMoving)
 		{
-			continue;
+			const float Speed = Ruleset->GetClimbSpeed(Stats->AbilityScores, ClimbRank);
+			const float Direction = bClimbInputUp ? 1.0f : -1.0f;
+
+			float NewZ = GetActorLocation().Z + (Speed * Direction * DeltaSeconds);
+			NewZ = FMath::Clamp(NewZ, ActiveClimbPoint->GetBottomZ(), ActiveClimbPoint->GetTopZ());
+
+			SetActorLocation(ActiveClimbPoint->GetAttachLocationFor(this, NewZ));
+
+			// Reaching the lip finishes the climb rather than leaving the player
+			// stuck at the top holding a button with nothing left to climb.
+			if (NewZ >= ActiveClimbPoint->GetTopZ() - 1.0f)
+			{
+				const FVector Dismount = ActiveClimbPoint->GetDismountLocation(this);
+
+				ADCCGameState::Log(this, EDCCLogCategory::Encounter, FText::Format(
+					NSLOCTEXT("DCC", "ClimbTop", "{0} hauls themselves over the top."),
+					FText::FromString(GetName())));
+
+				Server_ReleaseClimb_Implementation();
+				SetActorLocation(Dismount);
+
+				if (UCharacterMovementComponent* Movement = GetCharacterMovement())
+				{
+					Movement->SetMovementMode(MOVE_Walking);
+				}
+				return;
+			}
 		}
 
-		const float DistanceSquared = FVector::DistSquared(GetActorLocation(), Point->GetActorLocation());
-		if (DistanceSquared < BestDistanceSquared)
+		if (!Stats->ConsumeStamina(Cost * DeltaSeconds))
 		{
-			BestDistanceSquared = DistanceSquared;
-			Best = Point;
+			// Arms gave out. Falling is the honest outcome, and the reason the
+			// stamina bar is worth watching.
+			ADCCGameState::Log(this, EDCCLogCategory::Encounter, FText::Format(
+				NSLOCTEXT("DCC", "ClimbFall", "{0}'s grip fails. Gravity is a sponsor."),
+				FText::FromString(GetName())));
+
+			Server_ReleaseClimb_Implementation();
+		}
+	}
+	else if (bIsSprinting)
+	{
+		// Only charge for sprinting that is actually happening: holding Shift
+		// while standing still should not drain anything.
+		if (GetVelocity().Size2D() > 10.0f)
+		{
+			bExerting = true;
+
+			if (!Stats->ConsumeStamina(
+				Ruleset->GetSprintStaminaCost(Stats->AbilityScores) * DeltaSeconds))
+			{
+				Server_SetSprinting_Implementation(false);
+			}
 		}
 	}
 
-	if (Best)
+	if (!bExerting)
 	{
-		Best->TryClimb(this);
+		Stats->RecoverStamina(Ruleset->GetStaminaRegenRate(Stats->AbilityScores) * DeltaSeconds);
 	}
 }
 
@@ -365,7 +685,7 @@ void ADCCCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	// makes the first encounter playable without authoring input assets, and
 	// binds alongside the template's Enhanced Input rather than replacing it.
 	// Replace with a proper InputAction when the pause/queue loop lands.
-	PlayerInputComponent->BindKey(EKeys::LeftMouseButton, IE_Pressed, this, &ADCCCharacterBase::AttemptAttackNearest);
+	PlayerInputComponent->BindKey(EKeys::LeftMouseButton, IE_Pressed, this, &ADCCCharacterBase::OnPrimaryPressed);
 
 	// Space is the template's jump; P keeps the pause off anything the third
 	// person template already claims.
@@ -382,9 +702,34 @@ void ADCCCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	PlayerInputComponent->BindKey(EKeys::F, IE_Pressed, this, &ADCCCharacterBase::AttemptStow);
 	PlayerInputComponent->BindKey(EKeys::Tab, IE_Pressed, this, &ADCCCharacterBase::ToggleCharacterMenu);
 
-	// G for climbing, kept off E so that standing at a climb point next to a
-	// crate does not make one key mean two different things.
-	PlayerInputComponent->BindKey(EKeys::G, IE_Pressed, this, &ADCCCharacterBase::AttemptClimb);
+	// Left click is context sensitive, which is why it routes through a handler
+	// rather than binding straight to the attack: with a skill armed it picks a
+	// target, while climbing it hauls upward, and otherwise it swings.
+	PlayerInputComponent->BindKey(EKeys::LeftMouseButton, IE_Released, this, &ADCCCharacterBase::OnPrimaryReleased);
+	PlayerInputComponent->BindKey(EKeys::RightMouseButton, IE_Pressed, this, &ADCCCharacterBase::OnSecondaryPressed);
+	PlayerInputComponent->BindKey(EKeys::RightMouseButton, IE_Released, this, &ADCCCharacterBase::OnSecondaryReleased);
+
+	// Answering the confirmation box.
+	PlayerInputComponent->BindKey(EKeys::Y, IE_Pressed, this, &ADCCCharacterBase::AcceptPrompt);
+	PlayerInputComponent->BindKey(EKeys::N, IE_Pressed, this, &ADCCCharacterBase::DeclinePrompt);
+
+	// Space lets go of a wall. It is the template's jump key, which is harmless
+	// here: while climbing the movement mode is flying, so the jump does nothing
+	// and the key is free to mean the one thing a climber wants from it.
+	PlayerInputComponent->BindKey(EKeys::SpaceBar, IE_Pressed, this, &ADCCCharacterBase::ReleaseClimbIfClimbing);
+
+	// Sprint on Shift, held.
+	PlayerInputComponent->BindKey(EKeys::LeftShift, IE_Pressed, this, &ADCCCharacterBase::StartSprint);
+	PlayerInputComponent->BindKey(EKeys::LeftShift, IE_Released, this, &ADCCCharacterBase::StopSprint);
+
+	// Number keys arm a skill from the menu list. Bound one at a time because
+	// BindKey takes no payload, and a lambda per key would not survive a
+	// UFUNCTION binding.
+	PlayerInputComponent->BindKey(EKeys::One, IE_Pressed, this, &ADCCCharacterBase::SelectSkillSlot1);
+	PlayerInputComponent->BindKey(EKeys::Two, IE_Pressed, this, &ADCCCharacterBase::SelectSkillSlot2);
+	PlayerInputComponent->BindKey(EKeys::Three, IE_Pressed, this, &ADCCCharacterBase::SelectSkillSlot3);
+	PlayerInputComponent->BindKey(EKeys::Four, IE_Pressed, this, &ADCCCharacterBase::SelectSkillSlot4);
+	PlayerInputComponent->BindKey(EKeys::Five, IE_Pressed, this, &ADCCCharacterBase::SelectSkillSlot5);
 }
 
 void ADCCCharacterBase::AttemptAttackNearest()
@@ -538,6 +883,14 @@ void ADCCCharacterBase::PlayEmote()
 
 UAnimationAsset* ADCCCharacterBase::SelectLocomotionAnimation() const
 {
+	// Climbing overrides everything below it. It is picked from the replicated
+	// climb point rather than from a one-shot, so it loops for as long as the
+	// character is actually on the wall and every client agrees on it.
+	if (IsClimbing() && ClimbAnimation)
+	{
+		return ClimbAnimation;
+	}
+
 	// Horizontal speed only: falling should not read as sprinting.
 	const float Speed = GetVelocity().Size2D();
 
@@ -602,6 +955,13 @@ void ADCCCharacterBase::Tick(float DeltaSeconds)
 	// its clip from the movement it can already see, rather than replicating a
 	// state that velocity already implies.
 	UpdateLocomotionAnimation();
+
+	// Stamina is mechanical, so only the server spends it. Clients see the
+	// result through the replicated value.
+	if (HasAuthority())
+	{
+		TickStamina(DeltaSeconds);
+	}
 }
 
 void ADCCCharacterBase::PlayClimbAnimation(float DurationSeconds)

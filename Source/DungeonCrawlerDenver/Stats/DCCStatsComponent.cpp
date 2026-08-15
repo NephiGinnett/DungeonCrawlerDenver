@@ -21,6 +21,8 @@ void UDCCStatsComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	DOREPLIFETIME(UDCCStatsComponent, MaxHitPoints);
 	DOREPLIFETIME(UDCCStatsComponent, CurrentManaPoints);
 	DOREPLIFETIME(UDCCStatsComponent, MaxManaPoints);
+	DOREPLIFETIME(UDCCStatsComponent, CurrentStamina);
+	DOREPLIFETIME(UDCCStatsComponent, MaxStamina);
 }
 
 void UDCCStatsComponent::InitializeComponent()
@@ -69,6 +71,9 @@ void UDCCStatsComponent::RecalculateDerivedStats(bool bRefillToFull)
 
 	MaxManaPoints = GetRuleset()->GetMaxManaPoints(AbilityScores, Level);
 	CurrentManaPoints = bRefillToFull ? MaxManaPoints : FMath::Clamp(CurrentManaPoints, 0, MaxManaPoints);
+
+	MaxStamina = GetRuleset()->GetMaxStamina(AbilityScores, Level);
+	CurrentStamina = bRefillToFull ? MaxStamina : FMath::Clamp(CurrentStamina, 0.0f, MaxStamina);
 
 	if (CurrentHitPoints != PreviousHitPoints)
 	{
@@ -130,6 +135,35 @@ void UDCCStatsComponent::RestoreMana(int32 Amount)
 void UDCCStatsComponent::OnRep_CurrentManaPoints(int32 PreviousManaPoints)
 {
 	OnManaChanged.Broadcast(this, CurrentManaPoints, CurrentManaPoints - PreviousManaPoints);
+}
+
+bool UDCCStatsComponent::ConsumeStamina(float Amount)
+{
+	if (GetOwnerRole() != ROLE_Authority)
+	{
+		return false;
+	}
+
+	if (CurrentStamina <= 0.0f)
+	{
+		return false;
+	}
+
+	CurrentStamina = FMath::Max(0.0f, CurrentStamina - FMath::Max(0.0f, Amount));
+
+	// True while there is still something left to spend next frame, which is what
+	// makes this usable directly as a "can keep going" test.
+	return CurrentStamina > 0.0f;
+}
+
+void UDCCStatsComponent::RecoverStamina(float Amount)
+{
+	if (GetOwnerRole() != ROLE_Authority || Amount <= 0.0f)
+	{
+		return;
+	}
+
+	CurrentStamina = FMath::Min(MaxStamina, CurrentStamina + Amount);
 }
 
 void UDCCStatsComponent::ApplyDamage(int32 Amount)

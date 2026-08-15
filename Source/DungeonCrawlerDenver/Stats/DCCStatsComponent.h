@@ -57,6 +57,39 @@ public:
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Stats")
 	int32 MaxManaPoints = 0;
 
+	/**
+	 * Sustained-effort resource, drained by climbing.
+	 *
+	 * A float rather than an integer because it is spent continuously per second
+	 * rather than in discrete costs like Mana - rounding a continuous drain to
+	 * whole points would make it visibly step.
+	 *
+	 * Not replicated with a RepNotify: it changes every frame while climbing, so
+	 * it is a plain replicated value the HUD polls, rather than a delegate firing
+	 * sixty times a second.
+	 */
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Stats")
+	float CurrentStamina = 0.0f;
+
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Stats")
+	float MaxStamina = 0.0f;
+
+	UFUNCTION(BlueprintPure, Category = "Stats")
+	float GetStaminaFraction() const { return MaxStamina > 0.0f ? CurrentStamina / MaxStamina : 0.0f; }
+
+	/**
+	 * Server only. Spends stamina and reports whether any was left.
+	 *
+	 * Returns false once empty so callers can use it directly as the condition
+	 * that ends a sustained action.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Stats")
+	bool ConsumeStamina(float Amount);
+
+	/** Server only. Recovers stamina, clamped to the maximum. */
+	UFUNCTION(BlueprintCallable, Category = "Stats")
+	void RecoverStamina(float Amount);
+
 	/** Fires on server and on every client that receives the change. */
 	UPROPERTY(BlueprintAssignable, Category = "Stats")
 	FDCCHealthChanged OnHealthChanged;

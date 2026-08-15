@@ -134,6 +134,19 @@ public:
 	bool HasAdvancementMark(FName SkillId) const;
 
 	/**
+	 * Server only. Marks a skill as used so it is eligible for advancement.
+	 *
+	 * Marks on attempt, not on success - failing at something is how you learn it,
+	 * and the published rule is explicit that both outcomes count.
+	 *
+	 * Public because skill checks happen outside this component too: a climb
+	 * point rolls Climbing and has to mark it, and any future trap, lock or
+	 * social check will need the same.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Skills")
+	void MarkSkillUsed(FName SkillId);
+
+	/**
 	 * Server only. Rolls advancement for every marked skill, then clears all
 	 * marks - including on skills that failed their roll, exactly as the
 	 * published rule specifies.
@@ -193,14 +206,6 @@ protected:
 
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_SkillAdvanced(FName SkillId, int32 NewRank);
-
-	/**
-	 * Server only. Marks a skill as used so it is eligible for advancement.
-	 *
-	 * Marks on attempt, not on success - failing at something is how you learn it,
-	 * and the published rule is explicit that both outcomes count.
-	 */
-	void MarkSkillUsed(FName SkillId);
 
 	/** Finds this character's entry for a skill, or null. */
 	FDCCKnownSkill* FindKnownSkill(FName SkillId);
