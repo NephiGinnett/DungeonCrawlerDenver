@@ -8,6 +8,7 @@
 class ADCCCharacterBase;
 class ADCCGameState;
 class UDCCQuestComponent;
+class UDCCNarratorComponent;
 
 /**
  * One character's intent, parked until the world resumes.
@@ -72,6 +73,15 @@ public:
 	/** The party's shared quest log. Assign its QuestTable to give the game goals. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "DCC|Quests")
 	TObjectPtr<UDCCQuestComponent> Quests;
+
+	/**
+	 * The AI commentary layer. Reads this GameState's own feed.
+	 *
+	 * Off unless configured in Project Settings → Game → DCC Narrator, and the
+	 * game plays identically without it.
+	 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "DCC|Narration")
+	TObjectPtr<UDCCNarratorComponent> Narrator;
 
 	UFUNCTION(BlueprintPure, Category = "Combat")
 	bool IsCombatPaused() const { return bCombatPaused; }

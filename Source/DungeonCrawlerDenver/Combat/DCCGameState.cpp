@@ -1,6 +1,7 @@
 #include "Combat/DCCGameState.h"
 
 #include "Quests/DCCQuestComponent.h"
+#include "Narration/DCCNarratorComponent.h"
 
 #include "Characters/DCCCharacterBase.h"
 #include "Skills/DCCSkillComponent.h"
@@ -16,6 +17,9 @@ ADCCGameState::ADCCGameState()
 	// party-wide: five crawlers in one dungeon share one objective list, and a
 	// per-player log would show the same objective at four different counts.
 	Quests = CreateDefaultSubobject<UDCCQuestComponent>(TEXT("Quests"));
+
+	// Sits next to the feed it reads. Inert until switched on in Project Settings.
+	Narrator = CreateDefaultSubobject<UDCCNarratorComponent>(TEXT("Narrator"));
 }
 
 void ADCCGameState::AddLogEntry(EDCCLogCategory Category, const FText& Text)
@@ -46,6 +50,16 @@ void ADCCGameState::AddLogEntry(EDCCLogCategory Category, const FText& Text)
 
 	// The server never receives its own OnRep, so announce here.
 	OnEventLogged.Broadcast(Entry);
+
+	// Offered to the narrator last, and only ever offered - it returns immediately,
+	// drops almost everything, and can never write back synchronously. Its own
+	// output arrives later as an ordinary Announcement entry, which is why this
+	// cannot recurse: Announcements it produces are throttled by the same timer
+	// that gated the original request.
+	if (Narrator)
+	{
+		Narrator->Consider(Entry);
+	}
 
 	UE_LOG(LogTemp, Log, TEXT("DCCLog: %s"), *Entry.Text.ToString());
 }
