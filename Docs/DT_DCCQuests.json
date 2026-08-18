@@ -94,6 +94,48 @@
 		],
 		"ExperienceReward": 400,
 		"FavorReward": 30,
+		"NextQuestId": "Kitchens",
+		"bAutoStart": false
+	},
+	{
+		"Name": "Kitchens",
+		"QuestId": "Kitchens",
+		"Title": "Health and Safety",
+		"Summary": "Clear the kitchens. Watch the ticket rail.",
+		"StartAnnouncement": "The kitchen is still taking orders. It should not be. The rail above the pass prints a ticket before each course arrives, which is considerably more warning than this floor is contractually obliged to give you.",
+		"CompletionAnnouncement": "Kitchens clear. The rail is quiet. Somewhere a customer is still waiting to be seated, and will go on waiting.",
+		"Objectives": [
+			{
+				"Description": "Clear the kitchens",
+				"Type": "ClearEncounter",
+				"TargetId": "None",
+				"RequiredCount": 1,
+				"bHidden": false
+			}
+		],
+		"ExperienceReward": 500,
+		"FavorReward": 35,
+		"NextQuestId": "HeavyLifting",
+		"bAutoStart": false
+	},
+	{
+		"Name": "HeavyLifting",
+		"QuestId": "HeavyLifting",
+		"Title": "Unclaimed Property",
+		"Summary": "Take something heavy out of the pantry.",
+		"StartAnnouncement": "Dry storage holds property unclaimed by its previous owners, who are themselves unclaimed. Take what you can lift. The word 'can' is doing a great deal of work in that sentence.",
+		"CompletionAnnouncement": "Ownership transferred. The obligations attached to it transfer with it. We will detail those at a time of our choosing.",
+		"Objectives": [
+			{
+				"Description": "Carry something out of the pantry",
+				"Type": "Collect",
+				"TargetId": "None",
+				"RequiredCount": 1,
+				"bHidden": false
+			}
+		],
+		"ExperienceReward": 350,
+		"FavorReward": 25,
 		"NextQuestId": "FloorOne",
 		"bAutoStart": false
 	},

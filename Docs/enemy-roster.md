@@ -94,3 +94,98 @@ An eldritch horror that lives in the dungeon's one working bathroom, all tentacl
 ---
 
 Want me to keep developing more of the raw ideas into refined bosses next, or work on something else for Voldemortgage — like phase-2 dialogue lines, or a reference sheet breakdown for the model (front/side view notes, color palette, prop close-ups)?
+
+
+---
+
+## Floor 1 — the Denver layer (added 2026-08-18)
+
+Voldemortgage and the Debt Eaters carry the *foreclosure* half of Floor 1. These
+carry the *Denver* half. All original; the tone bible's rule is that the joke should
+be specific enough to be checkable.
+
+### The Nuclear Family — BUILT ✅
+
+`Characters/DCCEnemyCharacter_NuclearFamily.*` — three classes, compiled.
+
+**The premise is real, which is why it works.** Rocky Flats sat sixteen miles
+upwind of Denver making plutonium triggers, leaked for decades, got raided by the
+FBI in 1989, and is now — genuinely, on purpose — a National Wildlife Refuge. The
+joke is already written; the roster only has to point at it.
+
+A 1950s promotional-film family, still cheerful, still doing the barbecue, gently
+luminous. They are not angry and they do not chase hard. They want you to stay a
+while, and staying is the thing that kills you.
+
+**Physical description (for model generation):**
+
+Four figures lit from within, a soft sickly green-white that pools on the ground
+around them. Dad in a short-sleeved plaid shirt and an apron reading WORLD'S OKAYEST,
+holding tongs, eternally mid-flip over a barbecue whose coals are not coals. Mom in
+a full-skirted 1950s dress and cat-eye glasses, offering a casserole dish that
+glows through the foil. The Kid, maybe nine, in a striped tee, holding something
+cupped in both hands that he desperately wants to show you. Skin slightly
+translucent, veins reading as faint blue-white circuitry. Their edges are a little
+soft, as if photographed with too long an exposure. Everything they wear is
+period-perfect and slightly too clean. Dust motes drift upward around them rather
+than down.
+
+Overall mood: not menacing. *Welcoming.* The horror is that they mean it.
+
+**Why they exist mechanically:** they are the counter-argument to every other fight
+on the floor. Debt Eaters and Voldemortgage both reward closing to melee and holding
+position. The Family punish exactly that — their threat is a **dose** that
+accumulates while you stand near them and decays when you back off, so the correct
+play is strike-and-withdraw. A party that has learned Floor 1's other lesson loses
+to them on the first attempt. That is the point of putting them on Floor 1.
+
+**The dose curve** (`UDCCRadiationAura`, reusable — it is a *place* mechanic, not a
+creature trait, so leaking barrels and the Diving Pool can carry one too):
+
+- Exposure builds at ~1/sec inside the radius, decays at 0.5/sec outside
+- Nothing happens below a **safe dose of 2** — walking through is free
+- Above that, damage scales with accumulated dose, so the punishment is for
+  *lingering*, not for entering
+
+**Grief is the twist.** Every family member who dies raises the aura Intensity of
+everyone still standing — wider, faster, harder. The Kid grieves hardest at 0.9
+against the family's 0.45, so **killing the Kid first roughly doubles the pressure
+for the rest of the fight.** He is the obvious first target and the worst one.
+
+| Member | Aura | Note |
+|---|---|---|
+| **Dad, Still Grilling** | 700 radius, double damage | Widest and slowest. The barbecue is the most dangerous furniture in the room |
+| **Mom, Insisting You Eat** | 480 radius, fastest gain | She *follows*, so retreating buys less against her than against Dad |
+| **The Kid, Showing You Something** | 380 radius, fragile, quick | Kill last |
+
+Still needed: real models, and a green point light on each so the aura is visible
+before it is felt. **Right now the danger zone is invisible**, which will read as
+unfair rather than as tense — that is the one thing to fix before playtesting them.
+
+---
+
+### Still ideas — the rest of the Denver layer
+
+**Altitude Sickness.** Denver is the Mile High City and every visitor gets wrecked
+by it. A wispy, apologetic thing that drains *stamina* rather than health — climbing
+and sprinting both already run off that pool, so it attacks the traversal systems
+instead of the combat ones. Beating it is about pacing. Flavour: it is genuinely
+sorry, it just lives here and you do not.
+
+**The HOA.** Three-to-five identical polo shirts with clipboards. They do not attack;
+they issue **violations** — stacking debuffs for things you did several rooms ago
+(*"Unapproved Exterior Modification: you broke a door"*, *"Noise Complaint: you
+shouted"*). The counter is compliance or annihilation, and annihilation costs AI
+Favor because the audience finds it gauche. First enemy that punishes *how* you
+played rather than how you fought.
+
+**Last Call.** Not a creature — a floor-wide timer. When the Cantina closes, the
+lights come up and everything still in the building becomes hostile, including
+things that were not. Reuses the Balloon Payment's telegraph shape at floor scale.
+
+**The Brunch Rush.** A crowd, not a fight. Dozens of low-health patrons who want to
+be *seated*, moving as a mass and blocking movement. Damage is almost incidental —
+the threat is being unable to get anywhere. Pairs well with the Diving Pool arena.
+
+**Sir Loin of Beef** and **The Karengeist** from the Raw Ideas list below both fit
+the Cantina directly and would need no reworking to place here.

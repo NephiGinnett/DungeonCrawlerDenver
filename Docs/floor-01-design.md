@@ -268,24 +268,77 @@ pipeline in `Tools/` is the route.
 
 ## What this needs that does not exist yet
 
-Ordered by what blocks the most:
+**Updated 2026-08-15.** Items 1–4 of the original list have since been built and compiled —
+`Dialogue/`, staged waves in `Rooms/`, `Combat/DCCBossComponent`, and gold in `Stats/`. What
+is genuinely still missing:
 
-1. **A non-hostile NPC that talks.** The bartender and the server-on-break both need
-   dialogue with no combat attached. `ADCCCharacterBase` assumes everything fights.
-   **Largest genuinely new piece the floor needs**, and the ambient complaints — the
-   thing that makes the theme cohere — do not exist without it.
-2. **Wave spawning.** `ADCCEncounter` spawns once. Both the ticket rail and the boss
-   need staged waves. Voldemortgage does not work at all without this.
-3. **Summon-on-threshold and a telegraphed charge.** The boss's whole structure.
-4. **A gold resource.** Repossession Nip steals gold and the lien is repaid in gold.
-   Nothing tracks currency yet — this is a new stat, not a reskin of an existing one.
-5. **Rooms 5, 6, 7 as geometry.** All small, all installed packs, except the arena.
-6. **Room-to-room connection.** Rooms 01 and 02 are still islands.
-7. **A Voldemortgage model.** Meshy from the roster description.
+1. **Rooms 5, 6, 7 as geometry.** All small, all installed packs, except the arena.
+2. **Room-to-room connection.** Rooms 01 and 02 are still islands. The two joins that matter
+   are the Queue→Grotto walkway and the Falls→Kitchens catwalk
+   (`SciFi_Cliff/SM_bridge_01..03`); together they make the floor walkable end to end for the
+   first time, which is worth more for playtesting than any single room.
+3. **Pickup Blueprints.** `Items/` compiles and `HeavyLifting` is authored against it, but there
+   are **no `BP_Pickup_*` assets in the project**, so the Pantry's whole Strength lesson — the
+   mass tiers, the argument about who can lift what — has nothing to act on.
+4. **A Voldemortgage model.** Meshy from the roster description.
+5. **A cast animation for anyone at all.** No skeleton in the project has one; `SK_HockeyWings`
+   (CJ) has only Walking, Running, AgreeGesture and BoomDance. The Room 4 beat where CJ casts
+   Fire Fingers currently plays in an idle pose. The nearest usable poses — `A_DW_CallGesture`,
+   `A_AO_ArcheryAim` — are on **other skeletons** and need IK Rig retargeting, not a copy.
+   There is also no montage system: `Montage` appears nowhere in `Source/`.
+
+Casting *does* now root the caster — `FDCCSkillDef::CastTimeSeconds` defaults to 0 (instant, as
+before) and any positive value locks movement for that long. So the positional cost exists as
+soon as a skill row asks for it; only the animation is missing.
 
 None of it is blocked on the ruleset, the stats layer, or anything already compiled.
 
 ---
+
+## The way out — `ADCCFloorExit`
+
+**Added 2026-08-15.** In DCC the real problem on a floor is finding the stairs, so the exit
+is a first-class actor rather than a trigger bolted to the boss arena.
+
+**It locks itself.** The exit watches for living actors carrying a `UDCCBossComponent` and
+opens once none remain. Two consequences worth knowing:
+
+- **Voldemortgage needs no wiring to the exit.** Give him a `UDCCBossComponent` — which the
+  fight already requires — and the exit locks behind him automatically. There is no reference
+  to forget, which matters because a forgotten reference here fails *silently*: the exit would
+  simply never open.
+- It is **latched on "a boss has been seen"**, so it stays shut before he spawns rather than
+  reading an empty world as victory. That matters because he arrives as an encounter wave, not
+  at BeginPlay.
+
+The sign above it reads `EXIT — CLOSED FOR MAINTENANCE` in red, then `EXIT` in green. Set
+`bRequiresBossDefeat = false` for a tutorial floor that should just let people through.
+
+Walking out fires `ClearFloor` for the quest chain, and **banks any carried loot that deferred
+its value** — see below.
+
+## Gold, loot and why the Strongbox matters
+
+Three pieces, all added 2026-08-15:
+
+- **`ADCCPickup::GoldValue`** — what a prop is worth.
+- **`bBanksOnPickup`** — `true` pays out the moment it is lifted and vanishes (coins; making
+  the party walk pocket change to the exit is tedium, not tension). `false` keeps its value
+  until somebody carries it **out through the floor exit**.
+- **`LootTable` on `ADCCCharacterBase`** — `FDCCLootDrop` entries with an independent chance
+  roll each, spawning real pickups at the corpse. Hostiles default to a 55% chance of 3–12
+  gold; crawlers never drop, and that covers allies, since `IsCrawler()` returns `bIsAlly`.
+
+Drops are **actors on the floor, not credit to the killer**. That costs a few actors per
+fight and buys the thing that makes gold interesting at a table: loot has to be walked to,
+which pulls the party out of position, and whoever grabs it is a conversation rather than an
+automatic payout to whoever landed the hit.
+
+**`ADCCPickup_StrongboxCrate` is where all of this converges.** 75kg — the exact STR 5 line —
+worth 250 gold, and `bBanksOnPickup = false`. It is worth nothing unless a crawler carries it
+through the exit, and carrying it means both hands are full for the boss fight. The Pantry's
+"somebody has to be the one who carries it, and they are useless for the boss" twist is now
+mechanical rather than aspirational, and nobody has to be told the rule.
 
 ## Quest chain
 
@@ -301,3 +354,13 @@ None of it is blocked on the ruleset, the stats layer, or anything already compi
 
 `FloorOne` already exists and already pays the floor bonus, so the chain terminates
 correctly with no new C++.
+
+**All seven are authored and imported as of 2026-08-15.** `Kitchens` and `HeavyLifting` were
+the two missing rows; the chain now links end to end,
+`Orientation → MakeFriends → ClearTheRoom → GoUp → Kitchens → HeavyLifting → FloorOne`, verified
+by walking `NextQuestId` out of the live DataTable rather than the source file.
+
+Both new rows use `TargetId: "None"`, matching `ClearTheRoom`'s existing convention — the
+notify sites report the **encounter actor's name** for `ClearEncounter` and the **pickup's class
+name** for `Collect`, so an empty `TargetId` counts any of the right kind. Tighten them to a
+specific room or prop once those actors exist and have stable names.
