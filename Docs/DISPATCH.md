@@ -113,13 +113,41 @@ over 40 MB — the cause of 7 FPS with GPU 99% and memory pressure.
 **Diagnosed in a PIE run (2026-08-18).** Both open gameplay bugs now have answers, and
 neither is quite what it looked like from outside.
 
-**`[DCC Cast]` — the skill system is fine; two actors are not finding their rows.**
-`Mob_Brute_Courtyard` and `Crawler_Kyle` log `skills: (knows nothing)` despite
-`bUseSkills=true` and a full mana pool. Others in the same run resolve normally:
-`Scott_OfficePlaza_Demo` → `Critic` (cost 0), `NumberCruncher` (cost 0);
-`TestBoss_InternManager` → `ParkingLotSpecial` (cost 0), `QuickWit` (cost 0). So this is
-per-actor, not a global failure. Next step is `DT_DCCSkills`: look for missing or
-misnamed rows for those two specifically, keyed on whatever field the lookup uses.
+**`[DCC Cast]` — not missing rows. Two different bugs wearing one symptom.**
+
+The raw log settles one thing immediately: every actor, *including both failures*,
+prints `table=DT_DCCSkills`. The table is assigned. An earlier draft of this note
+blamed missing or misnamed rows — that is wrong, because the working actors resolve
+their rows off the same table.
+
+Verified against the CDOs and the live instances over MCP, 2026-08-18:
+
+| Actor | Blueprint | `StartingSkillIds` | Verdict |
+|---|---|---|---|
+| `Mob_Brute_Courtyard` | `BP_DCCEnemy_Brute` | **empty on CDO *and* placed instance** | Never authored |
+| `TestBoss_InternManager` | `BP_DCCEnemy_ArmsOut` | `ParkingLotSpecial`, `QuickWit` @ rank 2 | Works, matches CDO exactly |
+| `Scott_OfficePlaza_Demo` | — | `Critic`, `NumberCruncher` | Works |
+| `Crawler_Kyle` | `BP_DCCEnemy_ArmsOut` | see below | **Still open** |
+
+**The Brute needs no theory at all.** `StartingSkillIds` is empty on the class default
+*and* on the placed actor, so `GrantStartingSkills` has nothing to grant and correctly
+grants nothing. `POST_BUILD_TASKS.md` §3 lists an intended loadout (`Headbutt`,
+`KickItOver`) that was planned and never applied. Fill it in and the Brute is done.
+
+**Kyle is genuinely unresolved — do not record it as fixed.** `Crawler_Kyle` is an
+`ArmsOut` actor, and the ArmsOut loadout demonstrably works, because
+`TestBoss_InternManager` runs it. But in the PIE run that produced this log Kyle knew
+nothing, while in a later run the one `ArmsOut` actor matching "Kyle" had `KnownSkills`
+populated correctly at rank 2. Either there are two Kyle actors and only one was
+inspected, or something changed between the two runs. Identify the exact actor that
+logged `Crawler_Kyle` and read `StartingSkillIds` off *that* instance.
+
+**Actor naming is its own problem, and it is blocking diagnosis.** The `[DCC Cast]` and
+`[DCC Anim]` logs share **no actor names whatsoever** — `Scott_OfficePlaza_Demo` versus
+`Scott_OfficeAirplane_Demo`, `Crawler_Kyle` versus `Kyle_ArmsOut_Demo`. Either the two
+diagnostics print different name fields, or the level holds near-duplicate demo actors.
+Worth settling before chasing either bug further, because right now every
+cross-reference between the two logs is ambiguous.
 
 **`[DCC Anim]` — three Blueprints were never repointed after the skeleton merge.**
 Alert clips are built against `SK_DCCCrawler_Skeleton` and silently refuse with
@@ -155,7 +183,10 @@ PIE run above diagnosed:
 - **Repoint three Blueprints** to `SK_OfficeAirplane_Shared`, `SK_ArmsOut_Shared` and
   `SK_DiceWinged_Shared`. Cheapest of the outstanding items and it unblocks every
   shared animation on those characters, not just the alert.
-- **Audit `DT_DCCSkills`** for rows matching `Mob_Brute_Courtyard` and `Crawler_Kyle`.
+- **Author `BP_DCCEnemy_Brute`'s `StartingSkillIds`** (`Headbutt`, `KickItOver` per
+  `POST_BUILD_TASKS.md` §3). Verified empty; this is the whole Brute fix.
+- **Identify the actor logging as `Crawler_Kyle`** and read `StartingSkillIds` off that
+  instance. Not diagnosed yet — see the naming caveat above.
 
 ---
 
