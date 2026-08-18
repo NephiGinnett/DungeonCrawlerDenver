@@ -110,83 +110,143 @@ throttling, skeleton guard, audio hooks, `ADCCGameMode`.
 environment textures at 2048. Cave_Camp is 1.76 GB with 1713 MB of textures, twelve
 over 40 MB — the cause of 7 FPS with GPU 99% and memory pressure.
 
-**Diagnosed in a PIE run (2026-08-18).** Both open gameplay bugs now have answers, and
-neither is quite what it looked like from outside.
+### Both gameplay bugs, diagnosed (2026-08-18)
 
-**`[DCC Cast]` — not missing rows. Two different bugs wearing one symptom.**
+One PIE run plus MCP reads off the live actors settled both. **This is the single
+reconciled account** — earlier drafts of this section, and the corrections appended to
+them, contradicted each other in three places and have been removed. Do not append
+another "correction to the above"; edit this in place instead.
 
-The raw log settles one thing immediately: every actor, *including both failures*,
-prints `table=DT_DCCSkills`. The table is assigned. An earlier draft of this note
-blamed missing or misnamed rows — that is wrong, because the working actors resolve
-their rows off the same table.
+The evidence for everything below is the raw log, verbatim:
 
-Verified against the CDOs and the live instances over MCP, 2026-08-18:
+```
+[DCC Cast] Mob_Brute_Courtyard  INT=8  mana=8/8  bUseSkills=true  table=DT_DCCSkills  skills: (knows nothing)
+[DCC Cast] Scott_OfficePlaza_Demo  INT=12  mana=12/12  bUseSkills=true  table=DT_DCCSkills  skills: Critic(cost 0) NumberCruncher(cost 0)
+[DCC Cast] TestBoss_InternManager  INT=4  mana=4/4  bUseSkills=true  table=DT_DCCSkills  skills: ParkingLotSpecial(cost 0) QuickWit(cost 0)
+[DCC Cast] Crawler_Kyle  INT=5  mana=5/5  bUseSkills=true  table=DT_DCCSkills  skills: (knows nothing)
 
-| Actor | Blueprint | `StartingSkillIds` | Verdict |
+[DCC Anim] Scott_OfficeAirplane_Demo: refusing 'A_DCC_QA_Alert' (skeleton 'SK_DCCCrawler_Skeleton') on mesh 'SK_OfficeAirplane' (skeleton 'SK_OfficeAirplane_Skeleton'). Wrong rig.
+[DCC Anim] Kyle_ArmsOut_Demo: refusing 'A_DCC_OA_Alert' (skeleton 'SK_DCCCrawler_Skeleton') on mesh 'SK_ArmsOut' (skeleton 'SK_ArmsOut_Skeleton'). Wrong rig.
+[DCC Anim] Marcel_DiceWinged_Demo: refusing 'A_DCC_OA_Alert' (skeleton 'SK_DCCCrawler_Skeleton') on mesh 'SK_DiceWinged' (skeleton 'SK_DiceWinged_Skeleton'). Wrong rig.
+```
+
+That is the complete set under both filters for that run — nothing else matched.
+
+---
+
+#### `[DCC Cast]` — two unrelated causes wearing one symptom
+
+**Read the input and the output as separate things.** `StartingSkillIds` is the
+authored *input*; `KnownSkills` is the *runtime output* that `GrantStartingSkills()`
+produces from it. `[DCC Cast]` prints `KnownSkills`. Conflating the two cost a pass:
+an MCP read showing `StartingSkillIds` populated does **not** contradict a log line
+saying `(knows nothing)`.
+
+**Ruled out by the log itself, for all four actors including both failures:**
+
+- `table=DT_DCCSkills` on **every** line. The table is assigned everywhere. Any
+  "missing table" / `!SkillTable` theory is dead — and no further PIE run or log
+  re-read is needed, because the answer is already in the lines above.
+- `bUseSkills=true` and a full mana pool on every line. Neither gates this.
+- Missing or misnamed **rows** are out too: the two working actors resolve their rows
+  off that same table, and a missing row logs rather than failing silently.
+
+**Verified over MCP against the CDOs and the live instances:**
+
+| Actor | Blueprint | Authored `StartingSkillIds` | Status |
 |---|---|---|---|
-| `Mob_Brute_Courtyard` | `BP_DCCEnemy_Brute` | **empty on CDO *and* placed instance** | Never authored |
-| `TestBoss_InternManager` | `BP_DCCEnemy_ArmsOut` | `ParkingLotSpecial`, `QuickWit` @ rank 2 | Works, matches CDO exactly |
-| `Scott_OfficePlaza_Demo` | — | `Critic`, `NumberCruncher` | Works |
-| `Crawler_Kyle` | `BP_DCCEnemy_ArmsOut` | see below | **Still open** |
+| `Mob_Brute_Courtyard` | `BP_DCCEnemy_Brute` | **empty on CDO *and* placed instance** | **Solved** — nothing to grant |
+| `TestBoss_InternManager` | `BP_DCCEnemy_ArmsOut` | `ParkingLotSpecial`, `QuickWit` @ rank 2 | Working, matches CDO exactly |
+| `Scott_OfficePlaza_Demo` | not inspected | — | Working |
+| `Crawler_Kyle` | `BP_DCCEnemy_ArmsOut` | not read on *that* instance | **Open** |
 
-**The Brute needs no theory at all.** `StartingSkillIds` is empty on the class default
-*and* on the placed actor, so `GrantStartingSkills` has nothing to grant and correctly
-grants nothing. `POST_BUILD_TASKS.md` §3 lists an intended loadout (`Headbutt`,
-`KickItOver`) that was planned and never applied. Fill it in and the Brute is done.
+**Brute — solved, and it needs no theory.** `StartingSkillIds` is empty on the class
+default *and* on the placed actor, so `GrantStartingSkills()` correctly grants nothing.
+`POST_BUILD_TASKS.md` §3 records an intended loadout (`Headbutt`, `KickItOver`) that
+was planned and never applied. Applying it is the entire fix.
 
-**Kyle is genuinely unresolved — do not record it as fixed.** `Crawler_Kyle` is an
-`ArmsOut` actor, and the ArmsOut loadout demonstrably works, because
-`TestBoss_InternManager` runs it. But in the PIE run that produced this log Kyle knew
-nothing, while in a later run the one `ArmsOut` actor matching "Kyle" had `KnownSkills`
-populated correctly at rank 2. Either there are two Kyle actors and only one was
-inspected, or something changed between the two runs. Identify the exact actor that
-logged `Crawler_Kyle` and read `StartingSkillIds` off *that* instance.
+**Kyle — open, but narrowed to one question.** He is a `BP_DCCEnemy_ArmsOut` actor and
+that loadout demonstrably works, since `TestBoss_InternManager` runs the same two
+skills off the same Blueprint. Table, `bUseSkills` and mana are all confirmed good on
+his own log line. With rows, table and flags eliminated, what remains is the authored
+input on **that specific placed actor**:
 
-**Actor naming is its own problem, and it is blocking diagnosis.** The `[DCC Cast]` and
-`[DCC Anim]` logs share **no actor names whatsoever** — `Scott_OfficePlaza_Demo` versus
-`Scott_OfficeAirplane_Demo`, `Crawler_Kyle` versus `Kyle_ArmsOut_Demo`. Either the two
-diagnostics print different name fields, or the level holds near-duplicate demo actors.
-Worth settling before chasing either bug further, because right now every
-cross-reference between the two logs is ambiguous.
+> Read `StartingSkillIds` off the instance that logs as `Crawler_Kyle` — not off the
+> Blueprint CDO, and not off a different Kyle actor. Expect it to be empty. That is
+> trap #2 again.
 
-**`[DCC Anim]` — three Blueprints were never repointed after the skeleton merge.**
-Alert clips are built against `SK_DCCCrawler_Skeleton` and silently refuse with
-"Wrong rig" on exactly three characters:
+A later MCP read found *an* `ArmsOut` actor matching "Kyle" with `KnownSkills`
+correctly populated, which is why this is recorded as open rather than solved: the
+level contains more than one Kyle (see below), and the wrong one was almost certainly
+inspected.
 
-| Actor | Refused clip | Mesh in use | That mesh's skeleton |
-|---|---|---|---|
-| `Scott_OfficeAirplane_Demo` | `A_DCC_QA_Alert` | `SK_OfficeAirplane` | `SK_OfficeAirplane_Skeleton` |
-| `Kyle_ArmsOut_Demo` | `A_DCC_OA_Alert` | `SK_ArmsOut` | `SK_ArmsOut_Skeleton` |
-| `Marcel_DiceWinged_Demo` | `A_DCC_OA_Alert` | `SK_DiceWinged` | `SK_DiceWinged_Skeleton` |
+---
 
-**This needs no retargeting and no design decision — the work is already done.** The
-2026-08-15 consolidation (CLAUDE.md, *"All four crawlers now share one skeleton"*)
-imported `SK_OfficeAirplane_Shared`, `SK_ArmsOut_Shared` and `SK_DiceWinged_Shared`
-already bound to `SK_DCCCrawler_Skeleton`, and noted the originals could be deleted
-*"once the Blueprints are repointed"*. They never were. All three assets are still on
-disk under `Content/DCC/Characters/`, and these three actors are still using the
-pre-merge originals.
+#### `[DCC Anim]` — the Blueprints are already correct; the instances are not
 
-The corroborating detail is who is **absent** from the failure list: CJ. `SK_HockeyWings`
-was already on the shared skeleton and needed no re-import, so his alert plays fine.
-That is the same bug seen from the other side.
+The three ally **Blueprints were repointed** to the `_Shared` meshes on 2026-08-16, and
+each was confirmed by read-back. **Repointing them again is a no-op and must not be
+queued as work.**
 
-Fix is to point three Blueprints at the `_Shared` meshes. Verify the sockets came across
-— sockets are mesh-level, not skeleton-level, so each `_Shared` mesh needed its own
-`add_socket` pass and it is worth confirming that happened before deleting the originals.
+Yet the log shows all three actors still rendering pre-merge meshes — `SK_OfficeAirplane`,
+`SK_ArmsOut`, `SK_DiceWinged` — each on its own pre-merge skeleton, so alert clips built
+against `SK_DCCCrawler_Skeleton` are refused with "Wrong rig".
+
+**The open question is therefore not the Blueprint, it is the placed instance.** A
+`SkeletalMeshAsset` override serialised onto the actor beats the Blueprint value —
+trap #2, one level deeper than the `bIsAlly` case. Read the mesh off each placed actor
+and clear the override, rather than editing the Blueprint again.
+
+Corroboration that the merge itself is sound: **CJ is absent from the failure list.**
+`SK_HockeyWings` was already on the shared skeleton, so his alert plays.
+
+**Unexplained: `A_DCC_QA_Alert` does not exist.** The log names it, but the only Alert
+clips on disk are `A_DCC_OA_Alert` (shared) and `A_OA_Alert` (pre-merge original) — the
+shared set uses only `AO`, `DW`, `HW` and `OA` prefixes. There is no `QA` anything in
+the project.
+
+The lead: `DCCCrawlerAnimSet.cpp:15` sets the C++ default to
+`/Game/DCC/Characters/Shared/Anims/A_DCC_OA_Alert`, and Kyle and Marcel both log
+exactly that — they are running the C++ default. **Only Scott logs `QA`**, so something
+is overriding his alert slot with a reference to an asset that is missing or was
+renamed. Per trap #3, an authored Blueprint or instance value beats the C++ default.
+Check Scott's alert slot on the Blueprint *and* on the instance for a dangling
+reference. Do not assume the log is wrong — it was transcribed verbatim from the
+Output Log, and an earlier note in this file wrongly dismissed it as a transcription
+error.
+
+---
+
+#### Actor naming: the level holds near-duplicate characters
+
+Both diagnostics print `GetActorNameOrLabel()` — verified in source at
+`DCCEnemyCharacter.cpp:150` and `DCCCharacterBase.cpp:2102`. There is no second name
+field involved, so the two logs naming different actors means they **are** different
+actors: `Scott_OfficePlaza_Demo` and `Scott_OfficeAirplane_Demo` are two characters,
+as are `Crawler_Kyle` and `Kyle_ArmsOut_Demo`.
+
+Worth auditing and culling on its own merits: duplicates double the AI cost, they make
+every future diagnostic ambiguous, and they are what made Kyle hard to pin down above.
+`Crawler_*` (placed 2026-08-16 in the personal rooms) and `*_Demo` are almost certainly
+two generations of the same cast.
 
 **Waiting on MCP:** per-asset texture caps, reparent `BP_ThirdPersonGameMode` to
 `ADCCGameMode`, import Voldemortgage from `SourceArt/Voldemortgage/`, four pickup
 collisions, re-import `DT_DCCEquipment.csv`, build rooms 5-7, and the two fixes the
 PIE run above diagnosed:
 
-- **Repoint three Blueprints** to `SK_OfficeAirplane_Shared`, `SK_ArmsOut_Shared` and
-  `SK_DiceWinged_Shared`. Cheapest of the outstanding items and it unblocks every
-  shared animation on those characters, not just the alert.
 - **Author `BP_DCCEnemy_Brute`'s `StartingSkillIds`** (`Headbutt`, `KickItOver` per
-  `POST_BUILD_TASKS.md` §3). Verified empty; this is the whole Brute fix.
-- **Identify the actor logging as `Crawler_Kyle`** and read `StartingSkillIds` off that
-  instance. Not diagnosed yet — see the naming caveat above.
+  `POST_BUILD_TASKS.md` §3). Verified empty on CDO and instance; this is the whole
+  Brute fix, and the only fully-diagnosed item on this list.
+- **Clear the per-instance mesh override** on `Scott_OfficeAirplane_Demo`,
+  `Kyle_ArmsOut_Demo` and `Marcel_DiceWinged_Demo` so they render the `_Shared` meshes
+  their Blueprints already point at. **Do not re-edit the Blueprints — they were
+  repointed on 2026-08-16 and confirmed; that edit is a no-op.**
+- **Trace Scott's dangling `A_DCC_QA_Alert` reference.** No such asset exists. Kyle and
+  Marcel run the C++ default (`A_DCC_OA_Alert`), so Scott alone is overridden to
+  something missing or renamed.
+- **Read `StartingSkillIds` off the actor that logs as `Crawler_Kyle`** — that exact
+  instance, not the CDO and not another Kyle. Everything else is eliminated.
 
 ---
 
