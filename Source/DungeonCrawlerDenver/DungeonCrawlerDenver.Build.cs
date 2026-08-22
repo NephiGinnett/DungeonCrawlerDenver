@@ -32,6 +32,9 @@ public class DungeonCrawlerDenver : ModuleRules
 		//
 		// Json/JsonUtilities are for building the request and parsing the reply.
 		PrivateDependencyModuleNames.AddRange(new string[] {
+			// DCCWhoAmI reads the machine's own address so the host can read it
+			// out to the party. Private: nothing in the public headers needs it.
+			"Sockets",
 			"HTTP",
 			"Json",
 			"JsonUtilities",
