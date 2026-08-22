@@ -121,4 +121,14 @@ struct FDCCAchievementProgress
 	/** World seconds at unlock, so the end-of-floor recap can order them. */
 	UPROPERTY(BlueprintReadOnly, Category = "Achievement")
 	float UnlockedAtSeconds = 0.0f;
+
+	/**
+	 * False from the moment of unlock until the player opens it from the
+	 * Achievements tab. Unlocking and collecting are separate on purpose - see
+	 * UDCCAchievementComponent::Unlock and ::Server_ClaimReward - so a whole
+	 * session's worth of unlocks can pile up as a queue of things to open
+	 * rather than vanishing into stat totals the instant they happen.
+	 */
+	UPROPERTY(BlueprintReadOnly, Category = "Achievement")
+	bool bRewardClaimed = false;
 };

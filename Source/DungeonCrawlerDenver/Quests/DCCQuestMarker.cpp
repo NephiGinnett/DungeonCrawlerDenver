@@ -141,7 +141,9 @@ void ADCCQuestMarker::Tick(float DeltaSeconds)
 			FRotator ViewRotation;
 			PC->GetPlayerViewPoint(ViewLocation, ViewRotation);
 
-			Label->SetWorldRotation((Label->GetComponentLocation() - ViewLocation).Rotation());
+			// Forward must point AT the viewer - see the identical fix and comment
+			// on ADCCCharacterBase's nameplate billboarding, same bug.
+			Label->SetWorldRotation((ViewLocation - Label->GetComponentLocation()).Rotation());
 		}
 	}
 }

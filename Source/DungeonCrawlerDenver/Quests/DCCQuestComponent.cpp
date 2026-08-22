@@ -10,11 +10,23 @@
 #include "EngineUtils.h"
 #include "Net/UnrealNetwork.h"
 #include "GameFramework/GameStateBase.h"
+#include "Engine/DataTable.h"
+#include "UObject/ConstructorHelpers.h"
 
 UDCCQuestComponent::UDCCQuestComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 	SetIsReplicatedByDefault(true);
+
+	// Defaulted here for the same reason as the achievement table, and with one
+	// extra: this component lives on ADCCGameState, which has no Blueprint child
+	// to carry a Details-panel assignment at all.
+	static ConstructorHelpers::FObjectFinder<UDataTable> DefaultTable(
+		TEXT("/Game/DCC/Quests/DT_DCCQuests.DT_DCCQuests"));
+	if (DefaultTable.Succeeded())
+	{
+		QuestTable = DefaultTable.Object;
+	}
 }
 
 void UDCCQuestComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

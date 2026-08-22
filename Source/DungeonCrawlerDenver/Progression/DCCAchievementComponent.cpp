@@ -4,12 +4,25 @@
 #include "Stats/DCCStatsComponent.h"
 #include "Favor/DCCFavorComponent.h"
 #include "Combat/DCCGameState.h"
+#include "Engine/DataTable.h"
 #include "Net/UnrealNetwork.h"
+#include "UObject/ConstructorHelpers.h"
 
 UDCCAchievementComponent::UDCCAchievementComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 	SetIsReplicatedByDefault(true);
+
+	// Defaulted here rather than left for a per-Blueprint assignment because the
+	// failure mode is silent: no table means no rows means nothing ever fires,
+	// with nothing logged. A default that is right for this project beats an
+	// empty slot nobody notices. Still overridable in the Details panel.
+	static ConstructorHelpers::FObjectFinder<UDataTable> DefaultTable(
+		TEXT("/Game/DCC/Progression/DT_DCCAchievements.DT_DCCAchievements"));
+	if (DefaultTable.Succeeded())
+	{
+		AchievementTable = DefaultTable.Object;
+	}
 }
 
 void UDCCAchievementComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -157,29 +170,107 @@ void UDCCAchievementComponent::Unlock(const FDCCAchievementDef& Achievement)
 
 	ADCCGameState::Log(Owner, EDCCLogCategory::Achievement, Line);
 
-	if (Achievement.ExperienceReward > 0)
-	{
-		if (UDCCStatsComponent* Stats = Owner ? Owner->FindComponentByClass<UDCCStatsComponent>() : nullptr)
-		{
-			Stats->AddExperience(Achievement.ExperienceReward);
-		}
-	}
-
-	if (Achievement.FavorReward != 0)
-	{
-		if (UDCCFavorComponent* FavorComponent = Owner ? Owner->FindComponentByClass<UDCCFavorComponent>() : nullptr)
-		{
-			FavorComponent->AwardFavor(
-				Achievement.FavorReward,
-				EDCCFavorEvent::DirectorCall,
-				Achievement.DisplayName);
-		}
-	}
-
+	// Unlocking is not paying out. XP and Favor wait for Server_ClaimReward, so
+	// a session that unlocks six achievements mid-fight gets six things to open
+	// afterward rather than six numbers that ticked up somewhere off-screen.
 	OnAchievementUnlocked.Broadcast(this, Achievement);
 
 	UE_LOG(LogTemp, Log, TEXT("DCCAchievement: %s unlocked '%s'."),
 		*GetNameSafe(Owner), *Achievement.AchievementId.ToString());
+}
+
+void UDCCAchievementComponent::GetPendingRewardIds(TArray<FName>& OutIds) const
+{
+	OutIds.Reset();
+
+	for (const FDCCAchievementProgress& Entry : Progress)
+	{
+		if (Entry.bUnlocked && !Entry.bRewardClaimed)
+		{
+			OutIds.Add(Entry.AchievementId);
+		}
+	}
+}
+
+bool UDCCAchievementComponent::HasPendingRewards() const
+{
+	for (const FDCCAchievementProgress& Entry : Progress)
+	{
+		if (Entry.bUnlocked && !Entry.bRewardClaimed)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+void UDCCAchievementComponent::RequestClaimReward(FName AchievementId)
+{
+	if (GetOwnerRole() == ROLE_Authority)
+	{
+		Server_ClaimReward_Implementation(AchievementId);
+		return;
+	}
+
+	Server_ClaimReward(AchievementId);
+}
+
+void UDCCAchievementComponent::Server_ClaimReward_Implementation(FName AchievementId)
+{
+	FDCCAchievementProgress* Entry = nullptr;
+	for (FDCCAchievementProgress& Candidate : Progress)
+	{
+		if (Candidate.AchievementId == AchievementId)
+		{
+			Entry = &Candidate;
+			break;
+		}
+	}
+
+	// Not unlocked, or already opened - either way there is nothing to pay.
+	// Re-checked here rather than trusted from the client, same reason every
+	// other server entry point in this project re-checks its own gate.
+	if (!Entry || !Entry->bUnlocked || Entry->bRewardClaimed || !AchievementTable)
+	{
+		return;
+	}
+
+	static const FString Context(TEXT("DCCAchievementClaim"));
+	const FDCCAchievementDef* Row = AchievementTable->FindRow<FDCCAchievementDef>(AchievementId, Context, false);
+	if (!Row)
+	{
+		return;
+	}
+
+	Entry->bRewardClaimed = true;
+
+	AActor* Owner = GetOwner();
+
+	if (Row->ExperienceReward > 0)
+	{
+		if (UDCCStatsComponent* Stats = Owner ? Owner->FindComponentByClass<UDCCStatsComponent>() : nullptr)
+		{
+			Stats->AddExperience(Row->ExperienceReward);
+		}
+	}
+
+	if (Row->FavorReward != 0)
+	{
+		if (UDCCFavorComponent* FavorComponent = Owner ? Owner->FindComponentByClass<UDCCFavorComponent>() : nullptr)
+		{
+			FavorComponent->AwardFavor(
+				Row->FavorReward,
+				EDCCFavorEvent::DirectorCall,
+				Row->DisplayName);
+		}
+	}
+
+	ADCCGameState::Log(Owner, EDCCLogCategory::Achievement, FText::Format(
+		NSLOCTEXT("DCC", "AchievementRewardClaimed", "{0} opens the reward for {1}."),
+		FText::FromString(GetNameSafe(Owner)), Row->DisplayName));
+
+	OnRewardClaimed.Broadcast(this, *Row);
 }
 
 bool UDCCAchievementComponent::IsUnlocked(FName AchievementId) const

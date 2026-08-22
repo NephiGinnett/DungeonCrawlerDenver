@@ -9,6 +9,7 @@ class UDataTable;
 class UDCCAchievementComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDCCAchievementUnlocked, UDCCAchievementComponent*, Component, const FDCCAchievementDef&, Achievement);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDCCAchievementRewardClaimed, UDCCAchievementComponent*, Component, const FDCCAchievementDef&, Achievement);
 
 /**
  * Tracks one crawler's running totals and unlocks achievements off them.
@@ -52,6 +53,10 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Achievements")
 	FDCCAchievementUnlocked OnAchievementUnlocked;
 
+	/** Fires when a pending reward is actually opened - see Server_ClaimReward. */
+	UPROPERTY(BlueprintAssignable, Category = "Achievements")
+	FDCCAchievementRewardClaimed OnRewardClaimed;
+
 	/**
 	 * Server only. Adds to a running total and unlocks anything it crosses.
 	 *
@@ -75,6 +80,25 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Achievements")
 	void GetVisibleAchievements(TArray<FDCCAchievementDef>& OutAchievements) const;
 
+	/**
+	 * Unlocked achievements sitting unopened. See the class comment split
+	 * between Unlock (records it, announces it) and Server_ClaimReward
+	 * (actually pays it) for why this list can be non-empty for a while.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Achievements")
+	void GetPendingRewardIds(TArray<FName>& OutIds) const;
+
+	UFUNCTION(BlueprintPure, Category = "Achievements")
+	bool HasPendingRewards() const;
+
+	/**
+	 * Safe to call from a client - routes to the server. No-op if AchievementId
+	 * is not unlocked yet or its reward was already claimed, so a doubled click
+	 * or a stale button cannot pay twice.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Achievements")
+	void RequestClaimReward(FName AchievementId);
+
 	/** Convenience for the static helper below. */
 	UFUNCTION(BlueprintPure, Category = "Achievements")
 	static UDCCAchievementComponent* Find(AActor* Actor);
@@ -96,6 +120,10 @@ protected:
 	void Unlock(const FDCCAchievementDef& Achievement);
 
 	FDCCAchievementProgress& FindOrAddProgress(FName AchievementId);
+
+	/** Server only. Does the actual work once RequestClaimReward has routed here. */
+	UFUNCTION(Server, Reliable)
+	void Server_ClaimReward(FName AchievementId);
 
 private:
 	/**
