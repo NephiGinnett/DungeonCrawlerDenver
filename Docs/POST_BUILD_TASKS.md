@@ -465,7 +465,49 @@ a `UDCCBossComponent`, so §8e's wave 0 alone locks it and killing him opens it.
 hand-wired reference is one more thing to forget on every future floor, and forgetting it
 fails silently.
 
-### 8e. Author the Voldemortgage encounter — ✅ CLASSES BUILT 2026-08-15, wave wiring still open
+### 8e. Author the Voldemortgage encounter — ✅ DONE 2026-08-19, blockout only
+
+**Wave wiring is done.** `DCCEncounter_Voldemortgage` is placed in a new blockout arena
+(`DCCRoom_DivingPool`, Combat, linked via `DCCRoom.Encounter`) with both waves authored exactly
+as described below, and it was written in a **single `set_properties` call carrying the whole
+nested `Waves` JSON tree, confirmed by read-back.** The claim two paragraphs down — that
+`ObjectTools.set_properties` cannot write `ADCCEncounter.Waves` because it is a
+`TArray<FDCCEncounterWave>` of `TArray<FDCCEnemySpawn>` — was true when written (2026-08-15) but
+was never retested after the 2026-08-16 `set_properties` fix (see CLAUDE.md). It works now.
+
+**Dressed, connected, and playtested 2026-08-19.** The arena now has a water plane, an 8-bench
+seating ring, and an `ADCCFloorExit` (`bRequiresBossDefeat=true`). The Bar got walls and a
+ceiling. Both rooms are connected to the rest of the floor: Room02's floor already physically
+overlapped the Bar's (no gap existed, just a ~25-unit height seam, left as-is), and a new floor
+strip + nav volume bridges the Bar to the Diving Pool.
+
+**Playtested via PIE** (no input-injection tool exists in this MCP toolset, so this was
+autonomous-AI observation, not manual play — see below):
+- Spawned the player inside the arena bounds. `DCCRoom_DivingPool`'s occupancy reconcile
+  detected it within the timer interval and correctly called `TriggerEncounter` — confirmed live
+  by log: `DCCEncounter '...' started with 4 enemies`, and `find_actors` showed exactly
+  `DCCEnemyCharacter_Voldemortgage_0` (`bIsBoss`) + 3 `DCCEnemyCharacter_DebtEater` in the world,
+  matching Wave 0 exactly as authored.
+- Combat resolved for real: Voldemortgage's `HouseRules` and the DebtEaters' `LastCall` fired
+  repeatedly, including the documented "mana spent even on a fizzle" behavior verbatim in the
+  log (`House Rules fizzles. 4 Mana, gone.`). Hit/miss/crit rolls landed against the player's
+  Evade (DC 14) with real damage numbers, and the player was eventually reduced to 0/125 HP.
+- **What this does NOT prove**: nothing was attacking Voldemortgage (no player input, no allies
+  present in the arena), so he never lost HP — Late Notice (50% threshold), Balloon Payment, and
+  the Lien death effect were never exercised. That needs an actual playtest with someone fighting
+  back, or a temporary ally squad added for testing.
+- **Found and fixed a real, pre-existing bug while doing this**: Room02's `DCCRoom` had
+  `Encounter = None` — exactly the `"Combat room with no Encounter assigned"` warning
+  floor-01-design.md already flagged. Its `DCCEncounter` existed in the level the whole time
+  (at 7800,5000,0) but was never linked. Linked it live via `set_properties`, confirmed by
+  read-back. Room01's link was already correct — only Room02 had the bug.
+- Also confirmed, incidentally, in the same PIE sessions: Fire Fingers fires correctly
+  (`DCCSkill 'FireFingers' ... success=1 mana=3 magnitude=8 targets=1`), CJ took real combat
+  damage and regenerated mana back to full, and an enemy (`Mob_Courier`) was actually killed
+  (0/30 HP) in the existing sandbox combat area near spawn (x1500-3000, not inside Room01/02 —
+  this looks like an earlier ad hoc test area, distinct from the themed rooms).
+
+**Original note, kept for history:**
 
 **Steps 1 and 2 below no longer need doing — both classes exist, tuned exactly
 from `Docs/DT_DCCEnemies.json`, compiled and verified:**

@@ -268,19 +268,61 @@ pipeline in `Tools/` is the route.
 
 ## What this needs that does not exist yet
 
-**Updated 2026-08-15.** Items 1–4 of the original list have since been built and compiled —
+**Updated 2026-08-19.** Items 1–4 of the original list have since been built and compiled —
 `Dialogue/`, staged waves in `Rooms/`, `Combat/DCCBossComponent`, and gold in `Stats/`. What
 is genuinely still missing:
 
-1. **Rooms 5, 6, 7 as geometry.** All small, all installed packs, except the arena.
-2. **Room-to-room connection.** Rooms 01 and 02 are still islands. The two joins that matter
-   are the Queue→Grotto walkway and the Falls→Kitchens catwalk
-   (`SciFi_Cliff/SM_bridge_01..03`); together they make the floor walkable end to end for the
-   first time, which is worth more for playtesting than any single room.
-3. **Pickup Blueprints.** `Items/` compiles and `HeavyLifting` is authored against it, but there
-   are **no `BP_Pickup_*` assets in the project**, so the Pantry's whole Strength lesson — the
-   mass tiers, the argument about who can lift what — has nothing to act on.
-4. **A Voldemortgage model.** Meshy from the roster description.
+1. **Rooms 5, 6 and 7 are dressed blockouts, not final art.** `DCCRoom_Bar` (SafeRoom) has
+   walls, a ceiling, `SM_bar`/`SM_bar_top`, three stools and two lamps. `DCCRoom_DivingPool`
+   (Combat) has a water plane, an 8-bench seating ring, and an `ADCCFloorExit`. The bartender NPC
+   and the full `DCCEncounter_Voldemortgage` (both waves) are placed, wired, and PIE-verified to
+   actually spawn and fight. **`DCCRoom_Pantry` (LootVault) was built 2026-08-19** — x8700-9800,
+   y5800-6600, walls/ceiling/navmesh, wall shelving (`Diner/SM_store_large|short`),
+   `Ice_Station` crate stacks, and the full mass-tier pickup set (see item 3). **All seven rooms
+   of the floor now exist as geometry.**
+2. **Room-to-room connection — done.** As of 2026-08-19 the floor is walkable
+   Queue → Grotto → (climb) → Falls → Kitchens → Bar → Pantry, and Bar → Diving Pool, end to end:
+   - **Queue → Grotto**: an existing but undocumented "Approach" plaza/ramp system (labelled
+     actors `Approach_Ramp_Up/Down`, `Approach_Plaza_01/2`, spanning x987→4214) already carried
+     the spawn area most of the way. Only the last stretch was missing — a floor slab now
+     bridges x4214→5150 into Room01's west doorway (confirmed by the existing
+     `Room01_Wall_South_A` geometry, which leaves the doorway gap exactly at x5150-5200,
+     y-350..350 as this doc says).
+   - **Falls → Kitchens**: built as a single long graded ramp (not individual
+     `SciFi_Cliff/SM_bridge` segments — the run is ~4650 units, which would need 8+ segments;
+     went with a blockout plank instead, kit swap is still a valid later art pass) from the climb
+     ledge (`Room01_ClimbLedge`, x6600-6850, z360-400) down to Room02's actual west doorway gap.
+     **Room02 is built larger than this doc states** — its real bounds are roughly
+     x6660-8660, y4310-6360 (walls named `Room02_Wall_West_A/B/B2`, `_East`, `_North`, `_South`),
+     not the y4700-5300 written above. The doorway gap is the space between Wall_West_A (ends
+     y5050) and Wall_West_B (starts y5320).
+   - **Room02 → Bar → Diving Pool**: done 2026-08-19, see above.
+   - **Bar → Pantry**: done 2026-08-19. The Bar's north wall was rebuilt as two segments
+     (`SM_Bar_Wall_North_A`/`_B`) to cut a 300-unit doorway at x9150-9450, with a corridor floor
+     and nav volume running y5300→5800 into the Pantry's matching south-wall gap.
+   - **Left alone on purpose**: a separate, undocumented ground-level path (`Approach_North_01/
+     02/03`, `Approach_East_01/02`) already runs from the spawn area north then east, reaching
+     all the way to x6803 — right at Room02's west wall. Did not extend or connect this into
+     Room02, because the design doc is explicit that climbing is "the only way on" to the Falls/
+     Kitchens side, and finishing that ground path would create an unintended bypass. It's
+     unclear what this path was originally for; worth asking Zoe before touching it further.
+3. **Pickups — placed 2026-08-19, no longer blocking.** There are still no `BP_Pickup_*`
+   Blueprint assets and there do not need to be: the pickups are C++ subclasses
+   (`Items/DCCPickupVariants.h`) and were placed directly as class instances. The Pantry now
+   holds the full Strength lesson — Bottle (3kg) and EggBox (8kg) on the west side, GreaseBarrel
+   (35kg) / Crate (40kg) / Jukebox (50kg) through the middle, Keg (70kg) and the Strongbox (75kg)
+   on the east, so the mass tiers read left-to-right across the room.
+   **The Strongbox was MOVED, not duplicated** — it was sitting in Room 01's throw sandbox at
+   (5800, 100, 20) and is now at (9620, 6300, 60). Deliberate: it is `bBanksOnPickup = false`
+   with `GoldValue` 250, i.e. *the floor's single payday*, and a second copy would have broken
+   the Pantry twist ("somebody has to carry it, and they are useless for the boss"). The generic
+   tier props were duplicated instead of moved, since both rooms want things to lift and those
+   carry no unique value. Room 01 keeps Bottle/EggBox/Crate/GreaseBarrel/Keg/Coins as its throw
+   sandbox.
+   `HeavyLifting` uses `TargetId: "None"`, so any `Collect` of the right kind satisfies it —
+   the objective can now fire. **Not yet playtested.**
+4. **A Voldemortgage model.** Meshy from the roster description. `ADCCEnemyCharacter_Voldemortgage`
+   currently reskins onto `SK_DiceWinged_Shared` at 1.5x pending the real art.
 5. **A cast animation for anyone at all.** No skeleton in the project has one; `SK_HockeyWings`
    (CJ) has only Walking, Running, AgreeGesture and BoomDance. The Room 4 beat where CJ casts
    Fire Fingers currently plays in an idle pose. The nearest usable poses — `A_DW_CallGesture`,
