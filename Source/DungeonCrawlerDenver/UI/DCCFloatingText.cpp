@@ -2,6 +2,7 @@
 
 #include "Components/TextRenderComponent.h"
 #include "Engine/World.h"
+#include "Engine/Engine.h"
 #include "Kismet/GameplayStatics.h"
 #include "Camera/PlayerCameraManager.h"
 
@@ -104,7 +105,11 @@ void ADCCFloatingText::Tick(float DeltaSeconds)
 
 	// Face the local camera. TextRender draws on a flat quad, so without this the
 	// number is edge-on and invisible from most angles.
-	if (const APlayerController* PC = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr)
+	//
+	// Local, not first: GetFirstPlayerController returns the host on a listen
+	// server, which would turn every client's damage numbers edge-on — the exact
+	// failure this billboarding exists to prevent.
+	if (const APlayerController* PC = GEngine ? GEngine->GetFirstLocalPlayerController(GetWorld()) : nullptr)
 	{
 		if (const APlayerCameraManager* Camera = PC->PlayerCameraManager)
 		{

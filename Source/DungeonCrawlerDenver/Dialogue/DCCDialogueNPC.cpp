@@ -8,6 +8,8 @@
 #include "GameFramework/PlayerController.h"
 #include "Engine/World.h"
 #include "Engine/Engine.h"
+#include "Engine/DataTable.h"
+#include "UObject/ConstructorHelpers.h"
 
 ADCCDialogueNPC::ADCCDialogueNPC()
 {
@@ -17,6 +19,16 @@ ADCCDialogueNPC::ADCCDialogueNPC()
 	// Replicated so the actor exists on clients, but the talking itself is driven
 	// locally from the replicated script - see BeginPlay.
 	bReplicates = true;
+
+	// Defaulted so a placed NPC talks without anyone remembering to assign a
+	// table. SpeakerId still selects which lines it says, so every NPC on the
+	// floor can share this one script.
+	static ConstructorHelpers::FObjectFinder<UDataTable> DefaultTable(
+		TEXT("/Game/DCC/Dialogue/DT_DCCDialogue.DT_DCCDialogue"));
+	if (DefaultTable.Succeeded())
+	{
+		DialogueTable = DefaultTable.Object;
+	}
 
 	Collision = CreateDefaultSubobject<UCapsuleComponent>(TEXT("Collision"));
 	SetRootComponent(Collision);
@@ -273,7 +285,9 @@ void ADCCDialogueNPC::Tick(float DeltaSeconds)
 			FRotator ViewRotation;
 			PC->GetPlayerViewPoint(ViewLocation, ViewRotation);
 
-			Speech->SetWorldRotation((Speech->GetComponentLocation() - ViewLocation).Rotation());
+			// Forward must point AT the viewer - see the identical fix and comment
+			// on ADCCCharacterBase's nameplate billboarding, same bug.
+			Speech->SetWorldRotation((ViewLocation - Speech->GetComponentLocation()).Rotation());
 		}
 	}
 }

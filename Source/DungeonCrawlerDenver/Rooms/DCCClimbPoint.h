@@ -7,6 +7,7 @@
 class ADCCCharacterBase;
 class UBoxComponent;
 class UStaticMeshComponent;
+class UWorld;
 
 // -----------------------------------------------------------------------------
 // A CLIMBABLE SURFACE
@@ -89,4 +90,20 @@ public:
 	/** Somewhere safe to step off at the top, just inland of the lip. */
 	UFUNCTION(BlueprintPure, Category = "Climb")
 	FVector GetDismountLocation(const ADCCCharacterBase* Character) const;
+
+	/**
+	 * Server only. What makes an un-authored wall climbable.
+	 *
+	 * Reuses an existing climb point (authored or previously synthesized) if one
+	 * already covers this spot, so repeatedly clicking the same generic wall does
+	 * not litter the level with duplicate actors. Otherwise probes up and down
+	 * from HitLocation to estimate how tall the surface actually is, and spawns
+	 * a new point sized to that span.
+	 *
+	 * The box is deliberately unrotated: GetAttachLocationFor and IsWithinReach
+	 * both work off the component's world AABB and the character's own position
+	 * relative to it, not the box's facing, so a precisely-oriented panel was
+	 * never required - only that the AABB covers the reachable patch of wall.
+	 */
+	static ADCCClimbPoint* FindOrCreateForSurfaceHit(UWorld* World, const FVector& HitLocation, const FVector& HitNormal);
 };
