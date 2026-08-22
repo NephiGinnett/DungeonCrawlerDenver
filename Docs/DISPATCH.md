@@ -250,6 +250,95 @@ PIE run above diagnosed:
 
 ---
 
+## Queued for whoever has MCP (2026-08-23, after the full reconciliation pass)
+
+**Read CLAUDE.md's "✅ Reconciliation pass complete" section first** — it lists every bug fixed
+and every open question this list below assumes. This supersedes the 2026-08-22 list that used to
+be here; that session's work (loot menu, chests, ally auto-gear, `[DCC Talk]`) is still current
+and still items 1-4 below, just folded into one list with everything found since.
+
+**Everything in `Source/` is now committed and Development-Editor-build-verified, editor closed
+throughout.** `Content/` (the binary assets, including Zoe's own recent manual map edits) is
+deliberately NOT committed — review that yourself before committing it; it was not this session's
+call to make. Priority order below is "cheapest/most-isolated first," not "most important first" —
+item 3 (the ally bug) is probably the one Zoe actually cares most about.
+
+1. **Re-import `Docs/DT_DCCEquipment.csv`** into `/Game/DCC/Equipment/DT_DCCEquipment` — same
+   schema, three new rows only (`ConfettiCrossbow`, `NailGunPro`, `FlareGunEmergency`). Plain
+   re-import, no restart needed first.
+2. **Place the four curated chests** somewhere reachable — `ADCCLootContainer_KitchenDrawer`,
+   `_Armory`, `_Quartermaster`, `_ManagementLockbox` (`Items/DCCLootContainerVariants.h`). Pantry
+   or Bar are the least crowded rooms.
+3. **PIE, filter the log on `[DCC Talk]`, try to talk to an ally.** Names exactly which of four
+   gates refused the attempt. If `IsHostileTo=1`, read `bIsAlly` off that specific placed
+   instance next — trap #2 (Blueprint CDO true, placed instance false) is the leading theory,
+   especially since Zoe's own recent manual map edits could have reintroduced it.
+4. **PIE-test the new loot menu** — E on a corpse or a placed chest should show Check Inventory /
+   Loot All / Stow / Leave, not the old "Search the body." Compiled and deployed, never seen.
+5. **PIE-test the achievement reward-claim flow** — the HUD already draws a "Pending Rewards (N)"
+   affordance and calls `RequestClaimReward`; unlock something and confirm clicking it actually
+   pays XP/Favor and clears the pending flag. Never exercised.
+6. **PIE-test universal climbing again** — `ADCCClimbPoint::FindOrCreateForSurfaceHit` (the
+   function that makes any wall climbable) did not exist in git until this pass; it's never been
+   run. Known-good loop per CLAUDE.md: look at any wall, click, climbs or shows a "too far"/
+   "nothing to climb" notice.
+7. **Multiplayer-test the intro director with more than one client**, if/when it's ever placed in
+   a level (grep found it placed nowhere yet) — the just-fixed
+   `TeleportAllCrawlersToDungeon` needs a real multi-connection session to confirm, not just PIE
+   with one player.
+8. **A decision, not a task: is the procedural dungeon generator (`Rooms/DCCDungeonGenerator`)
+   wanted?** It's real, working, and completely unwired — nothing spawns an instance, and it
+   contradicts `floor-01-design.md`'s explicit hand-authored premise. Committed so the work isn't
+   lost. If the answer is "no," it can just stay dormant; if "yes," it needs a placed instance, a
+   NavMeshBoundsVolume-per-cell fix, and the frontier-trigger race-condition fix before it's safe
+   to turn on with more than one player.
+9. **Place a `DCCCrowdSpawner` in the Bar** — the ambient-crowd system (Tier 2 of
+   `population-design.md`) has been code-complete since before this session; its only blocker
+   (Bar geometry) has existed since 2026-08-19.
+10. **Place one or more Nuclear Family members** (`ADCCEnemy_NuclearDad/Mom/Kid`,
+    `Docs/enemy-roster.md`'s "Rocky Flats" hazard trio) somewhere they can actually be fought —
+    built, spawnable via the admin debug panel, never placed in a room/encounter.
+11. **Ask Zoe whether to download either free weapon pack** named in CLAUDE.md's reconciliation
+    section (Free Fantasy Weapon Sample Pack on Fab, ASIS Free Gun Weapons Pack on itch.io) —
+    `ConfettiCrossbow` ships with no mesh at all and the other two ranged rows reuse an unrelated
+    placeholder mesh until one lands.
+
+---
+
+## Queued for whoever has MCP (2026-08-18, evening)
+
+The main session has **no MCP**; dispatch demonstrably does. Treat that as the
+division of labour: main session takes C++, dispatch takes anything inside the
+editor. These are all editor-side and all reported by Zoe from live play.
+
+**Edit the versions in HER level, not the base classes.** Her words, and it is the
+right instruction — every one of these has a per-instance answer.
+
+1. **Physics warnings, third recurrence.** `DCCPickup_GreaseBarrel`, `_Keg`,
+   `_Crate`, `_StrongboxCrate` still log *"but it has ComplexAsSimple collision"* on
+   every PIE, and `_Keg` now repeats mid-session. Two previous sessions recorded this
+   as fixed via `StaticMeshTools.generate_convex_collisions`; it was not.
+   **Read the collision setting back after writing it, and save the asset** — an
+   unsaved change looks identical to a successful one until the next launch.
+
+2. **Random loot on the enemies actually placed in the level.** `ADCCEnemyCharacter`'s
+   constructor already gives every enemy a 55% / 3-12 gold `Coins` entry, so the base
+   default is fine — the question is whether the placed instances and the Blueprints
+   in `/Game/DCC/Characters/` have `LootTable` entries of their own, and whether
+   anything overrode it to empty. Vary it per enemy type rather than leaving them all
+   on the same coin drop.
+   Note the loot rules changed: drops are now rolled at death and held **on the
+   corpse** until searched (`E` → "Search the body"), not scattered on the floor.
+
+3. **Two Kyles, two Scotts.** Confirmed above as genuinely distinct actors. The
+   `Crawler_*` set was placed 2026-08-16 in the personal rooms; the `*_Demo` set
+   predates it. Audit and cull the duplicates — they double AI cost and confuse every
+   diagnostic.
+
+4. **The three wrong-rig actors are instance-level.** The Blueprints were already
+   repointed and verified. Clear the per-instance `SkeletalMeshAsset` override on the
+   placed actors, not the Blueprint.
+
 ## Working style
 
 Build first, explain at checkpoints. Zoe is learning game dev — explain the *why*

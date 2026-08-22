@@ -114,6 +114,16 @@ restructuring character data. So this folder must stay free of DCC-specific conc
 - `DCCStatsComponent.h/.cpp` — replicated per-character stats + HP. Goes on players and
   enemies alike, so the DM client can inspect both the same way.
 
+**Two stat layers, as the books specify (added 2026-08-15).** `AbilityScores` is the
+**Unenhanced** layer - authored, replicated, changed by potions and level-ups. `EnhancedScores`
+is derived: Unenhanced plus equipment, and later spells and buffs. **All rules read
+`GetEnhanced()`**; only advancement writes to the base. Recomputed from base on every change
+rather than adjusted in place, so removing an item can never leave a residue. Floored at 1,
+because cursed gear should make you bad at something, not delete the something.
+
+The one deliberate write to the base layer is `DCCEncounter.cpp` applying a spawn's authored
+stat block. Everything else was migrated.
+
 Gotcha worth preserving: ability modifiers use `FMath::FloorToInt32((Score - 10) / 2.0f)`,
 not integer division — C++ truncates toward zero, which gives the wrong answer for scores
 below 10 (7 would give -1 instead of -2).
@@ -188,6 +198,126 @@ layout and the previews yielded the modifier table. Only **Health remains an inv
 formula is on Crawlers & Customization p.41, which is not in the excerpts. `GetMaxHitPoints` is
 flagged in-code as the last placeholder. Evade's exact formula is likewise absent, so `10 + Dex`
 remains ours, though it now uses the correct banded modifier underneath.
+
+### `Source/DungeonCrawlerDenver/Equipment/` — and the skeleton problem
+
+**Added 2026-08-15.** DataTable-driven gear: `EDCCEquipmentSlot` (MainHand, OffHand, Head,
+Body, Trinket), `FDCCEquipmentDef` rows, and a replicated `UDCCEquipmentComponent` that
+folds bonuses into the stats layer and hangs meshes off sockets.
+
+**Ability bonuses are five flat `int32` columns, not a map or nested struct**, because the
+MCP DataTable importer only accepts CSV and CSV cannot express a nested container without
+hand-written UE struct literals. Uglier header, far better authoring.
+
+#### Rigid attachment only — and why that is not a temporary limitation
+
+**Every crawler has its own Meshy-generated skeleton ASSET**: `SK_HockeyWings_Skeleton`,
+`SK_OfficeAirplane_Skeleton`, `SK_ArmsOut_Skeleton`, `SK_DiceWinged_Skeleton`, plus the
+mannequin for the player.
+
+> ### ✅ CONSOLIDATED 2026-08-15. All four crawlers now share one skeleton.
+>
+> Canonical skeleton: **`/Game/DCC/Characters/Shared/SK_DCCCrawler_Skeleton`** (renamed from
+> `SK_HockeyWings_Skeleton`, which was misleading once everyone used it; CJ's mesh followed the
+> redirector cleanly).
+>
+> - CJ's `SK_HockeyWings` was already on it and needed no re-import.
+> - `SK_OfficeAirplane_Shared`, `SK_ArmsOut_Shared`, `SK_DiceWinged_Shared` were imported bound
+>   to it, with sockets re-added and materials/physics assets restored. Vertex counts verified
+>   **identical** to the originals, so nothing was mangled. Originals are still present as a
+>   fallback and can be deleted once the Blueprints are repointed.
+> - **All 24 animations** re-imported against it into `Shared/Anims` as `A_DCC_<src>_<clip>`.
+>   Every crawler can now play every clip — which fills three gaps the docs listed as missing:
+>   `A_DCC_DW_ChargedSlash` (an attack), `A_DCC_DW_CallGesture` (a cast, for CJ's Fire Fingers
+>   beat) and `A_DCC_DW_ClimbStairs` (a climb, for anyone).
+>
+> **Re-import is the only rebinding path** — `SkeletalMeshTools` has `get_skeleton` but no
+> `set_skeleton`, and `import_file` refuses to overwrite an existing asset. Hence new `_Shared`
+> assets rather than in-place rebinding.
+>
+> **Sockets are MESH-level, not skeleton-level.** A mesh imported against a skeleton that has
+> sockets inherits none of them, so every new mesh needs its own `add_socket` pass.
+>
+> **Animation imports return the junk mesh but NOT the AnimSequence.** The clip still lands, as
+> `<AssetName>_Anim` next to it — find it by path rather than trusting the return value.
+>
+> Original finding that made this possible:
+> **the four Meshy rigs are structurally IDENTICAL — verified 2026-08-15.** Byte-identical
+> bone lists: 24 bones, root `Hips`, same names in the same order
+> (`RightHand`, `LeftHand`, `Head`, `Spine02`, ...). They are separate *assets*, not separate
+> *rigs*. This is much better news than "five different skeletons" implies:
+>
+> - Animation retargeting between the four is a 1:1 bone map, i.e. nearly free.
+> - **Rebinding all four meshes to one shared Skeleton asset would make every animation
+>   directly usable by every character with no retargeting at all** — which is the cheap fix
+>   for CJ having no cast or attack animation, since `A_DW_ChargedSlash` and `A_DW_CallGesture`
+>   already exist on a structurally identical rig.
+> - Modular armour across the four becomes possible too, with clipping risk where Meshy gave
+>   them different silhouettes.
+>
+> Untested risk: identical hierarchy does not guarantee identical proportions or bind pose, so
+> shared animation may drift visually. Test on one character before committing.
+
+The player's mannequin is the genuine outlier — UE naming (`hand_r`, `spine_03`) against
+Meshy's (`RightHand`, `Spine02`).
+
+That rules out body-conforming armour outright. A chestplate skinned to CJ's rig has **no
+correspondence** to Marcel's — no shared skeleton to skin against, no shared topology to
+morph through. What works is rigid props snapped to sockets: weapons, helmets, shoulders,
+packs. What does not work is a fitted breastplate. Armour that must change the body's
+silhouette has to be a **material change on the existing mesh**, not new geometry.
+
+**The socket NAME is the contract; the bone it hangs from is per-skeleton detail.** That is
+what lets one item definition serve five differently-rigged characters — each skeleton just
+needs a socket of the agreed name, parented to whatever that rig calls its right hand.
+Names in use: `hand_rSocket`, `hand_lSocket`, `headSocket`, `spine_03Socket`.
+
+**Sockets are authored — done 2026-08-15.** All six skeletal meshes carry `hand_rSocket`,
+`hand_lSocket`, `headSocket` and `spine_03Socket`: the four Meshy characters and both
+mannequins (`SKM_Manny_Simple`, `SKM_Quinn_Simple`). Added with
+`SkeletalMeshTools.add_socket` — **a dedicated write API that works, unlike the broken
+`ObjectTools.set_properties`**, which is a useful pattern: when an ObjectTools write fails,
+look for a purpose-built tool on the asset's own toolset before giving up.
+
+> **Their transforms are identity and still need a visual pass.** A socket at the hand bone
+> puts a weapon at the wrist pivot, not in the grip, so expect props to sit wrong until
+> someone nudges them in the skeleton editor. Fallbacks still exist for safety
+> (`DCCCarryComponent` → capsule offset, equipment → mesh root).
+
+### `Source/DungeonCrawlerDenver/UI/DCCHUD.cpp` — enemy health bars moved off UMG entirely
+
+**2026-08-15.** `WBP_EnemyHealthBar` (a Screen Space `UWidgetComponent`, added on `BP_DCCEnemy`
+in the Blueprint editor, not C++) is now retired at runtime — `ADCCEnemyCharacter::BeginPlay`
+finds it via `FindComponentByClass<UWidgetComponent>()` and calls `DestroyComponent()` on every
+machine. It is not deleted from the Blueprint asset itself; disabling it in code was faster and
+safer than editing a component shared across seven subclasses.
+
+**Why it moved:** Screen Space widget components composite as a dedicated render pass *per
+instance*, every frame, and do not taper off with distance the way World Space ones do. With
+`LDMaxDrawDistance` unset (0 = unlimited) every enemy's bar rendered regardless of range — this
+was the direct cause of "health bars everywhere" and a real contributor to frame stutter with
+more than a handful of enemies on screen.
+
+**Where it lives now:** `ADCCHUD::DrawSegmentedBar` — the exact block-drawing algorithm the
+player's own vitals bar already used, extracted into a shared helper so both draw identically.
+`ADCCHUD::DrawNearbyHealthBars` iterates live characters, distance-gates them (2500 units),
+projects their head position to screen space, and draws a mini version of the same bar tinted
+by `GetAllegianceColour()` — flat by allegiance, not health-lerped, so a bar reddening as it
+empties can never be confused with "this is hostile." One bounded Canvas pass per frame, not N
+persistent widget components.
+
+**A second, unrelated finding while tracing an "allies won't fight" report:** the mechanics were
+fine — `PerformAttack` was resolving, dealing damage, and logging every hit. Nothing was visibly
+happening because `Multicast_PlayAttack` only calls `PlayOneShotAnimation(AttackAnimation)`, and
+`AttackAnimation` was unset on every character Blueprint, so it silently no-ops. Worth checking
+the combat log feed before assuming a mechanics bug when a fight looks static - it may just be
+an unset animation slot.
+
+**If the project ever standardises on one skeleton**, modular armour *and* cross-character
+animation retargeting both become possible in the same pass. That is the real argument for
+doing it: the fragmentation is already costing us — it is why CJ has no cast animation, why
+there is no shared AnimBlueprint, and why `BP_DCCEnemy_HockeyWings` runs a single looping
+clip with no blending. Armour would make the same tax hit twice.
 
 ### `Source/DungeonCrawlerDenver/Rooms/` and `Characters/`
 
@@ -298,6 +428,72 @@ idle/walk blending and no attack montage. A proper ABP for this skeleton is the 
 
 ## MCP level-editing gotchas
 
+> ### ✅ CORRECTED 2026-08-16: `ObjectTools.set_properties` DOES work.
+>
+> The previous entry here said it was inert and that quest markers, `HUDWidgetClass` and
+> DataTable-to-component assignment were permanently manual. **That was wrong**, and acting on
+> it cost real time: several things were built as C++ subclasses purely to route around a tool
+> that works.
+>
+> **The actual bug was the call, not the tool.** `set_properties` takes its payload in a
+> parameter named **`values`**, and that parameter is a **JSON-encoded string**, not an object:
+>
+> ```
+> set_properties(instance={"refPath": "..."}, values="{\"ObjectiveTag\": \"Orientation\"}")
+> ```
+>
+> Passing an object literal, or naming the parameter `properties`, raises a schema error rather
+> than writing anything. A call shaped that way returning "false" is what the old note recorded.
+>
+> Verified working 2026-08-16 by read-back on every property class the old note claimed was
+> blocked:
+>
+> | Target | Property | Result |
+> |---|---|---|
+> | Placed level actor | `ObjectiveTag` (`FName`), `MarkerLabel` (`FText`) | ✅ written |
+> | Placed actor's component | `StaticMesh` (object ref), `RelativeScale3D` (struct) | ✅ written |
+> | Blueprint CDO component | `SkeletalMeshAsset` (object ref) | ✅ written |
+> | Blueprint CDO, direct | `HUDWidgetClass` (`TSubclassOf`), set to null | ✅ cleared |
+>
+> **Still read the value back after writing.** Not because the tool lies, but because a wrong
+> refPath or a soft-pointer format mistake fails quietly — see the soft-pointer note below.
+>
+> **Soft object pointers take a plain path string, not a `refPath` object.** A
+> `TSoftObjectPtr` column written as `{"refPath": "..."}` silently stores `None`; written as
+> `"/Game/Path/Asset.Asset"` it stores correctly. Hit on `FDCCEquipmentDef.Mesh`.
+>
+> `ObjectTools.reset_properties` is the genuinely unreliable one, and its semantics are not what
+> the name suggests: it clears a property to the **type default** (null), *not* to the owning
+> C++ class's constructor value. Clearing `SkeletalMeshAsset` on a Blueprint whose C++ parent
+> sets a mesh leaves it `None`, and **compiling the Blueprint does not re-run the native
+> constructor** — only an editor restart rebuilds the CDO. Prefer `set_properties` and say what
+> you mean.
+>
+> **What this does not change:** setting defaults in C++ with
+> `ConstructorHelpers::FObjectFinder` is still the better answer for anything that must never
+> fail quiet, and the `ADCCAlly_*` / `DCCCrawlerAnimSet` classes remain the right shape — a
+> C++ default reaches every Blueprint that has not overridden the property, which is one edit
+> instead of four. Use `set_properties` for one-off instance wiring, C++ for defaults.
+
+- **`ConstructorHelpers::FObjectFinder` resolves ONCE, at editor startup.** An asset created
+  *during* a session is not picked up by a constructor default until the next editor restart —
+  the CDO was already built. Confirmed 2026-08-15: `achievementTable` resolved (its table
+  existed at startup) while `equipmentTable` read `None` (its table was imported mid-session).
+  **Self-healing on the next restart, no rebuild required** — the DLL is unchanged, the finder
+  just needs the asset to exist when the class is constructed. Do not conclude the system is
+  broken; check whether the table post-dates the session.
+- **`DataTableTools.import_file` cannot read `.json`** — it routes through `CSVImportFactory`,
+  which accepts only `csv`. Same shape as the `.glb`/`FbxFactory` gotcha. Since `DT_DCCQuests.json`
+  is JSON precisely *because* `Objectives` is an array of structs that CSV cannot express, the
+  route is `create` → `add_rows` → `set_rows` instead. `AssetTools.read_file` can read the source
+  file if it is staged under `Saved/` (its allowed roots are `/Game/`, plugin `Content/`, and
+  `Saved/`, and **relative paths resolve against the engine binary directory**, so pass absolute
+  ones) — which lets `ProgrammaticToolset` do the whole transform editor-side without the file
+  passing through Claude's context.
+- **DataTable property case is asymmetric.** `set_rows` takes **camelCase** at every level, but
+  `get_rows` returns top-level fields camelCase and **nested struct fields PascalCase**. Reading
+  back `objectives[0].type` gives null; the field is `Type`. This looks exactly like a failed
+  write and is not one.
 - **`ActorTools.set_actor_transform` resets any field you omit.** Passing only `location` silently
   sets rotation to zero and **scale to 1**. A 20×20 scaled floor cube becomes a 1m cube and the room
   vanishes. The "unset means don't change" note in its docs applies to blueprint defaults, not to
@@ -326,19 +522,99 @@ showrunner.
 
 ## Current state / next up
 
-**Last updated 2026-08-15.** All C++ compiles and is cleanly linked — verified with the editor
-closed, single DLL, no numbered hot-reload artifacts.
+**Superseded by the reconciliation pass below (2026-08-22/23) for anything the two disagree on.**
+The table immediately under this note is the old (2026-08-15) snapshot, kept for history. The
+one after it is current.
 
-### What exists and works
+### ✅ Reconciliation pass complete (2026-08-22/23, no-MCP dispatch session, Zoe away from the keyboard)
 
-The vertical slice is playable and has been played, including a **two-player PIE session**.
-Room 01 (`DCC/Room01`, x 5200–6800) and Room 02 (`DCC/Room02`, y≈5000) both exist, with a
-`DCCRoom`+`DCCEncounter`, navmesh, enemies that path and swing, ragdoll deaths, and a working
-clear condition.
+The ~4 days of uncommitted work flagged earlier in this file has been read in full, fixed where
+reading it surfaced a real bug, committed in ~13 logical chunks (each individually described in
+its own commit message — `git log` from here back to `d28d937` is the actual changelog, more
+detailed than this summary), and Development-Editor-build-verified after every chunk with the
+editor closed throughout. **Content/ (the .uasset binary assets, including Zoe's own recent
+manual map edits) is deliberately NOT committed** — that is hers to review, not a call to make
+unsupervised. Everything below is source-code state only.
+
+**Real bugs found and fixed, not just documented:**
+- Corpse loot tables never forwarded `EquipmentItemId` from a roll to the spawned pickup —
+  equipment entries on any character's `LootTable` were silently inert. (The newer
+  `DCCLootTableRoller`, used by the dungeon generator, already did this correctly.)
+- `UDCCBossComponent::SpawnChargeMinion` spawned its Debt Eaters with no `Owner` and never
+  registered them with the encounter — everything the Balloon Payment summoned mid-charge was
+  invisible to `ChargeDamagePerMinion` and to Repossession Nip's heal-the-boss lookup. Added
+  `ADCCEncounter::RegisterSpawnedEnemy`.
+- `UDCCEquipmentComponent::Equip`/`Unequip` silently destroyed a container's contents instead of
+  spilling them into the world the way `RetrieveFromContainer` always has.
+- `ADCCIntroDirector`'s cold-open only ever teleported ONE crawler (the server's own
+  `GetFirstPlayerController`) to the dungeon arrival point — in this project's five-player model,
+  four players' pawns were simply never moved. Added `TeleportAllCrawlersToDungeon`, spread on a
+  ring rather than stacked on one point.
+- `ADCCDungeonGenerator`'s `BuildRoomShell` spawned each room with a plain `SpawnActor`, running
+  `BeginPlay` before `RoomType`/`Encounter` were ever set — every generated Combat room's
+  clear-tracking delegate never bound. Switched to `SpawnActorDeferred` + `FinishSpawning` after
+  population.
+- `UDCCStatsComponent::RecalculateEnhancedScores` had no authority guard (unlike every sibling
+  mutator), and a character with stat-boosting starting gear spawned permanently pinned below its
+  true max HP/Mana (the initial refill happens before equipment can be read; the later
+  equipment-driven recalc only clamped down, never refilled up). Both fixed.
+- `ADCCClimbPoint::FindOrCreateForSurfaceHit` forced a synthesized climb point to be at least 300
+  units tall even when the first upward probe found nothing there at all — clicking near the top
+  of a short wall could climb into open air above the real geometry. Removed the erroneous floor.
+- `UDCCPopulationSubsystem::ApplyAttrition` took a `Cause` parameter that was accepted and never
+  read anywhere, despite its own doc comment promising an announcement. Now used when non-empty.
+
+**A real architectural question, not a bug — flagged for Zoe, not decided unilaterally:**
+`Rooms/DCCDungeonGenerator.h/.cpp` + `DCCDungeonFrontierTrigger` are a complete, working,
+**entirely orphaned** procedural floor generator — nothing spawns an instance anywhere, and it
+appears in no roadmap/design doc despite `floor-01-design.md`'s whole premise being that Floor 1
+is deliberately hand-authored. Committed so the work isn't lost, explicitly not as an endorsement
+of the direction. Worth asking whether it's wanted before investing further.
+
+**Also found, not yet acted on (documented, not fixed — lower value without a decision to build on
+first, or too invasive for a no-PIE session):**
+- Missing `NavMeshBoundsVolume` per generated dungeon cell — enemy pathing there likely has
+  nothing to path on.
+- Two dungeon-generator frontier triggers can legitimately target the same unclaimed cell from
+  different sides; whichever is reached first can leave the other's corridor stub facing a wall.
+- Reaching the generator's room budget makes a frontier trigger silently vanish with an open
+  doorway gap and no "nothing further generated" notice.
+- `ADCCClimbPoint::FindOrCreateForSurfaceHit`'s probe traces carry no ignored-actor list (a stray
+  pawn could corrupt the estimated span), and two players clicking the same never-before-seen
+  wall in the same tick can spawn two overlapping synthetic climb points.
+- `ADCCCrowdSpawner` (the Tier 2 ambient-crowd system) is code-complete and reachable via the
+  admin debug panel but has never been placed anywhere — its prerequisite (Bar/Room 05 geometry)
+  has existed since 2026-08-19, so this is purely an editor placement task now.
+- The Nuclear Family (`ADCCEnemy_NuclearDad/Mom/Kid`, Rocky Flats satire, dose-not-damage hazard)
+  is built and spawnable via the admin panel but not placed in any room/encounter.
+- `UDCCAchievementComponent`'s new claim-reward flow (`RequestClaimReward`, already called by the
+  HUD) has never been exercised in PIE.
+- **The `[DCC Talk]` ally-interaction diagnostic from earlier this session is still the open
+  question on "can't interact with allies"** — nothing in this pass's reading turned up an
+  obvious cause; it still needs one PIE run with that log filter.
+
+**Discovered mid-pass and fixed opportunistically:** several of this pile's own files depend on
+symbols that only exist in OTHER, still-more-uncommitted files from the same pile (Equipment
+called `Stats->RecalculateEnhancedScores()` before that function existed in committed history;
+the HUD's achievement-claim UI, itself already committed this session, called
+`RequestClaimReward` before `DCCAchievementComponent` had it; `DCCGameMode` needed a `Sockets`
+module dependency that was never added to `Build.cs`; `DCCCharacterBase.cpp` called
+`ADCCClimbPoint::FindOrCreateForSurfaceHit` before that function existed anywhere in git). None of
+this broke the actual working tree — every file was already present on disk together and this
+session's builds cover the true combined state — but it means **several individual commits in
+this pile's history do not independently compile if checked out alone**. Not worth rewriting
+history to fix; noted here so nobody burns an hour bisecting.
+
+### What exists and works — snapshot at 2026-08-15, superseded above
+
+Kept for history only. The vertical slice was playable and had been played, including a
+**two-player PIE session**. Room 01 (`DCC/Room01`, x 5200–6800) and Room 02 (`DCC/Room02`,
+y≈5000) both exist, with a `DCCRoom`+`DCCEncounter`, navmesh, enemies that path and swing,
+ragdoll deaths, and a working clear condition.
 
 Systems built and compiled, roughly in the order they were added:
 
-| System | Where | State |
+| System | Where | State (as of 2026-08-15 — see above for current) |
 |---|---|---|
 | Stats, ruleset, five-stat DCC math | `Stats/` | Working |
 | Rooms, encounters, **staged waves** | `Rooms/` | Compiled, waves untested |
@@ -358,18 +634,103 @@ Systems built and compiled, roughly in the order they were added:
 
 ### The immediate next step
 
-**Nothing new should be written until the three DataTables are imported and assigned.** Quests,
-achievements and dialogue are all inert without them and fail *quiet* — no table means no rows
-means nothing ever fires, with no error. `Docs/POST_BUILD_TASKS.md` §8 is the checklist.
+**The three DataTables are imported.** ✅ `DT_DCCAchievements` (20 rows), `DT_DCCQuests`
+(7 rows), `DT_DCCDialogue` (14 rows) all exist under `/Game/DCC/` and are saved. They no longer
+need assigning either — each is now loaded as a **C++ constructor default** via
+`ConstructorHelpers::FObjectFinder`, so the quiet-failure mode is gone. Still overridable per
+Blueprint in the Details panel if a floor ever wants its own table.
 
-After that, in order:
+**Everything is built and DEPLOYED as of 2026-08-15 17:15.** Development Editor target,
+editor closed, real `Link [x64] UnrealEditor-DungeonCrawlerDenver.dll`, no numbered
+hot-reload artifacts. The session's whole batch is live: the three table constructor
+defaults, `CastTimeSeconds` + the cast-time movement root, gold/`bBanksOnPickup`/`ClaimValue`,
+`FDCCLootDrop` chance-rolled drops, the seven `ADCCPickup_*` variants, `ADCCFloorExit`,
+the Unenhanced/Enhanced stat split, `UDCCEquipmentComponent`, and the `DCCFloatingText`
+billboard fix.
 
-1. **PIE and actually look at it.** Segmented health, the quest tracker, mana regen and the
-   nameplates have all been compiled but never once seen on screen.
-2. Place the two quest markers (`Orientation`, `EastLedge`) and one bartender NPC.
-3. Clear `HUDWidgetClass` on the player Blueprint — the old UMG HP bar draws over the new
-   Canvas one.
-4. Author the Voldemortgage encounter from `Docs/floor-01-design.md` and `DT_DCCEnemies.json`.
+Nothing is owed a build. What remains is editor-side placement and wiring — see
+`Docs/POST_BUILD_TASKS.md` §0.
+
+**✅ Items 2–5 below (quest markers, `HUDWidgetClass`, bartender, Voldemortgage encounter) were
+all completed 2026-08-19, verified live over MCP rather than trusted from a doc — this list had
+gone stale (POST_BUILD_TASKS.md already recorded 2 and 3 as done on 2026-08-16, but this section
+was never updated to match).** Details:
+
+- Quest markers and `HUDWidgetClass`: already done as of 2026-08-16, confirmed by reading the
+  live values back (`ObjectiveTag`/`MarkerLabel` set on both markers, `HUDWidgetClass` reads
+  `None` on the player Blueprint CDO).
+- **Rooms 5 (Bar) and 7 (Diving Pool) did not exist as geometry**, so "place the bartender" and
+  "author the Voldemortgage encounter" both turned out to be level-building tasks, not just
+  wiring. Built minimal blockouts for both: `DCCRoom_Bar` (SafeRoom) with an `SM_Cube` floor,
+  `SM_bar`/`SM_bar_top`, three stools, two lamps, and the `ADCCDialogueNPC` (`SpeakerId =
+  Bartender`) behind the counter — all in outliner folder `DCC/Room05_Bar`. `DCCRoom_DivingPool`
+  (Combat) with an `SM_Cube` floor and a `NavMeshBoundsVolume`, plus `DCCEncounter_Voldemortgage`
+  with both waves authored (Wave 0 immediate: Voldemortgage `bIsBoss=true` + 3 DebtEaters; Wave 1
+  at 50% boss health: 5 more DebtEaters) and linked via `DCCRoom.Encounter` — in
+  `DC/Room07_DivingPool`. Both are pure blockout, no art pass.
+- **Correction to the "`set_properties` can't write nested arrays" claim** (POST_BUILD_TASKS.md
+  §8e, and the MCP gotchas section below): it can. `ADCCEncounter::Waves` is
+  `TArray<FDCCEncounterWave>` where each wave holds its own `TArray<FDCCEnemySpawn>` — a doubly-
+  nested array of structs — and a single `set_properties` call with the whole JSON tree wrote it
+  correctly, confirmed by reading it back. The §8e claim predates the 2026-08-16 `set_properties`
+  fix and was never retested afterward. Try `set_properties` first on any "can't write this
+  property" problem before concluding it needs a workaround.
+
+**✅ Dressing, connection, exit, and a real PIE playtest all done 2026-08-19, same session.**
+The Bar got walls + a ceiling; the Diving Pool got a water plane, an 8-bench seating ring, and
+an `ADCCFloorExit`. Room02's floor already physically overlapped the Bar's (no corridor needed,
+just a ~25-unit height seam left as-is); a new floor strip + nav volume bridges the Bar to the
+Diving Pool. Full detail in `POST_BUILD_TASKS.md`'s §8e update. Highlights:
+
+- **PIE playtest confirmed the encounter chain works end to end**, autonomous-AI-only (no
+  input-injection tool exists in this MCP toolset, so this was observation via logs + live state
+  reads, not manual play): spawning the player inside the arena bounds triggered
+  `DCCRoom_DivingPool` → `DCCEncounter_Voldemortgage`, which spawned exactly the authored Wave 0
+  roster (Voldemortgage `bIsBoss` + 3 DebtEaters), and combat resolved for real — skills fired,
+  including the documented "mana spent even on a fizzle" rule verbatim in the log, and hit/miss/
+  crit rolls landed against Evade with real damage.
+- **What PIE did NOT prove**: nothing was attacking Voldemortgage (no player input, no allies in
+  the arena), so Late Notice, Balloon Payment, and the Lien were never exercised. That needs an
+  actual play session or a temporary ally squad.
+- **Found and fixed a real pre-existing bug**: Room02's `DCCRoom` had `Encounter = None` — the
+  exact `"Combat room with no Encounter assigned"` warning floor-01-design.md already flagged.
+  Its `DCCEncounter` existed in the level the whole time, just never linked. Fixed via
+  `set_properties`, confirmed by read-back. Room01 was already correct.
+- Also incidentally reconfirmed in the same PIE sessions: Fire Fingers fires and deals damage,
+  CJ's mana regenerates, and enemies actually die in combat — in the sandbox test area near
+  spawn (x1500–3000), not inside the themed Room01/02.
+
+**Floor connectivity — done (2026-08-19).** Queue → Grotto → (climb) → Falls → Kitchens → Bar →
+Pantry, plus Bar → Diving Pool, is now walkable end to end. **All seven rooms of Floor 1 exist
+as geometry.** Two finds worth knowing:
+- An existing but previously undocumented "Approach" plaza/ramp system already carried most of
+  the Queue→Grotto route; only the last ~950 units needed a new floor slab.
+- **Room02 is built larger than `floor-01-design.md` states** — real bounds ≈ x6660-8660,
+  y4310-6360, not y4700-5300. Its west doorway is the gap between `Room02_Wall_West_A` (ends
+  y5050) and `_West_B` (starts y5320).
+
+Deliberately did **not** connect a separate, undocumented ground path
+(`Approach_North_*`/`Approach_East_*`) that already runs from spawn to right at Room02's west
+wall — the design doc is explicit that climbing is "the only way on" to Falls/Kitchens, and
+finishing that path would bypass it. Worth asking Zoe what it was for before touching it.
+Full detail in `floor-01-design.md`'s "Room-to-room connection" section.
+
+**What's left:** `Docs/POST_BUILD_TASKS.md`'s "Verify" checklist (nameplates, segmented health,
+etc. — visual checks nobody has confirmed on screen), a real playtest of Voldemortgage's phase
+transitions with someone actually fighting him, and a playtest of the `HeavyLifting` quest now
+that the Pantry can satisfy it. Everything on the floor is an **art pass**, not a build.
+
+**Collecting works now (2026-08-19).** The old note here said the `HeavyLifting` quest could
+never fire because there are no `BP_Pickup_*` Blueprints. There are still none and **none are
+needed** — the pickups are C++ subclasses in `Items/DCCPickupVariants.h`, placed directly as
+class instances via `add_to_scene_from_class`. The Pantry (`DCCRoom_Pantry`, x8700-9800,
+y5800-6600) now holds the full mass-tier set, so the objective has something to act on. Untested.
+
+**One rule worth keeping when placing loot:** duplicate the generic tier props freely, but
+**never duplicate `ADCCPickup_StrongboxCrate`.** It is `bBanksOnPickup = false` at 250 gold — the
+floor's single payday — and the Pantry's whole twist is that one crawler must commit to carrying
+it through the boss fight. A second copy silently removes that choice. It was *moved* from Room
+01's throw sandbox into the Pantry rather than copied, for exactly this reason.
 
 ### Design documents — read these before adding content
 
@@ -377,16 +738,148 @@ After that, in order:
   Seven rooms with world coordinates, the Voldemortgage fight, what does not exist yet.
 - `Docs/dungeon-tone-bible.md` — the System AI's voice. Read before writing player-facing text.
 - `Docs/enemy-roster.md`, `Docs/DT_DCCEnemies.json` — stat blocks and boss phase structure.
+- `Docs/races-and-classes.md` — **race and class are selected on the THIRD FLOOR, not at
+  character creation.** Crawlers start as plain humans; Floors 1–2 are Tutorial Floors and
+  cap Skill Upgrades at the Rank 5 tier. Also: Game Guides, and why the Bar's bartender
+  should become Floor 1's.
 - `Docs/ai-narrator-integration.md` — how the local LLM connects and what it may never do.
 - `Docs/multiplayer-plan.md` — Enhanced Input migration, session model, predicted failures.
 - `Docs/POST_BUILD_TASKS.md` — the live wiring checklist.
 
-### Known-good test loop for climbing
+### Climbing is universal now, and no longer needs a skill armed (2026-08-19)
 
-Tab → `1` arms Climbing → look at Room 01's east wall → click → `Y` → hold LMB to rise, RMB to
-descend, Space to let go. The player has `Climbing`, `Vault`, `MartialArts` at Rank 1 and there
-is a climb point plus a landing ledge already placed. **There is no climb animation for the
-player skeleton**, so it plays in an idle pose — that is cosmetic, not a bug.
+**Root cause of "skills/climbing don't seem to work" (session found this by reading the input
+code, not guessing):** `TrySelectClimbTargetUnderCursor` only ran at all when a skill was armed
+from the menu (`SelectedSkillId` non-None) — with nothing armed, a primary click skipped
+climb-detection entirely and fell straight to fist-bump/attack. So clicking a wall with no skill
+selected did *nothing*, silently, with no feedback either way. This is very likely most of what
+read as "skills don't work" too — the same click-with-nothing-armed silently no-ops.
+
+**Fixed by generalizing climbing rather than gating it:**
+- `TrySelectClimbTargetUnderCursor` (now returns `bool`) runs on **every** primary click, skill
+  armed or not, and always consumes the click if the cursor is over anything wall-like.
+- **Any wall-like surface is now climbable**, not just placed `ADCCClimbPoint` actors. A hit
+  whose normal isn't floor/ceiling-like (`|Normal.Z| <= 0.5`) and isn't a character triggers
+  `ADCCClimbPoint::FindOrCreateForSurfaceHit` — reuses a nearby point if one already covers that
+  spot (authored or previously synthesized), otherwise probes up/down from the hit to estimate
+  the wall's climbable span and spawns a new point sized to it. Box is left unrotated on purpose:
+  `IsWithinReach`/`GetAttachLocationFor` work off the component's world AABB and the character's
+  own position, not the box's facing, so precise orientation was never required.
+- **Generic surfaces skip the Y/N confirm** (authored `ADCCClimbPoint`s, e.g. the Falls, still
+  ask as before) — click resolves immediately to either climbing or a `ShowLocalNotice` failure
+  message ("Too far away to climb that." / "There is nothing to climb there."), routed to the
+  server via the new `Server_RequestGenericClimb` RPC, which re-traces near the client's claimed
+  hit point rather than trusting it outright (same "nominate, don't dictate" pattern as
+  `Server_CastSkill`).
+- **Deliberate guardrail against hijacking combat clicks:** `GenericClimbReachDistance` (260,
+  `EditDefaultsOnly` on the character) keeps this narrow — since this game's attacks are
+  proximity-based (`AttemptAttackNearest`), not aimed, the only realistic false-positive is
+  standing right up against a wall while looking straight at it, which is a fair trade against
+  "walls not gated behind an armed skill". Worth watching for in play; tune the constant down
+  (or reintroduce a require-skill-armed gate) if it ever fires during a fight unintentionally.
+
+**This is a reflection change (new `UFUNCTION`s, new `UPROPERTY`, changed function signature) —
+DebugGame compile-check passed 2026-08-19, but it has NOT been deployed.** Needs the usual close
+editor → Development Editor build → reopen cycle before any of the above is actually live or
+testable in PIE.
+
+**Known-good test loop, once deployed:** look at *any* wall (no need to arm Climbing first) →
+click → climbs immediately, or shows a "too far" / "nothing to climb" notice. The player has
+`Climbing`, `Vault`, `MartialArts` at Rank 1. Hold LMB to rise, RMB to descend, Space to let go.
+**There is no climb animation for the player skeleton**, so it plays in an idle pose — that is
+cosmetic, not a bug.
+
+### ⚠️ Roughly 4 days of work is sitting uncommitted (found 2026-08-22)
+
+The last commit is 2026-08-18. `git status` shows **59 untracked `Source/` files** alone —
+`DCCAllyCharacters`, `DCCEnemyCharacter_DebtEater`/`_Voldemortgage`, `DCCDungeonGenerator`,
+`DCCPopulationSubsystem`, `DCCCrowdSpawner`/`_Crawler`, `DCCIntroDirector`, `DCCRadiationAura`,
+`DCCGameMode`, the whole `Equipment/` module, `DCCFloorExit`, `DCCQuestMarkers_Floor01`,
+`DCCLootTableRoller`, `DCCPickup_Equipment`, plus a long tail of new `Content/` — plenty of it
+already imported and playable (`DT_DCCEquipment`, `DT_DCCLootTables`, `DT_DCCAchievements`,
+`DT_DCCQuests`, `DT_DCCDialogue`, `SK_Voldemortgage`, `SK_DebtEater`, the whole `Shared/Anims/`
+set), by file mtime spanning back roughly 27–40 hours before this session and further. **This
+session's own new work sits on top of all of it, uncommitted the same way.** None of it is lost —
+it is all present on disk — but it exists nowhere except this one working copy. Worth a `git add`
++ commit (or several, by feature) at the next natural checkpoint, before anything happens to this
+machine. Not committed automatically here per this file's own rule: only commit when asked.
+
+This also means large parts of this file's own "Current state" narrative below predate 4 days of
+undocumented work and should be read as a partial, stale picture rather than ground truth — trust
+what you can verify on disk (or in the editor, once MCP is back) over what this file claims.
+
+### Loot menu rework, chests, and ally auto-gear (2026-08-22, dispatch session, no MCP)
+
+Written and Development-Editor-built with the editor closed the whole session (confirmed no
+numbered hot-reload DLL). **Not yet seen in PIE** — this needs Zoe at the editor. Full detail is
+in this session's commit; the shape of it:
+
+- **"Search the body" is gone, replaced by a loot menu shared by corpses and chests.** First E
+  press on either opens **Check Inventory / Loot All / Stow / Leave**. Check Inventory drills into
+  an itemised list — click through each row and take just that item, or Back out. Stow hands
+  everything left to the looter's own inventory as a **Stowed Remains** record (visible on the Tab
+  menu's Inventory page, click a row to empty it) and retires the source — a corpse fades on its
+  usual timer, a chest just sits there empty.
+- **New interface, `IDCCLootSource`** (`Items/DCCLootSource.h`) is what makes one menu work on two
+  unrelated actor types: `ADCCCharacterBase` (a corpse) and the new `ADCCLootContainer` (a chest,
+  deliberately **not** derived from `ADCCCharacterBase` — same reasoning as `ADCCDialogueNPC`, see
+  that class's own comment on why combat baggage should not follow a prop that never fights).
+- **Real bug fixed along the way, corpse-only:** `FDCCLootDrop::EquipmentItemId` documented itself
+  as forwarded onto a spawned pickup, but `ADCCCharacterBase::RollLootOntoBody`/`LootRemains` never
+  carried it — `FDCCRolledLoot` had no such field, so an equipment entry on any *character's*
+  `LootTable` was silently inert. **`Items/DCCLootTableRoller.cpp` already did this correctly**
+  (found mid-session, already forwards `EquipmentItemId` at its own spawn site) — it just has no
+  persistent "hold until searched" state, which is why it wasn't a fit for the corpse/chest menu
+  below. Fixed the corpse side by adding the field and routing both rolling and spawning through
+  two new shared helpers, `DCCLoot::RollLootTable` / `DCCLoot::SpawnRolledLoot`
+  (`Items/DCCLootTypes.h/.cpp`) — a corpse and the new chest both call these instead of each
+  carrying its own copy.
+- **`ADCCPickup_Equipment`** (`Items/DCCPickup_Equipment.h` — already existed, found mid-session
+  after a build error caught a duplicate-class collision; the first draft of this pass had written
+  a second one into `DCCPickupVariants.h` before discovering it) is a generic ground pickup that
+  resolves its own mesh from `DT_DCCEquipment` in `BeginPlay` — no per-weapon C++ class needed for
+  loot. `EquipmentItemId` and `GoldValue` are now replicated on `ADCCPickup` (they were not), which
+  is what lets a remote client see the right ground mesh at all.
+- **Four curated chest subclasses** (`Items/DCCLootContainerVariants.h`), each with a guaranteed
+  (`Chance = 1.0`) loot table, ready to place the moment MCP is back:
+  `ADCCLootContainer_KitchenDrawer` (mallet/knife/skillet), `ADCCLootContainer_Armory` (axe/sword/
+  shield), `ADCCLootContainer_Quartermaster` (the new ranged rows below), `ADCCLootContainer_
+  ManagementLockbox` (hat/blazer/name tag + real gold).
+- **Three new `DT_DCCEquipment.csv` rows for ranged gear** (`Docs/DT_DCCEquipment.csv`):
+  `ConfettiCrossbow`, `NailGunPro`, `FlareGunEmergency` — real `AttackRangeOverride` values, not
+  reskinned melee. **No pack installed in this project has anything bow- or gun-shaped** (checked
+  every folder under `Content/` for `*bow*`/`*gun*`/`*rifle*`/`*crossbow*` meshes — nothing but
+  World Partition hash-name false positives), so `ConfettiCrossbow` ships with an empty `Mesh`
+  column on purpose, and the other two reuse an existing tool/lamp mesh as a placeholder the same
+  way `ADCCPickup_Jukebox` reuses a kitchen appliance. Two free packs worth downloading to fix this
+  properly, found this session: **Free Fantasy Weapon Sample Pack** on Fab (Prop Garden LLC,
+  permanently free Unreal-sponsored content, 12 weapons incl. bow-shaped ones, static + skeletal
+  mesh) and **ASIS Free Gun Weapons Pack** on itch.io (FBX + textures, a community giveaway — FBX
+  imports directly through the existing pipeline, no Blender conversion needed). Only Zoe can
+  download either (Fab/itch are account-gated); once landed under `Content/`, swap the `Mesh`
+  column in the CSV and re-import.
+- **Allies now pick up and equip gear on their own.** `ADCCEnemyCharacter::TryAutoEquipNearbyGear`
+  (ally-only, throttled every ~3s like the other AI scans) compares any nearby unequipped-gear
+  pickup against whatever is already in that slot — summed ability bonuses + weapon die + Evade —
+  and equips it only on a strict improvement, so an ally never undresses itself for something
+  worse. Calls the exact same `ADCCPickup::OnPickedUp` a player's own pickup uses.
+- **`[DCC Talk]` diagnostic added for the still-open "can't interact with allies" report.**
+  Zoe reported this is still broken as of this session, and nothing in the code read as visibly
+  wrong on inspection — `IsHostileTo` correctly derives from `bIsAlly` via `IsCrawler()`, the sweep
+  correctly finds a living ally within range. Per this file's own established pattern, the fix is
+  to instrument rather than guess: every failed E-press now logs which of the four gates refused it
+  (nothing hit / not a character / hostile-or-dead-or-out-of-reach / too far), tagged `[DCC Talk]`.
+  **One PIE run with this filter answers the question that four sessions of re-reading the code
+  have not.** The leading theory, unconfirmed: the party's own history of `bIsAlly` being `true` on
+  a Blueprint CDO and `false` on the actually-placed instance (trap #2, hit at least twice already)
+  — and Zoe's own recent manual map edits are exactly the kind of change that could have
+  reintroduced it on whichever allies are in the level now.
+
+**Queued for whoever has MCP next:** re-import `Docs/DT_DCCEquipment.csv` (schema unchanged, just
+three new rows — plain re-import, no restart needed first); place the four curated chests
+somewhere reachable; a PIE run filtered on `[DCC Talk]` to close out the ally-interaction report;
+and, once Zoe has downloaded either weapon pack above, point `ConfettiCrossbow`/`NailGunPro`/
+`FlareGunEmergency`'s `Mesh` columns at real meshes and re-import.
 
 ### Gotcha that cost real time this session
 
@@ -436,18 +929,42 @@ binary. Batch C++ work and accept it is unverified until the next close.
 
 There is **no uncompiled backlog** — everything in `Source/` is built and cleanly linked.
 
-The workflow constraint is unchanged and has now been probed twice:
+The old constraint, for context:
 
 - Editor **open** → builds are unsafe. With Live Coding on, UBT refuses. With Live Coding off,
   it silently hot-reloads instead (see the warning near the top of this file). Neither is a way
   to verify C++.
 - Editor **closed** → clean builds work, but MCP dies with it, so no editor automation.
 
-The one idea not yet tested: with Live Coding **off** and the editor **open**, build the
-`DebugGame` configuration. It links to `UnrealEditor-DungeonCrawlerDenver-Win64-DebugGame.dll`,
-a filename the editor is not watching, so it should compile and link without triggering hot
-reload. If that works it is a genuine compile-check with the editor running. **Worth ten minutes
-next session** — it would remove the biggest friction in this project.
+#### The DebugGame compile-check works. Use it. (Confirmed 2026-08-15)
+
+With Live Coding **off** and the editor **open**, building the **`DungeonCrawlerDenver`** target
+(the standalone game target, *not* `DungeonCrawlerDenverEditor`) in the **DebugGame**
+configuration compiles and links cleanly, every time, without disturbing the running editor:
+
+```
+"D:/UE/UE_5.8/Engine/Build/BatchFiles/Build.bat" DungeonCrawlerDenver Win64 DebugGame \
+  -Project="C:/Users/kmett/Documents/Unreal Projects/DungeonCrawlerDenver/DungeonCrawlerDenver.uproject" -WaitMutex
+```
+
+It produces `Binaries/Win64/DungeonCrawlerDenver-Win64-DebugGame.exe` — a **standalone exe the
+editor never loads**, which is exactly why it works. No UBT refusal, no hot reload, no numbered
+DLLs, editor and MCP session both untouched. Verified across three builds including one that
+added new `UPROPERTY`s.
+
+Cold build ≈ 9 min; **incremental ≈ 1.5–3.5 min**, because UBT recompiles only changed files
+(adaptive non-unity pulls them out of the unity blob automatically).
+
+**What it does and does not buy you:**
+
+- ✅ Catches compile and link errors immediately, with the editor open and MCP alive.
+- ❌ Does **not** deploy anything into the running editor. The editor keeps executing the old
+  `UnrealEditor-DungeonCrawlerDenver.dll`. To actually *run* a change — reflection or not — the
+  editor still has to close for a Development Editor build.
+
+So it converts "write C++ blind, discover errors at the next restart" into "write C++ verified,
+deploy at the next restart". Batching reflection changes still matters; guessing whether they
+compile no longer does.
 
 MCP itself needs reconnecting after every editor restart. That is a session id the server
 forgets (`LogModelContextProtocol: Error: Unknown session id ...; client should reinitialize`),
