@@ -44,7 +44,13 @@ void UDCCEquipmentComponent::BeginPlay()
 
 	if (GetOwner() && GetOwner()->HasAuthority())
 	{
-		NotifyStatsDirty();
+		// True here only: InitializeComponent already refilled Current to Max
+		// against the UNENHANCED scores (equipment cannot be read that early),
+		// so a character with stat-boosting starting gear would otherwise spawn
+		// permanently pinned below the true, gear-inclusive max the moment this
+		// recalculates it - clamped down next time, never refilled up. Every
+		// other caller of NotifyStatsDirty leaves this false.
+		NotifyStatsDirty(/*bRefillToFull=*/true);
 	}
 }
 
@@ -441,13 +447,13 @@ void UDCCEquipmentComponent::SpillContainerContents(const FDCCEquippedItem& Entr
 	}
 }
 
-void UDCCEquipmentComponent::NotifyStatsDirty()
+void UDCCEquipmentComponent::NotifyStatsDirty(bool bRefillToFull)
 {
 	if (const ADCCCharacterBase* Character = GetOwningCharacter())
 	{
 		if (UDCCStatsComponent* Stats = Character->Stats)
 		{
-			Stats->RecalculateEnhancedScores();
+			Stats->RecalculateEnhancedScores(bRefillToFull);
 		}
 	}
 }

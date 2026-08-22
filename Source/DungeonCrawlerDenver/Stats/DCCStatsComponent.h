@@ -42,8 +42,56 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stats")
 	TSubclassOf<UDCCRuleset> RulesetClass;
 
+	/**
+	 * The UNENHANCED layer: base scores, plus anything permanent - potions and
+	 * level-ups. This is the authored value and the one on the character sheet.
+	 *
+	 * The books split stats into Unenhanced and Enhanced, and the distinction is
+	 * load-bearing rather than cosmetic: losing a sword must not un-drink a
+	 * potion. Keeping the authored field as the base means gear can be added and
+	 * removed non-destructively, because the number it modifies is never the
+	 * number it wrote to.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_AbilityScores, Category = "Stats")
 	FDCCAbilityScoreSet AbilityScores;
+
+	/**
+	 * The ENHANCED layer: AbilityScores plus equipment, and later spells and
+	 * buffs. Derived - never author this.
+	 *
+	 * Replicated rather than recomputed per machine because a client would
+	 * otherwise need the whole equipment table and every buff's rules to arrive
+	 * at the same answer, and any disagreement shows up as a wrong number on a
+	 * character sheet nobody can explain.
+	 */
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Stats")
+	FDCCAbilityScoreSet EnhancedScores;
+
+	/**
+	 * What the rules should read. Every check, attack, carry limit and throw
+	 * resolves against Enhanced; only advancement writes to Unenhanced.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Stats")
+	const FDCCAbilityScoreSet& GetEnhanced() const { return EnhancedScores; }
+
+	/**
+	 * Server only. Rebuilds EnhancedScores from AbilityScores plus equipment.
+	 *
+	 * Called whenever either side changes. Cheap enough to do eagerly, and doing
+	 * it eagerly means no call site has to remember to ask for a refresh.
+	 *
+	 * bRefillToFull defaults false - swapping gear mid-session must not
+	 * rubber-band a damaged character back to full HP/Mana just because a
+	 * ring changed hands. The one exception is the very first call after
+	 * spawn: InitializeComponent seeds EnhancedScores from the base layer
+	 * alone and refills to full against THAT (equipment may not exist on the
+	 * actor yet), so a character with stat-boosting starting gear would
+	 * otherwise spawn permanently pinned below its true, gear-inclusive max -
+	 * clamped down to the old max next time this runs, never refilled up to
+	 * the new one. UDCCEquipmentComponent::BeginPlay passes true for exactly
+	 * this reason; every other caller should leave it false.
+	 */
+	void RecalculateEnhancedScores(bool bRefillToFull = false);
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats", meta = (ClampMin = "1"))
 	int32 Level = 1;
@@ -139,6 +187,33 @@ public:
 	 */
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Stats")
 	bool bIsPlayerCharacter = false;
+
+	/**
+	 * Friendly NPC. Gets a survivability cushion like a player, but smaller.
+	 *
+	 * Without this an ally is statistically a mob wearing a different nameplate,
+	 * and dies at exactly the same rate as the things it is fighting - which is
+	 * what was observed. The party's own NPCs going down as fast as the enemy
+	 * makes recruiting anyone feel pointless.
+	 */
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Stats")
+	bool bIsAllyCharacter = false;
+
+	UFUNCTION(BlueprintCallable, Category = "Stats")
+	void SetIsAllyCharacter(bool bNewIsAlly);
+
+	/**
+	 * Ignores all incoming damage. A DM tool, not a game mechanic.
+	 *
+	 * Lives on the stats component rather than the character because ApplyDamage
+	 * is the single funnel every damage source already goes through - anywhere
+	 * else and something would eventually route around it.
+	 */
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Stats")
+	bool bInvulnerable = false;
+
+	UFUNCTION(BlueprintCallable, Category = "Stats")
+	void SetInvulnerable(bool bNewInvulnerable);
 
 	/** Server only. Marks this as a player's character and re-derives hit points. */
 	UFUNCTION(BlueprintCallable, Category = "Stats")

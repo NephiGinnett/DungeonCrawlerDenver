@@ -137,8 +137,18 @@ protected:
 	 */
 	void RebuildVisuals();
 
-	/** Tells the stats component its Enhanced layer is stale. Server only. */
-	void NotifyStatsDirty();
+	/**
+	 * Tells the stats component its Enhanced layer is stale. Server only.
+	 *
+	 * bRefillToFull is passed straight through to
+	 * UDCCStatsComponent::RecalculateEnhancedScores - false for every runtime
+	 * Equip/Unequip (swapping gear must not rubber-band a damaged character
+	 * back to full), true only from this component's own BeginPlay, where it
+	 * closes the gap between InitializeComponent's unenhanced refill (which
+	 * runs first and cannot see equipment yet) and whatever a character's
+	 * starting gear actually grants.
+	 */
+	void NotifyStatsDirty(bool bRefillToFull = false);
 
 	/**
 	 * Spawned mesh components, one per visible equipped item, keyed by slot so a

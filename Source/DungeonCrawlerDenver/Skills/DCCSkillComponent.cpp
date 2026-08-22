@@ -12,11 +12,24 @@
 #include "UI/DCCEventLogTypes.h"
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraSystem.h"
+#include "UObject/ConstructorHelpers.h"
 
 UDCCSkillComponent::UDCCSkillComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 	SetIsReplicatedByDefault(true);
+
+	// Defaulted for the same reason as the achievement/quest/dialogue/equipment
+	// tables: an unassigned table fails silently. This one hid for longer than
+	// the others precisely because the silence is total - GrantStartingSkills
+	// returns 0, KnownSkills stays empty, and every character just melees
+	// forever with no error anywhere. Still overridable per-Blueprint.
+	static ConstructorHelpers::FObjectFinder<UDataTable> DefaultTable(
+		TEXT("/Game/DCC/Skills/DT_DCCSkills.DT_DCCSkills"));
+	if (DefaultTable.Succeeded())
+	{
+		SkillTable = DefaultTable.Object;
+	}
 }
 
 void UDCCSkillComponent::BeginPlay()
@@ -325,7 +338,7 @@ TArray<FDCCSkillRecommendation> UDCCSkillComponent::GetRecommendedSkills(int32 C
 	for (int32 Index = 0; Index < static_cast<int32>(EDCCAbility::MAX); ++Index)
 	{
 		const EDCCAbility Ability = static_cast<EDCCAbility>(Index);
-		const int32 Score = Stats->AbilityScores.GetScore(Ability);
+		const int32 Score = Stats->GetEnhanced().GetScore(Ability);
 		if (Score > BestScore)
 		{
 			BestScore = Score;
@@ -350,7 +363,7 @@ TArray<FDCCSkillRecommendation> UDCCSkillComponent::GetRecommendedSkills(int32 C
 			continue;
 		}
 
-		const int32 CastingScore = Stats->AbilityScores.GetScore(Row->CastingAbility);
+		const int32 CastingScore = Stats->GetEnhanced().GetScore(Row->CastingAbility);
 
 		FDCCSkillRecommendation Recommendation;
 		Recommendation.SkillId = SkillId;
@@ -554,6 +567,14 @@ FDCCSkillResult UDCCSkillComponent::ActivateSkillInternal(const FDCCSkillDef& Sk
 	Result.ManaSpent = Skill.ManaCost;
 	CooldownEndTimes.Add(Skill.SkillId, World->GetTimeSeconds() + Skill.CooldownSeconds);
 
+	// Rooted at the same moment the cost is paid, and deliberately before the
+	// roll: the commitment is made by casting, not by succeeding. A fizzle that
+	// left the caster free to run would make failure cheaper than success.
+	if (ADCCCharacterBase* Caster = GetOwningCharacter())
+	{
+		Caster->BeginCastLock(Skill.CastTimeSeconds);
+	}
+
 	const bool bKnown = IsSkillKnown(Skill.SkillId);
 	Result.bWasUntrained = !bKnown;
 	Result.SkillRank = GetSkillRank(Skill.SkillId);
@@ -563,7 +584,7 @@ FDCCSkillResult UDCCSkillComponent::ActivateSkillInternal(const FDCCSkillDef& Sk
 	if (Skill.DifficultyClass > 0)
 	{
 		Result.Check = Ruleset->ResolveSkillCheck(
-			Stats->AbilityScores,
+			Stats->GetEnhanced(),
 			Skill.CastingAbility,
 			Result.SkillRank,
 			Skill.DifficultyClass,
@@ -594,7 +615,7 @@ FDCCSkillResult UDCCSkillComponent::ActivateSkillInternal(const FDCCSkillDef& Sk
 		TArray<ADCCCharacterBase*> Targets;
 		GatherTargets(Skill, Target, Targets);
 
-		const int32 AbilityModifier = Ruleset->GetAbilityModifier(Stats->AbilityScores.GetScore(Skill.CastingAbility));
+		const int32 AbilityModifier = Ruleset->GetAbilityModifier(Stats->GetEnhanced().GetScore(Skill.CastingAbility));
 
 		for (ADCCCharacterBase* Affected : Targets)
 		{

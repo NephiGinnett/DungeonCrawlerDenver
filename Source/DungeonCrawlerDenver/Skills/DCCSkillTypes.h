@@ -125,6 +125,19 @@ struct FDCCSkillDef : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill|Cost", meta = (ClampMin = "0.0"))
 	float CooldownSeconds = 6.0f;
 
+	/**
+	 * Seconds the caster is rooted after this resolves. Zero is instant, which is
+	 * why it defaults to zero - every skill authored before this field existed
+	 * keeps behaving exactly as it did.
+	 *
+	 * This is the *positional* price of a skill. Mana and cooldown both spend
+	 * resources the caster cannot see on screen; standing still in a room that is
+	 * actively trying to kill you is a cost the party can watch happen, which is
+	 * what makes choosing to pay it a decision rather than arithmetic.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill|Cost", meta = (ClampMin = "0.0"))
+	float CastTimeSeconds = 0.0f;
+
 	/** Max distance to a target. Ignored for Self. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill|Targeting", meta = (ClampMin = "0.0"))
 	float Range = 600.0f;

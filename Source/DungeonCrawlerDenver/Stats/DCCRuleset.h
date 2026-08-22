@@ -53,6 +53,15 @@ public:
 	virtual int32 GetMaxHitPoints(const FDCCAbilityScoreSet& AbilityScores, int32 Level) const;
 
 	/**
+	 * Hit point multiplier for friendly NPCs. Between a mob's 1.0 and a player's.
+	 *
+	 * Not a rule from any book - the same concession as the player multiplier,
+	 * scaled down because losing an ally should still be possible.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Ruleset")
+	virtual float GetAllyToughnessMultiplier() const;
+
+	/**
 	 * Multiplier applied to a player-controlled character's hit points.
 	 *
 	 * Not a rule from any book - it is a concession to the fact that an NPC ally

@@ -61,6 +61,11 @@ FDCCCheckResult UDCCRuleset::ResolveCheck(
 	return Result;
 }
 
+float UDCCRuleset::GetAllyToughnessMultiplier() const
+{
+	return 1.75f;
+}
+
 int32 UDCCRuleset::GetMaxHitPoints(const FDCCAbilityScoreSet& AbilityScores, int32 Level) const
 {
 	// STILL AN INVENTION. Constitution determines Health per the rules, but the

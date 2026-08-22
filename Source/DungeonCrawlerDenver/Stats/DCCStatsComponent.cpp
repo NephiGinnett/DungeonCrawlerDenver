@@ -1,6 +1,7 @@
 #include "Stats/DCCStatsComponent.h"
 
 #include "Stats/DCCRuleset.h"
+#include "Equipment/DCCEquipmentComponent.h"
 #include "Net/UnrealNetwork.h"
 
 UDCCStatsComponent::UDCCStatsComponent()
@@ -17,6 +18,7 @@ void UDCCStatsComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(UDCCStatsComponent, AbilityScores);
+	DOREPLIFETIME(UDCCStatsComponent, EnhancedScores);
 	DOREPLIFETIME(UDCCStatsComponent, CurrentHitPoints);
 	DOREPLIFETIME(UDCCStatsComponent, MaxHitPoints);
 	DOREPLIFETIME(UDCCStatsComponent, CurrentManaPoints);
@@ -24,6 +26,8 @@ void UDCCStatsComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	DOREPLIFETIME(UDCCStatsComponent, CurrentStamina);
 	DOREPLIFETIME(UDCCStatsComponent, MaxStamina);
 	DOREPLIFETIME(UDCCStatsComponent, bIsPlayerCharacter);
+	DOREPLIFETIME(UDCCStatsComponent, bIsAllyCharacter);
+	DOREPLIFETIME(UDCCStatsComponent, bInvulnerable);
 	DOREPLIFETIME(UDCCStatsComponent, ExperiencePoints);
 	DOREPLIFETIME(UDCCStatsComponent, ExperienceToNextLevel);
 	DOREPLIFETIME(UDCCStatsComponent, Gold);
@@ -189,6 +193,13 @@ void UDCCStatsComponent::InitializeComponent()
 	// Only the server establishes starting values; clients get them by replication.
 	if (GetOwnerRole() == ROLE_Authority)
 	{
+		// Seeded before anything derives from it. RecalculateDerivedStats reads
+		// the Enhanced layer, so leaving this at its default would size Health and
+		// Mana off a default score set rather than the authored one - and the
+		// equipment component's own BeginPlay is too late, since it runs after
+		// InitializeComponent and may not exist on this actor at all.
+		EnhancedScores = AbilityScores;
+
 		RecalculateDerivedStats(/*bRefillToFull=*/true);
 	}
 }
@@ -215,7 +226,71 @@ UDCCRuleset* UDCCStatsComponent::GetRuleset() const
 
 int32 UDCCStatsComponent::GetAbilityModifier(EDCCAbility Ability) const
 {
-	return GetRuleset()->GetAbilityModifier(AbilityScores.GetScore(Ability));
+	// Enhanced: a modifier is what you roll with, and gear is part of that.
+	return GetRuleset()->GetAbilityModifier(EnhancedScores.GetScore(Ability));
+}
+
+void UDCCStatsComponent::RecalculateEnhancedScores(bool bRefillToFull)
+{
+	if (GetOwnerRole() != ROLE_Authority)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("DCCStatsComponent::RecalculateEnhancedScores called on a client; ignoring."));
+		return;
+	}
+
+	// Start from the permanent layer every time rather than adjusting in place,
+	// so removing an item can never leave a residue behind. Recomputing from base
+	// is the only version of this that is correct after an arbitrary sequence of
+	// equips and unequips.
+	EnhancedScores = AbilityScores;
+
+	TArray<int32> Bonuses;
+	if (const UDCCEquipmentComponent* Equipment = UDCCEquipmentComponent::Find(GetOwner()))
+	{
+		Equipment->AccumulateAbilityBonuses(Bonuses);
+	}
+
+	for (int32 Index = 0; Index < Bonuses.Num(); ++Index)
+	{
+		if (!EnhancedScores.Scores.IsValidIndex(Index) || Bonuses[Index] == 0)
+		{
+			continue;
+		}
+
+		// Floored at 1. A score of zero would divide the banded modifier table's
+		// bottom rung out from under itself, and the books have no concept of a
+		// zero stat anyway - cursed gear should make you bad at something, not
+		// remove the something.
+		EnhancedScores.Scores[Index] = FMath::Max(1, EnhancedScores.Scores[Index] + Bonuses[Index]);
+	}
+
+	// Constitution feeds Health and Intelligence feeds Mana, so a ring that moves
+	// either has to move the pools with it or the numbers quietly disagree.
+	// bRefillToFull is almost always false - see this function's header comment
+	// for the one exception (the initial post-spawn call).
+	RecalculateDerivedStats(bRefillToFull);
+}
+
+void UDCCStatsComponent::SetInvulnerable(bool bNewInvulnerable)
+{
+	if (GetOwnerRole() == ROLE_Authority)
+	{
+		bInvulnerable = bNewInvulnerable;
+	}
+}
+
+void UDCCStatsComponent::SetIsAllyCharacter(bool bNewIsAlly)
+{
+	if (GetOwnerRole() != ROLE_Authority || bIsAllyCharacter == bNewIsAlly)
+	{
+		return;
+	}
+
+	bIsAllyCharacter = bNewIsAlly;
+
+	// Refilled, because this runs at spawn and a freshly promoted ally arriving
+	// on a fraction of its new maximum would look like it had already been hurt.
+	RecalculateDerivedStats(/*bRefillToFull=*/true);
 }
 
 void UDCCStatsComponent::RecalculateDerivedStats(bool bRefillToFull)
@@ -223,7 +298,7 @@ void UDCCStatsComponent::RecalculateDerivedStats(bool bRefillToFull)
 	const int32 PreviousHitPoints = CurrentHitPoints;
 	const int32 PreviousManaPoints = CurrentManaPoints;
 
-	MaxHitPoints = GetRuleset()->GetMaxHitPoints(AbilityScores, Level);
+	MaxHitPoints = GetRuleset()->GetMaxHitPoints(EnhancedScores, Level);
 
 	// The player's cushion is applied here rather than inside GetMaxHitPoints so
 	// that the ruleset's own curve stays the honest answer to "how tough is this
@@ -233,15 +308,23 @@ void UDCCStatsComponent::RecalculateDerivedStats(bool bRefillToFull)
 		MaxHitPoints = FMath::Max(1,
 			FMath::RoundToInt32(MaxHitPoints * GetRuleset()->GetPlayerToughnessMultiplier()));
 	}
+	else if (bIsAllyCharacter)
+	{
+		// Smaller cushion than a player's, for the same reason players get one at
+		// all: an ally dying is a story beat, but an ally dying every fight is
+		// just attrition the party cannot do anything about.
+		MaxHitPoints = FMath::Max(1,
+			FMath::RoundToInt32(MaxHitPoints * GetRuleset()->GetAllyToughnessMultiplier()));
+	}
 
 	CurrentHitPoints = bRefillToFull ? MaxHitPoints : FMath::Clamp(CurrentHitPoints, 0, MaxHitPoints);
 
 	ExperienceToNextLevel = GetRuleset()->GetExperienceToNextLevel(Level);
 
-	MaxManaPoints = GetRuleset()->GetMaxManaPoints(AbilityScores, Level);
+	MaxManaPoints = GetRuleset()->GetMaxManaPoints(EnhancedScores, Level);
 	CurrentManaPoints = bRefillToFull ? MaxManaPoints : FMath::Clamp(CurrentManaPoints, 0, MaxManaPoints);
 
-	MaxStamina = GetRuleset()->GetMaxStamina(AbilityScores, Level);
+	MaxStamina = GetRuleset()->GetMaxStamina(EnhancedScores, Level);
 	CurrentStamina = bRefillToFull ? MaxStamina : FMath::Clamp(CurrentStamina, 0.0f, MaxStamina);
 
 	if (CurrentHitPoints != PreviousHitPoints)
@@ -343,6 +426,13 @@ void UDCCStatsComponent::ApplyDamage(int32 Amount)
 		return;
 	}
 
+	// Checked here because this is the one funnel every damage source shares -
+	// melee, skills, the radiation aura and the boss charge all arrive through it.
+	if (bInvulnerable)
+	{
+		return;
+	}
+
 	if (Amount <= 0 || !IsAlive())
 	{
 		return;
@@ -396,7 +486,7 @@ FDCCCheckResult UDCCStatsComponent::ResolveCheck(EDCCAbility Ability, int32 Diff
 		return FDCCCheckResult();
 	}
 
-	return GetRuleset()->ResolveCheck(AbilityScores, Ability, DifficultyClass, SituationalBonus);
+	return GetRuleset()->ResolveCheck(EnhancedScores, Ability, DifficultyClass, SituationalBonus);
 }
 
 void UDCCStatsComponent::RefreshDerivedStats(bool bRefillToFull)
