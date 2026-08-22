@@ -8,11 +8,18 @@ WHY THIS EXISTS
     transcoded first.
 
 USAGE
-    blender --background --python Tools/glb_to_fbx.py -- <src.glb> <dst.fbx> [0|1]
+    blender --background --python Tools/glb_to_fbx.py -- <src.glb> <dst.fbx> [0|1] [scale]
 
     The trailing flag bakes animation into the output. Leave it 0 for the
     character mesh; per-animation files come from Tools/split_glb_anims.py
     instead, because Unreal only imports ONE take per FBX.
+
+    [scale] is an optional uniform multiplier, default 1.0. Meshy normalizes
+    every generated asset - character or small prop alike - to roughly the
+    same bounding-box size rather than encoding true real-world scale, which
+    is correct for a person but means a water bottle or a board game comes
+    out ~190cm tall unless corrected here. Leave it 1.0 for characters, where
+    that normalization already lands at real human height.
 """
 
 import bpy
@@ -22,6 +29,7 @@ import os
 argv = sys.argv[sys.argv.index("--") + 1:]
 src, dst = argv[0], argv[1]
 want_anim = len(argv) > 2 and argv[2] == "1"
+scale = float(argv[3]) if len(argv) > 3 else 1.0
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=src)
@@ -49,10 +57,12 @@ bpy.ops.export_scene.fbx(
     path_mode='COPY',
     embed_textures=True,
     object_types={'ARMATURE', 'MESH'},
-    # Meshy models already arrive at real-world scale in metres, which maps 1:1
-    # onto Unreal centimetres through the FBX unit conversion. Touching either
-    # of these produces a character either 100x too big or 100x too small.
-    global_scale=1.0,
+    # For a character, Meshy's normalized bounding box already lands at real
+    # human height, which maps 1:1 onto Unreal centimetres through the FBX
+    # unit conversion - global_scale=1.0 there. A small prop needs the scale
+    # arg above to correct for the same normalization producing an oversized
+    # mesh; see the usage note.
+    global_scale=scale,
     apply_scale_options='FBX_SCALE_NONE',
 )
 

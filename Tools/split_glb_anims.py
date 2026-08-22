@@ -64,6 +64,11 @@ for act in list(bpy.data.actions):
         object_types={'ARMATURE', 'MESH'},
         global_scale=1.0,
         apply_scale_options='FBX_SCALE_NONE',
+        # Silences Unreal's "No smoothing group information was found" warning on
+        # import. The mesh in these files is throwaway - only the animation is
+        # kept - so the normals never matter, but the warning is noise that
+        # obscures real import problems.
+        mesh_smooth_type='FACE',
     )
 
     print("EXPORTED_ACTION:", act.name, "->", dst, "frames", int(start), int(end))
