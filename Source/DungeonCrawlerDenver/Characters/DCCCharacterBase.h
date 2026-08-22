@@ -3,6 +3,10 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Stats/DCCAbilityTypes.h"
+#include "Items/DCCLootTypes.h"
+#include "Items/DCCLootSource.h"
+#include "UI/DCCInteractionTypes.h"
+#include "Skills/DCCSkillTypes.h"
 #include "DCCCharacterBase.generated.h"
 
 class UDCCStatsComponent;
@@ -11,9 +15,11 @@ class UDCCFavorComponent;
 class UDCCCarryComponent;
 class UDCCInventoryComponent;
 class UDCCAchievementComponent;
+class UDCCEquipmentComponent;
 class ADCCCharacterBase;
 class UUserWidget;
 class UTextRenderComponent;
+class USoundBase;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDCCCharacterDied, ADCCCharacterBase*, Character);
 
@@ -27,7 +33,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDCCCharacterDied, ADCCCharacterBase
  * the outcome through replicated hit points and the cosmetic multicast.
  */
 UCLASS(Abstract)
-class DUNGEONCRAWLERDENVER_API ADCCCharacterBase : public ACharacter
+class DUNGEONCRAWLERDENVER_API ADCCCharacterBase : public ACharacter, public IDCCLootSource
 {
 	GENERATED_BODY()
 
@@ -65,6 +71,10 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "DCC")
 	TObjectPtr<UDCCAchievementComponent> Achievements;
 
+	/** Worn gear. Feeds the Enhanced stat layer and hangs meshes off sockets. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "DCC")
+	TObjectPtr<UDCCEquipmentComponent> Equipment;
+
 	/**
 	 * Known skills and spells. On enemies too, so a boss casts through exactly
 	 * the same code path a player does - and so the DM client can inspect both
@@ -99,8 +109,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Combat", meta = (ClampMin = "1"))
 	int32 WeaponDamageDie = 6;
 
+	/** Melee reach. Overridden by a ranged weapon - see GetEffectiveAttackRange. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Combat", meta = (ClampMin = "0.0"))
 	float AttackRange = 200.0f;
+
+	/** AttackRange, or the longest reach among equipped weapons if any is ranged. */
+	UFUNCTION(BlueprintPure, Category = "DCC|Combat")
+	float GetEffectiveAttackRange() const;
 
 	/**
 	 * Doubles as this action's initiative/cooldown value. The design doc calls
@@ -167,9 +182,120 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Animation", meta = (ClampMin = "0.0"))
 	float WalkSpeedThreshold = 20.0f;
 
+	// -------------------------------------------------------------------------
+	// GETTING HIT
+	//
+	// Combat previously resolved with nothing happening to the person it happened
+	// to: the attacker swung, a number floated up, and the target stood there
+	// unmoved. That reads as two people ignoring each other, and it is the single
+	// biggest reason fights here have felt weightless.
+	//
+	// Two halves, because no hit-reaction clip exists in the project yet:
+	//
+	//   1. HitReactionAnimation - the proper answer, left null until a reaction
+	//      pack is imported. Anything assigned here is played on every machine.
+	//   2. A stagger - a short shove away from whoever hit you. Needs no assets
+	//      at all, works today, and is honestly most of the readability: bodies
+	//      that move when struck look hit even with no bespoke animation.
+	// -------------------------------------------------------------------------
+
+	/** Played on the target when it takes damage. Optional. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Animation")
+	TObjectPtr<UAnimationAsset> HitReactionAnimation;
+
+	/**
+	 * How long the reaction is squeezed into.
+	 *
+	 * Short on purpose. The stand-in clip is not a flinch, it is a whole gesture
+	 * compressed - at a quarter of a second that reads as a jolt, and at any
+	 * longer it reads as the character doing something odd.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Animation", meta = (ClampMin = "0.05"))
+	float HitReactionSeconds = 0.28f;
+
+	/** Shove away from the attacker, in cm/s. Zero disables the stagger. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Animation", meta = (ClampMin = "0.0"))
+	float HitStaggerStrength = 260.0f;
+
+	/**
+	 * Minimum gap between reactions.
+	 *
+	 * Without it a fast attacker holds the target in a permanent flinch and it
+	 * stops reading as individual hits - which is worse than no reaction at all.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Animation", meta = (ClampMin = "0.0"))
+	float HitReactionCooldown = 0.22f;
+
 	/** Above this ground speed the run cycle is used instead of the walk. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Animation", meta = (ClampMin = "0.0"))
 	float RunSpeedThreshold = 320.0f;
+
+	/**
+	 * Temporary cap on movement speed. Zero means "no override".
+	 *
+	 * Exists because derived speed is `BaseWalkSpeed * modifier`, which lands at
+	 * 500+ for everybody - comfortably above RunSpeedThreshold. The consequence
+	 * was that a character had exactly two states, standing still and sprinting,
+	 * and an ally escorting the party therefore looked like it was permanently
+	 * fleeing something. This is how a character asks to move at a walk.
+	 */
+	UPROPERTY(BlueprintReadOnly, Category = "DCC|Movement")
+	float MovementSpeedOverride = 0.0f;
+
+	UFUNCTION(BlueprintCallable, Category = "DCC|Movement")
+	void SetMovementSpeedOverride(float NewSpeed);
+
+	// -------------------------------------------------------------------------
+	// SOUND
+	//
+	// Hooks, not content. The project ships no audio at all, and the reason is
+	// not that nobody wanted any - it is that there was nowhere to put a sound
+	// once you had one. These sit on the multicast paths that already exist for
+	// animation, so a clip assigned here is heard on every machine with no
+	// further wiring.
+	//
+	// All optional. A null sound is silence, exactly as today.
+	// -------------------------------------------------------------------------
+
+	/** Played on every machine when this character swings. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Audio")
+	TObjectPtr<USoundBase> AttackSound;
+
+	/** Played when this character is hurt, wherever it was standing. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Audio")
+	TObjectPtr<USoundBase> HurtSound;
+
+	/** Played once, at the moment this character goes down for good. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Audio")
+	TObjectPtr<USoundBase> DeathSound;
+
+	/** Played when a crawler drops to the floor but can still be saved. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Audio")
+	TObjectPtr<USoundBase> DownedSound;
+
+	/** Played on the revived crawler when somebody gets them up. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Audio")
+	TObjectPtr<USoundBase> ReviveSound;
+
+	/** Played when a skill goes off, on the caster. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Audio")
+	TObjectPtr<USoundBase> CastSound;
+
+	/**
+	 * Camera shake played on this character's own view when they are hurt.
+	 *
+	 * A hook like the sounds above, and unset by default - the Combat variant
+	 * already ships `BP_CameraShake_Hit_Player`, which can be dropped straight in.
+	 * Only ever plays for the player it happened to: shaking the whole party's
+	 * cameras when one person is hit is how you get five people feeling every
+	 * blow and none of them feeling their own.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Audio")
+	TSubclassOf<class UCameraShakeBase> HurtCameraShake;
+
+	/** Fire-and-forget 3D sound at this character's feet. Null is silence. */
+	UFUNCTION(BlueprintCallable, Category = "DCC|Audio")
+	void PlayCharacterSound(USoundBase* Sound) const;
 
 	/**
 	 * Victory emotes. One is picked at random when this character lands a kill.
@@ -310,9 +436,329 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DCC|Carry")
 	void AttemptStow();
 
+	// -------------------------------------------------------------------------
+	// TALKING TO PEOPLE
+	//
+	// `E` is contextual: an ally under the crosshair opens a conversation, and
+	// anything else falls through to the pickup/drop it has always done. That
+	// ordering matters - a crawler standing on a crate next to CJ should get the
+	// conversation, because the crate is still there afterwards and CJ may not be.
+	//
+	// The menu itself is local and cosmetic. Everything it can *do* routes to the
+	// server through Server_PerformInteraction, which re-validates range and
+	// availability - a client may open any menu it likes and still be refused.
+	// -------------------------------------------------------------------------
+
+	/** Whoever this crawler is currently talking to, or null. */
+	UFUNCTION(BlueprintPure, Category = "DCC|Interaction")
+	ADCCCharacterBase* GetInteractionTarget() const { return InteractionTarget; }
+
+	UFUNCTION(BlueprintPure, Category = "DCC|Interaction")
+	const TArray<FDCCInteractionEntry>& GetInteractionOptions() const { return InteractionOptions; }
+
+	UFUNCTION(BlueprintPure, Category = "DCC|Interaction")
+	int32 GetInteractionIndex() const { return InteractionIndex; }
+
+	/**
+	 * Whose gear the HUD should be showing, or null.
+	 *
+	 * Separate from InteractionTarget because the gear panel outlives the choice
+	 * that opened it - you pick "Look at their gear", read it, and the menu is
+	 * still there underneath to pick something else.
+	 */
+	UFUNCTION(BlueprintPure, Category = "DCC|Interaction")
+	ADCCCharacterBase* GetInspectedCharacter() const { return InspectedCharacter; }
+
+	UFUNCTION(BlueprintCallable, Category = "DCC|Interaction")
+	void SetInspectedCharacter(ADCCCharacterBase* Target) { InspectedCharacter = Target; }
+
+	/**
+	 * Opens a conversation with Target directly - the Tab menu's Chat tab uses
+	 * this to start talking to a nearby friendly face picked from a list,
+	 * rather than requiring the crosshair to be aimed at them.
+	 *
+	 * Skips the hostile-nearby confirm step FindInteractionTargetUnderCursor's
+	 * caller applies: that step exists to catch an accidental E press near a
+	 * fight, and picking a name from a menu is already the deliberate action
+	 * it is meant to distinguish from. Still refuses a dead or hostile target,
+	 * same as the crosshair path - and Server_PerformInteraction re-validates
+	 * range and hostility itself regardless, so this cannot be used to talk to
+	 * someone genuinely out of reach or on the other side.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DCC|Interaction")
+	void OpenChat(ADCCCharacterBase* Target);
+
+	/** How close you must be to start a conversation. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Interaction", meta = (ClampMin = "0.0"))
+	float InteractionRange = 400.0f;
+
+	/**
+	 * How close a living hostile must be for the game to treat you as "in a
+	 * fight" for interaction purposes.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Interaction", meta = (ClampMin = "0.0"))
+	float CombatProximityRadius = 1600.0f;
+
+	/** Seconds the armed talk prompt stays live before it lapses. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Interaction", meta = (ClampMin = "0.0"))
+	float TalkConfirmSeconds = 2.5f;
+
+	/** True when something hostile and alive is inside CombatProximityRadius. */
+	UFUNCTION(BlueprintPure, Category = "DCC|Interaction")
+	bool IsHostileNearby() const;
+
+	/**
+	 * Who the next E press would open a conversation with, while a fight is on.
+	 *
+	 * Read by the HUD to draw the "press E again to talk" prompt - the whole
+	 * point of the two-step is that the player is told it exists.
+	 */
+	UFUNCTION(BlueprintPure, Category = "DCC|Interaction")
+	ADCCCharacterBase* GetPendingTalkTarget() const;
+
+	/** Difficulty of the Persuade check. Low - this is a friendly face. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Interaction", meta = (ClampMin = "0"))
+	int32 PersuadeDifficulty = 11;
+
+	/** Intimidate is harder than Persuade, and worse when it misses. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Interaction", meta = (ClampMin = "0"))
+	int32 IntimidateDifficulty = 14;
+
+	/** `E`. Opens a conversation, confirms the highlighted option, or picks up. */
+	UFUNCTION(BlueprintCallable, Category = "DCC|Interaction")
+	void HandleInteractPressed();
+
+	/** Moves the highlight. Wraps, so the list is a loop rather than a wall. */
+	UFUNCTION(BlueprintCallable, Category = "DCC|Interaction")
+	void CycleInteractionOption(int32 Delta);
+
+	// BindKey carries no payload, so the wheel needs one thunk per direction -
+	// the same reason the five skill slots each have their own function.
+	//
+	// Routed to whichever menu is actually open. The two are mutually
+	// exclusive in practice - opening one closes the other - but checking
+	// LootTargetActor first costs nothing and means the wheel never silently
+	// does nothing because it was driving the wrong menu's index.
+	void InteractionScrollUp() { LootTargetActor ? CycleLootMenu(-1) : CycleInteractionOption(-1); }
+	void InteractionScrollDown() { LootTargetActor ? CycleLootMenu(1) : CycleInteractionOption(1); }
+
+	UFUNCTION(BlueprintCallable, Category = "DCC|Interaction")
+	void CloseInteraction();
+
+	// -------------------------------------------------------------------------
+	// GOING DOWN, AND GETTING BACK UP
+	//
+	// A crawler at zero HP is *downed*, not dead: still on the floor, still an
+	// actor, still repossessable, and on a bleed-out timer. Anyone else on the
+	// party can pick them back up before it expires.
+	//
+	// Split from death rather than bolted onto it because reviving a fully
+	// destroyed pawn is a rebuild - the controller has been detached, the mesh is
+	// simulating, and the capsule is gone. Keeping a downed crawler intact means
+	// revive only has to undo three things instead of reconstruct them.
+	//
+	// Mobs are exempt. A Debt Eater that gets back up is not a story beat, it is
+	// a bug report.
+	// -------------------------------------------------------------------------
+
+	/** On the floor at 0 HP, still savable. False once bled out. */
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_Downed, Category = "DCC|Downed")
+	bool bIsDowned = false;
+
+	UFUNCTION(BlueprintPure, Category = "DCC|Downed")
+	bool IsDowned() const { return bIsDowned; }
+
+	/** Seconds on the floor before a downed crawler dies for real. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Downed", meta = (ClampMin = "0.0"))
+	float BleedOutSeconds = 90.0f;
+
+	/** Fraction of max HP restored by a revive. Deliberately not generous. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Downed", meta = (ClampMin = "0.01", ClampMax = "1.0"))
+	float ReviveHealthFraction = 0.35f;
+
+	/**
+	 * Seconds the rescuer is rooted while reviving.
+	 *
+	 * This is the whole cost of a revive, and it is a positional one: no check,
+	 * no resource, just several seconds standing still in a room that is still
+	 * trying to kill you. A dice roll here would make saving a friend feel
+	 * arbitrary; a vulnerable window makes it feel brave.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Downed", meta = (ClampMin = "0.0"))
+	float ReviveSeconds = 4.0f;
+
+	/** Seconds left before bleeding out. 0 when not downed. */
+	UFUNCTION(BlueprintPure, Category = "DCC|Downed")
+	float GetBleedOutRemaining() const;
+
+	/** Server only. Puts a downed crawler back on their feet. */
+	UFUNCTION(BlueprintCallable, Category = "DCC|Downed")
+	void Revive(ADCCCharacterBase* Rescuer);
+
+	// -------------------------------------------------------------------------
+	// LOOTING THE BODY
+	//
+	// Drops are rolled at the moment of death and held ON the corpse rather than
+	// scattered across the floor. Same loot, later - but now the body is the
+	// container, so a fight leaves a readable trail of who died where instead of
+	// a carpet of physics props, and walking away from a corpse means leaving
+	// something behind.
+	//
+	// A corpse and a chest (ADCCLootContainer) are unrelated actor types that
+	// happen to share this one shape - see IDCCLootSource's own comment for why
+	// that is an interface rather than a shared base class.
+	// -------------------------------------------------------------------------
+
+	virtual FText GetLootSourceName() const override;
+	virtual bool HasAnyLoot() const override;
+	virtual const TArray<FDCCRolledLoot>& GetPendingLootItems() const override;
+	virtual FVector GetLootOrigin() const override;
+	virtual void LootOne(int32 Index, ADCCCharacterBase* Looter) override;
+	virtual void LootAll(ADCCCharacterBase* Looter) override;
+	virtual void StowInto(ADCCCharacterBase* Looter) override;
+
+	// -------------------------------------------------------------------------
+	// THE LOOT MENU
+	//
+	// A second, parallel menu to the conversation one above - opened on a
+	// corpse or a chest instead of a person, and deliberately NOT layered onto
+	// InteractionTarget/InteractionOptions. Keeping the two apart means neither
+	// has to special-case the other: the conversation menu never again needs a
+	// bBody branch, and this one never needs to know what Persuade is.
+	//
+	// Same wheel-to-choose, E-to-confirm input as the conversation menu, and
+	// the same "client picks, server re-validates" shape as everything else -
+	// Server_LootOne/LootAll/StowLootSource all re-check range and authority.
+	// -------------------------------------------------------------------------
+
+	/** The corpse or chest currently open in the loot menu, or null. */
+	UFUNCTION(BlueprintPure, Category = "DCC|Loot")
+	AActor* GetLootTarget() const { return LootTargetActor; }
+
+	/** False: the top menu (Check Inventory / Loot All / Stow / Leave). True: the itemised list. */
+	UFUNCTION(BlueprintPure, Category = "DCC|Loot")
+	bool IsShowingLootItems() const { return bLootShowingItems; }
+
+	UFUNCTION(BlueprintPure, Category = "DCC|Loot")
+	int32 GetLootMenuIndex() const { return LootMenuIndex; }
+
+	/** Moves the highlight in whichever loot menu page is open. Wraps. */
+	UFUNCTION(BlueprintCallable, Category = "DCC|Loot")
+	void CycleLootMenu(int32 Delta);
+
+	UFUNCTION(BlueprintCallable, Category = "DCC|Loot")
+	void CloseLootMenu();
+
+	/**
+	 * Empties one Stowed Remains record from this crawler's own pack, at their
+	 * feet - the Tab menu's Inventory page calls this on a clicked row.
+	 *
+	 * Routed through the server like AttemptStow, because
+	 * UDCCInventoryComponent::LootAllFromStowed refuses outright without
+	 * authority - a client calling it directly would silently do nothing.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DCC|Loot")
+	void DCCEmptyStowedRemains(int32 Index);
+
+	/**
+	 * Party command: stop escorting and stand still, or resume.
+	 *
+	 * A no-op on the base class - only ADCCEnemyCharacter has AI to stop. Declared
+	 * here so the interaction menu can issue the order without caring what it is
+	 * talking to, which is the same reason encounters take ADCCCharacterBase.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DCC|Interaction")
+	virtual void SetHoldingPosition(bool bHold);
+
+	// -------------------------------------------------------------------------
+	// TEST CHEATS
+	//
+	// Exec functions, so they run from the ~ console on the possessed pawn. These
+	// exist because the alternative for trying a skill or a weapon is editing a
+	// Blueprint, recompiling, and restarting - which is a five-minute round trip
+	// for a question that deserves a five-second one.
+	//
+	// Server-guarded like everything else. A client typing DCC.GrantSkill gets
+	// the request routed, re-validated, and applied authoritatively or not at all.
+	// -------------------------------------------------------------------------
+
+	/** `DCC.GrantSkill FireFingers 3` - learn any row in the skill table. */
+	UFUNCTION(Exec, BlueprintCallable, Category = "DCC|Cheats")
+	void DCCGrantSkill(const FString& SkillId, int32 Rank = 1);
+
+	/** `DCC.Equip WallSword` - equip any row in the equipment table. */
+	UFUNCTION(Exec, BlueprintCallable, Category = "DCC|Cheats")
+	void DCCEquip(const FString& ItemId);
+
+	// -------------------------------------------------------------------------
+	// DM PANEL
+	//
+	// The same actions the exec commands expose, reachable as buttons. Zoe runs
+	// this as the DM and should not have to remember command names mid-session -
+	// the console is a programmer's affordance, a panel is a table's.
+	//
+	// Every one routes through a server RPC and is re-validated there, exactly
+	// like the gameplay paths. A cheat that trusted the client would be the one
+	// hole in an otherwise server-authoritative game.
+	// -------------------------------------------------------------------------
+
+	/** Opens or closes the DM panel. Local and cosmetic. */
+	UFUNCTION(BlueprintCallable, Category = "DCC|Admin")
+	void ToggleAdminPanel();
+
+	/** Server. Spawns one of anything at the caller's feet. */
+	UFUNCTION(Server, Reliable)
+	void Server_AdminSpawn(TSubclassOf<AActor> ActorClass, bool bAsAlly);
+
+	/** Server. Kills every living hostile in the level. */
+	UFUNCTION(Server, Reliable)
+	void Server_AdminClearHostiles();
+
+	/** Server. Toggles damage immunity on the caller. */
+	UFUNCTION(Server, Reliable)
+	void Server_AdminSetInvulnerable(bool bInvulnerable);
+
+	UFUNCTION(Server, Reliable)
+	void Server_AdminAddGold(int32 Amount);
+
+	/** Server. Grants a level, re-deriving the pools that depend on it. */
+	UFUNCTION(Server, Reliable)
+	void Server_AdminLevelUp();
+
+	/** `DCC.Refill` - top up health, mana and stamina. */
+	UFUNCTION(Exec, BlueprintCallable, Category = "DCC|Cheats")
+	void DCCRefill();
+
+	/** Server halves of the cheats above. */
+	UFUNCTION(Server, Reliable)
+	void Server_GrantSkill(FName SkillId, int32 Rank);
+
+	UFUNCTION(Server, Reliable)
+	void Server_EquipItem(FName ItemId);
+
+	UFUNCTION(Server, Reliable)
+	void Server_Refill();
+
 	/** Opens or closes the character menu. Local and cosmetic. */
 	UFUNCTION(BlueprintCallable, Category = "DCC|UI")
 	void ToggleCharacterMenu();
+
+	/** Flashes a message on this character's own HUD. No-op for AI. */
+	void ShowLocalNotice(const FText& Message) const;
+
+	/** Plain-English reason a skill was refused, for the notice above. */
+	static FText DescribeSkillFailure(EDCCSkillFailure Failure, const FText& SkillName);
+
+	/** Advances the HUD event feed to its next category filter. Local and cosmetic. */
+	UFUNCTION(BlueprintCallable, Category = "DCC|UI")
+	void CycleLogFilter();
+
+	/** Moves between character-menu pages. Local and cosmetic. */
+	UFUNCTION(BlueprintCallable, Category = "DCC|UI")
+	void CycleMenuTab(int32 Delta);
+
+	void PreviousMenuTab() { CycleMenuTab(-1); }
+	void NextMenuTab() { CycleMenuTab(1); }
 
 	// -------------------------------------------------------------------------
 	// CLIMBING
@@ -348,17 +794,80 @@ public:
 	void SelectSkill(FName SkillId);
 
 	/**
-	 * Traces from the camera through the crosshair and, if it lands on a
-	 * climbable face within reach, raises the confirmation box.
+	 * Traces from the camera through the crosshair for anything climbable and,
+	 * if it finds something, consumes the click.
 	 *
-	 * Local: it only decides what to ask. The answer is what goes to the server.
+	 * Called from OnPrimaryPressed whenever a skill is armed (a climbable face
+	 * always wins over casting), and otherwise only when there is no hostile in
+	 * range to attack - see GenericClimbReachDistance for why attacking wins
+	 * that race by default. Three outcomes when it does run:
+	 *   - An authored ADCCClimbPoint in reach: raises the confirmation box, as
+	 *     before.
+	 *   - Any other wall-like surface in reach: starts climbing immediately via
+	 *     Server_RequestGenericClimb, no confirmation - this is what makes an
+	 *     un-authored rock face climbable at all.
+	 *   - A wall-like surface out of reach: reports failure locally and still
+	 *     consumes the click, so a click at a wall never just does nothing.
+	 * Anything else under the cursor (floor, sky, a character) is not a climb
+	 * attempt and returns false.
+	 *
+	 * Local: it only decides what to ask (or, for generic surfaces, what to
+	 * request). The server re-validates everything before anything happens.
+	 *
+	 * @return True if the click was climb-related and should not be processed
+	 *         further this frame.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "DCC|Climb")
-	void TrySelectClimbTargetUnderCursor();
+	bool TrySelectClimbTargetUnderCursor();
 
 	/** Answers the confirmation box. */
 	UFUNCTION(BlueprintCallable, Category = "DCC|Climb")
 	void ConfirmPendingClimb(bool bAccept);
+
+	/**
+	 * What a click would target right now, for the given armed skill.
+	 *
+	 * Self, Cone and AreaOfEffect skills resolve against the caster - they are
+	 * aimed by facing, not by clicking a specific actor, so this returns Self
+	 * for those the instant a target is needed at all. SingleTarget traces from
+	 * the camera through the crosshair for a hostile character within the
+	 * skill's range.
+	 *
+	 * Pure and side-effect-free on purpose: the HUD calls this every frame to
+	 * draw the targeting overlay, and the click handler calls the exact same
+	 * function to decide what to cast at. The overlay can never show a target a
+	 * click would not actually have hit, because there is only one function
+	 * deciding that, not two that might disagree.
+	 */
+	UFUNCTION(BlueprintPure, Category = "DCC|Combat")
+	AActor* FindSkillTargetUnderCursor(FName SkillId) const;
+
+	/**
+	 * Click handling for an armed non-climb skill: resolves the target via
+	 * FindSkillTargetUnderCursor and fires or queues it.
+	 *
+	 * Only reached when TrySelectClimbTargetUnderCursor found no climbable face
+	 * under the cursor - see OnPrimaryPressed. A climb point always wins the
+	 * click regardless of which skill is armed, so aiming a spell at a wall you
+	 * could climb offers the climb instead. Deliberate: there was no clean way
+	 * to ask "is the armed skill specifically Climbing" without hard-coding a
+	 * skill id, and falling through on a climb-miss needs none of that.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DCC|Combat")
+	void TrySelectSkillTargetUnderCursor();
+
+	/**
+	 * How close a generic (un-authored) wall has to be for a click to climb it
+	 * rather than report "too far to climb".
+	 *
+	 * A hostile in range already wins the click over climbing at all (see
+	 * OnPrimaryPressed), so this only matters once there is nothing to fight -
+	 * kept short anyway as a second line of defence, alongside the foot-level
+	 * exclusion in TrySelectClimbTargetUnderCursor, against an ordinary
+	 * movement click near a wall reading as a climb attempt.
+	 */
+	UPROPERTY(EditDefaultsOnly, Category = "DCC|Climb", meta = (ClampMin = "0.0"))
+	float GenericClimbReachDistance = 260.0f;
 
 	/** Held-input state, set by the climb keys and read on the server each tick. */
 	UFUNCTION(BlueprintCallable, Category = "DCC|Climb")
@@ -385,6 +894,29 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "DCC|Movement")
 	bool IsSprinting() const { return bIsSprinting; }
+
+	// -------------------------------------------------------------------------
+	// Casting
+	//
+	// A skill with a CastTimeSeconds roots its caster for that long. Without it a
+	// skill costs Mana and a cooldown but no *position*, so there is nothing to
+	// trade against - which is precisely the decision the pause/queue loop exists
+	// to make interesting. Replicated rather than server-only because movement is
+	// client-predicted: a client that does not know it is casting will run, then
+	// get snapped back.
+	// -------------------------------------------------------------------------
+
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_Casting, Category = "DCC|Combat")
+	bool bIsCasting = false;
+
+	UFUNCTION(BlueprintPure, Category = "DCC|Combat")
+	bool IsCasting() const { return bIsCasting; }
+
+	/**
+	 * Roots this character for Seconds. Server-only; a zero or negative duration
+	 * is a no-op, which is what makes CastTimeSeconds default-0 mean "instant".
+	 */
+	void BeginCastLock(float Seconds);
 
 protected:
 	// Input handlers. Left click means three different things depending on
@@ -487,6 +1019,19 @@ protected:
 	UFUNCTION(Server, Reliable)
 	void Server_AttackNearest();
 
+	/**
+	 * Carries a skill cast to the server, target included.
+	 *
+	 * Unlike Server_AttackNearest, the target here genuinely cannot be re-derived
+	 * server-side - "nearest hostile" is objective, "whatever the camera is
+	 * pointed at" is not. The server does not trust it as an identity, only as a
+	 * nomination: ResolveOrQueueSkill and, beneath it,
+	 * UDCCSkillComponent::CanActivate re-check range, allegiance and everything
+	 * else before anything happens.
+	 */
+	UFUNCTION(Server, Reliable)
+	void Server_CastSkill(FName SkillId, AActor* Target);
+
 	UFUNCTION(Server, Reliable)
 	void Server_TogglePause();
 
@@ -494,7 +1039,24 @@ protected:
 	void Server_StowCarried();
 
 	UFUNCTION(Server, Reliable)
+	void Server_EmptyStowedRemains(int32 Index);
+
+	UFUNCTION(Server, Reliable)
 	void Server_BeginClimb(ADCCClimbPoint* Point);
+
+	/**
+	 * Client's request to climb a generic surface with no authored
+	 * ADCCClimbPoint. HitLocation/HitNormal are a nomination, not a fact: the
+	 * server re-traces near HitLocation itself before trusting that a wall is
+	 * really there, the same way Server_CastSkill re-validates a nominated
+	 * target rather than trusting the client's aim.
+	 */
+	UFUNCTION(Server, Reliable)
+	void Server_RequestGenericClimb(FVector HitLocation, FVector HitNormal);
+
+	/** Routes a climb-failure message to the requesting client's HUD. */
+	UFUNCTION(Client, Reliable)
+	void Client_ShowClimbNotice(const FText& Message);
 
 	UFUNCTION(Server, Reliable)
 	void Server_SetClimbInput(bool bUp, bool bDown);
@@ -548,11 +1110,42 @@ protected:
 	UFUNCTION()
 	void OnRep_Sprinting();
 
+	UFUNCTION()
+	void OnRep_Casting();
+
+	/** Clears bIsCasting when the cast timer elapses. Server only. */
+	void EndCastLock();
+
+	FTimerHandle CastLockTimer;
+
+	/**
+	 * Rolled on death, server side. Empty on players and allies, so only things
+	 * meant to be looted ever drop anything.
+	 *
+	 * Lives on the base rather than on ADCCEnemyCharacter because death teardown
+	 * is here, and a boss is not guaranteed to be an enemy subclass forever.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Loot")
+	TArray<FDCCLootDrop> LootTable;
+
+	/** Server only. Rolls every LootTable entry and spawns what hits. */
+	/**
+	 * Rolls this character's loot table once, at death, onto the body.
+	 *
+	 * Replaces the old DropLoot, which spawned pickups scattered on the floor the
+	 * instant something died. Same rolls, same odds - the difference is that the
+	 * result now waits on the corpse until somebody searches it.
+	 */
+	void RollLootOntoBody();
+
 	/** Server only. Runs the climb and sprint stamina economy for one frame. */
 	void TickStamina(float DeltaSeconds);
 
 	/** Server-side: swing now, or park the intent if the world is paused. */
 	void ResolveOrQueueAttack();
+
+	/** Server-side: cast now, or park the intent if the world is paused. */
+	void ResolveOrQueueSkill(FName SkillId, AActor* Target);
 
 	UFUNCTION()
 	virtual void HandleDied(UDCCStatsComponent* InStats);
@@ -572,6 +1165,170 @@ protected:
 	void Multicast_PlayAttack(ADCCCharacterBase* Target, bool bHit);
 
 	/**
+	 * The casting equivalent, and the reason it exists: ADCCEnemyCharacter plays
+	 * CastAnimation itself before calling TryActivateSkill, but the *player's*
+	 * cast path never did - so a crawler casting a skill was silent on every
+	 * machine including their own, which reads as the skill not having fired.
+	 *
+	 * Held for HoldSeconds so a skill with a CastTimeSeconds root has an
+	 * animation lasting as long as the character is actually stuck in place.
+	 */
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_PlayCast(float HoldSeconds);
+
+	/**
+	 * Plays the flinch on every machine. Unreliable, like the other cosmetics -
+	 * a dropped reaction costs a frame of feedback, not correctness.
+	 */
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_PlayHitReaction();
+
+	/**
+	 * Server. Staggers this character away from a point and fires the reaction.
+	 *
+	 * The shove is applied here rather than in the multicast because movement is
+	 * server-authoritative - launching on every machine independently would have
+	 * five clients disagreeing about where the target ended up.
+	 */
+	void ReactToHitFrom(const FVector& ImpactSource);
+
+	/**
+	 * Server-side resolution of a chosen conversation option.
+	 *
+	 * Everything the menu can do lands here and is re-validated, because the menu
+	 * is client-side: range, allegiance, and the option's own availability are
+	 * all checked again rather than trusted.
+	 */
+	UFUNCTION(Server, Reliable)
+	void Server_PerformInteraction(EDCCInteractionOption Option, ADCCCharacterBase* Target);
+
+	/** The raw camera-forward sweep both FindInteractionTargetUnderCursor and FindLootTargetUnderCursor classify. */
+	AActor* SweepForInteractionCandidate() const;
+
+	/**
+	 * Finds a living, non-hostile character under the crosshair within range.
+	 *
+	 * A corpse no longer qualifies - see FindLootTargetUnderCursor. Splitting
+	 * the two is what let the bBody branch come out of BuildInteractionOptions
+	 * entirely rather than growing a second special case next to Persuade.
+	 */
+	ADCCCharacterBase* FindInteractionTargetUnderCursor() const;
+
+	/** Rebuilds the option list for the current target, with availability. */
+	void BuildInteractionOptions();
+
+	/** Finds a corpse or chest under the crosshair within range, or null. */
+	AActor* FindLootTargetUnderCursor() const;
+
+	/** Confirms the highlighted row of whichever loot menu page is open. */
+	void HandleLootMenuConfirm();
+
+	/**
+	 * Server-side resolution of the loot menu's three verbs.
+	 *
+	 * Same shape as Server_PerformInteraction: the menu is client-side, so
+	 * range and existence are re-checked here rather than trusted. Three
+	 * separate RPCs rather than one with an enum payload because each takes a
+	 * different argument shape (an index, nothing, nothing) and the enum
+	 * would only be reused by this one caller.
+	 */
+	UFUNCTION(Server, Reliable)
+	void Server_LootOne(AActor* Source, int32 Index);
+
+	UFUNCTION(Server, Reliable)
+	void Server_LootAll(AActor* Source);
+
+	UFUNCTION(Server, Reliable)
+	void Server_StowLootSource(AActor* Source);
+
+	/** Runs one social check and narrates the result into the event feed. */
+	void ResolveSocialCheck(ADCCCharacterBase* Target, bool bIntimidate);
+
+	/** Whoever this crawler is talking to. Local - conversations are not shared. */
+	UPROPERTY(Transient)
+	TObjectPtr<ADCCCharacterBase> InteractionTarget;
+
+	UPROPERTY(Transient)
+	TArray<FDCCInteractionEntry> InteractionOptions;
+
+	int32 InteractionIndex = 0;
+
+	/** Local only - inspecting somebody's kit changes nothing about the world. */
+	UPROPERTY(Transient)
+	TObjectPtr<ADCCCharacterBase> InspectedCharacter;
+
+	/** Armed by a first E press during combat, consumed by the second. */
+	UPROPERTY(Transient)
+	TObjectPtr<ADCCCharacterBase> PendingTalkTarget;
+
+	double PendingTalkExpiry = 0.0;
+
+	/** Whoever's loot menu this crawler has open. Local - same as InteractionTarget. */
+	UPROPERTY(Transient)
+	TObjectPtr<AActor> LootTargetActor;
+
+	int32 LootMenuIndex = 0;
+
+	/** False: top menu. True: the itemised Check Inventory submenu. */
+	bool bLootShowingItems = false;
+
+	UFUNCTION()
+	void OnRep_Downed();
+
+	/** Shared teardown for going down and for dying outright. */
+	void ApplyCollapsedBody();
+
+	/** Undoes ApplyCollapsedBody. Only ever called on a downed crawler. */
+	void RestoreStandingBody();
+
+	/** Bleed-out expiry: converts a downed crawler into a real corpse. */
+	void HandleBleedOut();
+
+	/** Everything the full death teardown does, once revival is off the table. */
+	void FinishDying();
+
+	/**
+	 * True when this clip was authored for the same skeleton this mesh uses.
+	 *
+	 * The engine's own failure here is an ensure plus a garbage pose, which is
+	 * unreadable at a glance; refusing the clip leaves the character in its last
+	 * good pose and prints which asset is on the wrong rig.
+	 */
+	bool CanPlayOnThisSkeleton(const UAnimationAsset* Animation) const;
+
+	/** One warning per character, not one per frame. */
+	mutable bool bWarnedSkeletonMismatch = false;
+
+	/**
+	 * Rolled at death and held until looted.
+	 *
+	 * Replicated - the itemised "Check Inventory" submenu has to read real
+	 * item data on whichever machine is drawing it, not just the server. Before
+	 * that submenu existed only bHasLoot needed to leave the server at all.
+	 */
+	UPROPERTY(Replicated)
+	TArray<FDCCRolledLoot> PendingLoot;
+
+	/** Replicated so a client can grey out "Search the body" without asking. */
+	UPROPERTY(Replicated)
+	bool bHasLoot = false;
+
+	/** World seconds the last reaction played, for the cooldown above. */
+	float LastHitReactionTime = -100.0f;
+
+	FTimerHandle BleedOutTimer;
+	FTimerHandle ReviveTimer;
+
+	/**
+	 * Mesh transform relative to the capsule, captured before anything ragdolls.
+	 *
+	 * Required to stand a revived crawler back up: once the mesh is simulating it
+	 * has been detached, and reattaching without the original offset leaves them
+	 * standing waist-deep in the floor.
+	 */
+	FTransform MeshRestTransform;
+
+	/**
 	 * Plays the victory emote on every machine.
 	 *
 	 * Multicast rather than local, because the server rolls the chance - letting
@@ -587,9 +1344,25 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = "DCC", meta = (DisplayName = "On Died"))
 	void BP_OnDied();
 
-	/** Seconds the corpse stays before cleanup on the server. 0 keeps it forever. */
+	/**
+	 * Seconds the corpse stays before cleanup on the server. 0 keeps it forever.
+	 *
+	 * Zero on purpose: a body is a container now, and a container that evaporates
+	 * on a timer turns "come back for the loot" into a trap.
+	 */
 	UPROPERTY(EditDefaultsOnly, Category = "DCC")
 	float CorpseLifeSpan = 0.0f;
+
+	/**
+	 * Seconds an emptied body sticks around after being looted.
+	 *
+	 * The pair of these is the whole corpse-cleanup policy: a body with something
+	 * on it waits indefinitely, and starts counting down only once it has nothing
+	 * left to give. That keeps loot safe from a timer while still stopping a long
+	 * session from accumulating every corpse it ever made.
+	 */
+	UPROPERTY(EditDefaultsOnly, Category = "DCC", meta = (ClampMin = "0.0"))
+	float LootedCorpseLifeSpan = 25.0f;
 
 private:
 	/**

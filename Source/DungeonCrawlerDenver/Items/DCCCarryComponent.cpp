@@ -2,6 +2,7 @@
 
 #include "Items/DCCPickup.h"
 #include "Characters/DCCCharacterBase.h"
+#include "Equipment/DCCEquipmentComponent.h"
 #include "Stats/DCCStatsComponent.h"
 #include "Stats/DCCRuleset.h"
 #include "Quests/DCCQuestComponent.h"
@@ -43,7 +44,7 @@ float UDCCCarryComponent::GetCarryMassLimit() const
 		return 0.0f;
 	}
 
-	return Ruleset->GetCarryMassLimit(Stats->AbilityScores);
+	return Ruleset->GetCarryMassLimit(Stats->GetEnhanced());
 }
 
 ADCCPickup* UDCCCarryComponent::FindBestPickupInReach() const
@@ -134,13 +135,33 @@ void UDCCCarryComponent::DoPickup(ADCCPickup* Pickup)
 		return;
 	}
 
-	CarriedPickup = Pickup;
-	Pickup->OnPickedUp(GetOwningCharacter());
-
 	// Reported by class so a quest can ask for a particular prop - "recover the
 	// generator core" - while an empty TargetId counts anything liftable.
-	UDCCQuestComponent::NotifyEvent(this, EDCCObjectiveType::Collect,
-		Pickup->GetClass() ? Pickup->GetClass()->GetFName() : NAME_None);
+	const FName PickupClassName = Pickup->GetClass() ? Pickup->GetClass()->GetFName() : NAME_None;
+
+	ADCCCharacterBase* Character = GetOwningCharacter();
+
+	// Pocket change banks and vanishes; it must never be diverted into a
+	// container first. Without this test, equipping a water bottle silently
+	// turned every coin on the floor into an inventory item that had to be
+	// fished back out to be worth anything - see ADCCPickup::bBanksOnPickup,
+	// which exists precisely so small money skips the carry loop entirely.
+	const bool bIsPocketChange = Pickup->bBanksOnPickup && Pickup->GoldValue > 0;
+
+	// Small or liquid-tagged items disappear into an equipped container (a
+	// water bottle, say) instead of filling the one carry slot a crate would -
+	// scooping up something bottle-sized should not cost you both hands.
+	if (!bIsPocketChange && Character && Character->Equipment
+		&& Character->Equipment->TryStoreInAnyContainer(Pickup))
+	{
+		UDCCQuestComponent::NotifyEvent(this, EDCCObjectiveType::Collect, PickupClassName);
+		return;
+	}
+
+	CarriedPickup = Pickup;
+	Pickup->OnPickedUp(Character);
+
+	UDCCQuestComponent::NotifyEvent(this, EDCCObjectiveType::Collect, PickupClassName);
 
 	ApplyAttachment();
 	OnCarryChanged.Broadcast(this, Pickup);
@@ -213,7 +234,7 @@ void UDCCCarryComponent::Server_Throw_Implementation()
 		return;
 	}
 
-	const float Speed = Ruleset->GetThrowSpeed(Stats->AbilityScores, Pickup->MassKilograms);
+	const float Speed = Ruleset->GetThrowSpeed(Stats->GetEnhanced(), Pickup->MassKilograms);
 
 	// Throw along the character's facing, tilted up so props arc. Using control
 	// rotation would aim at wherever the camera happens to point, which for a

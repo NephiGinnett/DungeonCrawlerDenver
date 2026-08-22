@@ -15,6 +15,7 @@ void UDCCInventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(UDCCInventoryComponent, Items);
+	DOREPLIFETIME(UDCCInventoryComponent, StowedRemains);
 }
 
 float UDCCInventoryComponent::GetTotalMass() const
@@ -96,6 +97,83 @@ ADCCPickup* UDCCInventoryComponent::DropItem(int32 Index, const FVector& WorldLo
 }
 
 void UDCCInventoryComponent::OnRep_Items()
+{
+	OnInventoryChanged.Broadcast(this);
+}
+
+void UDCCInventoryComponent::StowRemains(const FText& SourceName, const TArray<FDCCRolledLoot>& Contents)
+{
+	if (GetOwnerRole() != ROLE_Authority)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("DCCInventoryComponent::StowRemains called on a client; ignoring."));
+		return;
+	}
+
+	// No capacity check, deliberately - a stowed corpse is not a physical prop
+	// competing for a slot with the sword in your pocket. Refusing "Stow Body"
+	// because your Items list happens to be full would be a rule nobody could
+	// see coming.
+	FDCCStowedRemains Remains;
+	Remains.DisplayName = SourceName;
+	Remains.Contents = Contents;
+
+	StowedRemains.Add(MoveTemp(Remains));
+
+	OnInventoryChanged.Broadcast(this);
+}
+
+bool UDCCInventoryComponent::LootOneFromStowed(int32 RemainsIndex, int32 ItemIndex, const FVector& WorldLocation)
+{
+	if (GetOwnerRole() != ROLE_Authority || !StowedRemains.IsValidIndex(RemainsIndex))
+	{
+		return false;
+	}
+
+	FDCCStowedRemains& Remains = StowedRemains[RemainsIndex];
+	if (!Remains.Contents.IsValidIndex(ItemIndex))
+	{
+		return false;
+	}
+
+	UWorld* World = GetWorld();
+	if (!DCCLoot::SpawnRolledLoot(World, Remains.Contents[ItemIndex], WorldLocation))
+	{
+		return false;
+	}
+
+	Remains.Contents.RemoveAt(ItemIndex);
+
+	// An emptied record is clutter, not a memento - drop it the moment the last
+	// item leaves, same as a corpse fading once it has nothing left to give.
+	if (Remains.Contents.IsEmpty())
+	{
+		StowedRemains.RemoveAt(RemainsIndex);
+	}
+
+	OnInventoryChanged.Broadcast(this);
+	return true;
+}
+
+bool UDCCInventoryComponent::LootAllFromStowed(int32 RemainsIndex, const FVector& WorldLocation)
+{
+	if (GetOwnerRole() != ROLE_Authority || !StowedRemains.IsValidIndex(RemainsIndex))
+	{
+		return false;
+	}
+
+	UWorld* World = GetWorld();
+	for (const FDCCRolledLoot& Rolled : StowedRemains[RemainsIndex].Contents)
+	{
+		DCCLoot::SpawnRolledLoot(World, Rolled, WorldLocation);
+	}
+
+	StowedRemains.RemoveAt(RemainsIndex);
+
+	OnInventoryChanged.Broadcast(this);
+	return true;
+}
+
+void UDCCInventoryComponent::OnRep_StowedRemains()
 {
 	OnInventoryChanged.Broadcast(this);
 }

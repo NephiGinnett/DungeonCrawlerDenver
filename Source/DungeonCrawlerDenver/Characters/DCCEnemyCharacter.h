@@ -25,6 +25,7 @@ public:
 	ADCCEnemyCharacter();
 
 	virtual void Tick(float DeltaSeconds) override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	/** How far this enemy will notice a player from. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|AI", meta = (ClampMin = "0.0"))
@@ -56,6 +57,50 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|AI", meta = (ClampMin = "0.0"))
 	float SkillAttemptInterval = 2.5f;
 
+	// -------------------------------------------------------------------------
+	// RANGED STANDOFF
+	//
+	// A fighter whose weapon outreaches its own body should use that reach
+	// instead of walking into arm's length to use it. Before this existed the
+	// chase always closed to `AttackRange * 0.5` - the RAW property - while the
+	// in-range test asked GetEffectiveAttackRange(), which equipment can raise.
+	// Hand Scott a 600-unit lacrosse stick and the two disagreed by 400 units:
+	// he could fire from 600 and his feet kept taking him to 210 anyway, every
+	// time, which is exactly "ranged allies never keep their distance".
+	//
+	// Both numbers are fractions of the EFFECTIVE range, so an item that
+	// changes reach moves the whole behaviour with it rather than needing the
+	// AI retuned per weapon.
+	// -------------------------------------------------------------------------
+
+	/** Where a ranged fighter prefers to stand, as a fraction of its effective reach. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|AI|Ranged", meta = (ClampMin = "0.1", ClampMax = "1.0"))
+	float RangedStandoffFraction = 0.8f;
+
+	/**
+	 * Closer than this fraction of reach and a ranged fighter gives ground.
+	 *
+	 * Deliberately well below RangedStandoffFraction: the gap between the two
+	 * is a dead band, and without one an archer jitters back and forth on the
+	 * boundary instead of shooting - the same reason the escort walk has
+	 * FollowResumeMultiplier.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|AI|Ranged", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float RangedRetreatFraction = 0.45f;
+
+	/**
+	 * Seconds a leash-dropped ally must spend heading home before it may pick
+	 * a new fight.
+	 *
+	 * Without this, an ally that hit FollowLeashRadius dropped its target and
+	 * re-acquired the same one on the very next scan - 0.35s later - so it
+	 * bounced between "charge" and "come back" forever and never stood still
+	 * long enough to swing. That reads as "allies just always run at enemies
+	 * and never attack", which is precisely what it was.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|AI|Escort", meta = (ClampMin = "0.0"))
+	float ReengageCooldownSeconds = 2.5f;
+
 	/**
 	 * Seconds a caster stands still after casting, rooted in place.
 	 *
@@ -70,6 +115,99 @@ public:
 	UFUNCTION(BlueprintPure, Category = "DCC|AI")
 	ADCCCharacterBase* GetCurrentTarget() const { return CurrentTarget; }
 
+	// -------------------------------------------------------------------------
+	// ESCORT BEHAVIOUR - allies only
+	//
+	// Everything below is ignored unless bIsAlly is true. A mob's job is to find
+	// the nearest crawler and commit to it; an ally's job is to stay with the
+	// party and only break off for a fight that is actually happening. Sharing
+	// one AI for both made allies sprint at anything they could see the moment
+	// they spawned, which is how a four-person escort ends up strung out across
+	// three rooms with the player alone in the middle of them.
+	// -------------------------------------------------------------------------
+
+	/** How close an ally tries to stay to the crawler it is escorting. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|AI|Escort", meta = (ClampMin = "0.0"))
+	float FollowDistance = 400.0f;
+
+	/**
+	 * Multiple of FollowDistance at which a settled ally sets off again.
+	 *
+	 * The dead band between the two is what stops an escort twitching on the
+	 * boundary: stop at 400, do not resume until 640.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|AI|Escort", meta = (ClampMin = "1.0"))
+	float FollowResumeMultiplier = 1.6f;
+
+	/**
+	 * Speed while escorting. Below RunSpeedThreshold on purpose, so following
+	 * plays the walk cycle instead of the run.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|AI|Escort", meta = (ClampMin = "0.0"))
+	float FollowWalkSpeed = 260.0f;
+
+	/**
+	 * Past this far from their leader an ally abandons its target and comes back.
+	 *
+	 * This is the leash that actually matters for allies - LeashRadius measures
+	 * from the ally to its target, which does nothing to stop the ally itself
+	 * being dragged halfway across the floor by a fleeing mob.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|AI|Escort", meta = (ClampMin = "0.0"))
+	float FollowLeashRadius = 1600.0f;
+
+	/**
+	 * How close a hostile must be - to the ally or to its leader - before the
+	 * ally treats it as an immediate threat and engages without being provoked.
+	 *
+	 * Deliberately much tighter than AggroRadius. Outside this, an ally will only
+	 * engage a hostile that is already fighting someone on the party's side.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|AI|Escort", meta = (ClampMin = "0.0"))
+	float AllyThreatRadius = 700.0f;
+
+	/**
+	 * Whether allies join a fight the moment any hostile aggroes onto the party,
+	 * even one further away than AllyThreatRadius.
+	 *
+	 * This is the "just when aggroed" half. On, because an ally that watches a
+	 * mob chew on the player from twenty metres away reads as broken rather than
+	 * as disciplined.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|AI|Escort")
+	bool bEngageWhenPartyAggroed = true;
+
+	// -------------------------------------------------------------------------
+	// GEARING UP - allies only
+	//
+	// An ally that walks past a dropped weapon and never picks it up reads as
+	// oblivious, the same way "allies never fight" did before AttackAnimation
+	// was wired. Deliberately upgrades-only rather than "grab anything free
+	// hands can hold" - an ally comparing a nearby item against what it
+	// already has and only swapping in a strict improvement means it never
+	// undresses itself for something worse, which a first-match rule would
+	// happily do if a plain item turned up before a better one.
+	// -------------------------------------------------------------------------
+
+	/** How far an ally will notice gear worth picking up. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|AI|Gear", meta = (ClampMin = "0.0"))
+	float GearScanRadius = 500.0f;
+
+	/** Seconds between gear scans - the same throttling reason the target and leader scans use. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|AI|Gear", meta = (ClampMin = "0.0"))
+	float GearScanInterval = 3.0f;
+
+	/**
+	 * Ordered to stand still via the interaction menu's "Hold position".
+	 *
+	 * Suppresses escorting only, never self-defence: a held ally still fights
+	 * what walks into it. An order to wait is not an order to die politely.
+	 */
+	UPROPERTY(BlueprintReadOnly, Category = "DCC|AI|Escort")
+	bool bHoldingPosition = false;
+
+	virtual void SetHoldingPosition(bool bHold) override;
+
 	/**
 	 * Flips this character to the crawlers' side: an ally NPC rather than a mob.
 	 *
@@ -81,7 +219,15 @@ public:
 	 * an encounter. That is deliberate: the party's own NPCs walking into a trap
 	 * should spring it.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DCC|AI")
+	// Replicated: without it, only the server (and a listen-server host, which
+	// shares the server's own actors) ever sees the true value. Every remote
+	// client falls back to the C++ default of false - IsCrawler() then reads
+	// false too, so anything client-side that keys off allegiance (nameplate
+	// colour, the world-space health bar tint) shows an ally as hostile even
+	// though the server-driven behaviour - targeting, damage, who fights whom -
+	// was always correct. That split (right behaviour, wrong colour) is exactly
+	// what this was seen doing before it was marked Replicated.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Replicated, Category = "DCC|AI")
 	bool bIsAlly = false;
 
 	/** Dungeon-side unless bIsAlly flips it. Drives the whole faction check. */
@@ -138,6 +284,43 @@ protected:
 	ADCCCharacterBase* FindNearestHostileTarget() const;
 
 	/**
+	 * One line per enemy at spawn: Intelligence, mana pool, skill table, and the
+	 * cost of everything it knows. Exists because a caster that cannot afford its
+	 * own spell behaves identically to one that has no spell at all.
+	 */
+	void LogCastingReadiness() const;
+
+	/**
+	 * The crawler this ally is escorting: the nearest player-controlled one.
+	 *
+	 * Player-controlled specifically, not merely IsCrawler - otherwise four
+	 * allies pick each other as leaders and the whole group follows itself
+	 * around in a circle while the actual player walks off alone.
+	 *
+	 * Returns null for mobs, and for an ally with no player in the level.
+	 */
+	ADCCCharacterBase* FindFollowLeader() const;
+
+	/**
+	 * Whether an ally should break off and fight this hostile.
+	 *
+	 * True when the hostile is an immediate threat (inside AllyThreatRadius of
+	 * the ally or of its leader) or, with bEngageWhenPartyAggroed, when it has
+	 * already picked a fight with someone on the party's side. Everything else
+	 * is left alone - which is the whole point, and what stops an ally charging
+	 * an idle mob across the room the instant it comes into view.
+	 */
+	bool ShouldAllyEngage(const ADCCCharacterBase* Hostile, const ADCCCharacterBase* Leader) const;
+
+	/**
+	 * Walks an ally back towards its leader, or stands it down when close enough.
+	 *
+	 * Split out of Tick because it is the ally's whole idle behaviour, and Tick
+	 * was already long enough to hide a bug in.
+	 */
+	void TickFollowLeader(ADCCCharacterBase* Leader, class AAIController* AIController);
+
+	/**
 	 * Server only. Casts the longest-range currently-usable skill at Target.
 	 *
 	 * Returns true if something was cast, which the caller treats as "this turn
@@ -157,9 +340,57 @@ private:
 	/** Set while a move order is outstanding, so we do not re-issue it every frame. */
 	bool bIsChasing = false;
 
+	// -------------------------------------------------------------------------
+	// SCAN THROTTLING
+	//
+	// FindFollowLeader and FindNearestHostileTarget both walk every character in
+	// the world with a TActorIterator. Running either per enemy per frame is
+	// O(enemies x actors) every tick - with a couple of hundred actors in the
+	// level that is thousands of visits a frame for information that changes
+	// slowly. Both are now cached and refreshed on a stagger.
+	//
+	// The stagger matters as much as the interval: without a per-actor offset
+	// every enemy would re-scan on the same frame and turn a steady cost into a
+	// periodic hitch.
+	// -------------------------------------------------------------------------
+
+	/** Seconds between full world scans for a follow leader. */
+	UPROPERTY(EditAnywhere, Category = "DCC|AI", meta = (ClampMin = "0.0"))
+	float LeaderScanInterval = 0.5f;
+
+	/** Seconds between full world scans for a new target. */
+	UPROPERTY(EditAnywhere, Category = "DCC|AI", meta = (ClampMin = "0.0"))
+	float TargetScanInterval = 0.35f;
+
+	UPROPERTY(Transient)
+	TObjectPtr<ADCCCharacterBase> CachedLeader;
+
+	float NextLeaderScanTime = 0.0f;
+	float NextTargetScanTime = 0.0f;
+
+	/** Cached leader, rescanned at most every LeaderScanInterval. */
+	ADCCCharacterBase* GetFollowLeaderThrottled();
+
+	/**
+	 * Server only, allies only. Scans within GearScanRadius for equipment
+	 * pickups worth wearing and equips the first strict upgrade found.
+	 *
+	 * "Upgrade" is a single-number heuristic - ability bonuses plus weapon die
+	 * plus Evade bonus, summed - not a real simulation of what the party would
+	 * actually choose. Good enough to stop an ally standing next to a dropped
+	 * sword with a fist, not a substitute for a player's own judgement about
+	 * NameTagDave's Charisma bonus mattering more than a d8 in this fight.
+	 */
+	void TryAutoEquipNearbyGear();
+
+	float NextGearScanTime = 0.0f;
+
 	/** World seconds of the last skill attempt. Server-side only. */
 	float LastSkillAttemptTime = TNumericLimits<float>::Lowest();
 
 	/** World time until which this character is rooted mid-cast. */
 	float CastHoldUntilTime = 0.0f;
+
+	/** World time before which a leash-dropped ally may not take a new target. */
+	float ReengageAllowedTime = 0.0f;
 };

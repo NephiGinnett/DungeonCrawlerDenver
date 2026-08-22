@@ -1,0 +1,97 @@
+#include "Items/DCCLootContainerVariants.h"
+
+#include "Items/DCCPickupVariants.h"
+#include "Items/DCCPickup_Equipment.h"
+#include "Components/StaticMeshComponent.h"
+#include "Engine/StaticMesh.h"
+#include "UObject/ConstructorHelpers.h"
+
+namespace
+{
+	void SetChestMesh(UStaticMeshComponent* Mesh, const TCHAR* MeshPath)
+	{
+		if (!Mesh)
+		{
+			return;
+		}
+
+		ConstructorHelpers::FObjectFinder<UStaticMesh> MeshAsset(MeshPath);
+		if (MeshAsset.Succeeded())
+		{
+			Mesh->SetStaticMesh(MeshAsset.Object);
+		}
+	}
+
+	/** One guaranteed-drop row. Chance 1.0 makes "curated contents" rather than "random chest". */
+	FDCCLootDrop MakeGearDrop(FName ItemId)
+	{
+		FDCCLootDrop Drop;
+		Drop.PickupClass = ADCCPickup_Equipment::StaticClass();
+		Drop.Chance = 1.0f;
+		Drop.EquipmentItemId = ItemId;
+		return Drop;
+	}
+
+	/** A guaranteed gold entry, using the same coin pickup corpses drop. */
+	FDCCLootDrop MakeGoldDrop(int32 MinGold, int32 MaxGold)
+	{
+		FDCCLootDrop Drop;
+		Drop.PickupClass = ADCCPickup_Coins::StaticClass();
+		Drop.Chance = 1.0f;
+		Drop.MinGold = MinGold;
+		Drop.MaxGold = MaxGold;
+		return Drop;
+	}
+}
+
+ADCCLootContainer_KitchenDrawer::ADCCLootContainer_KitchenDrawer()
+{
+	// The same wooden crate the Pantry's mid-tier props use - "kitchen storage"
+	// is exactly what it already looks like.
+	SetChestMesh(Mesh, TEXT("/Game/Cave_Camp/Meshes/Props_02/SM_crate_01.SM_crate_01"));
+
+	DisplayName = NSLOCTEXT("DCC", "ChestKitchen", "Kitchen Drawer, Jammed Shut");
+
+	LootTable.Add(MakeGearDrop(TEXT("TenderiserMallet")));
+	LootTable.Add(MakeGearDrop(TEXT("ChefsKnife")));
+	LootTable.Add(MakeGearDrop(TEXT("CastIronSkillet")));
+	LootTable.Add(MakeGoldDrop(10, 25));
+}
+
+ADCCLootContainer_Armory::ADCCLootContainer_Armory()
+{
+	// The strongbox mesh, repurposed - a locked case reads as an armory rack
+	// just as well as it reads as a strongbox.
+	SetChestMesh(Mesh, TEXT("/Game/Cave_Camp/Meshes/Props_02/SM_crate_02.SM_crate_02"));
+
+	DisplayName = NSLOCTEXT("DCC", "ChestArmory", "Emergency Equipment Locker");
+
+	LootTable.Add(MakeGearDrop(TEXT("FireAxe")));
+	LootTable.Add(MakeGearDrop(TEXT("WallSword")));
+	LootTable.Add(MakeGearDrop(TEXT("FeatureWallShield")));
+	LootTable.Add(MakeGoldDrop(20, 40));
+}
+
+ADCCLootContainer_Quartermaster::ADCCLootContainer_Quartermaster()
+{
+	SetChestMesh(Mesh, TEXT("/Game/Cave_Camp/Meshes/Props_02/SM_barrel_01.SM_barrel_01"));
+
+	DisplayName = NSLOCTEXT("DCC", "ChestQuartermaster", "Quartermaster's Supply Crate");
+
+	LootTable.Add(MakeGearDrop(TEXT("ConfettiCrossbow")));
+	LootTable.Add(MakeGearDrop(TEXT("NailGunPro")));
+	LootTable.Add(MakeGearDrop(TEXT("FlareGunEmergency")));
+	LootTable.Add(MakeGoldDrop(15, 30));
+}
+
+ADCCLootContainer_ManagementLockbox::ADCCLootContainer_ManagementLockbox()
+{
+	SetChestMesh(Mesh, TEXT("/Game/Cave_Camp/Meshes/Props_02/SM_barrel_03.SM_barrel_03"));
+
+	DisplayName = NSLOCTEXT("DCC", "ChestManagement", "Assistant Manager's Lockbox");
+
+	LootTable.Add(MakeGearDrop(TEXT("PatioSunHat")));
+	LootTable.Add(MakeGearDrop(TEXT("ManagersBlazer")));
+	LootTable.Add(MakeGearDrop(TEXT("NameTagDave")));
+	LootTable.Add(MakeGoldDrop(60, 120));
+}

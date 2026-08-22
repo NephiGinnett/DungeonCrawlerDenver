@@ -2,10 +2,12 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "Items/DCCLootTypes.h"
 #include "DCCInventoryComponent.generated.h"
 
 class ADCCPickup;
 class UDCCInventoryComponent;
+class ADCCCharacterBase;
 
 /**
  * One stowed item.
@@ -30,6 +32,29 @@ struct FDCCInventoryItem
 	/** Kept so the HUD can show carried weight without loading every class. */
 	UPROPERTY(BlueprintReadOnly, Category = "Inventory")
 	float MassKilograms = 0.0f;
+};
+
+/**
+ * A whole corpse or chest, stowed rather than looted item-by-item.
+ *
+ * "Stow Body" - the loot menu's third option, on both corpses and chests -
+ * hands everything the source still had over to this record and retires the
+ * source, per IDCCLootSource::StowInto. Kept as a record rather than a live
+ * actor for the same reason FDCCInventoryItem is: the world object goes away,
+ * and only the data needed to draw and later act on it survives.
+ */
+USTRUCT(BlueprintType)
+struct FDCCStowedRemains
+{
+	GENERATED_BODY()
+
+	/** Whatever the source's loot menu was titled - "Mob_Brute_Courtyard", a chest's name. */
+	UPROPERTY(BlueprintReadOnly, Category = "Inventory")
+	FText DisplayName;
+
+	/** Snapshot of whatever the source had not yet been looted of. */
+	UPROPERTY(BlueprintReadOnly, Category = "Inventory")
+	TArray<FDCCRolledLoot> Contents;
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDCCInventoryChanged, UDCCInventoryComponent*, Inventory);
@@ -95,7 +120,32 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	ADCCPickup* DropItem(int32 Index, const FVector& WorldLocation);
 
+	// -- Stowed remains --------------------------------------------------------
+	// A corpse or chest carried away whole via "Stow Body" rather than looted
+	// on the spot. Separate array from Items on purpose: a stowed body is not a
+	// prop with a mass and a class, it is a bundle of still-unresolved loot -
+	// mixing the two shapes into one list would mean every reader has to check
+	// which kind of entry it is looking at.
+
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_StowedRemains, Category = "Inventory")
+	TArray<FDCCStowedRemains> StowedRemains;
+
+	/** Server only. Always succeeds - a stowed body has no capacity limit of its own. */
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void StowRemains(const FText& SourceName, const TArray<FDCCRolledLoot>& Contents);
+
+	/** Server only. Spawns Contents[ItemIndex] near WorldLocation and removes just that entry. */
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	bool LootOneFromStowed(int32 RemainsIndex, int32 ItemIndex, const FVector& WorldLocation);
+
+	/** Server only. Spawns everything left in Contents and forgets the record. */
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	bool LootAllFromStowed(int32 RemainsIndex, const FVector& WorldLocation);
+
 protected:
 	UFUNCTION()
 	void OnRep_Items();
+
+	UFUNCTION()
+	void OnRep_StowedRemains();
 };

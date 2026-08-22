@@ -4,6 +4,8 @@
 #include "Stats/DCCRuleset.h"
 #include "Skills/DCCSkillComponent.h"
 #include "Combat/DCCGameState.h"
+#include "Combat/DCCBossComponent.h"
+#include "Characters/DCCEnemyCharacter.h"
 #include "Favor/DCCFavorComponent.h"
 #include "Items/DCCCarryComponent.h"
 #include "Items/DCCInventoryComponent.h"
@@ -12,6 +14,7 @@
 #include "UI/DCCHUD.h"
 #include "Rooms/DCCClimbPoint.h"
 #include "Progression/DCCAchievementComponent.h"
+#include "Equipment/DCCEquipmentComponent.h"
 #include "Quests/DCCQuestComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "Animation/AnimSequenceBase.h"
@@ -24,6 +27,7 @@
 #include "GameFramework/PlayerController.h"
 #include "Blueprint/UserWidget.h"
 #include "EngineUtils.h"
+#include "Kismet/GameplayStatics.h"
 
 ADCCCharacterBase::ADCCCharacterBase()
 {
@@ -43,6 +47,7 @@ ADCCCharacterBase::ADCCCharacterBase()
 	Carry = CreateDefaultSubobject<UDCCCarryComponent>(TEXT("Carry"));
 	Inventory = CreateDefaultSubobject<UDCCInventoryComponent>(TEXT("Inventory"));
 	Achievements = CreateDefaultSubobject<UDCCAchievementComponent>(TEXT("Achievements"));
+	Equipment = CreateDefaultSubobject<UDCCEquipmentComponent>(TEXT("Equipment"));
 
 	Nameplate = CreateDefaultSubobject<UTextRenderComponent>(TEXT("Nameplate"));
 	Nameplate->SetupAttachment(RootComponent);
@@ -69,7 +74,11 @@ void ADCCCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 
 	DOREPLIFETIME(ADCCCharacterBase, ActiveClimbPoint);
 	DOREPLIFETIME(ADCCCharacterBase, bIsSprinting);
+	DOREPLIFETIME(ADCCCharacterBase, bIsCasting);
 	DOREPLIFETIME(ADCCCharacterBase, bBefriended);
+	DOREPLIFETIME(ADCCCharacterBase, bIsDowned);
+	DOREPLIFETIME(ADCCCharacterBase, bHasLoot);
+	DOREPLIFETIME(ADCCCharacterBase, PendingLoot);
 }
 
 void ADCCCharacterBase::PossessedBy(AController* NewController)
@@ -90,6 +99,15 @@ void ADCCCharacterBase::PossessedBy(AController* NewController)
 void ADCCCharacterBase::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// Captured before anything can ragdoll. Reviving reattaches the mesh to the
+	// capsule and needs the offset it had at rest - read it back after a ragdoll
+	// and you get wherever physics dumped the body, which stands the revived
+	// crawler up embedded in the floor.
+	if (const USkeletalMeshComponent* MeshComponent = GetMesh())
+	{
+		MeshRestTransform = MeshComponent->GetRelativeTransform();
+	}
 
 	if (Stats)
 	{
@@ -131,6 +149,21 @@ void ADCCCharacterBase::HandleHealthChangedForTicker(UDCCStatsComponent* InStats
 	ADCCFloatingText::Spawn(this, SpawnLocation, Delta, IsCrawler());
 }
 
+void ADCCCharacterBase::SetMovementSpeedOverride(float NewSpeed)
+{
+	const float Clamped = FMath::Max(0.0f, NewSpeed);
+	if (FMath::IsNearlyEqual(MovementSpeedOverride, Clamped))
+	{
+		return;
+	}
+
+	MovementSpeedOverride = Clamped;
+
+	// Re-derived immediately rather than waiting for the next Tick, so the change
+	// is visible on the frame it was asked for.
+	ApplyDerivedMovementSpeed();
+}
+
 void ADCCCharacterBase::ApplyDerivedMovementSpeed()
 {
 	UCharacterMovementComponent* Movement = GetCharacterMovement();
@@ -145,15 +178,72 @@ void ADCCCharacterBase::ApplyDerivedMovementSpeed()
 		return;
 	}
 
-	float Speed = BaseWalkSpeed * Ruleset->GetMoveSpeedMultiplier(Stats->AbilityScores);
+	float Speed = BaseWalkSpeed * Ruleset->GetMoveSpeedMultiplier(Stats->GetEnhanced());
 
 	if (bIsSprinting)
 	{
-		Speed *= Ruleset->GetSprintSpeedMultiplier(Stats->AbilityScores);
+		Speed *= Ruleset->GetSprintSpeedMultiplier(Stats->GetEnhanced());
+	}
+
+	// Applied before the casting clamp so a rooted caster is still rooted, and
+	// after the sprint multiplier so an escorting ally cannot sprint by accident.
+	if (MovementSpeedOverride > 0.0f)
+	{
+		Speed = FMath::Min(Speed, MovementSpeedOverride);
+	}
+
+	// Routed through the same funnel as sprint rather than poking MaxWalkSpeed
+	// from the skill component, so the two can never disagree about who set the
+	// speed last. A sprint multiplier applied to zero is still zero.
+	if (bIsCasting)
+	{
+		Speed = 0.0f;
 	}
 
 	Movement->MaxWalkSpeed = Speed;
 }
+
+void ADCCCharacterBase::BeginCastLock(float Seconds)
+{
+	if (!HasAuthority() || Seconds <= 0.0f)
+	{
+		return;
+	}
+
+	bIsCasting = true;
+	ApplyDerivedMovementSpeed();
+
+	// Velocity is killed outright as well as capped: MaxWalkSpeed bounds new
+	// input, but a character already sliding keeps its momentum otherwise, and a
+	// caster drifting through their own cast reads as a bug.
+	if (UCharacterMovementComponent* Movement = GetCharacterMovement())
+	{
+		Movement->StopMovementImmediately();
+	}
+
+	// Re-arming replaces the pending timer rather than stacking, so a second cast
+	// mid-cast extends the root instead of ending it early.
+	GetWorldTimerManager().ClearTimer(CastLockTimer);
+	GetWorldTimerManager().SetTimer(CastLockTimer, this,
+		&ADCCCharacterBase::EndCastLock, Seconds, false);
+}
+
+void ADCCCharacterBase::EndCastLock()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	bIsCasting = false;
+	ApplyDerivedMovementSpeed();
+}
+
+void ADCCCharacterBase::OnRep_Casting()
+{
+	ApplyDerivedMovementSpeed();
+}
+
 
 void ADCCCharacterBase::AttemptPickupOrDrop()
 {
@@ -209,8 +299,43 @@ void ADCCCharacterBase::Server_StowCarried_Implementation()
 	}
 }
 
+void ADCCCharacterBase::DCCEmptyStowedRemains(int32 Index)
+{
+	if (HasAuthority())
+	{
+		Server_EmptyStowedRemains_Implementation(Index);
+	}
+	else
+	{
+		Server_EmptyStowedRemains(Index);
+	}
+}
+
+void ADCCCharacterBase::Server_EmptyStowedRemains_Implementation(int32 Index)
+{
+	if (Inventory)
+	{
+		Inventory->LootAllFromStowed(Index, GetActorLocation());
+	}
+}
+
 void ADCCCharacterBase::OnPrimaryPressed()
 {
+	// The character menu owns the mouse while it is open, so a click meant for an
+	// achievement row does not also swing at whatever happens to be behind the
+	// panel. Checked first: this outranks even climbing, because the cursor is
+	// visibly over a UI panel and clicking UI should never move the character.
+	if (const APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		if (const ADCCHUD* DCCHUD = Cast<ADCCHUD>(PC->GetHUD()))
+		{
+			if (DCCHUD->IsMenuVisible())
+			{
+				return;
+			}
+		}
+	}
+
 	// Climbing wins: while on a wall the button is the climb, not a swing.
 	if (IsClimbing())
 	{
@@ -225,10 +350,17 @@ void ADCCCharacterBase::OnPrimaryPressed()
 		return;
 	}
 
-	// With a skill armed from the menu, the click is aimed at the world.
+	// With a skill armed from the menu, a climbable face under the cursor always
+	// wins the click, whatever skill is armed - see TrySelectSkillTargetUnderCursor's
+	// comment for why. Otherwise the click casts.
 	if (!SelectedSkillId.IsNone())
 	{
-		TrySelectClimbTargetUnderCursor();
+		if (TrySelectClimbTargetUnderCursor())
+		{
+			return;
+		}
+
+		TrySelectSkillTargetUnderCursor();
 		return;
 	}
 
@@ -236,6 +368,17 @@ void ADCCCharacterBase::OnPrimaryPressed()
 	// before the attack because IsHostileTo already refuses to swing at an ally,
 	// so this consumes a click that would otherwise have done nothing at all.
 	if (TryFistBumpUnderCursor())
+	{
+		return;
+	}
+
+	// Hitting is the default action with nothing armed: a hostile in range
+	// always wins the click over climbing, so an ordinary attack click near a
+	// cave wall - which describes most of this game's combat rooms - is never
+	// mistaken for a climb attempt. Climbing is only probed for when there is
+	// nothing to fight, which is also the one situation where "the click did
+	// nothing" would otherwise be true instead of a swing-and-miss.
+	if (!FindNearestHostileInRange() && TrySelectClimbTargetUnderCursor())
 	{
 		return;
 	}
@@ -453,21 +596,14 @@ void ADCCCharacterBase::SelectSkill(FName SkillId)
 	PendingClimbPoint = nullptr;
 }
 
-void ADCCCharacterBase::TrySelectClimbTargetUnderCursor()
+bool ADCCCharacterBase::TrySelectClimbTargetUnderCursor()
 {
 	// Purely local: this decides what to *ask*, never what happens.
 	APlayerController* PC = Cast<APlayerController>(GetController());
 	UWorld* World = GetWorld();
 	if (!PC || !World || IsClimbing())
 	{
-		return;
-	}
-
-	// Only meaningful once a skill is armed from the menu. Without this, every
-	// left click in the game would start probing for walls.
-	if (SelectedSkillId.IsNone())
-	{
-		return;
+		return false;
 	}
 
 	FVector CameraLocation;
@@ -478,20 +614,169 @@ void ADCCCharacterBase::TrySelectClimbTargetUnderCursor()
 
 	FCollisionQueryParams Params;
 	Params.AddIgnoredActor(this);
+	Params.bTraceComplex = true;
 
 	FHitResult Hit;
 	if (!World->LineTraceSingleByChannel(Hit, CameraLocation, TraceEnd, ECC_Visibility, Params))
 	{
-		return;
+		return false;
 	}
 
-	ADCCClimbPoint* Point = Cast<ADCCClimbPoint>(Hit.GetActor());
-	if (!Point || !Point->IsWithinReach(this))
+	// An authored climb point, exactly as before: raises the confirmation box.
+	if (ADCCClimbPoint* Point = Cast<ADCCClimbPoint>(Hit.GetActor()))
+	{
+		if (Point->IsWithinReach(this))
+		{
+			PendingClimbPoint = Point;
+			return true;
+		}
+
+		ShowLocalNotice(NSLOCTEXT("DCC", "ClimbTooFar", "Too far away to climb that."));
+		return true;
+	}
+
+	// Not a climb point - a character under the cursor is a combat/social click,
+	// never a climb attempt, whatever its collision does to Visibility traces.
+	if (Cast<ADCCCharacterBase>(Hit.GetActor()))
+	{
+		return false;
+	}
+
+	// Wall-like means the hit face is closer to vertical than horizontal. A
+	// normal near (0,0,1) is a floor, near (0,0,-1) a ceiling - neither is
+	// something a player is trying to climb by clicking it.
+	if (!Hit.bBlockingHit || FMath::Abs(Hit.Normal.Z) > 0.5f)
+	{
+		return false;
+	}
+
+	// Also excludes anything at foot level: cave floors are irregular rock, not
+	// flat tile, so a pebble or a sloped seam right underfoot can present a
+	// steep-enough local normal to pass the check above despite obviously being
+	// ground, not a wall. Requiring the hit to sit meaningfully above the
+	// character's own feet is what keeps that from being read as a climb
+	// attempt during ordinary movement across rough terrain.
+	const float FootZ = GetActorLocation().Z
+		- (GetCapsuleComponent() ? GetCapsuleComponent()->GetScaledCapsuleHalfHeight() : 90.0f);
+
+	if (Hit.Location.Z < FootZ + 30.0f)
+	{
+		return false;
+	}
+
+	// This is a genuine climb attempt at un-authored geometry now - report
+	// failure rather than silently doing nothing if it is out of reach, same
+	// as the authored case above.
+	if (FVector::Dist(Hit.Location, GetActorLocation()) > GenericClimbReachDistance)
+	{
+		ShowLocalNotice(NSLOCTEXT("DCC", "ClimbTooFarGeneric", "Too far away to climb that."));
+		return true;
+	}
+
+	// No confirmation for a generic surface - the click itself is the ask, and
+	// the server is the one deciding whether a wall genuinely exists there.
+	if (HasAuthority())
+	{
+		Server_RequestGenericClimb_Implementation(Hit.Location, Hit.Normal);
+	}
+	else
+	{
+		Server_RequestGenericClimb(Hit.Location, Hit.Normal);
+	}
+
+	return true;
+}
+
+AActor* ADCCCharacterBase::FindSkillTargetUnderCursor(FName SkillId) const
+{
+	if (!Skills || SkillId.IsNone())
+	{
+		return nullptr;
+	}
+
+	FDCCSkillDef Skill;
+	if (!Skills->FindSkill(SkillId, Skill))
+	{
+		return nullptr;
+	}
+
+	// Self, Cone and AreaOfEffect all resolve from the caster's own position and
+	// facing server-side (see UDCCSkillComponent::GatherTargets) - there is no
+	// specific actor to click, only a direction, so the caster stands in as the
+	// nominal target and the cast fires on confirm.
+	if (Skill.Targeting != EDCCSkillTargeting::SingleTarget)
+	{
+		return const_cast<ADCCCharacterBase*>(this);
+	}
+
+	const APlayerController* PC = Cast<APlayerController>(GetController());
+	const UWorld* World = GetWorld();
+	if (!PC || !World)
+	{
+		return nullptr;
+	}
+
+	FVector CameraLocation;
+	FRotator CameraRotation;
+	PC->GetPlayerViewPoint(CameraLocation, CameraRotation);
+
+	const float TraceDistance = FMath::Max(Skill.Range, 100.0f);
+	const FVector TraceEnd = CameraLocation + CameraRotation.Vector() * TraceDistance;
+
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+
+	// A sphere sweep rather than a thin ray, matching the fist bump and the
+	// interaction target sweep - a hair-thin raycast at close range (most
+	// skill ranges are melee-ish) demands near-pixel-perfect aim to ever
+	// register a hit, which is what "not sure it's locking onto a target" was.
+	// Pawn channel rather than Visibility: a spell aimed at a person should not
+	// be blocked from resolving by a lamp post the sweep happens to graze, and
+	// it means a wall under the cursor correctly reads as "no target" rather
+	// than "target: wall".
+	FHitResult Hit;
+	if (!World->SweepSingleByChannel(Hit, CameraLocation, TraceEnd, FQuat::Identity,
+		ECC_Pawn, FCollisionShape::MakeSphere(40.0f), Params))
+	{
+		return nullptr;
+	}
+
+	ADCCCharacterBase* HitCharacter = Cast<ADCCCharacterBase>(Hit.GetActor());
+	if (!HitCharacter || !HitCharacter->IsAlive() || !IsHostileTo(HitCharacter))
+	{
+		return nullptr;
+	}
+
+	return HitCharacter;
+}
+
+void ADCCCharacterBase::TrySelectSkillTargetUnderCursor()
+{
+	if (SelectedSkillId.IsNone())
 	{
 		return;
 	}
 
-	PendingClimbPoint = Point;
+	AActor* Target = FindSkillTargetUnderCursor(SelectedSkillId);
+	if (!Target)
+	{
+		// Armed but nothing valid under the cursor yet - stay armed and wait for
+		// a better click, the same way an unanswered climb prompt would.
+		//
+		// Now says so. This silently returning was the single biggest reason
+		// skills felt broken: an armed skill, a click, and absolutely no
+		// indication that anything had been considered at all.
+		FDCCSkillDef Definition;
+		const bool bFound = Skills && Skills->FindSkill(SelectedSkillId, Definition);
+
+		ShowLocalNotice(DescribeSkillFailure(EDCCSkillFailure::NoTarget,
+			bFound && !Definition.DisplayName.IsEmpty()
+				? Definition.DisplayName
+				: FText::FromName(SelectedSkillId)));
+		return;
+	}
+
+	ResolveOrQueueSkill(SelectedSkillId, Target);
 }
 
 void ADCCCharacterBase::ConfirmPendingClimb(bool bAccept)
@@ -542,6 +827,61 @@ void ADCCCharacterBase::Server_BeginClimb_Implementation(ADCCClimbPoint* Point)
 	ADCCGameState::Log(this, EDCCLogCategory::Encounter, FText::Format(
 		NSLOCTEXT("DCC", "ClimbBegin", "{0} takes hold of the rock."),
 		FText::FromString(GetName())));
+}
+
+void ADCCCharacterBase::Server_RequestGenericClimb_Implementation(FVector HitLocation, FVector HitNormal)
+{
+	// Everything Server_BeginClimb already re-validates (alive, not already
+	// climbing, stamina) still applies once a point exists - this only adds the
+	// checks specific to trusting an un-authored location at all.
+	if (!IsAlive() || IsClimbing())
+	{
+		return;
+	}
+
+	if (FVector::Dist(HitLocation, GetActorLocation()) > GenericClimbReachDistance + 50.0f)
+	{
+		Client_ShowClimbNotice(NSLOCTEXT("DCC", "ClimbTooFarServer", "Too far away to climb that."));
+		return;
+	}
+
+	// The client's hit is a nomination, not a fact: confirm solid geometry is
+	// genuinely near HitLocation before trusting it enough to spawn anything,
+	// the same way a nominated skill target is re-checked rather than assumed.
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	const FVector Normal = HitNormal.IsNearlyZero() ? FVector::ForwardVector : HitNormal.GetSafeNormal();
+	const FVector ProbeStart = HitLocation + Normal * 50.0f;
+	const FVector ProbeEnd = HitLocation - Normal * 50.0f;
+
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+	Params.bTraceComplex = true;
+
+	FHitResult Confirm;
+	if (!World->LineTraceSingleByChannel(Confirm, ProbeStart, ProbeEnd, ECC_Visibility, Params))
+	{
+		Client_ShowClimbNotice(NSLOCTEXT("DCC", "ClimbNothingThere", "There is nothing to climb there."));
+		return;
+	}
+
+	ADCCClimbPoint* Point = ADCCClimbPoint::FindOrCreateForSurfaceHit(World, Confirm.Location, Confirm.Normal);
+	if (!Point)
+	{
+		Client_ShowClimbNotice(NSLOCTEXT("DCC", "ClimbNothingThere", "There is nothing to climb there."));
+		return;
+	}
+
+	Server_BeginClimb_Implementation(Point);
+}
+
+void ADCCCharacterBase::Client_ShowClimbNotice_Implementation(const FText& Message)
+{
+	ShowLocalNotice(Message);
 }
 
 void ADCCCharacterBase::SetClimbInput(bool bUp, bool bDown)
@@ -668,7 +1008,7 @@ void ADCCCharacterBase::TickStamina(float DeltaSeconds)
 
 		if (bMoving)
 		{
-			const float Speed = Ruleset->GetClimbSpeed(Stats->AbilityScores, ClimbRank);
+			const float Speed = Ruleset->GetClimbSpeed(Stats->GetEnhanced(), ClimbRank);
 			const float Direction = bClimbInputUp ? 1.0f : -1.0f;
 
 			const float PreviousZ = GetActorLocation().Z;
@@ -732,7 +1072,7 @@ void ADCCCharacterBase::TickStamina(float DeltaSeconds)
 			bExerting = true;
 
 			if (!Stats->ConsumeStamina(
-				Ruleset->GetSprintStaminaCost(Stats->AbilityScores) * DeltaSeconds))
+				Ruleset->GetSprintStaminaCost(Stats->GetEnhanced()) * DeltaSeconds))
 			{
 				Server_SetSprinting_Implementation(false);
 			}
@@ -741,8 +1081,1036 @@ void ADCCCharacterBase::TickStamina(float DeltaSeconds)
 
 	if (!bExerting)
 	{
-		Stats->RecoverStamina(Ruleset->GetStaminaRegenRate(Stats->AbilityScores) * DeltaSeconds);
+		Stats->RecoverStamina(Ruleset->GetStaminaRegenRate(Stats->GetEnhanced()) * DeltaSeconds);
 	}
+}
+
+bool ADCCCharacterBase::IsHostileNearby() const
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return false;
+	}
+
+	const float RadiusSquared = FMath::Square(CombatProximityRadius);
+
+	for (TActorIterator<ADCCCharacterBase> It(World); It; ++It)
+	{
+		const ADCCCharacterBase* Other = *It;
+
+		// Corpses and downed enemies do not count - a room full of things you
+		// already killed is not a fight, and treating it as one would put the
+		// confirmation step in front of every post-battle conversation.
+		if (!Other || Other == this || !Other->IsAlive() || Other->IsDowned())
+		{
+			continue;
+		}
+
+		if (!IsHostileTo(Other))
+		{
+			continue;
+		}
+
+		if (FVector::DistSquared(GetActorLocation(), Other->GetActorLocation()) <= RadiusSquared)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+ADCCCharacterBase* ADCCCharacterBase::GetPendingTalkTarget() const
+{
+	const UWorld* World = GetWorld();
+	if (!PendingTalkTarget || !World || World->GetTimeSeconds() > PendingTalkExpiry)
+	{
+		return nullptr;
+	}
+
+	return PendingTalkTarget;
+}
+
+AActor* ADCCCharacterBase::SweepForInteractionCandidate() const
+{
+	const APlayerController* PC = Cast<APlayerController>(GetController());
+	UWorld* World = GetWorld();
+	if (!PC || !World)
+	{
+		return nullptr;
+	}
+
+	FVector CameraLocation;
+	FRotator CameraRotation;
+	PC->GetPlayerViewPoint(CameraLocation, CameraRotation);
+
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+
+	// A generous sphere sweep, matching the fist bump. Starting a conversation
+	// (or opening a loot menu) should not require better aim than swinging at
+	// someone does.
+	//
+	// Visibility rather than Pawn: ApplyCollapsedBody explicitly sets a
+	// ragdolled corpse's mesh to ECR_Ignore on ECC_Pawn (so a dead body's
+	// flailing limbs cannot shove a living character around) and disables the
+	// capsule outright. That is correct for movement collision and wrong for
+	// this sweep - a Pawn-channel trace can never find a body to search, which
+	// was the entire "can't loot corpses" bug. The corpse's mesh still blocks
+	// Visibility (only Pawn was overridden to Ignore), and a living character's
+	// capsule already blocks Visibility too, so this finds both without
+	// changing what counts as a valid target. A chest's static mesh blocks
+	// Visibility by default, so it needs no special casing here at all.
+	FHitResult Hit;
+	if (!World->SweepSingleByChannel(
+		Hit, CameraLocation, CameraLocation + CameraRotation.Vector() * 2000.0f,
+		FQuat::Identity, ECC_Visibility, FCollisionShape::MakeSphere(48.0f), Params))
+	{
+		return nullptr;
+	}
+
+	return Hit.GetActor();
+}
+
+ADCCCharacterBase* ADCCCharacterBase::FindInteractionTargetUnderCursor() const
+{
+	AActor* Hit = SweepForInteractionCandidate();
+	ADCCCharacterBase* Target = Cast<ADCCCharacterBase>(Hit);
+
+	// [DCC Talk] - diagnostic for the still-open "can't interact with allies"
+	// report. Only fires on an E press that fails to open a conversation, which
+	// is not every frame, so this is safe to leave live rather than pull once
+	// the next PIE run has answered the question. Prints exactly which of the
+	// four gates (nothing hit / not a character / hostile / out of range)
+	// refused the attempt, so a repro no longer needs a theory - just a log
+	// filtered on this tag.
+	if (!Target || Target == this)
+	{
+		UE_LOG(LogTemp, Log, TEXT("[DCC Talk] %s: sweep hit %s - not a valid character."),
+			*GetActorNameOrLabel(), Hit ? *Hit->GetActorNameOrLabel() : TEXT("nothing"));
+		return nullptr;
+	}
+
+	// Two valid subjects, and the hostility rule only applies to the first: a
+	// living friend to talk to, or a downed friend to pick up. A corpse is no
+	// longer either - it opens the loot menu instead, via
+	// FindLootTargetUnderCursor, so the conversation tree never has to know
+	// what a body is.
+	const bool bLivingFriend = Target->IsAlive() && !Target->IsDowned() && !Target->IsHostileTo(this);
+	const bool bDownedFriend = Target->IsDowned() && !Target->IsHostileTo(this);
+
+	if (!bLivingFriend && !bDownedFriend)
+	{
+		UE_LOG(LogTemp, Log,
+			TEXT("[DCC Talk] %s: hit %s but refused - IsAlive=%d IsDowned=%d IsHostileTo=%d IsCrawler=%d (self IsCrawler=%d)."),
+			*GetActorNameOrLabel(), *Target->GetActorNameOrLabel(),
+			Target->IsAlive(), Target->IsDowned(), Target->IsHostileTo(this), Target->IsCrawler(), IsCrawler());
+		return nullptr;
+	}
+
+	const float Distance = FVector::Dist(GetActorLocation(), Target->GetActorLocation());
+	if (Distance > InteractionRange)
+	{
+		UE_LOG(LogTemp, Log, TEXT("[DCC Talk] %s: hit %s but too far - %.0f > InteractionRange %.0f."),
+			*GetActorNameOrLabel(), *Target->GetActorNameOrLabel(), Distance, InteractionRange);
+		return nullptr;
+	}
+
+	return Target;
+}
+
+AActor* ADCCCharacterBase::FindLootTargetUnderCursor() const
+{
+	AActor* Hit = SweepForInteractionCandidate();
+	if (!Hit || Hit == this)
+	{
+		return nullptr;
+	}
+
+	// A person only counts once they are dead outright - a living or downed
+	// ally is IDCCLootSource-capable in the C++ type system (every character
+	// implements the interface, for the corpse case) but is not actually loot
+	// while they are still standing or still savable.
+	if (const ADCCCharacterBase* AsCharacter = Cast<ADCCCharacterBase>(Hit))
+	{
+		if (AsCharacter->IsAlive() || AsCharacter->IsDowned())
+		{
+			return nullptr;
+		}
+	}
+
+	if (!Hit->Implements<UDCCLootSource>())
+	{
+		return nullptr;
+	}
+
+	if (FVector::Dist(GetActorLocation(), Hit->GetActorLocation()) > InteractionRange)
+	{
+		return nullptr;
+	}
+
+	return Hit;
+}
+
+void ADCCCharacterBase::BuildInteractionOptions()
+{
+	InteractionOptions.Reset();
+
+	if (!InteractionTarget)
+	{
+		return;
+	}
+
+	const bool bFriendly = InteractionTarget->IsBefriended();
+	const bool bDowned = InteractionTarget->IsDowned();
+
+	auto Add = [this](EDCCInteractionOption Option, FText Label, bool bAvailable = true,
+		FText Reason = FText::GetEmpty())
+	{
+		FDCCInteractionEntry Entry;
+		Entry.Option = Option;
+		Entry.Label = MoveTemp(Label);
+		Entry.bAvailable = bAvailable;
+		Entry.UnavailableReason = MoveTemp(Reason);
+		InteractionOptions.Add(MoveTemp(Entry));
+	};
+
+	// A corpse never reaches this function any more - FindInteractionTargetUnderCursor
+	// stops treating a body as a conversation target, and HandleInteractPressed
+	// opens the separate loot menu on it instead. Only a living or downed
+	// person gets this far.
+	if (bDowned)
+	{
+		Add(EDCCInteractionOption::Revive,
+			NSLOCTEXT("DCC", "InteractRevive", "Help them up"));
+
+		Add(EDCCInteractionOption::Leave,
+			NSLOCTEXT("DCC", "InteractLeaveDowned", "Leave them"));
+
+		InteractionIndex = FMath::Clamp(InteractionIndex, 0, InteractionOptions.Num() - 1);
+		return;
+	}
+
+	Add(EDCCInteractionOption::Chatter,
+		NSLOCTEXT("DCC", "InteractChatter", "Talk"));
+
+	Add(EDCCInteractionOption::AskAbout,
+		NSLOCTEXT("DCC", "InteractAsk", "Ask about this place"));
+
+	Add(EDCCInteractionOption::Persuade,
+		NSLOCTEXT("DCC", "InteractPersuade", "Persuade"));
+
+	Add(EDCCInteractionOption::Intimidate,
+		NSLOCTEXT("DCC", "InteractIntimidate", "Intimidate"));
+
+	// Recruiting is gated on already being on good terms. Shown greyed rather
+	// than hidden, so the player learns that warming them up is the way in.
+	Add(EDCCInteractionOption::Recruit,
+		NSLOCTEXT("DCC", "InteractRecruit", "Ask them to join you"),
+		bFriendly,
+		bFriendly ? FText::GetEmpty()
+			: NSLOCTEXT("DCC", "InteractRecruitLocked", "not friendly enough yet"));
+
+	Add(EDCCInteractionOption::Inventory,
+		NSLOCTEXT("DCC", "InteractInventory", "Look at their gear"));
+
+	// Party commands only mean anything once they are actually following you.
+	Add(EDCCInteractionOption::FollowMe,
+		NSLOCTEXT("DCC", "InteractFollow", "Follow me"),
+		bFriendly,
+		bFriendly ? FText::GetEmpty()
+			: NSLOCTEXT("DCC", "InteractFollowLocked", "not in your party"));
+
+	Add(EDCCInteractionOption::HoldPosition,
+		NSLOCTEXT("DCC", "InteractHold", "Hold position"),
+		bFriendly,
+		bFriendly ? FText::GetEmpty()
+			: NSLOCTEXT("DCC", "InteractHoldLocked", "not in your party"));
+
+	Add(EDCCInteractionOption::Leave,
+		NSLOCTEXT("DCC", "InteractLeave", "Leave"));
+
+	InteractionIndex = FMath::Clamp(InteractionIndex, 0, InteractionOptions.Num() - 1);
+}
+
+void ADCCCharacterBase::HandleInteractPressed()
+{
+	// The loot menu owns E first, if one is open - same reason the
+	// conversation menu is checked before anything else below.
+	if (LootTargetActor)
+	{
+		HandleLootMenuConfirm();
+		return;
+	}
+
+	// Already talking: E confirms the highlighted row.
+	if (InteractionTarget)
+	{
+		if (!InteractionOptions.IsValidIndex(InteractionIndex))
+		{
+			CloseInteraction();
+			return;
+		}
+
+		const FDCCInteractionEntry& Entry = InteractionOptions[InteractionIndex];
+
+		if (Entry.Option == EDCCInteractionOption::Leave)
+		{
+			CloseInteraction();
+			return;
+		}
+
+		// Unavailable rows stay selectable so their reason can be read, but they
+		// do nothing when confirmed.
+		if (!Entry.bAvailable)
+		{
+			return;
+		}
+
+		// Walking away mid-sentence ends the conversation rather than silently
+		// firing an option at someone out of earshot.
+		if (FVector::Dist(GetActorLocation(), InteractionTarget->GetActorLocation()) > InteractionRange)
+		{
+			CloseInteraction();
+			return;
+		}
+
+		if (HasAuthority())
+		{
+			Server_PerformInteraction_Implementation(Entry.Option, InteractionTarget);
+		}
+		else
+		{
+			Server_PerformInteraction(Entry.Option, InteractionTarget);
+		}
+
+		// Purely a local view - there is nothing for the server to do, and routing
+		// it through an RPC would add a round trip before the panel appeared.
+		if (Entry.Option == EDCCInteractionOption::Inventory)
+		{
+			// Toggles, so the same row that opened the panel closes it again.
+			InspectedCharacter = (InspectedCharacter == InteractionTarget)
+				? nullptr : InteractionTarget.Get();
+			return;
+		}
+
+		// Options that finish a piece of business close the conversation behind
+		// them. Recruiting somebody and then still standing in a menu is the
+		// specific thing that felt like being stuck - the verb succeeded, so the
+		// menu has done its job and should get out of the way.
+		switch (Entry.Option)
+		{
+		case EDCCInteractionOption::Recruit:
+		case EDCCInteractionOption::FollowMe:
+		case EDCCInteractionOption::HoldPosition:
+		case EDCCInteractionOption::Revive:
+			CloseInteraction();
+			return;
+
+		default:
+			break;
+		}
+
+		// The rest are conversational and can be repeated, so the menu stays -
+		// rebuilt, because what just ran may have changed what is available.
+		BuildInteractionOptions();
+		return;
+	}
+
+	// Not talking yet: an ally under the crosshair starts a conversation.
+	if (ADCCCharacterBase* Target = FindInteractionTargetUnderCursor())
+	{
+		// Chatting is still allowed mid-fight - sometimes ordering an ally to
+		// hold position IS the tactical move - but it should not happen by
+		// accident while reaching for the pickup key. With something hostile
+		// nearby the first press only arms the prompt; the second opens it.
+		//
+		// Reviving is exempt: it is something you do *because* the fight is
+		// going badly, and a confirmation step on picking a friend up off the
+		// floor would be actively cruel.
+		const bool bUrgent = Target->IsDowned();
+
+		if (!bUrgent && IsHostileNearby())
+		{
+			const double Now = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0;
+
+			if (PendingTalkTarget != Target || Now > PendingTalkExpiry)
+			{
+				PendingTalkTarget = Target;
+				PendingTalkExpiry = Now + TalkConfirmSeconds;
+				return;
+			}
+		}
+
+		PendingTalkTarget = nullptr;
+
+		InteractionTarget = Target;
+		InteractionIndex = 0;
+		BuildInteractionOptions();
+		return;
+	}
+
+	// Still nobody to talk to: a corpse or chest under the crosshair opens the
+	// loot menu instead. No hostile-nearby confirm step here - searching a body
+	// or a crate is exactly the kind of thing you do mid-fight, the same reason
+	// the old Loot option never gated on IsHostileNearby either.
+	if (AActor* LootSource = FindLootTargetUnderCursor())
+	{
+		PendingTalkTarget = nullptr;
+
+		LootTargetActor = LootSource;
+		LootMenuIndex = 0;
+		bLootShowingItems = false;
+		return;
+	}
+
+	PendingTalkTarget = nullptr;
+
+	// Nobody to talk to and nothing to loot, so E keeps its original job.
+	AttemptPickupOrDrop();
+}
+
+void ADCCCharacterBase::HandleLootMenuConfirm()
+{
+	AActor* SourceActor = LootTargetActor;
+	IDCCLootSource* Source = Cast<IDCCLootSource>(SourceActor);
+	if (!SourceActor || !Source)
+	{
+		CloseLootMenu();
+		return;
+	}
+
+	// Walking away closes the menu, same as the conversation one.
+	if (FVector::Dist(GetActorLocation(), SourceActor->GetActorLocation()) > InteractionRange)
+	{
+		CloseLootMenu();
+		return;
+	}
+
+	if (bLootShowingItems)
+	{
+		const TArray<FDCCRolledLoot>& Items = Source->GetPendingLootItems();
+
+		// The row after the last item is "Back" - see DCCHUD::DrawLootMenu,
+		// which draws it in exactly this position for exactly this reason.
+		if (LootMenuIndex == Items.Num() || Items.IsEmpty())
+		{
+			bLootShowingItems = false;
+			LootMenuIndex = 0;
+			return;
+		}
+
+		if (Items.IsValidIndex(LootMenuIndex))
+		{
+			const int32 TakenIndex = LootMenuIndex;
+
+			if (HasAuthority())
+			{
+				Server_LootOne_Implementation(SourceActor, TakenIndex);
+			}
+			else
+			{
+				Server_LootOne(SourceActor, TakenIndex);
+			}
+
+			// Locally re-clamped so the highlight does not point past the end
+			// once the server's removal replicates back - it settles on
+			// whatever slid up to fill the taken row's place.
+			LootMenuIndex = FMath::Clamp(TakenIndex, 0, FMath::Max(0, Items.Num() - 2));
+		}
+
+		return;
+	}
+
+	// The top menu: Check Inventory / Loot All / Stow / Leave, in that order -
+	// see DCCHUD::DrawLootMenu's TopLabels array, which must stay in sync.
+	switch (LootMenuIndex)
+	{
+	case 0:
+		if (Source->HasAnyLoot())
+		{
+			bLootShowingItems = true;
+			LootMenuIndex = 0;
+		}
+		return;
+
+	case 1:
+		if (HasAuthority())
+		{
+			Server_LootAll_Implementation(SourceActor);
+		}
+		else
+		{
+			Server_LootAll(SourceActor);
+		}
+		CloseLootMenu();
+		return;
+
+	case 2:
+		if (HasAuthority())
+		{
+			Server_StowLootSource_Implementation(SourceActor);
+		}
+		else
+		{
+			Server_StowLootSource(SourceActor);
+		}
+		CloseLootMenu();
+		return;
+
+	case 3:
+	default:
+		CloseLootMenu();
+		return;
+	}
+}
+
+void ADCCCharacterBase::CycleLootMenu(int32 Delta)
+{
+	IDCCLootSource* Source = Cast<IDCCLootSource>(LootTargetActor.Get());
+	if (!Source)
+	{
+		return;
+	}
+
+	// +1 for the itemised page's trailing "Back" row.
+	const int32 Count = bLootShowingItems ? Source->GetPendingLootItems().Num() + 1 : 4;
+	if (Count <= 0)
+	{
+		return;
+	}
+
+	LootMenuIndex = ((LootMenuIndex + Delta) % Count + Count) % Count;
+}
+
+void ADCCCharacterBase::CloseLootMenu()
+{
+	LootTargetActor = nullptr;
+	LootMenuIndex = 0;
+	bLootShowingItems = false;
+}
+
+void ADCCCharacterBase::Server_LootOne_Implementation(AActor* Source, int32 Index)
+{
+	IDCCLootSource* LootSource = Cast<IDCCLootSource>(Source);
+	if (!LootSource || !IsAlive() || IsDowned())
+	{
+		return;
+	}
+
+	if (FVector::Dist(GetActorLocation(), Source->GetActorLocation()) > InteractionRange)
+	{
+		return;
+	}
+
+	LootSource->LootOne(Index, this);
+}
+
+void ADCCCharacterBase::Server_LootAll_Implementation(AActor* Source)
+{
+	IDCCLootSource* LootSource = Cast<IDCCLootSource>(Source);
+	if (!LootSource || !IsAlive() || IsDowned())
+	{
+		return;
+	}
+
+	if (FVector::Dist(GetActorLocation(), Source->GetActorLocation()) > InteractionRange)
+	{
+		return;
+	}
+
+	LootSource->LootAll(this);
+
+	ADCCGameState::Log(this, EDCCLogCategory::Encounter, FText::Format(
+		NSLOCTEXT("DCC", "LogLootAll", "{0} empties {1} out."),
+		FText::FromString(GetActorNameOrLabel()), LootSource->GetLootSourceName()));
+}
+
+void ADCCCharacterBase::Server_StowLootSource_Implementation(AActor* Source)
+{
+	IDCCLootSource* LootSource = Cast<IDCCLootSource>(Source);
+	if (!LootSource || !IsAlive() || IsDowned())
+	{
+		return;
+	}
+
+	if (FVector::Dist(GetActorLocation(), Source->GetActorLocation()) > InteractionRange)
+	{
+		return;
+	}
+
+	ADCCGameState::Log(this, EDCCLogCategory::Encounter, FText::Format(
+		NSLOCTEXT("DCC", "LogStow", "{0} pockets {1} whole. Grim, but efficient."),
+		FText::FromString(GetActorNameOrLabel()), LootSource->GetLootSourceName()));
+
+	LootSource->StowInto(this);
+}
+
+void ADCCCharacterBase::OpenChat(ADCCCharacterBase* Target)
+{
+	if (!Target || Target == this || !Target->IsAlive() || Target->IsHostileTo(this))
+	{
+		return;
+	}
+
+	PendingTalkTarget = nullptr;
+
+	InteractionTarget = Target;
+	InteractionIndex = 0;
+	BuildInteractionOptions();
+}
+
+void ADCCCharacterBase::CycleInteractionOption(int32 Delta)
+{
+	if (!InteractionTarget || InteractionOptions.IsEmpty())
+	{
+		return;
+	}
+
+	const int32 Count = InteractionOptions.Num();
+
+	// Wraps in both directions - scrolling past the end of a nine-item list to
+	// reach "Leave" at the top is faster than scrolling back.
+	InteractionIndex = ((InteractionIndex + Delta) % Count + Count) % Count;
+}
+
+void ADCCCharacterBase::CloseInteraction()
+{
+	InteractionTarget = nullptr;
+	InspectedCharacter = nullptr;
+	InteractionOptions.Reset();
+	InteractionIndex = 0;
+
+	// Esc is bound to this function alone, so it has to close whichever of the
+	// two menus is actually open - harmless to call when the loot menu was
+	// already closed, CloseLootMenu just resets fields that are reset already.
+	CloseLootMenu();
+}
+
+void ADCCCharacterBase::ResolveSocialCheck(ADCCCharacterBase* Target, bool bIntimidate)
+{
+	UDCCRuleset* Ruleset = Stats ? Stats->GetRuleset() : nullptr;
+	if (!Ruleset || !Target)
+	{
+		return;
+	}
+
+	const int32 Difficulty = bIntimidate ? IntimidateDifficulty : PersuadeDifficulty;
+
+	// Charisma, per the published social skills. The roll is real and the result
+	// is reported in full - the narrator layer describes outcomes, it never
+	// decides them.
+	const FDCCCheckResult Check = Ruleset->ResolveCheck(
+		Stats->GetEnhanced(), EDCCAbility::Charisma, Difficulty);
+
+	const FText SelfName = FText::FromString(GetActorNameOrLabel());
+	const FText TargetName = Target->DisplayName.IsEmpty()
+		? FText::FromString(Target->GetActorNameOrLabel())
+		: Target->DisplayName;
+
+	if (Check.bSuccess)
+	{
+		// Success on either verb warms them to you. That is what makes Recruit
+		// reachable, and it is the only thing in this menu that changes state.
+		Target->bBefriended = true;
+		Target->OnRep_Befriended();
+
+		ADCCGameState::Log(this, EDCCLogCategory::Skill, FText::Format(
+			bIntimidate
+				? NSLOCTEXT("DCC", "LogIntimidateWin", "{0} leans on {1}. ({2} vs {3}) They decide agreeing is cheaper.")
+				: NSLOCTEXT("DCC", "LogPersuadeWin", "{0} talks {1} round. ({2} vs {3})"),
+			SelfName, TargetName,
+			FText::AsNumber(Check.Total), FText::AsNumber(Check.DifficultyClass)));
+	}
+	else
+	{
+		ADCCGameState::Log(this, EDCCLogCategory::Skill, FText::Format(
+			bIntimidate
+				? NSLOCTEXT("DCC", "LogIntimidateFail", "{0} tries to lean on {1} and it lands badly. ({2} vs {3})")
+				: NSLOCTEXT("DCC", "LogPersuadeFail", "{0} fails to convince {1}. ({2} vs {3})"),
+			SelfName, TargetName,
+			FText::AsNumber(Check.Total), FText::AsNumber(Check.DifficultyClass)));
+	}
+
+	// Intimidation is content whichever way it goes, which is exactly the sort of
+	// thing the producer rewards. Persuasion is merely competent, so it pays nothing.
+	if (bIntimidate && Favor)
+	{
+		Favor->AwardFavor(Check.bSuccess ? 2 : 1, EDCCFavorEvent::DirectorCall,
+			NSLOCTEXT("DCC", "FavorIntimidate", "A raised voice in a quiet room."));
+	}
+
+	// Marks the skill either way, matching the published rule that an attempt
+	// marks a skill whether it succeeds or fails.
+	if (Skills)
+	{
+		Skills->MarkSkillUsed(bIntimidate ? TEXT("FirstImpressions") : TEXT("QuickWit"));
+	}
+}
+
+void ADCCCharacterBase::Server_PerformInteraction_Implementation(
+	EDCCInteractionOption Option, ADCCCharacterBase* Target)
+{
+	// The menu is client-side, so none of its gating is trusted here. Reviving
+	// acts on a character that is downed but not dead, so only "the caller must
+	// be standing" applies up front - liveness of the target is checked per
+	// option below. A corpse never reaches this RPC at all any more - see
+	// Server_LootOne/LootAll/StowLootSource for that path.
+	if (!Target || !IsAlive() || IsDowned())
+	{
+		return;
+	}
+
+	if (Target->IsHostileTo(this))
+	{
+		return;
+	}
+
+	if (FVector::Dist(GetActorLocation(), Target->GetActorLocation()) > InteractionRange)
+	{
+		return;
+	}
+
+	const FText TargetName = Target->DisplayName.IsEmpty()
+		? FText::FromString(Target->GetActorNameOrLabel())
+		: Target->DisplayName;
+
+	switch (Option)
+	{
+	case EDCCInteractionOption::Chatter:
+		ADCCGameState::Log(this, EDCCLogCategory::Announcement, FText::Format(
+			NSLOCTEXT("DCC", "LogChatter", "{0} says something that will not be in the highlight reel."),
+			TargetName));
+		Multicast_PlayFistBump(Target);
+		break;
+
+	case EDCCInteractionOption::AskAbout:
+		ADCCGameState::Log(this, EDCCLogCategory::Announcement, FText::Format(
+			NSLOCTEXT("DCC", "LogAskAbout", "{0}: \"Management changed. The floor did not. Watch the water.\""),
+			TargetName));
+		break;
+
+	case EDCCInteractionOption::Persuade:
+		ResolveSocialCheck(Target, /*bIntimidate=*/false);
+		break;
+
+	case EDCCInteractionOption::Intimidate:
+		ResolveSocialCheck(Target, /*bIntimidate=*/true);
+		break;
+
+	case EDCCInteractionOption::Recruit:
+		// Re-checked server-side: the client greys this out below friendly, but
+		// a client that lies about it still gets refused here.
+		if (!Target->IsBefriended())
+		{
+			return;
+		}
+
+		Target->SetHoldingPosition(false);
+
+		ADCCGameState::Log(this, EDCCLogCategory::Announcement, FText::Format(
+			NSLOCTEXT("DCC", "LogRecruit", "{0} falls in behind you. The audience notes the roster change."),
+			TargetName));
+
+		if (Favor)
+		{
+			Favor->AwardFavor(3, EDCCFavorEvent::DirectorCall,
+				NSLOCTEXT("DCC", "FavorRecruit", "A party is more watchable than a loner."));
+		}
+		break;
+
+	case EDCCInteractionOption::FollowMe:
+		Target->SetHoldingPosition(false);
+		ADCCGameState::Log(this, EDCCLogCategory::Announcement, FText::Format(
+			NSLOCTEXT("DCC", "LogFollowMe", "{0} moves to follow."), TargetName));
+		break;
+
+	case EDCCInteractionOption::HoldPosition:
+		Target->SetHoldingPosition(true);
+		ADCCGameState::Log(this, EDCCLogCategory::Announcement, FText::Format(
+			NSLOCTEXT("DCC", "LogHold", "{0} holds position."), TargetName));
+		break;
+
+	case EDCCInteractionOption::Revive:
+		if (!Target->IsDowned())
+		{
+			return;
+		}
+
+		// Rooted for the channel, then they come up. Reusing the cast lock means
+		// a rescuer is interruptible exactly like a caster is - taking a hit
+		// mid-revive should cost you the attempt.
+		BeginCastLock(ReviveSeconds);
+
+		{
+			TWeakObjectPtr<ADCCCharacterBase> WeakTarget(Target);
+			TWeakObjectPtr<ADCCCharacterBase> WeakSelf(this);
+
+			FTimerDelegate Finish;
+			Finish.BindLambda([WeakSelf, WeakTarget]()
+			{
+				// Both ends re-checked on completion: the rescuer may have died
+				// during the channel, and the target may have bled out or been
+				// picked up by somebody faster.
+				if (WeakSelf.IsValid() && WeakTarget.IsValid()
+					&& WeakSelf->IsAlive() && WeakTarget->IsDowned())
+				{
+					WeakTarget->Revive(WeakSelf.Get());
+				}
+			});
+
+			GetWorldTimerManager().SetTimer(ReviveTimer, Finish, ReviveSeconds, false);
+		}
+
+		ADCCGameState::Log(this, EDCCLogCategory::Announcement, FText::Format(
+			NSLOCTEXT("DCC", "LogReviveStart", "{0} drops to help {1} up."),
+			FText::FromString(GetActorNameOrLabel()), TargetName));
+		break;
+
+	case EDCCInteractionOption::Inventory:
+	case EDCCInteractionOption::Leave:
+	default:
+		// Inventory is a read-only view drawn by the HUD; nothing to do server-side.
+		break;
+	}
+}
+
+void ADCCCharacterBase::SetHoldingPosition(bool bHold)
+{
+	// Overridden by ADCCEnemyCharacter, which is the only thing with AI to stop.
+}
+
+void ADCCCharacterBase::DCCGrantSkill(const FString& SkillId, int32 Rank)
+{
+	const FName Id(*SkillId);
+
+	if (HasAuthority())
+	{
+		Server_GrantSkill_Implementation(Id, Rank);
+	}
+	else
+	{
+		Server_GrantSkill(Id, Rank);
+	}
+}
+
+void ADCCCharacterBase::Server_GrantSkill_Implementation(FName SkillId, int32 Rank)
+{
+	if (!Skills)
+	{
+		return;
+	}
+
+	// Refused rather than silently granted: a skill that is not in the table
+	// would sit in KnownSkills forever, show as a blank hotbar slot, and fail
+	// every activation with UnknownSkill.
+	FDCCSkillDef Definition;
+	if (!Skills->FindSkill(SkillId, Definition))
+	{
+		ADCCGameState::Log(this, EDCCLogCategory::Announcement, FText::Format(
+			NSLOCTEXT("DCC", "CheatNoSkill", "No skill called '{0}' in the table."),
+			FText::FromName(SkillId)));
+		return;
+	}
+
+	const int32 ClampedRank = FMath::Clamp(Rank, 1, 15);
+
+	// Re-ranking an already-known skill rather than adding a duplicate, which
+	// would give the character two hotbar entries that share a cooldown.
+	for (FDCCKnownSkill& Known : Skills->KnownSkills)
+	{
+		if (Known.SkillId == SkillId)
+		{
+			Known.Rank = ClampedRank;
+
+			ADCCGameState::Log(this, EDCCLogCategory::Advancement, FText::Format(
+				NSLOCTEXT("DCC", "CheatReRank", "{0} is now Rank {1}."),
+				Definition.DisplayName.IsEmpty() ? FText::FromName(SkillId) : Definition.DisplayName,
+				FText::AsNumber(ClampedRank)));
+			return;
+		}
+	}
+
+	FDCCKnownSkill Learned;
+	Learned.SkillId = SkillId;
+	Learned.Rank = ClampedRank;
+	Skills->KnownSkills.Add(Learned);
+
+	ADCCGameState::Log(this, EDCCLogCategory::Advancement, FText::Format(
+		NSLOCTEXT("DCC", "CheatLearned", "{0} learns {1} at Rank {2}."),
+		FText::FromString(GetActorNameOrLabel()),
+		Definition.DisplayName.IsEmpty() ? FText::FromName(SkillId) : Definition.DisplayName,
+		FText::AsNumber(ClampedRank)));
+}
+
+void ADCCCharacterBase::DCCEquip(const FString& ItemId)
+{
+	const FName Id(*ItemId);
+
+	if (HasAuthority())
+	{
+		Server_EquipItem_Implementation(Id);
+	}
+	else
+	{
+		Server_EquipItem(Id);
+	}
+}
+
+void ADCCCharacterBase::Server_EquipItem_Implementation(FName ItemId)
+{
+	if (!Equipment)
+	{
+		return;
+	}
+
+	// Equip already picks the right slot from the row and rebuilds the visuals
+	// and the Enhanced stat layer, so there is nothing to do here but report.
+	const bool bEquipped = Equipment->Equip(ItemId);
+
+	ADCCGameState::Log(this, EDCCLogCategory::Announcement, bEquipped
+		? FText::Format(NSLOCTEXT("DCC", "CheatEquipped", "Equipped '{0}'."), FText::FromName(ItemId))
+		: FText::Format(NSLOCTEXT("DCC", "CheatEquipFail", "No item called '{0}' in the table."),
+			FText::FromName(ItemId)));
+}
+
+void ADCCCharacterBase::DCCRefill()
+{
+	if (HasAuthority())
+	{
+		Server_Refill_Implementation();
+	}
+	else
+	{
+		Server_Refill();
+	}
+}
+
+void ADCCCharacterBase::Server_Refill_Implementation()
+{
+	if (!Stats)
+	{
+		return;
+	}
+
+	// bRefillToFull re-derives the pools and tops all three up in one call, so
+	// this also picks up any stat change made since the character spawned.
+	Stats->RefreshDerivedStats(/*bRefillToFull=*/true);
+
+	ADCCGameState::Log(this, EDCCLogCategory::Announcement,
+		NSLOCTEXT("DCC", "CheatRefill", "Complimentary top-up applied. This is not a sponsorship."));
+}
+
+void ADCCCharacterBase::ToggleAdminPanel()
+{
+	const APlayerController* PC = Cast<APlayerController>(GetController());
+	if (ADCCHUD* DCCHUD = PC ? Cast<ADCCHUD>(PC->GetHUD()) : nullptr)
+	{
+		DCCHUD->ToggleAdminPanel();
+	}
+}
+
+void ADCCCharacterBase::Server_AdminSpawn_Implementation(TSubclassOf<AActor> ActorClass, bool bAsAlly)
+{
+	UWorld* World = GetWorld();
+	if (!World || !ActorClass)
+	{
+		return;
+	}
+
+	// Three metres ahead and slightly up, so a spawned character lands in front
+	// of the DM rather than inside them.
+	const FVector SpawnLocation = GetActorLocation() + GetActorForwardVector() * 300.0f + FVector(0, 0, 60.0f);
+
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride =
+		ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+	AActor* Spawned = World->SpawnActor<AActor>(
+		ActorClass, SpawnLocation, GetActorRotation(), Params);
+
+	if (ADCCEnemyCharacter* Enemy = Cast<ADCCEnemyCharacter>(Spawned))
+	{
+		// Set before BeginPlay would have mattered, so this also nudges the
+		// toughness cushion into place for a freshly spawned friend.
+		Enemy->bIsAlly = bAsAlly;
+		if (bAsAlly && Enemy->Stats)
+		{
+			Enemy->Stats->SetIsAllyCharacter(true);
+		}
+	}
+
+	ADCCGameState::Log(this, EDCCLogCategory::Announcement, FText::Format(
+		NSLOCTEXT("DCC", "AdminSpawned", "Management has added {0} to the floor."),
+		FText::FromString(GetNameSafe(Spawned))));
+}
+
+void ADCCCharacterBase::Server_AdminClearHostiles_Implementation()
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	int32 Cleared = 0;
+
+	for (TActorIterator<ADCCCharacterBase> It(World); It; ++It)
+	{
+		ADCCCharacterBase* Character = *It;
+
+		// Hostile to the caller specifically, so this never kills the party's own
+		// allies - which is the mistake a blunt "kill everything" would make.
+		if (Character && Character->IsAlive() && IsHostileTo(Character) && Character->Stats)
+		{
+			Character->Stats->ApplyDamage(Character->Stats->MaxHitPoints * 10);
+			++Cleared;
+		}
+	}
+
+	ADCCGameState::Log(this, EDCCLogCategory::Announcement, FText::Format(
+		NSLOCTEXT("DCC", "AdminCleared",
+			"{0} contestants have been released from their contracts."),
+		FText::AsNumber(Cleared)));
+}
+
+void ADCCCharacterBase::Server_AdminSetInvulnerable_Implementation(bool bInvulnerable)
+{
+	if (Stats)
+	{
+		Stats->SetInvulnerable(bInvulnerable);
+
+		ADCCGameState::Log(this, EDCCLogCategory::Announcement, bInvulnerable
+			? NSLOCTEXT("DCC", "AdminInvulnOn", "Producer protection enabled. This is not a sponsorship.")
+			: NSLOCTEXT("DCC", "AdminInvulnOff", "Producer protection withdrawn. Good luck."));
+	}
+}
+
+void ADCCCharacterBase::Server_AdminAddGold_Implementation(int32 Amount)
+{
+	if (Stats)
+	{
+		Stats->AddGold(Amount);
+	}
+}
+
+void ADCCCharacterBase::Server_AdminLevelUp_Implementation()
+{
+	if (!Stats)
+	{
+		return;
+	}
+
+	++Stats->Level;
+
+	// Refilled, because Health and Mana both derive from Level and arriving at a
+	// new level already hurt would read as a bug.
+	Stats->RefreshDerivedStats(/*bRefillToFull=*/true);
+
+	ADCCGameState::Log(this, EDCCLogCategory::Experience, FText::Format(
+		NSLOCTEXT("DCC", "AdminLevel", "{0} is now Level {1}. The audience assumes favouritism."),
+		FText::FromString(GetActorNameOrLabel()), FText::AsNumber(Stats->Level)));
 }
 
 void ADCCCharacterBase::ToggleCharacterMenu()
@@ -751,6 +2119,68 @@ void ADCCCharacterBase::ToggleCharacterMenu()
 	if (ADCCHUD* DCCHUD = PC ? Cast<ADCCHUD>(PC->GetHUD()) : nullptr)
 	{
 		DCCHUD->ToggleMenu();
+	}
+}
+
+void ADCCCharacterBase::ShowLocalNotice(const FText& Message) const
+{
+	const APlayerController* PC = Cast<APlayerController>(GetController());
+	if (ADCCHUD* DCCHUD = PC ? Cast<ADCCHUD>(PC->GetHUD()) : nullptr)
+	{
+		DCCHUD->ShowNotice(Message);
+	}
+}
+
+FText ADCCCharacterBase::DescribeSkillFailure(EDCCSkillFailure Failure, const FText& SkillName)
+{
+	switch (Failure)
+	{
+	case EDCCSkillFailure::OnCooldown:
+		return FText::Format(NSLOCTEXT("DCC", "FailCooldown", "{0} is still on cooldown."), SkillName);
+
+	case EDCCSkillFailure::NotEnoughMana:
+		return FText::Format(NSLOCTEXT("DCC", "FailMana", "Not enough mana for {0}."), SkillName);
+
+	case EDCCSkillFailure::NoTarget:
+		return FText::Format(NSLOCTEXT("DCC", "FailTarget", "No valid target for {0}."), SkillName);
+
+	case EDCCSkillFailure::OutOfRange:
+		return FText::Format(NSLOCTEXT("DCC", "FailRange", "{0} cannot reach that."), SkillName);
+
+	case EDCCSkillFailure::RequiresTraining:
+		return FText::Format(
+			NSLOCTEXT("DCC", "FailUntrained", "{0} cannot be attempted untrained."), SkillName);
+
+	case EDCCSkillFailure::UnknownSkill:
+		return FText::Format(NSLOCTEXT("DCC", "FailUnknown", "You do not know {0}."), SkillName);
+
+	case EDCCSkillFailure::Dead:
+		return NSLOCTEXT("DCC", "FailDead", "You are in no condition to do that.");
+
+	default:
+		return FText::Format(NSLOCTEXT("DCC", "FailGeneric", "{0} did not go off."), SkillName);
+	}
+}
+
+void ADCCCharacterBase::CycleLogFilter()
+{
+	const APlayerController* PC = Cast<APlayerController>(GetController());
+	if (ADCCHUD* DCCHUD = PC ? Cast<ADCCHUD>(PC->GetHUD()) : nullptr)
+	{
+		DCCHUD->CycleFeedFilter();
+	}
+}
+
+void ADCCCharacterBase::CycleMenuTab(int32 Delta)
+{
+	const APlayerController* PC = Cast<APlayerController>(GetController());
+	ADCCHUD* DCCHUD = PC ? Cast<ADCCHUD>(PC->GetHUD()) : nullptr;
+
+	// Only while the menu is open - otherwise the bracket keys would silently
+	// change a page nobody is looking at.
+	if (DCCHUD && DCCHUD->IsMenuVisible())
+	{
+		DCCHUD->CycleMenuTab(Delta);
 	}
 }
 
@@ -770,6 +2200,22 @@ bool ADCCCharacterBase::IsAttackReady() const
 	return (World->GetTimeSeconds() - LastAttackTime) >= AttackCooldownSeconds;
 }
 
+float ADCCCharacterBase::GetEffectiveAttackRange() const
+{
+	// Equipment wins when it says anything, so a bow genuinely changes how the
+	// character fights rather than just how the swing looks.
+	if (Equipment)
+	{
+		const float Override = Equipment->GetAttackRangeOverride();
+		if (Override > 0.0f)
+		{
+			return Override;
+		}
+	}
+
+	return AttackRange;
+}
+
 bool ADCCCharacterBase::IsInAttackRange(const ADCCCharacterBase* Target) const
 {
 	if (!Target)
@@ -784,7 +2230,7 @@ bool ADCCCharacterBase::IsInAttackRange(const ADCCCharacterBase* Target) const
 
 	const float Distance = FVector::Dist(GetActorLocation(), Target->GetActorLocation());
 
-	return Distance <= (AttackRange + SelfRadius + TargetRadius);
+	return Distance <= (GetEffectiveAttackRange() + SelfRadius + TargetRadius);
 }
 
 FDCCAttackResult ADCCCharacterBase::PerformAttack(ADCCCharacterBase* Target, bool bIgnoreCooldown)
@@ -825,15 +2271,40 @@ FDCCAttackResult ADCCCharacterBase::PerformAttack(ADCCCharacterBase* Target, boo
 	}
 
 	Result = Ruleset->ResolveAttack(
-		Stats->AbilityScores,
+		Stats->GetEnhanced(),
 		AttackAbility,
 		WeaponDamageDie,
-		TargetStats->AbilityScores,
+		TargetStats->GetEnhanced(),
 		TargetStats->Level);
 
 	if (Result.bHit)
 	{
-		TargetStats->ApplyDamage(Result.Damage);
+		// A boss mid-Balloon-Payment soaks part of the hit. Applied here rather
+		// than inside ApplyDamage so the stats layer stays ruleset-agnostic and
+		// knows nothing about bosses - see the note on keeping Stats/ clean.
+		int32 FinalDamage = Result.Damage;
+		if (const UDCCBossComponent* TargetBoss = Target->FindComponentByClass<UDCCBossComponent>())
+		{
+			FinalDamage = FMath::Max(1,
+				FMath::RoundToInt(FinalDamage * TargetBoss->GetIncomingDamageMultiplier()));
+		}
+
+		TargetStats->ApplyDamage(FinalDamage);
+		Target->PlayCharacterSound(Target->HurtSound);
+
+		// Staggered away from whoever swung, so the direction of the blow is
+		// legible as well as the fact of it.
+		Target->ReactToHitFrom(GetActorLocation());
+
+		// Local to whoever was hit. Cast rather than assumed, because most things
+		// taking damage in this game are AI and have no camera at all.
+		if (Target->HurtCameraShake)
+		{
+			if (APlayerController* HurtPC = Cast<APlayerController>(Target->GetController()))
+			{
+				HurtPC->ClientStartCameraShake(Target->HurtCameraShake);
+			}
+		}
 
 		UDCCAchievementComponent::RecordFor(this, EDCCAchievementStat::DamageDealt, Result.Damage);
 		UDCCAchievementComponent::RecordFor(Target, EDCCAchievementStat::DamageTaken, Result.Damage);
@@ -992,13 +2463,32 @@ void ADCCCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	// E lifts and drops, R throws. Two keys rather than one because "put this
 	// down carefully" and "hurl this at the thing trying to eat me" are different
 	// intentions, and a single key would guess wrong at the worst moment.
-	PlayerInputComponent->BindKey(EKeys::E, IE_Pressed, this, &ADCCCharacterBase::AttemptPickupOrDrop);
+	// Contextual: an ally under the crosshair opens a conversation, otherwise this
+	// falls through to the pickup/drop it has always been.
+	PlayerInputComponent->BindKey(EKeys::E, IE_Pressed, this, &ADCCCharacterBase::HandleInteractPressed);
+
+	// The wheel only does anything while a conversation is open, so it stays free
+	// for the hotbar or camera zoom later.
+	PlayerInputComponent->BindKey(EKeys::MouseScrollUp, IE_Pressed, this, &ADCCCharacterBase::InteractionScrollUp);
+	PlayerInputComponent->BindKey(EKeys::MouseScrollDown, IE_Pressed, this, &ADCCCharacterBase::InteractionScrollDown);
+	PlayerInputComponent->BindKey(EKeys::Escape, IE_Pressed, this, &ADCCCharacterBase::CloseInteraction);
 	PlayerInputComponent->BindKey(EKeys::R, IE_Pressed, this, &ADCCCharacterBase::AttemptThrow);
 
 	// F stows what is in hand; Tab opens the character menu. Tab is the near
 	// universal convention for an inventory screen, so it costs no explaining.
 	PlayerInputComponent->BindKey(EKeys::F, IE_Pressed, this, &ADCCCharacterBase::AttemptStow);
 	PlayerInputComponent->BindKey(EKeys::Tab, IE_Pressed, this, &ADCCCharacterBase::ToggleCharacterMenu);
+	PlayerInputComponent->BindKey(EKeys::L, IE_Pressed, this, &ADCCCharacterBase::CycleLogFilter);
+
+	// F1 for the DM panel. A function key rather than a letter because it is not
+	// a game action - it should not compete with anything a player might press
+	// mid-fight, and it stays out of the way of the movement hand entirely.
+	PlayerInputComponent->BindKey(EKeys::F1, IE_Pressed, this, &ADCCCharacterBase::ToggleAdminPanel);
+
+	// Menu pages. Bracket keys rather than Q/E, because E is the interact key and
+	// Q is free but reads as a movement key to anyone who has played a shooter.
+	PlayerInputComponent->BindKey(EKeys::LeftBracket, IE_Pressed, this, &ADCCCharacterBase::PreviousMenuTab);
+	PlayerInputComponent->BindKey(EKeys::RightBracket, IE_Pressed, this, &ADCCCharacterBase::NextMenuTab);
 
 	// Left click is context sensitive, which is why it routes through a handler
 	// rather than binding straight to the attack: with a skill armed it picks a
@@ -1066,6 +2556,72 @@ void ADCCCharacterBase::ResolveOrQueueAttack()
 	PerformAttack(Target);
 }
 
+void ADCCCharacterBase::ResolveOrQueueSkill(FName SkillId, AActor* Target)
+{
+	if (!HasAuthority())
+	{
+		Server_CastSkill(SkillId, Target);
+		return;
+	}
+
+	const UWorld* World = GetWorld();
+	if (ADCCGameState* GameState = World ? World->GetGameState<ADCCGameState>() : nullptr)
+	{
+		if (GameState->IsCombatPaused())
+		{
+			GameState->QueueAction(this, SkillId, Target);
+			return;
+		}
+	}
+
+	// TryActivateSkill already does its own client/server dispatch when called
+	// off the server, but this path only ever runs once already-authoritative,
+	// so it always takes the direct branch inside it.
+	if (!Skills)
+	{
+		return;
+	}
+
+	FDCCSkillDef Definition;
+	const bool bFound = Skills->FindSkill(SkillId, Definition);
+
+	const FText SkillName = bFound && !Definition.DisplayName.IsEmpty()
+		? Definition.DisplayName
+		: FText::FromName(SkillId);
+
+	// Asked BEFORE anything visible happens. Refusals used to be silent on every
+	// path, which made a skill that could not be afforded indistinguishable from
+	// a key that had not registered - the single biggest reason skills felt
+	// broken. Checking first also stops a refused skill playing its wind-up.
+	const EDCCSkillFailure Refusal = Skills->CanActivate(SkillId, Target);
+	if (Refusal != EDCCSkillFailure::None)
+	{
+		// Reported into the replicated feed rather than a local notice, because
+		// this runs on the server and has to reach the player who asked even when
+		// they are a remote client.
+		ADCCGameState::Log(this, EDCCLogCategory::Skill,
+			DescribeSkillFailure(Refusal, SkillName));
+		return;
+	}
+
+	// The wind-up should be visible even when the roll goes on to miss, exactly
+	// as a swing is. ADCCEnemyCharacter does the same in its own cast path.
+	if (bFound)
+	{
+		Multicast_PlayCast(Definition.CastTimeSeconds);
+	}
+
+	Skills->TryActivateSkill(SkillId, Target);
+}
+
+void ADCCCharacterBase::Server_CastSkill_Implementation(FName SkillId, AActor* Target)
+{
+	// Re-validated all the way down: ResolveOrQueueSkill queues or calls
+	// TryActivateSkill, and either path re-checks CanActivate server-side before
+	// anything happens. The client's target is a nomination, never a fact.
+	ResolveOrQueueSkill(SkillId, Target);
+}
+
 void ADCCCharacterBase::RequestTogglePause()
 {
 	if (HasAuthority())
@@ -1126,6 +2682,52 @@ ADCCCharacterBase* ADCCCharacterBase::FindNearestHostileInRange() const
 	return Best;
 }
 
+bool ADCCCharacterBase::CanPlayOnThisSkeleton(const UAnimationAsset* Animation) const
+{
+	const USkeletalMeshComponent* MeshComponent = GetMesh();
+	if (!Animation || !MeshComponent)
+	{
+		return false;
+	}
+
+	const USkeletalMesh* MeshAsset = MeshComponent->GetSkeletalMeshAsset();
+	if (!MeshAsset)
+	{
+		return false;
+	}
+
+	const USkeleton* MeshSkeleton = MeshAsset->GetSkeleton();
+	const USkeleton* AnimSkeleton = Animation->GetSkeleton();
+
+	if (MeshSkeleton && AnimSkeleton && MeshSkeleton == AnimSkeleton)
+	{
+		return true;
+	}
+
+	// This is the `SkeletonToCompactPose.IsValidIndex` ensure, caught one frame
+	// before the engine hits it. Playing a clip authored for one skeleton on a
+	// mesh built from another does not fail cleanly - it produces a garbage pose,
+	// which is what "the allies are standing on their heads" actually is.
+	//
+	// Warned once per character rather than every frame, and it names both assets,
+	// because the useful question is never "did it break" but "which clip is on
+	// the wrong rig".
+	if (!bWarnedSkeletonMismatch)
+	{
+		bWarnedSkeletonMismatch = true;
+
+		UE_LOG(LogTemp, Warning,
+			TEXT("[DCC Anim] %s: refusing '%s' (skeleton '%s') on mesh '%s' (skeleton '%s'). Wrong rig."),
+			*GetActorNameOrLabel(),
+			*Animation->GetName(),
+			AnimSkeleton ? *AnimSkeleton->GetName() : TEXT("none"),
+			*MeshAsset->GetName(),
+			MeshSkeleton ? *MeshSkeleton->GetName() : TEXT("none"));
+	}
+
+	return false;
+}
+
 void ADCCCharacterBase::PlayOneShotAnimation(UAnimationAsset* Animation, float OverrideDurationSeconds)
 {
 	USkeletalMeshComponent* MeshComponent = GetMesh();
@@ -1138,6 +2740,11 @@ void ADCCCharacterBase::PlayOneShotAnimation(UAnimationAsset* Animation, float O
 	// Only meaningful in single-node mode. With an AnimBlueprint driving the mesh
 	// this call would be ignored anyway, so bail rather than fight it.
 	if (MeshComponent->GetAnimationMode() != EAnimationMode::AnimationSingleNode)
+	{
+		return;
+	}
+
+	if (!CanPlayOnThisSkeleton(Animation))
 	{
 		return;
 	}
@@ -1240,6 +2847,14 @@ void ADCCCharacterBase::UpdateLocomotionAnimation()
 		return;
 	}
 
+	// Same guard as the one-shot path. A mismatched idle is the worst case of
+	// all, because it is the pose the character holds while doing nothing -
+	// which is precisely when it was seen standing on its head.
+	if (!CanPlayOnThisSkeleton(Desired))
+	{
+		return;
+	}
+
 	MeshComponent->SetPlayRate(1.0f);
 	MeshComponent->PlayAnimation(Desired, true);
 	ActiveLoopAnimation = Desired;
@@ -1281,7 +2896,11 @@ void ADCCCharacterBase::Tick(float DeltaSeconds)
 			FRotator ViewRotation;
 			PC->GetPlayerViewPoint(ViewLocation, ViewRotation);
 
-			Nameplate->SetWorldRotation((Nameplate->GetComponentLocation() - ViewLocation).Rotation());
+			// Forward must point AT the viewer, not away from them - a
+			// TextRenderComponent draws on its front face only, so getting this
+			// subtraction backwards shows the reverse of the quad, which reads as
+			// mirrored text rather than as simply-not-facing-you.
+			Nameplate->SetWorldRotation((ViewLocation - Nameplate->GetComponentLocation()).Rotation());
 		}
 	}
 }
@@ -1305,20 +2924,74 @@ void ADCCCharacterBase::Multicast_PlayAttack_Implementation(ADCCCharacterBase* T
 	// Runs on every machine, which is what finally makes swings visible: the
 	// attack itself resolves server-side, but the clip has to play locally.
 	PlayOneShotAnimation(AttackAnimation);
+	PlayCharacterSound(AttackSound);
 
 	BP_OnAttackPerformed(Target, bHit);
 }
 
-void ADCCCharacterBase::HandleDied(UDCCStatsComponent* InStats)
+void ADCCCharacterBase::PlayCharacterSound(USoundBase* Sound) const
 {
-	// OnDied can arrive more than once across authority and replication paths;
-	// the visual teardown must only happen the first time.
-	if (bHasDied)
+	// Located at the character rather than 2D, so a fight across the room sounds
+	// like it is across the room - which is most of what audio buys a party that
+	// cannot see each other constantly.
+	if (Sound && GetWorld())
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, Sound, GetActorLocation());
+	}
+}
+
+void ADCCCharacterBase::Multicast_PlayCast_Implementation(float HoldSeconds)
+{
+	PlayOneShotAnimation(CastAnimation, HoldSeconds);
+	PlayCharacterSound(CastSound);
+}
+
+void ADCCCharacterBase::Multicast_PlayHitReaction_Implementation()
+{
+	// Squeezed into HitReactionSeconds. PlayOneShotAnimation already stretches or
+	// compresses a clip to fill a window, which is what makes a borrowed gesture
+	// usable as a flinch until a real reaction clip exists.
+	PlayOneShotAnimation(HitReactionAnimation, HitReactionSeconds);
+}
+
+void ADCCCharacterBase::ReactToHitFrom(const FVector& ImpactSource)
+{
+	UWorld* World = GetWorld();
+	if (!HasAuthority() || !World || !IsAlive() || bIsDowned)
 	{
 		return;
 	}
-	bHasDied = true;
 
+	const float Now = World->GetTimeSeconds();
+	if (Now - LastHitReactionTime < HitReactionCooldown)
+	{
+		return;
+	}
+	LastHitReactionTime = Now;
+
+	if (HitStaggerStrength > 0.0f)
+	{
+		FVector Away = GetActorLocation() - ImpactSource;
+		Away.Z = 0.0f;
+
+		// Falls back to straight backwards when the two are stacked exactly, which
+		// happens more often than it sounds - melee closes to touching distance.
+		if (!Away.Normalize())
+		{
+			Away = -GetActorForwardVector();
+		}
+
+		// A small upward component so the shove reads as a jolt rather than as
+		// sliding. bXYOverride false so it adds to existing motion instead of
+		// replacing it, which would stop a charging enemy dead.
+		LaunchCharacter(Away * HitStaggerStrength + FVector(0.0f, 0.0f, 90.0f), false, false);
+	}
+
+	Multicast_PlayHitReaction();
+}
+
+void ADCCCharacterBase::ApplyCollapsedBody()
+{
 	// The nameplate outlives the character otherwise, hanging in the air over a
 	// ragdoll and still cheerfully reading "ALLY".
 	if (Nameplate)
@@ -1337,15 +3010,17 @@ void ADCCCharacterBase::HandleDied(UDCCStatsComponent* InStats)
 		Movement->DisableMovement();
 	}
 
+	// Collapsing mid-cast would otherwise leave the timer to fire on a body and
+	// clear a flag nothing reads again.
+	GetWorldTimerManager().ClearTimer(CastLockTimer);
+	bIsCasting = false;
+
 	// Ragdoll rather than a death animation. None of the imported characters ship
 	// one, and physics gives a different fall every time - which reads better
 	// than the same canned collapse on every mob in the room. Every skeletal mesh
 	// already has a physics asset from import, so this costs nothing extra.
 	if (USkeletalMeshComponent* MeshComponent = GetMesh())
 	{
-		// Detach from the capsule first: while attached, the capsule's transform
-		// keeps overriding the simulation and the body twitches in place instead
-		// of falling.
 		MeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 		MeshComponent->SetCollisionObjectType(ECC_PhysicsBody);
 		MeshComponent->SetCollisionResponseToAllChannels(ECR_Block);
@@ -1355,11 +3030,114 @@ void ADCCCharacterBase::HandleDied(UDCCStatsComponent* InStats)
 		MeshComponent->SetSimulatePhysics(true);
 		MeshComponent->WakeAllRigidBodies();
 	}
+}
 
-	// Detaching the controller stops AI from continuing to issue orders to a
-	// corpse, and stops a dead player from steering it.
+void ADCCCharacterBase::RestoreStandingBody()
+{
+	if (USkeletalMeshComponent* MeshComponent = GetMesh())
+	{
+		// Stop the simulation before reattaching - a body still solving physics
+		// fights the attachment and snaps back to wherever it had drifted.
+		MeshComponent->SetSimulatePhysics(false);
+		MeshComponent->SetAllBodiesSimulatePhysics(false);
+
+		MeshComponent->AttachToComponent(
+			GetCapsuleComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+
+		// Captured at BeginPlay, before anything could ragdoll. Without it the
+		// mesh reattaches at wherever physics left it, which is usually the floor.
+		MeshComponent->SetRelativeTransform(MeshRestTransform);
+
+		MeshComponent->SetCollisionObjectType(ECC_Pawn);
+		MeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+		MeshComponent->SetCollisionResponseToAllChannels(ECR_Ignore);
+	}
+
+	if (UCapsuleComponent* Capsule = GetCapsuleComponent())
+	{
+		Capsule->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	}
+
+	if (UCharacterMovementComponent* Movement = GetCharacterMovement())
+	{
+		Movement->SetMovementMode(MOVE_Walking);
+	}
+
+	if (Nameplate)
+	{
+		Nameplate->SetVisibility(true);
+	}
+}
+
+void ADCCCharacterBase::HandleDied(UDCCStatsComponent* InStats)
+{
+	// OnDied can arrive more than once across authority and replication paths;
+	// the visual teardown must only happen the first time.
+	if (bHasDied || bIsDowned)
+	{
+		return;
+	}
+
+	// A crawler at zero goes DOWN, not out - the party gets a window to reach
+	// them. Mobs skip straight to dead, because a Debt Eater that gets back up
+	// is not a story beat.
+	if (IsCrawler() && BleedOutSeconds > 0.0f)
+	{
+		bIsDowned = true;
+		ApplyCollapsedBody();
+		PlayCharacterSound(DownedSound);
+
+		if (HasAuthority())
+		{
+			GetWorldTimerManager().SetTimer(
+				BleedOutTimer, this, &ADCCCharacterBase::HandleBleedOut, BleedOutSeconds, false);
+
+			ADCCGameState::Log(this, EDCCLogCategory::Death, FText::Format(
+				NSLOCTEXT("DCC", "LogCrawlerDowned",
+					"{0} is down and bleeding out. Somebody has {1} seconds to care."),
+				DisplayName.IsEmpty() ? FText::FromString(GetActorNameOrLabel()) : DisplayName,
+				FText::AsNumber(FMath::RoundToInt(BleedOutSeconds))));
+		}
+
+		BP_OnDied();
+		return;
+	}
+
+	FinishDying();
+}
+
+void ADCCCharacterBase::HandleBleedOut()
+{
+	if (!bIsDowned || bHasDied)
+	{
+		return;
+	}
+
+	bIsDowned = false;
+	FinishDying();
+}
+
+void ADCCCharacterBase::FinishDying()
+{
+	if (bHasDied)
+	{
+		return;
+	}
+	bHasDied = true;
+
+	GetWorldTimerManager().ClearTimer(BleedOutTimer);
+
+	// Safe to call twice - a bled-out crawler already collapsed when it went
+	// down, and every step in here is idempotent.
+	ApplyCollapsedBody();
+	PlayCharacterSound(DeathSound);
+
 	if (HasAuthority())
 	{
+		// Rolled here rather than spawned here. The result is fixed at the moment
+		// of death so two players racing to the same corpse cannot re-roll it.
+		RollLootOntoBody();
+
 		// A crawler going down is a bigger beat than a mob dying, and the tone
 		// bible is explicit that the AI gets more corporate rather than warmer
 		// when something actually matters.
@@ -1384,4 +3162,177 @@ void ADCCCharacterBase::HandleDied(UDCCStatsComponent* InStats)
 	BP_OnDied();
 
 	OnCharacterDied.Broadcast(this);
+}
+
+void ADCCCharacterBase::OnRep_Downed()
+{
+	// Clients run the same visual collapse the server did, so a downed crawler
+	// looks downed on every machine rather than only where they fell.
+	if (bIsDowned)
+	{
+		ApplyCollapsedBody();
+	}
+	else if (!bHasDied)
+	{
+		RestoreStandingBody();
+	}
+}
+
+void ADCCCharacterBase::Revive(ADCCCharacterBase* Rescuer)
+{
+	if (!HasAuthority() || !bIsDowned || bHasDied || !Stats)
+	{
+		return;
+	}
+
+	GetWorldTimerManager().ClearTimer(BleedOutTimer);
+
+	bIsDowned = false;
+	RestoreStandingBody();
+	PlayCharacterSound(ReviveSound);
+
+	const int32 Restored = FMath::Max(1,
+		FMath::RoundToInt(Stats->MaxHitPoints * ReviveHealthFraction));
+	Stats->Heal(Restored);
+
+	ADCCGameState::Log(this, EDCCLogCategory::Announcement, FText::Format(
+		NSLOCTEXT("DCC", "LogRevive", "{0} gets {1} back on their feet. The audience was hoping for the other thing."),
+		Rescuer ? FText::FromString(Rescuer->GetActorNameOrLabel()) : FText::FromString(TEXT("Someone")),
+		DisplayName.IsEmpty() ? FText::FromString(GetActorNameOrLabel()) : DisplayName));
+
+	// Saving somebody is watchable. The producer pays for it.
+	if (Rescuer && Rescuer->Favor)
+	{
+		Rescuer->Favor->AwardFavor(4, EDCCFavorEvent::DirectorCall,
+			NSLOCTEXT("DCC", "FavorRevive", "A rescue, live on air."));
+	}
+}
+
+float ADCCCharacterBase::GetBleedOutRemaining() const
+{
+	if (!bIsDowned)
+	{
+		return 0.0f;
+	}
+
+	// Only the server runs the timer, so a client asks its own world for the
+	// value and gets 0 - the countdown is authoritative and shown to the host.
+	// Clients still see the DOWN overlay, just without a ticking number.
+	return GetWorldTimerManager().GetTimerRemaining(BleedOutTimer);
+}
+
+void ADCCCharacterBase::RollLootOntoBody()
+{
+	PendingLoot.Reset();
+	bHasLoot = false;
+
+	if (!HasAuthority() || LootTable.IsEmpty())
+	{
+		return;
+	}
+
+	// Crawlers do not carry a payday, and that covers allies too - IsCrawler()
+	// returns bIsAlly on the enemy class, so CJ going down leaves a body rather
+	// than a windfall. Looting your own downed friend is a different game.
+	if (IsCrawler())
+	{
+		return;
+	}
+
+	DCCLoot::RollLootTable(LootTable, PendingLoot);
+	bHasLoot = !PendingLoot.IsEmpty();
+}
+
+// -- IDCCLootSource --------------------------------------------------------
+// A corpse's half of the interface. RollLootOntoBody above is corpse-specific
+// (rolled at death, refuses crawlers) and stays a named function other death
+// code calls directly; everything below is the generic contract the loot menu
+// actually talks to, and ADCCLootContainer implements the same six calls for
+// a chest using its own BeginPlay-rolled contents instead.
+
+FText ADCCCharacterBase::GetLootSourceName() const
+{
+	return DisplayName.IsEmpty() ? FText::FromString(GetActorNameOrLabel()) : DisplayName;
+}
+
+bool ADCCCharacterBase::HasAnyLoot() const
+{
+	return bHasLoot;
+}
+
+const TArray<FDCCRolledLoot>& ADCCCharacterBase::GetPendingLootItems() const
+{
+	return PendingLoot;
+}
+
+FVector ADCCCharacterBase::GetLootOrigin() const
+{
+	return GetActorLocation();
+}
+
+void ADCCCharacterBase::LootOne(int32 Index, ADCCCharacterBase* Looter)
+{
+	if (!HasAuthority() || !PendingLoot.IsValidIndex(Index))
+	{
+		return;
+	}
+
+	DCCLoot::SpawnRolledLoot(GetWorld(), PendingLoot[Index], GetLootOrigin());
+	PendingLoot.RemoveAt(Index);
+	bHasLoot = !PendingLoot.IsEmpty();
+
+	// Same cleanup as a full LootAll, once there is nothing left either way.
+	if (!bHasLoot && LootedCorpseLifeSpan > 0.0f)
+	{
+		SetLifeSpan(LootedCorpseLifeSpan);
+	}
+}
+
+void ADCCCharacterBase::LootAll(ADCCCharacterBase* Looter)
+{
+	if (!HasAuthority() || !bHasLoot)
+	{
+		return;
+	}
+
+	// Cleared first: two players confirming "Loot All" on the same frame would
+	// otherwise both pass the check above and spawn everything twice.
+	bHasLoot = false;
+
+	const FVector Origin = GetLootOrigin();
+	for (const FDCCRolledLoot& Rolled : PendingLoot)
+	{
+		DCCLoot::SpawnRolledLoot(GetWorld(), Rolled, Origin);
+	}
+
+	PendingLoot.Reset();
+
+	// Now that it is empty, let it go. Bodies persist until looted precisely so
+	// nothing is lost to a timer - but an emptied corpse is just an actor with a
+	// physics asset costing frame time in a room the party has finished with.
+	if (LootedCorpseLifeSpan > 0.0f)
+	{
+		SetLifeSpan(LootedCorpseLifeSpan);
+	}
+}
+
+void ADCCCharacterBase::StowInto(ADCCCharacterBase* Looter)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (Looter && Looter->Inventory)
+	{
+		Looter->Inventory->StowRemains(GetLootSourceName(), PendingLoot);
+	}
+
+	PendingLoot.Reset();
+	bHasLoot = false;
+
+	if (LootedCorpseLifeSpan > 0.0f)
+	{
+		SetLifeSpan(LootedCorpseLifeSpan);
+	}
 }

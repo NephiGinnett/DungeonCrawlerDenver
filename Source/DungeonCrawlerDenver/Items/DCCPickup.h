@@ -62,6 +62,64 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Pickup")
 	bool bCanBePickedUp = true;
 
+	/**
+	 * What this is worth in gold. Zero means it is a prop, not loot.
+	 *
+	 * Kept on the pickup rather than in a separate loot asset because the whole
+	 * point of the Pantry is that value and mass live on the same object - the
+	 * argument about who carries the heavy thing is only interesting because the
+	 * heavy thing is also the valuable one.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = "Pickup|Loot", meta = (ClampMin = "0"))
+	int32 GoldValue = 0;
+
+	/**
+	 * True: banks its gold the moment it is lifted, then vanishes. Coins and
+	 * small loot work this way, because making the party walk pocket change to
+	 * the exit is tedium rather than tension.
+	 *
+	 * False: keeps its value until somebody carries it out through the floor
+	 * exit. That is the Pantry's twist made mechanical - the strongbox is only
+	 * worth anything if a crawler commits to carrying it, and carrying it is
+	 * exactly what stops them being useful in the boss fight.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Pickup|Loot")
+	bool bBanksOnPickup = true;
+
+	/** True once its gold has been paid out, so it can never be banked twice. */
+	UPROPERTY(BlueprintReadOnly, Category = "Pickup|Loot")
+	bool bValueClaimed = false;
+
+	/**
+	 * A DT_DCCEquipment row id. None (the default) means "not equipment, ignore
+	 * this field entirely" - every mass-tier prop and coin leaves it unset and
+	 * behaves exactly as before.
+	 *
+	 * Set, OnPickedUp equips it straight into the carrier's matching slot and
+	 * the pickup consumes itself, the same "pick it up and it is just yours"
+	 * shape bBanksOnPickup already gives coins - gear does not want the
+	 * carry/throw loop, since nobody means to throw the sword they just found.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = "Pickup|Equipment")
+	FName EquipmentItemId;
+
+	/**
+	 * Freeform category tags. "Liquid" is the one a container item currently
+	 * checks for (see FDCCEquipmentDef::bContainerAcceptsLiquids) - kept as
+	 * an open tag list rather than a single bool so a later container can
+	 * filter on something else without another pass over every pickup.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Pickup")
+	TArray<FName> ItemTags;
+
+	/**
+	 * Server only. Pays GoldValue to Claimant and marks this claimed.
+	 *
+	 * Returns the amount actually paid, which is zero for a prop, for something
+	 * already claimed, or for a claimant with no stats.
+	 */
+	int32 ClaimValue(ADCCCharacterBase* Claimant);
+
 	/** True while a character is holding this. Replicated so clients suppress physics. */
 	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_IsHeld, Category = "Pickup")
 	bool bIsHeld = false;

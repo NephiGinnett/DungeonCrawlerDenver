@@ -3,7 +3,10 @@
 #include "Characters/DCCCharacterBase.h"
 #include "Stats/DCCStatsComponent.h"
 #include "Stats/DCCRuleset.h"
+#include "Combat/DCCGameState.h"
+#include "UI/DCCEventLogTypes.h"
 #include "Components/StaticMeshComponent.h"
+#include "Equipment/DCCEquipmentComponent.h"
 #include "Net/UnrealNetwork.h"
 
 ADCCPickup::ADCCPickup()
@@ -31,6 +34,16 @@ void ADCCPickup::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(ADCCPickup, bIsHeld);
+
+	// Both are usually set once, immediately after a server-side spawn (a
+	// rolled corpse or chest drop overriding the class default) - without
+	// replicating them a remote client's copy of this actor never learns what
+	// it actually is, which is harmless for GoldValue (the server alone pays
+	// out) but was a real bug for EquipmentItemId: ADCCPickup_Equipment reads
+	// it in BeginPlay to pick a ground mesh, and a client that never received
+	// the real value would show the wrong prop forever.
+	DOREPLIFETIME(ADCCPickup, EquipmentItemId);
+	DOREPLIFETIME(ADCCPickup, GoldValue);
 }
 
 void ADCCPickup::BeginPlay()
@@ -58,6 +71,53 @@ void ADCCPickup::OnPickedUp(ADCCCharacterBase* Carrier)
 
 	bIsHeld = true;
 	ApplyHeldState();
+
+	// Gear equips straight into its slot rather than joining the carry/throw
+	// loop - see the field comment on EquipmentItemId - and consumes itself
+	// the moment that happens, so it never falls through to the gold path
+	// below even if someone also gave it a GoldValue for sell-back purposes.
+	if (!EquipmentItemId.IsNone())
+	{
+		if (Carrier->Equipment)
+		{
+			Carrier->Equipment->Equip(EquipmentItemId);
+		}
+
+		bIsHeld = false;
+		Destroy();
+		return;
+	}
+
+	// Pocket change pays out and disappears; anything valuable enough to be worth
+	// carrying stays in your hands until the exit. See bBanksOnPickup.
+	if (bBanksOnPickup && GoldValue > 0 && !bValueClaimed)
+	{
+		ClaimValue(Carrier);
+		Destroy();
+	}
+}
+
+int32 ADCCPickup::ClaimValue(ADCCCharacterBase* Claimant)
+{
+	if (!HasAuthority() || bValueClaimed || GoldValue <= 0 || !Claimant)
+	{
+		return 0;
+	}
+
+	UDCCStatsComponent* ClaimantStats = Claimant->Stats;
+	if (!ClaimantStats)
+	{
+		return 0;
+	}
+
+	bValueClaimed = true;
+	ClaimantStats->AddGold(GoldValue);
+
+	ADCCGameState::Log(this, EDCCLogCategory::Experience, FText::Format(
+		NSLOCTEXT("DCC", "LogLootClaimed", "{0} banks {1} — {2} gold."),
+		FText::FromString(GetNameSafe(Claimant)), DisplayName, FText::AsNumber(GoldValue)));
+
+	return GoldValue;
 }
 
 void ADCCPickup::OnDropped()
@@ -177,7 +237,7 @@ void ADCCPickup::HandleMeshHit(
 	const float ImpactSpeed = Mesh ? Mesh->GetPhysicsLinearVelocity().Size() : 0.0f;
 
 	const int32 Damage = Ruleset->GetThrowDamage(
-		ThrowerStats->AbilityScores,
+		ThrowerStats->GetEnhanced(),
 		ImpactDamageDie,
 		ImpactSpeed);
 
