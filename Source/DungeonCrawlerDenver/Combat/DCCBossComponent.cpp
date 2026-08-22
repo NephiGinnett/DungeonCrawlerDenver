@@ -1,6 +1,7 @@
 #include "Combat/DCCBossComponent.h"
 
 #include "Characters/DCCCharacterBase.h"
+#include "Characters/DCCEnemyCharacter.h"
 #include "Stats/DCCStatsComponent.h"
 #include "Rooms/DCCEncounter.h"
 #include "Combat/DCCGameState.h"
@@ -26,6 +27,7 @@ void UDCCBossComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	DOREPLIFETIME(UDCCBossComponent, ChargeProgress);
 	DOREPLIFETIME(UDCCBossComponent, bCharging);
 	DOREPLIFETIME(UDCCBossComponent, bVulnerable);
+	DOREPLIFETIME(UDCCBossComponent, CurrentPhase);
 }
 
 void UDCCBossComponent::BeginPlay()
@@ -94,6 +96,18 @@ void UDCCBossComponent::BeginCharge()
 	bHasCharged = true;
 	ChargeProgress = 0.0f;
 
+	++CurrentPhase;
+	++PhasesTriggered;
+
+	// Captured at the start of every charge rather than once at BeginPlay: the
+	// arena floor is not flat, and he does not necessarily launch from where he
+	// spawned.
+	GroundedZ = Self->GetActorLocation().Z;
+
+	// First body arrives almost immediately, so the channel reads as dangerous
+	// from the opening second rather than after a quiet interval.
+	MinionSpawnCountdown = 0.5f;
+
 	if (!ChargeStartLine.IsEmpty())
 	{
 		ADCCGameState::Log(this, EDCCLogCategory::Announcement, ChargeStartLine);
@@ -110,13 +124,20 @@ void UDCCBossComponent::CancelCharge()
 	}
 
 	bCharging = false;
-	ChargeProgress = 0.0f;
+
+	// Interrupted: he drops. The balloon deflating and the boss thumping back
+	// into melee reach is the party's reward for breaking the channel, and it
+	// has to be visible from the floor to land as one.
+	SettleToGround();
 }
 
 void UDCCBossComponent::ResolveCharge()
 {
 	bCharging = false;
-	ChargeProgress = 0.0f;
+
+	// Down first, so the blast originates from ground level and the recovery
+	// window happens somewhere the party can actually reach him.
+	SettleToGround();
 
 	UWorld* World = GetWorld();
 	AActor* Owner = GetOwner();
@@ -259,9 +280,25 @@ void UDCCBossComponent::TickComponent(float DeltaSeconds, ELevelTick TickType,
 	{
 		ChargeProgress = FMath::Clamp(ChargeProgress + (DeltaSeconds / ChargeDurationSeconds), 0.0f, 1.0f);
 
+		TickBalloon(DeltaSeconds);
+
 		if (ChargeProgress >= 1.0f)
 		{
 			ResolveCharge();
+		}
+
+		return;
+	}
+
+	// Multi-phase when thresholds are authored, single-shot otherwise. The
+	// fallback keeps every boss written before phases existed behaving exactly
+	// as it did rather than silently losing its one charge.
+	if (PhaseThresholds.Num() > 0)
+	{
+		if (PhasesTriggered < PhaseThresholds.Num()
+			&& Stats->GetHealthFraction() <= PhaseThresholds[PhasesTriggered])
+		{
+			BeginCharge();
 		}
 
 		return;
@@ -274,4 +311,109 @@ void UDCCBossComponent::TickComponent(float DeltaSeconds, ELevelTick TickType,
 	{
 		BeginCharge();
 	}
+}
+
+float UDCCBossComponent::GetIncomingDamageMultiplier() const
+{
+	if (!bCharging)
+	{
+		return 1.0f;
+	}
+
+	// Scales with inflation rather than being a flat toggle, so hitting him early
+	// in the channel is worth more than hitting him late. That is what makes
+	// reacting fast mechanically better than reacting eventually.
+	return FMath::Clamp(1.0f - ChargeDamageResistance * ChargeProgress, 0.05f, 1.0f);
+}
+
+void UDCCBossComponent::TickBalloon(float DeltaSeconds)
+{
+	AActor* Owner = GetOwner();
+	if (!Owner)
+	{
+		return;
+	}
+
+	// Lift. Absolute from the height he started at, not additive per frame -
+	// integrating a delta would drift him upward a little more on every charge
+	// and eventually park him in the ceiling.
+	const float TargetZ = GroundedZ + ChargeLiftHeight * ChargeProgress;
+	FVector Location = Owner->GetActorLocation();
+	Location.Z = FMath::FInterpTo(Location.Z, TargetZ, DeltaSeconds, 3.0f);
+	Owner->SetActorLocation(Location);
+
+	if (MinionSpawnInterval <= 0.0f || !MinionClass)
+	{
+		return;
+	}
+
+	MinionSpawnCountdown -= DeltaSeconds;
+	if (MinionSpawnCountdown <= 0.0f)
+	{
+		MinionSpawnCountdown = MinionSpawnInterval;
+
+		// Later phases arrive thicker. One extra body per phase reads clearly from
+		// the floor without turning phase three into an unwinnable wall.
+		const int32 Count = 1 + MinionsPerPhaseBonus * FMath::Max(0, CurrentPhase - 1);
+		for (int32 Index = 0; Index < Count; ++Index)
+		{
+			SpawnChargeMinion();
+		}
+	}
+}
+
+void UDCCBossComponent::SpawnChargeMinion()
+{
+	UWorld* World = GetWorld();
+	AActor* Owner = GetOwner();
+	if (!World || !Owner || !MinionClass)
+	{
+		return;
+	}
+
+	// Placed on the ground beneath him rather than at his altitude, so the swarm
+	// lands between the party and the boss instead of raining out of the sky.
+	const FVector2D Offset = FMath::RandPointInCircle(MinionSpawnRadius);
+	const FVector SpawnLocation(
+		Owner->GetActorLocation().X + Offset.X,
+		Owner->GetActorLocation().Y + Offset.Y,
+		GroundedZ);
+
+	// Owned by the encounter, same as a wave-authored spawn - without this,
+	// ADCCEnemyCharacter::OnDamageDealt's Cast<ADCCEncounter>(GetOwner()) lookup
+	// (Repossession Nip's "who do I heal" question) fails for anything the
+	// balloon spits out.
+	ADCCEncounter* Encounter = GetOwningEncounter();
+
+	FActorSpawnParameters Params;
+	Params.Owner = Encounter ? static_cast<AActor*>(Encounter) : Owner;
+	Params.SpawnCollisionHandlingOverride =
+		ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+	ADCCCharacterBase* Minion = World->SpawnActor<ADCCCharacterBase>(MinionClass, SpawnLocation, FRotator::ZeroRotator, Params);
+
+	// Folded into the encounter's own roster so GetLivingEnemyCount() (which
+	// ChargeDamagePerMinion reads when the charge lands) can actually see it -
+	// previously nothing registered these with SpawnedEnemies at all, so every
+	// charge-spawned Debt Eater was mechanically invisible to the mechanic it
+	// exists to feed.
+	if (Encounter)
+	{
+		if (ADCCEnemyCharacter* MinionEnemy = Cast<ADCCEnemyCharacter>(Minion))
+		{
+			Encounter->RegisterSpawnedEnemy(MinionEnemy);
+		}
+	}
+}
+
+void UDCCBossComponent::SettleToGround()
+{
+	if (AActor* Owner = GetOwner())
+	{
+		FVector Location = Owner->GetActorLocation();
+		Location.Z = GroundedZ;
+		Owner->SetActorLocation(Location);
+	}
+
+	ChargeProgress = 0.0f;
 }

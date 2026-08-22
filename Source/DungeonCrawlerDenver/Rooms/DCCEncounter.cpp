@@ -319,6 +319,19 @@ void ADCCEncounter::ResetEncounter()
 	SetState(EDCCEncounterState::Dormant);
 }
 
+void ADCCEncounter::RegisterSpawnedEnemy(ADCCEnemyCharacter* Enemy)
+{
+	if (!HasAuthority() || !Enemy || SpawnedEnemies.Contains(Enemy))
+	{
+		return;
+	}
+
+	// Exactly SpawnWave's own registration - the death hookup and roster
+	// membership, just for an enemy this encounter did not spawn itself.
+	Enemy->OnCharacterDied.AddDynamic(this, &ADCCEncounter::HandleEnemyDied);
+	SpawnedEnemies.Add(Enemy);
+}
+
 void ADCCEncounter::SetState(EDCCEncounterState NewState)
 {
 	if (State == NewState)

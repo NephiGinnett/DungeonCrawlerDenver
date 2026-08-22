@@ -148,9 +148,10 @@ creature trait, so leaking barrels and the Diving Pool can carry one too):
   *lingering*, not for entering
 
 **Grief is the twist.** Every family member who dies raises the aura Intensity of
-everyone still standing — wider, faster, harder. The Kid grieves hardest at 0.9
-against the family's 0.45, so **killing the Kid first roughly doubles the pressure
-for the rest of the fight.** He is the obvious first target and the worst one.
+everyone still standing — wider, faster, harder. The Kid grieves hardest at 0.9,
+against Mom's baseline 0.45 and Dad's own 0.5, so **killing the Kid first roughly
+doubles the pressure for the rest of the fight.** He is the obvious first target
+and the worst one.
 
 | Member | Aura | Note |
 |---|---|---|

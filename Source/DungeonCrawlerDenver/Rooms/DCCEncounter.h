@@ -184,6 +184,22 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Encounter")
 	void ResetEncounter();
 
+	/**
+	 * Server only. Folds an enemy spawned OUTSIDE SpawnWave (a boss's charge
+	 * minions, say) into this encounter's own roster - the death hookup and the
+	 * SpawnedEnemies membership SpawnWave itself gives every wave-authored
+	 * enemy for free.
+	 *
+	 * Exists because UDCCBossComponent::SpawnChargeMinion used to spawn
+	 * Debt Eaters with no Owner and no registration at all: they were real,
+	 * damage-dealing characters that this encounter's GetLivingEnemyCount()
+	 * could never see, which silently broke both ChargeDamagePerMinion (counts
+	 * living minions when the charge lands) and Repossession Nip's heal-the-boss
+	 * lookup (Cast<ADCCEncounter>(GetOwner()), which needs Owner set).
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Encounter")
+	void RegisterSpawnedEnemy(ADCCEnemyCharacter* Enemy);
+
 protected:
 	UPROPERTY(ReplicatedUsing = OnRep_State, BlueprintReadOnly, Category = "Encounter")
 	EDCCEncounterState State = EDCCEncounterState::Dormant;

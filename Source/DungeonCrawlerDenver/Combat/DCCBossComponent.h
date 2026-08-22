@@ -108,6 +108,87 @@ public:
 	// -------------------------------------------------------------------------
 
 	/** Replicated 0-1 so every client can draw the same wind-up bar. */
+	// -------------------------------------------------------------------------
+	// THE BALLOON PAYMENT
+	//
+	// The charge is no longer a hidden timer with a number at the end of it. It
+	// inflates a balloon over the boss's head, lifts him out of melee reach, and
+	// spits out a Debt Eater every few seconds while it runs.
+	//
+	// The design intent is that every second of the channel is legible from
+	// across the arena WITHOUT reading the log: the balloon says how long is
+	// left, his altitude says how hard he is to reach, and the number of things
+	// biting your ankles says what it will cost when it lands. A party that has
+	// never been told the rules should still work out "pop it or get off the
+	// floor" from watching it once.
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Health fractions that each trigger a charge, highest first.
+	 *
+	 * Replaces the single ChargeHealthThreshold, which could only ever produce a
+	 * one-beat fight. Three entries give the intended shape: an opening statement,
+	 * a nastier reprise, and a final one that starts with the arena already full.
+	 * ChargeHealthThreshold is still honoured when this is left empty, so every
+	 * existing boss keeps behaving exactly as it did.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Charge")
+	TArray<float> PhaseThresholds;
+
+	/** Which charge this is. 0 before the first. Replicated for the HUD. */
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Boss")
+	int32 CurrentPhase = 0;
+
+	/** How high the boss floats at full inflation, in centimetres. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Balloon", meta = (ClampMin = "0.0"))
+	float ChargeLiftHeight = 600.0f;
+
+	/**
+	 * Fraction of incoming damage ignored at full inflation.
+	 *
+	 * The altitude alone already defeats melee, so this exists for ranged
+	 * attackers - without it the counterplay would be "everyone who brought a
+	 * spell wins, everyone who brought fists watches". At 0.6 a caster can still
+	 * meaningfully hurt him while he is up there, just slowly enough that
+	 * interrupting the channel is the better play.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Balloon", meta = (ClampMin = "0.0", ClampMax = "0.95"))
+	float ChargeDamageResistance = 0.6f;
+
+	/** Balloon scale at 0% and 100% inflation. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Balloon", meta = (ClampMin = "0.0"))
+	float BalloonMinScale = 0.4f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Balloon", meta = (ClampMin = "0.0"))
+	float BalloonMaxScale = 5.0f;
+
+	/** What gets summoned while the balloon inflates. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Balloon")
+	TSubclassOf<ADCCCharacterBase> MinionClass;
+
+	/** Seconds between summons during a charge. 0 disables summoning. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Balloon", meta = (ClampMin = "0.0"))
+	float MinionSpawnInterval = 2.5f;
+
+	/** Extra minions added per phase, so later charges swarm harder. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Balloon", meta = (ClampMin = "0"))
+	int32 MinionsPerPhaseBonus = 2;
+
+	/** How far from the boss minions arrive. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Boss|Balloon", meta = (ClampMin = "0.0"))
+	float MinionSpawnRadius = 700.0f;
+
+	UFUNCTION(BlueprintPure, Category = "Boss")
+	bool IsCharging() const { return bCharging; }
+
+	/** 0-1 inflation, for the balloon scale and the HUD. */
+	UFUNCTION(BlueprintPure, Category = "Boss")
+	float GetChargeProgress() const { return ChargeProgress; }
+
+	/** Damage multiplier to apply to the boss right now. 1 when grounded. */
+	UFUNCTION(BlueprintPure, Category = "Boss")
+	float GetIncomingDamageMultiplier() const;
+
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Boss")
 	float ChargeProgress = 0.0f;
 
@@ -158,4 +239,21 @@ private:
 	bool bHasCharged = false;
 
 	float VulnerableTimeRemaining = 0.0f;
+
+	/** Counts down between summons while charging. */
+	float MinionSpawnCountdown = 0.0f;
+
+	/** Owner's Z when the current charge started, so the lift is relative. */
+	float GroundedZ = 0.0f;
+
+	/** Thresholds already used, so a phase cannot re-fire. */
+	int32 PhasesTriggered = 0;
+
+	/** Inflates the balloon, lifts the boss, and drips out minions. */
+	void TickBalloon(float DeltaSeconds);
+
+	/** Puts the boss back on the floor and deflates. */
+	void SettleToGround();
+
+	void SpawnChargeMinion();
 };
