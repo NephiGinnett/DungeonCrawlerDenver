@@ -95,3 +95,32 @@ ADCCLootContainer_ManagementLockbox::ADCCLootContainer_ManagementLockbox()
 	LootTable.Add(MakeGearDrop(TEXT("NameTagDave")));
 	LootTable.Add(MakeGoldDrop(60, 120));
 }
+
+ADCCLootContainer_LostAndFound::ADCCLootContainer_LostAndFound()
+{
+	// Reusing the crate mesh rather than guessing at an unverified one - CLAUDE.md
+	// flags more than one prior session losing real time to Fab packs that turned
+	// out to be station-scale rather than human-scale, and this is a constructor
+	// default that every future placement of this class inherits, not a one-off
+	// a scale mistake here is cheap to fix in one place.
+	SetChestMesh(Mesh, TEXT("/Game/Cave_Camp/Meshes/Props_02/SM_crate_01.SM_crate_01"));
+
+	DisplayName = NSLOCTEXT("DCC", "ChestLostAndFound", "Lost and Found, Never Claimed");
+
+	LootTable.Add(MakeGearDrop(TEXT("SeveranceCheckUncashed")));
+	LootTable.Add(MakeGearDrop(TEXT("NameTagDave")));
+	LootTable.Add(MakeGearDrop(TEXT("PatioSunHat")));
+	LootTable.Add(MakeGoldDrop(5, 15));
+}
+
+ADCCLootContainer_SafetyLocker::ADCCLootContainer_SafetyLocker()
+{
+	SetChestMesh(Mesh, TEXT("/Game/Cave_Camp/Meshes/Props_02/SM_barrel_01.SM_barrel_01"));
+
+	DisplayName = NSLOCTEXT("DCC", "ChestSafetyLocker", "Safety Locker, Inspection Overdue");
+
+	LootTable.Add(MakeGearDrop(TEXT("HighVisibilitySafetyVest")));
+	LootTable.Add(MakeGearDrop(TEXT("ComplaintFolderOverstuffed")));
+	LootTable.Add(MakeGearDrop(TEXT("GreaseApron")));
+	LootTable.Add(MakeGoldDrop(10, 25));
+}

@@ -19,3 +19,5 @@ Introductions,Introductions,Introductions,"A fist has been bumped. Alliance logg
 Networking,Networking,Networking,"Four alliances. You are building something down here. Production is monitoring it with interest.",FistBumps,4,300,40,False
 Setback,Setback,Setback,"A crawler has died. This has been logged as content. Your sponsors are reviewing their position.",Deaths,1,0,-20,False
 Persistent,Persistent,Persistent,"Five deaths. The audience has grown fond of the sound. We have isolated it for the remix.",Deaths,5,0,-50,True
+EstateSale,EstateSale,Estate Sale,"Five bodies and boxes emptied out. Everything in this dungeon used to belong to someone. Now it belongs to you.",ContainersLooted,5,100,10,False
+AssetRecovery,AssetRecovery,Asset Recovery Specialist,"Thirty containers cleared out. Repossession is, when you get right down to it, a two-way arrangement.",ContainersLooted,30,600,30,False

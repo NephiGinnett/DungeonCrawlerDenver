@@ -1620,7 +1620,17 @@ void ADCCCharacterBase::Server_LootAll_Implementation(AActor* Source)
 		return;
 	}
 
+	// Checked before LootAll empties it, and only counted if there was
+	// genuinely something to take - an empty corpse or chest is not a
+	// container "looted."
+	const bool bHadLoot = LootSource->HasAnyLoot();
+
 	LootSource->LootAll(this);
+
+	if (bHadLoot)
+	{
+		UDCCAchievementComponent::RecordFor(this, EDCCAchievementStat::ContainersLooted);
+	}
 
 	ADCCGameState::Log(this, EDCCLogCategory::Encounter, FText::Format(
 		NSLOCTEXT("DCC", "LogLootAll", "{0} empties {1} out."),
@@ -1640,11 +1650,18 @@ void ADCCCharacterBase::Server_StowLootSource_Implementation(AActor* Source)
 		return;
 	}
 
+	const bool bHadLoot = LootSource->HasAnyLoot();
+
 	ADCCGameState::Log(this, EDCCLogCategory::Encounter, FText::Format(
 		NSLOCTEXT("DCC", "LogStow", "{0} pockets {1} whole. Grim, but efficient."),
 		FText::FromString(GetActorNameOrLabel()), LootSource->GetLootSourceName()));
 
 	LootSource->StowInto(this);
+
+	if (bHadLoot)
+	{
+		UDCCAchievementComponent::RecordFor(this, EDCCAchievementStat::ContainersLooted);
+	}
 }
 
 void ADCCCharacterBase::OpenChat(ADCCCharacterBase* Target)

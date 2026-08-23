@@ -64,3 +64,23 @@ class DUNGEONCRAWLERDENVER_API ADCCLootContainer_ManagementLockbox : public ADCC
 public:
 	ADCCLootContainer_ManagementLockbox();
 };
+
+/** Trinkets and small personal effects nobody came back to claim. */
+UCLASS()
+class DUNGEONCRAWLERDENVER_API ADCCLootContainer_LostAndFound : public ADCCLootContainer
+{
+	GENERATED_BODY()
+
+public:
+	ADCCLootContainer_LostAndFound();
+};
+
+/** Safety/utility gear - a supply locker theme, distinct from the Quartermaster's weapons. */
+UCLASS()
+class DUNGEONCRAWLERDENVER_API ADCCLootContainer_SafetyLocker : public ADCCLootContainer
+{
+	GENERATED_BODY()
+
+public:
+	ADCCLootContainer_SafetyLocker();
+};

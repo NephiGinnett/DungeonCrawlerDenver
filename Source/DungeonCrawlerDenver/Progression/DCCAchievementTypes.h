@@ -46,6 +46,13 @@ enum class EDCCAchievementStat : uint8
 	/** Times this crawler has died. Yes, this is an achievement. */
 	Deaths              UMETA(DisplayName = "Deaths"),
 
+	/**
+	 * Corpses and chests emptied out - Loot All or Stow, not a per-item Check
+	 * Inventory take (that path is left uncounted on purpose, so a player
+	 * cannot inflate this by clicking through one item at a time).
+	 */
+	ContainersLooted    UMETA(DisplayName = "Containers Looted"),
+
 	MAX                 UMETA(Hidden)
 };
 
