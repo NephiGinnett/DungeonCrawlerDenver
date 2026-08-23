@@ -295,7 +295,18 @@ item 3 (the ally bug) is probably the one Zoe actually cares most about.
    contradicts `floor-01-design.md`'s explicit hand-authored premise. Committed so the work isn't
    lost. If the answer is "no," it can just stay dormant; if "yes," it needs a placed instance, a
    NavMeshBoundsVolume-per-cell fix, and the frontier-trigger race-condition fix before it's safe
-   to turn on with more than one player.
+   to turn on with more than one player. **Confirmed dormant as of 2026-08-23 — Zoe's call, leave
+   it alone until she says otherwise.**
+8a. **Place a paired `ADCCOathgate`** (new this session, `Rooms/DCCOathgate.h`) — two instances,
+   each with `PairedGate` set to the other. Leave the default `EnemyPool` (Debt Eater/Fine
+   Print/Arbiter) on the "entrance" side; clear `EnemyPool` to empty on the "exit" side so it only
+   teleports back. Anywhere reachable works — this is explicitly a DM testing tool first, unlimited
+   use, no cooldown beyond a 3s re-trigger debounce. Never placed or PIE-tested.
+8b. **Place `ADCCQuestMarker_BarEntrance`** (new this session) in the Bar, roughly x9200/y5000 per
+   `floor-01-design.md` — same pattern as Orientation/EastLedge.
+8c. **Re-import `Docs/DT_DCCQuests.json`** — six new quests (`TheOathgate`, `BountyCollectors` →
+   `RepeatCustomer`, `NetworkingOpportunity`, `FreeWeights`, `SecondHelping`), all optional side
+   content alongside the existing seven-quest main chain, all `bAutoStart: false`. None PIE-tested.
 9. **Place a `DCCCrowdSpawner` in the Bar** — the ambient-crowd system (Tier 2 of
    `population-design.md`) has been code-complete since before this session; its only blocker
    (Bar geometry) has existed since 2026-08-19.
