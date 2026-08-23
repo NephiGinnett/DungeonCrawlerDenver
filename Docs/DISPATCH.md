@@ -250,6 +250,61 @@ PIE run above diagnosed:
 
 ---
 
+## Queued for whoever has MCP (2026-08-23, chat/feed system)
+
+Built this session, no MCP: the Feed/Chatter/Party/Allies/Whispers chat system per Zoe's own
+spec. `Docs/story-premise.md`'s new "System AI wants something" section explains the fictional
+split between AI Favor (unchanged) and the new Chatter/Viewer Popularity concept - read that
+before touching either. **Development-Editor-build-verified, editor closed throughout, real
+link (no numbered hot-reload DLL).** Never seen in PIE.
+
+New/changed, source only:
+- `UI/DCCChatTypes.h` (new) - `EDCCChatChannel`, `FDCCChatMessage`.
+- `UI/DCCChatterTypes.h/.cpp` (new) - `EDCCChatterBucket`, `FDCCChatterLineDef` DataTable row,
+  token substitution.
+- `UI/DCCChatInputWidget.h/.cpp` (new) - a C++-only Slate `SEditableTextBox` wrapped in a
+  `UUserWidget`, no WBP asset. This is how free-text chat entry works inside the otherwise
+  Canvas-drawn HUD - see the class comment for why a WBP wasn't an option this session.
+- `Combat/DCCGameState.h/.cpp` - `ChatMessages` (replicated, same pattern as `EventLog`),
+  `AddChatMessage`, `RollChatterBatch` (rolls a batch on-demand, not on a timer - see its own
+  comment), `LogRoll` (Feed entries now optionally carry Instigator/RollTarget/crit flags).
+- `Characters/DCCCharacterBase.h/.cpp` - `IsDead()`/`bHasDied` is now actually replicated (it
+  wasn't before - a real, separate gap this closes: clients previously had no reliable signal
+  that a downed crawler had died rather than stabilized). `Server_SendChatMessage`,
+  `Server_RequestChatterBatch`, one-final-message-after-death rule, gameplay input locked out
+  on death (attack/interact/throw/stow/skill-select all check `bHasDied` now). `[K]` toggles
+  Feed visibility (Pinned/Minimized/Hidden).
+- `UI/DCCHUD.h/.cpp` - five new/changed Tab menu pages. **The old `Chat` tab (the NPC small-talk
+  picker) is renamed `Talk`** to free up the name - it's unchanged behaviourally, just relabeled,
+  because the enum value `EDCCMenuTab::Chat` would have read as the new player-chat feature
+  otherwise. Feed tab is a bigger scrollback of the same always-on log. Chatter/Allies/Whispers
+  are new. Feed now colour-codes nat 20 (green) / nat 1 (red), and has a new "My Rolls" filter
+  (`[L]` to cycle, now five presets not four).
+- `Docs/DT_DCCChatterLines.csv` (new) - starter Chatter content pool, ~40 lines across 8 buckets.
+  Not meant to be complete; add more rows freely, no code change needed to use them.
+
+**Queued MCP work:**
+1. **Import `Docs/DT_DCCChatterLines.csv`** as `/Game/DCC/UI/DT_DCCChatterLines` - plain CSV
+   import, `FDCCChatterLineDef` row struct. `ADCCGameState`'s constructor looks for it at that
+   exact path (self-healing on next restart if imported mid-session, same pattern as every other
+   content table in this project).
+2. **PIE test, full loop**: open the Tab menu, check Feed/Chatter/Party/Allies/Whispers all draw;
+   send a Party message from one client and confirm another client sees it; set a Whispers target
+   name and confirm only the two participants' clients show that thread; fist-bump someone and
+   confirm they appear on the Allies tab; open Chatter and confirm a batch of lines appears (needs
+   item 1 done first, or the table reads None and nothing rolls).
+3. **Kill a crawler in PIE and confirm the one-final-message rule** - they should get exactly one
+   more send on Party/Allies/Whispers, then the send row should grey out with "that final message
+   has already gone out." Also confirm the Tab menu stays reachable after death if it was already
+   open (a deliberate change to `DrawHUD`'s early-return - see its own comment).
+4. **Visual pass on the chat input box** - `UDCCChatInputWidget` uses Slate's stock look with no
+   styling applied; confirm it's legible against the Canvas HUD's dark panels and isn't a jarring
+   white box.
+5. **Sanity-check the crit colour coding** - only the basic attack roll is wired to `LogRoll`
+   (`ADCCCharacterBase`'s `PerformAttack`-equivalent). Skill checks still log through the plain
+   `Log()` and won't show green/red or count toward "My Rolls" yet - a natural follow-up once this
+   is confirmed working, not done this session.
+
 ## Queued for whoever has MCP (2026-08-23, after the full reconciliation pass)
 
 **Read CLAUDE.md's "✅ Reconciliation pass complete" section first** — it lists every bug fixed

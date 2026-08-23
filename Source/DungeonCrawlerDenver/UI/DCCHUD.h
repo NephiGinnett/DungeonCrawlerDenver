@@ -2,11 +2,14 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/HUD.h"
+#include "UI/DCCChatTypes.h"
 #include "DCCHUD.generated.h"
 
 class ADCCCharacterBase;
 class UDCCStatsComponent;
+class UDCCChatInputWidget;
 enum class EDCCLogCategory : uint8;
+struct FDCCEventLogEntry;
 
 /** Pages of the Tab menu. Clickable tabs, or Q/E-style arrow keys. */
 enum class EDCCMenuTab : uint8
@@ -15,8 +18,27 @@ enum class EDCCMenuTab : uint8
 	Skills,
 	Inventory,
 	Party,
-	Chat,
+
+	/** Renamed from Chat 2026-08-23: this is the proximity NPC-talk picker
+	 *  (opens DrawInteractionMenu), not the new player chat channels below.
+	 *  Keeping "Chat" for that would collide with Chatter/Allies/Whispers in
+	 *  a player's head even though the enum values themselves don't clash. */
+	Talk,
+
 	Achievements,
+
+	/** Bigger scrollback of the always-on Feed box, for catching up on lines
+	 *  that scrolled past - the always-on box itself is unaffected. */
+	Feed,
+
+	/** Simulated audience - see UI/DCCChatterTypes.h. Read-only, no send box. */
+	Chatter,
+
+	/** Anyone fist-bumped who's still alive - see ADCCCharacterBase::IsBefriended. */
+	Allies,
+
+	/** Private 1:1 - type a name to open a channel with them. */
+	Whispers,
 
 	MAX
 };
@@ -39,7 +61,41 @@ enum class EDCCFeedFilter : uint8
 	SkillsOnly,
 	Milestones,
 
+	/** Only entries where the local crawler is Instigator or RollTarget - the
+	 *  "cut the noise with five NPCs swinging at once" filter. */
+	MyRolls,
+
 	MAX
+};
+
+/** How much of the always-on Feed box is showing. Re-pinning happens from the
+ *  Feed tab of the Tab menu; minimizing/hiding happens live via the same key
+ *  that opens this cycle (K by default). */
+enum class EDCCFeedVisibility : uint8
+{
+	/** Full box, exactly like today. */
+	Pinned,
+
+	/** Just the "Log: ... [N new]" header line. */
+	Minimized,
+
+	/** Nothing drawn at all. */
+	Hidden,
+
+	MAX
+};
+
+/** What ChatInputWidget is currently collecting text for. */
+enum class EDCCChatInputMode : uint8
+{
+	None,
+
+	/** Free text, sent to ActiveChatChannel on submit. */
+	Message,
+
+	/** A crawler's name; submitting sets WhisperTargetName and reopens in
+	 *  Message mode automatically. */
+	WhisperTarget,
 };
 
 /**
@@ -86,6 +142,18 @@ public:
 	/** Moves between menu pages. Wraps. */
 	UFUNCTION(BlueprintCallable, Category = "DCC|UI")
 	void CycleMenuTab(int32 Delta);
+
+	/** Pinned -> Minimized -> Hidden -> Pinned. The Feed tab's "Re-pin" row
+	 *  jumps straight back to Pinned instead of cycling through all three. */
+	UFUNCTION(BlueprintCallable, Category = "DCC|UI")
+	void CycleFeedVisibility();
+
+	// Plain C++, not UFUNCTION: EDCCFeedVisibility is a plain enum like
+	// EDCCMenuTab/EDCCFeedFilter, not a UENUM, matching this class's existing
+	// convention that Canvas-HUD state enums stay internal rather than being
+	// exposed to Blueprint.
+	EDCCFeedVisibility GetFeedVisibility() const { return FeedVisibility; }
+	void SetFeedVisibility(EDCCFeedVisibility NewVisibility) { FeedVisibility = NewVisibility; }
 
 	/**
 	 * Flashes a short message in the middle of the screen.
@@ -257,20 +325,22 @@ protected:
 	/** The row of page tabs at the top of the character menu. */
 	float DrawMenuTabs(float X, float Y);
 
-	/** Party page: who is with you, their health, and whether they are holding. */
+	/** Party page: who is with you, their health, whether they are holding, and
+	 *  (2026-08-23) the Party chat log/input below the roster. */
 	float DrawParty(float X, float Y, ADCCCharacterBase* Crawler);
 
 	/**
-	 * Chat page: nearby friendly or neutral faces, pick one to start talking.
+	 * Talk page (renamed from Chat 2026-08-23 - see EDCCMenuTab::Talk): nearby
+	 * friendly or neutral faces, pick one to start talking.
 	 *
 	 * Deliberately just a picker for the conversation menu that already exists
 	 * (DrawInteractionMenu, always drawn regardless of this tab) rather than a
-	 * second dialogue system - Chatter/AskAbout/Persuade/Intimidate are the
-	 * whole of "chat" here. There is no shop option anywhere in that menu, and
-	 * this page must never grow one; picking a name opens a conversation, not
-	 * a storefront.
+	 * second dialogue system - AskAbout/Persuade/Intimidate/Chatter(the NPC
+	 * verb) are the whole of "talk" here. There is no shop option anywhere in
+	 * that menu, and this page must never grow one; picking a name opens a
+	 * conversation, not a storefront.
 	 */
-	float DrawChat(float X, float Y, ADCCCharacterBase* Crawler);
+	float DrawTalk(float X, float Y, ADCCCharacterBase* Crawler);
 
 	/** Equipment page content, folded into the Character tab. */
 	float DrawEquipment(float X, float Y, ADCCCharacterBase* Crawler);
@@ -282,6 +352,58 @@ protected:
 	float DrawAchievements(float X, float Y, ADCCCharacterBase* Crawler);
 	float DrawFeed(float X, float Y);
 
+	// -------------------------------------------------------------------------
+	// CHAT TABS (2026-08-23) - Feed/Chatter/Party/Allies/Whispers, per Zoe's
+	// naming. Feed and Chatter here are the *tab* versions; the always-on Feed
+	// box above is unaffected by any of this.
+	// -------------------------------------------------------------------------
+
+	/** Feed tab: a bigger scrollback of the same EventLog the always-on box
+	 *  shows, for catching up on lines that scrolled past. */
+	float DrawFeedTab(float X, float Y);
+
+	/** Chatter tab: simulated audience. Requests a fresh batch the moment this
+	 *  tab is opened (see DrawHUD's tab-transition check), not on a timer. */
+	float DrawChatterTab(float X, float Y);
+
+	/** Allies tab: roster of fist-bumped-and-still-alive crawlers, then the
+	 *  Allies channel log/input below it - same shape as DrawParty. */
+	float DrawAlliesTab(float X, float Y, ADCCCharacterBase* Crawler);
+
+	/** Whispers tab: a name field (WhisperTargetName) gating a 1:1 log/input. */
+	float DrawWhispersTab(float X, float Y, ADCCCharacterBase* Crawler);
+
+	/**
+	 * Shared message-list renderer for Party/Allies/Whispers/Chatter.
+	 *
+	 * For Whispers, TargetFilter must be non-empty and the list is further
+	 * narrowed to messages where the local crawler is sender or recipient of
+	 * that specific target - everyone else's whispers never reach this HUD's
+	 * filter step at all, which is what makes it "private" on a shared array
+	 * (see AddChatMessage's own comment on why that's an acceptable model for
+	 * a trusted five-person table). A dead sender's messages, past or future,
+	 * get a "This message sent/received from a dead crawler" header - checked
+	 * live via SenderCharacter->IsDead(), not stamped at send time.
+	 */
+	float DrawChannelMessages(float X, float Y, EDCCChatChannel Channel, ADCCCharacterBase* Crawler,
+		int32 LineCount, const FString& TargetFilter = FString());
+
+	/** The "type a message..." row under a channel. Clicking it opens
+	 *  ChatInputWidget in Message mode for that channel. */
+	float DrawChatSendRow(float X, float Y, EDCCChatChannel Channel, ADCCCharacterBase* Crawler,
+		const FString& HitBoxSuffix);
+
+	/** Creates ChatInputWidget on first use and positions/shows/focuses it. */
+	void OpenChatInputForChannel(EDCCChatChannel Channel, EDCCChatInputMode Mode, float X, float Y);
+
+	void CloseChatInput();
+
+	UFUNCTION()
+	void HandleChatInputSubmitted(const FString& SubmittedText);
+
+	UFUNCTION()
+	void HandleChatInputCancelled();
+
 private:
 	bool bShowMenu = false;
 
@@ -289,9 +411,9 @@ private:
 	FName SelectedAchievementId;
 
 	/**
-	 * The Chat tab's last-drawn list, indexed by the hit boxes DrawChat just
-	 * registered - "Chat_2" means ChatCandidates[2]. Rebuilt fresh every frame
-	 * DrawChat runs, same lifetime as any other Canvas hit box.
+	 * The Talk tab's last-drawn list, indexed by the hit boxes DrawTalk just
+	 * registered - "Talk_2" means ChatCandidates[2]. Rebuilt fresh every frame
+	 * DrawTalk runs, same lifetime as any other Canvas hit box.
 	 */
 	UPROPERTY(Transient)
 	TArray<TWeakObjectPtr<ADCCCharacterBase>> ChatCandidates;
@@ -299,6 +421,31 @@ private:
 	EDCCFeedFilter FeedFilter = EDCCFeedFilter::All;
 
 	EDCCMenuTab MenuTab = EDCCMenuTab::Character;
+
+	/** So DrawHUD can tell "just switched to Chatter" from "still on Chatter"
+	 *  and only request a batch on the transition. */
+	EDCCMenuTab PreviousDrawnMenuTab = EDCCMenuTab::Character;
+
+	EDCCFeedVisibility FeedVisibility = EDCCFeedVisibility::Pinned;
+
+	/** Lazily created C++-only Slate text box - see DCCChatInputWidget.h for
+	 *  why this exists instead of a WBP. */
+	UPROPERTY(Transient)
+	TObjectPtr<UDCCChatInputWidget> ChatInputWidget;
+
+	EDCCChatInputMode ChatInputMode = EDCCChatInputMode::None;
+
+	/** Which channel ChatInputWidget's next submit goes to, when in Message mode. */
+	EDCCChatChannel ActiveChatChannel = EDCCChatChannel::Party;
+
+	/** Set by submitting the Whispers tab's target field; empty means no
+	 *  Whispers conversation is open yet. */
+	FString WhisperTargetName;
+
+	/** Canvas->SizeY as of the last DrawHUD, so NotifyHitBoxClick (which can
+	 *  fire outside of DrawHUD, when Canvas is not guaranteed valid) has
+	 *  something safe to position the chat input widget against. */
+	float CachedViewportHeight = 720.0f;
 
 	bool bShowAdminPanel = false;
 	EDCCAdminTab AdminTab = EDCCAdminTab::Self;
@@ -312,8 +459,10 @@ private:
 	/** Draws the transient centre-screen notice, if one is live. */
 	void DrawNotice();
 
-	/** Whether a line of this category should draw under the current preset. */
-	bool PassesFeedFilter(EDCCLogCategory Category) const;
+	/** Whether this entry should draw under the current preset. Takes the whole
+	 *  entry rather than just its Category because MyRolls needs to compare
+	 *  Instigator/RollTarget against the local crawler. */
+	bool PassesFeedFilter(const FDCCEventLogEntry& Entry, const ADCCCharacterBase* LocalCrawler) const;
 
 	/** Name shown next to the feed so the active preset is never a guess. */
 	FString GetFeedFilterLabel() const;

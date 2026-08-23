@@ -6,6 +6,7 @@
 #include "Items/DCCLootTypes.h"
 #include "Items/DCCLootSource.h"
 #include "UI/DCCInteractionTypes.h"
+#include "UI/DCCChatTypes.h"
 #include "Skills/DCCSkillTypes.h"
 #include "DCCCharacterBase.generated.h"
 
@@ -577,6 +578,38 @@ public:
 	UFUNCTION(BlueprintPure, Category = "DCC|Downed")
 	bool IsDowned() const { return bIsDowned; }
 
+	/** True once death saves have run out. Permanent for now - see CLAUDE.md's
+	 *  note on the 1-2 rare resurrection instances being a later, separate pass. */
+	UFUNCTION(BlueprintPure, Category = "DCC|Downed")
+	bool IsDead() const { return bHasDied; }
+
+	/** Whether this crawler can still send a chat message - alive, or dead but
+	 *  hasn't used their one final send yet. */
+	UFUNCTION(BlueprintPure, Category = "DCC|Chat")
+	bool CanSendChatMessage() const { return !bHasDied || !bHasSentFinalMessage; }
+
+	/**
+	 * Server only. Posts Text into Channel, or into a Whisper to
+	 * WhisperTargetName (ignored for every other channel).
+	 *
+	 * A dead crawler is allowed exactly one more send (bHasSentFinalMessage
+	 * flips true right after it goes through), then refused - re-validated
+	 * here rather than trusted from the client, same as every other action in
+	 * this class. Public rather than protected, unlike most Server_ RPCs here,
+	 * because DCCHUD calls it directly from the chat input widget's submit
+	 * handler - the HUD is not a member of this class the way its own input
+	 * handlers are.
+	 */
+	UFUNCTION(Server, Reliable)
+	void Server_SendChatMessage(EDCCChatChannel Channel, const FString& WhisperTargetName, const FText& Text);
+
+	/** Server only. Rolls a fresh Chatter batch - see
+	 *  ADCCGameState::RollChatterBatch for why this is on-demand, not timed.
+	 *  Public for the same reason Server_SendChatMessage is - DCCHUD calls it
+	 *  directly when the Chatter tab opens. */
+	UFUNCTION(Server, Reliable)
+	void Server_RequestChatterBatch();
+
 	/** Whether hitting 0 HP downs this character at all. False means straight to dead - the old mob behaviour. */
 	UPROPERTY(EditDefaultsOnly, Category = "DCC|Downed")
 	bool bCanBeDowned = true;
@@ -836,6 +869,11 @@ public:
 	/** Advances the HUD event feed to its next category filter. Local and cosmetic. */
 	UFUNCTION(BlueprintCallable, Category = "DCC|UI")
 	void CycleLogFilter();
+
+	/** Pinned -> Minimized -> Hidden -> Pinned for the always-on Feed box.
+	 *  Local and cosmetic - re-pinning is also reachable from the Feed tab. */
+	UFUNCTION(BlueprintCallable, Category = "DCC|UI")
+	void CycleFeedVisibility();
 
 	/** Moves between character-menu pages. Local and cosmetic. */
 	UFUNCTION(BlueprintCallable, Category = "DCC|UI")
@@ -1501,5 +1539,22 @@ private:
 	/** Server-side only; clients never gate on this. */
 	float LastAttackTime = TNumericLimits<float>::Lowest();
 
+	/**
+	 * Replicated so clients can query IsDead() reliably (the Whispers/Allies
+	 * chat tabs need to know), not because anything here reacts to the OnRep -
+	 * FinishDying's own locally-triggered ApplyCollapsedBody/PlayCharacterSound
+	 * calls are untouched, on purpose: that path is already tested, and this
+	 * flag only needs to be *readable*, not to drive anything itself.
+	 */
+	UPROPERTY(Replicated)
 	bool bHasDied = false;
+
+	/**
+	 * A dead crawler gets exactly one more chat send (any channel but Feed,
+	 * which was never sendable anyway), then loses the ability to send again -
+	 * see Server_SendChatMessage. Replicated so the local HUD can grey out the
+	 * input box once it's used, rather than only finding out via a refused RPC.
+	 */
+	UPROPERTY(Replicated)
+	bool bHasSentFinalMessage = false;
 };

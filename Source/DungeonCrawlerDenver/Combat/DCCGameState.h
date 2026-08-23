@@ -3,6 +3,9 @@
 #include "CoreMinimal.h"
 #include "GameFramework/GameStateBase.h"
 #include "UI/DCCEventLogTypes.h"
+#include "UI/DCCChatTypes.h"
+#include "UI/DCCChatterTypes.h"
+#include "Engine/DataTable.h"
 #include "DCCGameState.generated.h"
 
 class ADCCCharacterBase;
@@ -142,6 +145,15 @@ public:
 	 */
 	static void Log(const UObject* WorldContext, EDCCLogCategory Category, const FText& Text);
 
+	/**
+	 * Same as Log, but carries who rolled, against whom, and whether it was a
+	 * natural 20/1 - for the Feed's colour-coding and the "My Rolls" filter.
+	 * Existing plain Log() call sites are unaffected; this is additive.
+	 */
+	static void LogRoll(const UObject* WorldContext, EDCCLogCategory Category, const FText& Text,
+		ADCCCharacterBase* Instigator, ADCCCharacterBase* RollTarget,
+		bool bCriticalSuccess, bool bCriticalFailure);
+
 	UFUNCTION(BlueprintPure, Category = "Log")
 	const TArray<FDCCEventLogEntry>& GetEventLog() const { return EventLog; }
 
@@ -157,6 +169,46 @@ public:
 	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Log", meta = (ClampMin = "1"))
 	int32 MaxLogEntries = 50;
+
+	// -------------------------------------------------------------------------
+	// CHAT (Party / Allies / Whispers / Chatter) - see UI/DCCChatTypes.h
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Server only. Appends a chat line and trims to MaxChatMessages.
+	 *
+	 * Whispers are not delivered separately per-client - this is a trusted
+	 * five-person table, not a competitive game, so every message replicates
+	 * to everyone and the HUD filters Whispers down to sender/recipient
+	 * locally. Simpler than real per-connection routing and correct for what
+	 * this actually needs to be private *from*: nobody's screen, not the wire.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Chat")
+	void AddChatMessage(EDCCChatChannel Channel, const FString& SenderName, ADCCCharacterBase* SenderCharacter,
+		const FString& WhisperRecipientName, const FText& Text, bool bModerated = false);
+
+	UFUNCTION(BlueprintPure, Category = "Chat")
+	const TArray<FDCCChatMessage>& GetChatMessages() const { return ChatMessages; }
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Chat", meta = (ClampMin = "1"))
+	int32 MaxChatMessages = 100;
+
+	/**
+	 * Server only. Rolls a fresh batch of simulated audience lines into the
+	 * Chatter channel. Called when a player opens the Chatter tab (see
+	 * ADCCCharacterBase::Server_RequestChatterBatch) rather than on a timer -
+	 * "comments coming in" when you check the channel, not a background
+	 * trickle nobody asked for.
+	 */
+	void RollChatterBatch(int32 Count = 8);
+
+	/**
+	 * Starter content pool - Docs/DT_DCCChatterLines.csv. Resolved once at
+	 * editor startup like the other content tables; re-import after editing
+	 * the CSV, no restart needed for row edits.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Chat")
+	TObjectPtr<UDataTable> ChatterTable;
 
 	/**
 	 * How far time is slowed while paused. Not zero by default: a hard stop
@@ -185,11 +237,18 @@ protected:
 	UPROPERTY(ReplicatedUsing = OnRep_EventLog, BlueprintReadOnly, Category = "Log")
 	TArray<FDCCEventLogEntry> EventLog;
 
+	/** Replicated as a whole array, same reasoning as EventLog above. */
+	UPROPERTY(ReplicatedUsing = OnRep_ChatMessages, BlueprintReadOnly, Category = "Chat")
+	TArray<FDCCChatMessage> ChatMessages;
+
 	UFUNCTION()
 	void OnRep_CombatPaused();
 
 	UFUNCTION()
 	void OnRep_EventLog();
+
+	UFUNCTION()
+	void OnRep_ChatMessages();
 
 	/** Server only. Runs every queued action in initiative order, then clears. */
 	void ResolveQueuedActions();

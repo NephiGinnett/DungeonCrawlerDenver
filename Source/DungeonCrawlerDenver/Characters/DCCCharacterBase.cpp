@@ -94,6 +94,8 @@ void ADCCCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	DOREPLIFETIME(ADCCCharacterBase, DeathSaveFailures);
 	DOREPLIFETIME(ADCCCharacterBase, bHasLoot);
 	DOREPLIFETIME(ADCCCharacterBase, PendingLoot);
+	DOREPLIFETIME(ADCCCharacterBase, bHasDied);
+	DOREPLIFETIME(ADCCCharacterBase, bHasSentFinalMessage);
 }
 
 void ADCCCharacterBase::PossessedBy(AController* NewController)
@@ -270,6 +272,11 @@ void ADCCCharacterBase::AttemptPickupOrDrop()
 
 void ADCCCharacterBase::AttemptThrow()
 {
+	if (bHasDied)
+	{
+		return;
+	}
+
 	if (Carry)
 	{
 		Carry->TryThrow();
@@ -278,6 +285,11 @@ void ADCCCharacterBase::AttemptThrow()
 
 void ADCCCharacterBase::AttemptStow()
 {
+	if (bHasDied)
+	{
+		return;
+	}
+
 	if (HasAuthority())
 	{
 		Server_StowCarried_Implementation();
@@ -354,6 +366,14 @@ void ADCCCharacterBase::OnPrimaryPressed()
 	// Posing for a photo wins too - a stray click should not swing a weapon
 	// while the character is holding still smiling at their own phone.
 	if (bInSelfieMode)
+	{
+		return;
+	}
+
+	// A dead crawler keeps exactly one chat send and nothing else - see
+	// Server_SendChatMessage. Every other action is refused client-side too,
+	// not just server-side, so there's no dead-air click with no feedback.
+	if (bHasDied)
 	{
 		return;
 	}
@@ -609,8 +629,65 @@ void ADCCCharacterBase::Multicast_PlayFistBump_Implementation(ADCCCharacterBase*
 	RefreshNameplate();
 }
 
+void ADCCCharacterBase::Server_SendChatMessage_Implementation(EDCCChatChannel Channel, const FString& WhisperTargetName, const FText& Text)
+{
+	if (!HasAuthority() || Text.IsEmptyOrWhitespace())
+	{
+		return;
+	}
+
+	// Re-validated server-side: a dead crawler gets exactly one more send, then
+	// none, regardless of what the client's UI thinks it already used.
+	if (!CanSendChatMessage())
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	ADCCGameState* GameState = World ? World->GetGameState<ADCCGameState>() : nullptr;
+	if (!GameState)
+	{
+		return;
+	}
+
+	if (Channel == EDCCChatChannel::Chatter)
+	{
+		// Players don't post to Chatter - it's the simulated audience. A client
+		// asking for this channel is either a stale UI state or a bad actor;
+		// either way, silently refuse rather than let it through.
+		return;
+	}
+
+	const FString SenderDisplayName = DisplayName.IsEmpty() ? GetActorNameOrLabel() : DisplayName.ToString();
+	GameState->AddChatMessage(Channel, SenderDisplayName, this, WhisperTargetName, Text);
+
+	if (bHasDied)
+	{
+		bHasSentFinalMessage = true;
+	}
+}
+
+void ADCCCharacterBase::Server_RequestChatterBatch_Implementation()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (ADCCGameState* GameState = World ? World->GetGameState<ADCCGameState>() : nullptr)
+	{
+		GameState->RollChatterBatch();
+	}
+}
+
 void ADCCCharacterBase::SelectSkill(FName SkillId)
 {
+	if (bHasDied)
+	{
+		return;
+	}
+
 	SelectedSkillId = SkillId;
 
 	// Choosing a different skill abandons any question already on screen, so the
@@ -1358,6 +1435,11 @@ void ADCCCharacterBase::BuildInteractionOptions()
 
 void ADCCCharacterBase::HandleInteractPressed()
 {
+	if (bHasDied)
+	{
+		return;
+	}
+
 	// The loot menu owns E first, if one is open - same reason the
 	// conversation menu is checked before anything else below.
 	if (LootTargetActor)
@@ -2178,6 +2260,15 @@ void ADCCCharacterBase::CycleLogFilter()
 	}
 }
 
+void ADCCCharacterBase::CycleFeedVisibility()
+{
+	const APlayerController* PC = Cast<APlayerController>(GetController());
+	if (ADCCHUD* DCCHUD = PC ? Cast<ADCCHUD>(PC->GetHUD()) : nullptr)
+	{
+		DCCHUD->CycleFeedVisibility();
+	}
+}
+
 void ADCCCharacterBase::CycleMenuTab(int32 Delta)
 {
 	const APlayerController* PC = Cast<APlayerController>(GetController());
@@ -2363,7 +2454,8 @@ FDCCAttackResult ADCCCharacterBase::PerformAttack(ADCCCharacterBase* Target, boo
 				FText::AsNumber(Result.Check.Total), FText::AsNumber(Result.Check.DifficultyClass));
 		}
 
-		ADCCGameState::Log(this, EDCCLogCategory::Combat, Line);
+		ADCCGameState::LogRoll(this, EDCCLogCategory::Combat, Line, this, Target,
+			Result.Check.bCriticalSuccess, Result.Check.bCriticalFailure);
 	}
 
 	Multicast_PlayAttack(Target, Result.bHit);
@@ -2487,6 +2579,7 @@ void ADCCCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	PlayerInputComponent->BindKey(EKeys::C, IE_Pressed, this, &ADCCCharacterBase::ToggleSelfieMode);
 	PlayerInputComponent->BindKey(EKeys::Tab, IE_Pressed, this, &ADCCCharacterBase::ToggleCharacterMenu);
 	PlayerInputComponent->BindKey(EKeys::L, IE_Pressed, this, &ADCCCharacterBase::CycleLogFilter);
+	PlayerInputComponent->BindKey(EKeys::K, IE_Pressed, this, &ADCCCharacterBase::CycleFeedVisibility);
 
 	// F1 for the DM panel. A function key rather than a letter because it is not
 	// a game action - it should not compete with anything a player might press

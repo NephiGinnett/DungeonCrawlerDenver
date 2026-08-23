@@ -3,6 +3,8 @@
 #include "CoreMinimal.h"
 #include "DCCEventLogTypes.generated.h"
 
+class ADCCCharacterBase;
+
 // -----------------------------------------------------------------------------
 // THE EVENT FEED
 //
@@ -85,4 +87,24 @@ struct FDCCEventLogEntry
 	/** Server world-seconds, so the HUD can age or order entries. */
 	UPROPERTY(BlueprintReadOnly, Category = "Log")
 	float TimeSeconds = 0.0f;
+
+	/**
+	 * Who rolled, and against whom - null on entries that were never a roll
+	 * (an achievement firing, a favor change). Added for the "My Rolls" feed
+	 * filter and for colour-coding; existing call sites that only pass
+	 * Category/Text/context are unaffected, since these default to null/false.
+	 */
+	UPROPERTY(BlueprintReadOnly, Category = "Log")
+	TObjectPtr<ADCCCharacterBase> Instigator = nullptr;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Log")
+	TObjectPtr<ADCCCharacterBase> RollTarget = nullptr;
+
+	/** Natural 20. Feed colours this green. */
+	UPROPERTY(BlueprintReadOnly, Category = "Log")
+	bool bCriticalSuccess = false;
+
+	/** Natural 1. Feed colours this red. */
+	UPROPERTY(BlueprintReadOnly, Category = "Log")
+	bool bCriticalFailure = false;
 };

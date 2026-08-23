@@ -22,6 +22,8 @@
 #include "Quests/DCCQuestMarker.h"
 #include "Combat/DCCGameState.h"
 #include "UI/DCCEventLogTypes.h"
+#include "UI/DCCChatInputWidget.h"
+#include "Blueprint/UserWidget.h"
 #include "Rooms/DCCClimbPoint.h"
 #include "Engine/Canvas.h"
 #include "Engine/Engine.h"
@@ -155,10 +157,10 @@ void ADCCHUD::NotifyHitBoxClick(FName BoxName)
 		return;
 	}
 
-	// Chat rows are named Chat_<index> into ChatCandidates, the same shape as
+	// Talk rows are named Talk_<index> into ChatCandidates, the same shape as
 	// tabs - an actor pointer cannot be embedded in a hit box name, but an
-	// index into the list DrawChat just built can.
-	if (AsString.StartsWith(TEXT("Chat_")))
+	// index into the list DrawTalk just built can.
+	if (AsString.StartsWith(TEXT("Talk_")))
 	{
 		const int32 Index = FCString::Atoi(*AsString.RightChop(5));
 		if (ChatCandidates.IsValidIndex(Index) && ChatCandidates[Index].IsValid())
@@ -168,6 +170,42 @@ void ADCCHUD::NotifyHitBoxClick(FName BoxName)
 				Crawler->OpenChat(ChatCandidates[Index].Get());
 			}
 		}
+		return;
+	}
+
+	// "ChatOpen|<channel>" opens the Slate input box for Party/Allies, or the
+	// Whispers target field. "ChatOpen|WhisperMsg" opens it for the message
+	// itself once a target is already set.
+	if (AsString.StartsWith(TEXT("ChatOpen|")))
+	{
+		const FString Sub = AsString.RightChop(9);
+		const float InputX = 32.0f;
+		const float InputY = CachedViewportHeight - 90.0f;
+
+		if (Sub == TEXT("Party"))
+		{
+			OpenChatInputForChannel(EDCCChatChannel::Party, EDCCChatInputMode::Message, InputX, InputY);
+		}
+		else if (Sub == TEXT("Allies"))
+		{
+			OpenChatInputForChannel(EDCCChatChannel::Allies, EDCCChatInputMode::Message, InputX, InputY);
+		}
+		else if (Sub == TEXT("WhisperTarget"))
+		{
+			OpenChatInputForChannel(EDCCChatChannel::Whispers, EDCCChatInputMode::WhisperTarget, InputX, InputY);
+		}
+		else if (Sub == TEXT("WhisperMsg") && !WhisperTargetName.IsEmpty())
+		{
+			OpenChatInputForChannel(EDCCChatChannel::Whispers, EDCCChatInputMode::Message, InputX, InputY);
+		}
+		return;
+	}
+
+	// The Feed tab's "Re-pin" row - jumps straight to Pinned rather than
+	// cycling, since the player clicked it specifically to get the box back.
+	if (AsString == TEXT("FeedRePin"))
+	{
+		FeedVisibility = EDCCFeedVisibility::Pinned;
 		return;
 	}
 
@@ -210,11 +248,23 @@ void ADCCHUD::DrawHUD()
 		return;
 	}
 
+	CachedViewportHeight = Canvas->SizeY;
+
 	ADCCCharacterBase* Crawler = GetOwningCrawler();
 
-	// The feed is always on: it is the only way to see what the dice did, and
-	// hiding it behind a menu would defeat the point.
-	DrawFeed(24.0f, Canvas->SizeY - (FeedLineCount + 1) * LineHeight - 24.0f);
+	// On by default: it is the only way to see what the dice did, and hiding it
+	// behind a menu would defeat the point. Minimized/Hidden (2026-08-23, [K]
+	// to cycle) are an explicit opt-out for exactly that reason - Pinned stays
+	// the default and DrawFeed itself is unchanged.
+	if (FeedVisibility == EDCCFeedVisibility::Pinned)
+	{
+		DrawFeed(24.0f, Canvas->SizeY - (FeedLineCount + 1) * LineHeight - 24.0f);
+	}
+	else if (FeedVisibility == EDCCFeedVisibility::Minimized)
+	{
+		DrawText(FString::Printf(TEXT("Log: %s (minimized)  [K] restore"), *GetFeedFilterLabel()),
+			DimColour, 24.0f, Canvas->SizeY - LineHeight - 24.0f);
+	}
 
 	// Drawn before the death check, so the bars are still on screen underneath the
 	// GAME OVER overlay showing exactly zero. Watching it sit empty is the point -
@@ -237,7 +287,17 @@ void ADCCHUD::DrawHUD()
 	if (Crawler && Crawler->Stats && !Crawler->Stats->IsAlive())
 	{
 		DrawDeathScreen();
-		return;
+
+		// A dead crawler still gets exactly one final chat send and can still
+		// read every channel (see ADCCCharacterBase::Server_SendChatMessage) -
+		// so if the Tab menu was already open, it stays reachable instead of
+		// being cut off the instant death lands. Every actual gameplay action
+		// below this point is separately guarded on IsDead() in
+		// DCCCharacterBase, so nothing here needs to re-check that.
+		if (!bShowMenu)
+		{
+			return;
+		}
 	}
 
 	DrawQuestTracker();
@@ -271,6 +331,16 @@ void ADCCHUD::DrawHUD()
 	Y = DrawMenuTabs(X, Y);
 	Y += SectionGap;
 
+	// Chatter is rolled fresh on the transition into the tab, not on a timer -
+	// see ADCCGameState::RollChatterBatch. Compared against the tab drawn last
+	// frame rather than a "have I ever opened this" flag, so leaving and
+	// coming back also refreshes it.
+	if (MenuTab == EDCCMenuTab::Chatter && PreviousDrawnMenuTab != EDCCMenuTab::Chatter && Crawler)
+	{
+		Crawler->Server_RequestChatterBatch();
+	}
+	PreviousDrawnMenuTab = MenuTab;
+
 	// One page at a time. The old panel stacked all four sections into a single
 	// column that ran off the bottom of the screen on anything but a tall
 	// display - and the sections nobody was looking at pushed the ones they were
@@ -295,8 +365,8 @@ void ADCCHUD::DrawHUD()
 		Y = DrawParty(X, Y, Crawler);
 		break;
 
-	case EDCCMenuTab::Chat:
-		Y = DrawChat(X, Y, Crawler);
+	case EDCCMenuTab::Talk:
+		Y = DrawTalk(X, Y, Crawler);
 		break;
 
 	case EDCCMenuTab::Achievements:
@@ -304,6 +374,22 @@ void ADCCHUD::DrawHUD()
 
 		// Last, so the card draws over the menu panel rather than under it.
 		DrawAchievementDetail(Crawler);
+		break;
+
+	case EDCCMenuTab::Feed:
+		Y = DrawFeedTab(X, Y);
+		break;
+
+	case EDCCMenuTab::Chatter:
+		Y = DrawChatterTab(X, Y);
+		break;
+
+	case EDCCMenuTab::Allies:
+		Y = DrawAlliesTab(X, Y, Crawler);
+		break;
+
+	case EDCCMenuTab::Whispers:
+		Y = DrawWhispersTab(X, Y, Crawler);
 		break;
 
 	default:
@@ -674,8 +760,12 @@ namespace
 		case EDCCMenuTab::Skills:       return TEXT("SKILLS");
 		case EDCCMenuTab::Inventory:    return TEXT("INVENTORY");
 		case EDCCMenuTab::Party:        return TEXT("PARTY");
-		case EDCCMenuTab::Chat:         return TEXT("CHAT");
+		case EDCCMenuTab::Talk:         return TEXT("TALK");
 		case EDCCMenuTab::Achievements: return TEXT("ACHIEVEMENTS");
+		case EDCCMenuTab::Feed:         return TEXT("FEED");
+		case EDCCMenuTab::Chatter:      return TEXT("CHATTER");
+		case EDCCMenuTab::Allies:       return TEXT("ALLIES");
+		case EDCCMenuTab::Whispers:     return TEXT("WHISPERS");
 		default:                        return TEXT("");
 		}
 	}
@@ -818,12 +908,16 @@ float ADCCHUD::DrawParty(float X, float Y, ADCCCharacterBase* Crawler)
 		Y += LineHeight;
 	}
 
+	Y += SectionGap;
+	Y = DrawChannelMessages(X, Y, EDCCChatChannel::Party, Crawler, 6);
+	Y = DrawChatSendRow(X, Y, EDCCChatChannel::Party, Crawler, TEXT("Party"));
+
 	return Y;
 }
 
-float ADCCHUD::DrawChat(float X, float Y, ADCCCharacterBase* Crawler)
+float ADCCHUD::DrawTalk(float X, float Y, ADCCCharacterBase* Crawler)
 {
-	DrawText(TEXT("Chat  -  pick a name to talk"), HeadingColour, X, Y);
+	DrawText(TEXT("Talk  -  pick a name to talk"), HeadingColour, X, Y);
 	Y += LineHeight;
 
 	ChatCandidates.Reset();
@@ -880,7 +974,7 @@ float ADCCHUD::DrawChat(float X, float Y, ADCCCharacterBase* Crawler)
 		const bool bTalkingToThem = Crawler->GetInteractionTarget() == Candidate;
 
 		AddHitBox(FVector2D(X, Y), FVector2D(RowWidth, LineHeight),
-			FName(*FString::Printf(TEXT("Chat_%d"), Index)), /*bConsumesInput=*/true, /*Priority=*/1);
+			FName(*FString::Printf(TEXT("Talk_%d"), Index)), /*bConsumesInput=*/true, /*Priority=*/1);
 
 		if (bTalkingToThem)
 		{
@@ -2284,20 +2378,23 @@ void ADCCHUD::DrawLootMenu(ADCCCharacterBase* Crawler)
 	DrawText(TEXT("Wheel to choose  ·  E to confirm  ·  Esc to leave"), DimColour, X, Y);
 }
 
-bool ADCCHUD::PassesFeedFilter(EDCCLogCategory Category) const
+bool ADCCHUD::PassesFeedFilter(const FDCCEventLogEntry& Entry, const ADCCCharacterBase* LocalCrawler) const
 {
 	switch (FeedFilter)
 	{
 	case EDCCFeedFilter::CombatOnly:
-		return Category == EDCCLogCategory::Combat || Category == EDCCLogCategory::Death
-			|| Category == EDCCLogCategory::Encounter;
+		return Entry.Category == EDCCLogCategory::Combat || Entry.Category == EDCCLogCategory::Death
+			|| Entry.Category == EDCCLogCategory::Encounter;
 
 	case EDCCFeedFilter::SkillsOnly:
-		return Category == EDCCLogCategory::Skill || Category == EDCCLogCategory::Advancement;
+		return Entry.Category == EDCCLogCategory::Skill || Entry.Category == EDCCLogCategory::Advancement;
 
 	case EDCCFeedFilter::Milestones:
-		return Category == EDCCLogCategory::Achievement || Category == EDCCLogCategory::Experience
-			|| Category == EDCCLogCategory::Favor || Category == EDCCLogCategory::Announcement;
+		return Entry.Category == EDCCLogCategory::Achievement || Entry.Category == EDCCLogCategory::Experience
+			|| Entry.Category == EDCCLogCategory::Favor || Entry.Category == EDCCLogCategory::Announcement;
+
+	case EDCCFeedFilter::MyRolls:
+		return LocalCrawler && (Entry.Instigator == LocalCrawler || Entry.RollTarget == LocalCrawler);
 
 	case EDCCFeedFilter::All:
 	default:
@@ -2312,6 +2409,7 @@ FString ADCCHUD::GetFeedFilterLabel() const
 	case EDCCFeedFilter::CombatOnly: return TEXT("Combat");
 	case EDCCFeedFilter::SkillsOnly: return TEXT("Skills");
 	case EDCCFeedFilter::Milestones: return TEXT("Milestones");
+	case EDCCFeedFilter::MyRolls:    return TEXT("My Rolls");
 	case EDCCFeedFilter::All:
 	default:                         return TEXT("All");
 	}
@@ -2323,6 +2421,30 @@ void ADCCHUD::CycleFeedFilter()
 		(static_cast<uint8>(FeedFilter) + 1) % static_cast<uint8>(EDCCFeedFilter::MAX));
 }
 
+void ADCCHUD::CycleFeedVisibility()
+{
+	FeedVisibility = static_cast<EDCCFeedVisibility>(
+		(static_cast<uint8>(FeedVisibility) + 1) % static_cast<uint8>(EDCCFeedVisibility::MAX));
+}
+
+namespace
+{
+	/** Nat 20 green, nat 1 red, everything else the usual age-lerp - shared by
+	 *  the always-on box and the Feed tab so the two never disagree. */
+	FLinearColor FeedEntryColour(const FDCCEventLogEntry& Entry, float Age, const FLinearColor& InBodyColour, const FLinearColor& InDimColour)
+	{
+		if (Entry.bCriticalSuccess)
+		{
+			return FLinearColor(0.35f, 0.95f, 0.45f);
+		}
+		if (Entry.bCriticalFailure)
+		{
+			return FLinearColor(0.95f, 0.30f, 0.30f);
+		}
+		return FMath::Lerp(InBodyColour, InDimColour, Age);
+	}
+}
+
 float ADCCHUD::DrawFeed(float X, float Y)
 {
 	const ADCCGameState* GameState = GetWorld() ? GetWorld()->GetGameState<ADCCGameState>() : nullptr;
@@ -2331,6 +2453,7 @@ float ADCCHUD::DrawFeed(float X, float Y)
 		return Y;
 	}
 
+	const ADCCCharacterBase* LocalCrawler = GetOwningCrawler();
 	const TArray<FDCCEventLogEntry>& Log = GameState->GetEventLog();
 
 	// Walk backward from newest, keeping only lines the active preset allows,
@@ -2339,7 +2462,7 @@ float ADCCHUD::DrawFeed(float X, float Y)
 	Shown.Reserve(FeedLineCount);
 	for (int32 Index = Log.Num() - 1; Index >= 0 && Shown.Num() < FeedLineCount; --Index)
 	{
-		if (PassesFeedFilter(Log[Index].Category))
+		if (PassesFeedFilter(Log[Index], LocalCrawler))
 		{
 			Shown.Add(&Log[Index]);
 		}
@@ -2353,7 +2476,7 @@ float ADCCHUD::DrawFeed(float X, float Y)
 	DrawRect(FLinearColor(0.42f, 0.44f, 0.52f, 0.5f), X - 10.0f, Y - 10.0f, PanelWidth + 20.0f, PanelHeight + 20.0f);
 	DrawRect(FLinearColor(0.02f, 0.03f, 0.06f, 0.78f), X - 8.0f, Y - 8.0f, PanelWidth + 16.0f, PanelHeight + 16.0f);
 
-	DrawText(FString::Printf(TEXT("Log: %s   [L] cycle"), *GetFeedFilterLabel()), DimColour, X, Y);
+	DrawText(FString::Printf(TEXT("Log: %s   [L] cycle   [K] minimize"), *GetFeedFilterLabel()), DimColour, X, Y);
 	Y += LineHeight;
 
 	// Drawn oldest-to-newest top-to-bottom, dimming toward the top, so the eye
@@ -2361,11 +2484,311 @@ float ADCCHUD::DrawFeed(float X, float Y)
 	for (int32 ShownIndex = Shown.Num() - 1; ShownIndex >= 0; --ShownIndex)
 	{
 		const float Age = static_cast<float>(ShownIndex) / FMath::Max(1, Shown.Num() - 1);
-		const FLinearColor Colour = FMath::Lerp(BodyColour, DimColour, Age);
 
-		DrawText(Shown[ShownIndex]->Text.ToString(), Colour, X, Y);
+		DrawText(Shown[ShownIndex]->Text.ToString(),
+			FeedEntryColour(*Shown[ShownIndex], Age, BodyColour, DimColour), X, Y);
 		Y += LineHeight;
 	}
 
 	return Y;
+}
+
+float ADCCHUD::DrawFeedTab(float X, float Y)
+{
+	DrawText(TEXT("Feed  -  [L] cycle filter"), HeadingColour, X, Y);
+	Y += LineHeight;
+
+	if (FeedVisibility != EDCCFeedVisibility::Pinned)
+	{
+		AddHitBox(FVector2D(X, Y), FVector2D(200.0f, LineHeight), TEXT("FeedRePin"),
+			/*bConsumesInput=*/true, /*Priority=*/1);
+		DrawText(TEXT("  [click to re-pin the on-screen log]"), HeadingColour, X, Y);
+		Y += LineHeight + 4.0f;
+	}
+
+	const ADCCGameState* GameState = GetWorld() ? GetWorld()->GetGameState<ADCCGameState>() : nullptr;
+	if (!GameState)
+	{
+		return Y;
+	}
+
+	const ADCCCharacterBase* LocalCrawler = GetOwningCrawler();
+	const TArray<FDCCEventLogEntry>& Log = GameState->GetEventLog();
+
+	constexpr int32 TabFeedLineCount = 20;
+	TArray<const FDCCEventLogEntry*> Shown;
+	Shown.Reserve(TabFeedLineCount);
+	for (int32 Index = Log.Num() - 1; Index >= 0 && Shown.Num() < TabFeedLineCount; --Index)
+	{
+		if (PassesFeedFilter(Log[Index], LocalCrawler))
+		{
+			Shown.Add(&Log[Index]);
+		}
+	}
+
+	if (Shown.IsEmpty())
+	{
+		DrawText(TEXT("  (nothing yet)"), DimColour, X, Y);
+		return Y + LineHeight;
+	}
+
+	for (int32 ShownIndex = Shown.Num() - 1; ShownIndex >= 0; --ShownIndex)
+	{
+		const float Age = static_cast<float>(ShownIndex) / FMath::Max(1, Shown.Num() - 1);
+		DrawText(Shown[ShownIndex]->Text.ToString(),
+			FeedEntryColour(*Shown[ShownIndex], Age, BodyColour, DimColour), X, Y);
+		Y += LineHeight;
+	}
+
+	return Y;
+}
+
+float ADCCHUD::DrawChannelMessages(float X, float Y, EDCCChatChannel Channel, ADCCCharacterBase* Crawler,
+	int32 LineCount, const FString& TargetFilter)
+{
+	const ADCCGameState* GameState = GetWorld() ? GetWorld()->GetGameState<ADCCGameState>() : nullptr;
+	if (!GameState)
+	{
+		return Y;
+	}
+
+	const FString LocalName = Crawler
+		? (Crawler->DisplayName.IsEmpty() ? Crawler->GetActorNameOrLabel() : Crawler->DisplayName.ToString())
+		: FString();
+
+	const TArray<FDCCChatMessage>& AllMessages = GameState->GetChatMessages();
+
+	TArray<const FDCCChatMessage*> Shown;
+	Shown.Reserve(LineCount);
+	for (int32 Index = AllMessages.Num() - 1; Index >= 0 && Shown.Num() < LineCount; --Index)
+	{
+		const FDCCChatMessage& Message = AllMessages[Index];
+		if (Message.Channel != Channel)
+		{
+			continue;
+		}
+
+		// Whispers only ever show a conversation with one specific other
+		// person - everyone else's whispers are filtered out here, which is
+		// the entire privacy model (see AddChatMessage's own comment).
+		if (Channel == EDCCChatChannel::Whispers)
+		{
+			if (TargetFilter.IsEmpty())
+			{
+				continue;
+			}
+			const bool bImSender = Message.SenderName == LocalName && Message.WhisperRecipientName == TargetFilter;
+			const bool bImRecipient = Message.WhisperRecipientName == LocalName && Message.SenderName == TargetFilter;
+			if (!bImSender && !bImRecipient)
+			{
+				continue;
+			}
+		}
+
+		Shown.Add(&Message);
+	}
+
+	if (Shown.IsEmpty())
+	{
+		DrawText(TEXT("  (nothing yet)"), DimColour, X, Y);
+		return Y + LineHeight;
+	}
+
+	FString LastHeaderedSender;
+	for (int32 ShownIndex = Shown.Num() - 1; ShownIndex >= 0; --ShownIndex)
+	{
+		const FDCCChatMessage& Message = *Shown[ShownIndex];
+		const bool bSenderDead = Message.SenderCharacter && Message.SenderCharacter->IsDead();
+
+		// One header per run of consecutive messages from the same dead
+		// sender, not one per line - it's a status marker, not noise.
+		if (bSenderDead && LastHeaderedSender != Message.SenderName)
+		{
+			DrawText(TEXT("  -- message sent/received from a dead crawler --"),
+				FLinearColor(0.6f, 0.35f, 0.35f), X, Y);
+			Y += LineHeight;
+			LastHeaderedSender = Message.SenderName;
+		}
+		else if (!bSenderDead)
+		{
+			LastHeaderedSender.Empty();
+		}
+
+		const FString Line = FString::Printf(TEXT("  %s: %s"), *Message.SenderName, *Message.Text.ToString());
+		DrawText(Line, Message.bModerated ? DimColour : BodyColour, X, Y);
+		Y += LineHeight;
+	}
+
+	return Y;
+}
+
+float ADCCHUD::DrawChatSendRow(float X, float Y, EDCCChatChannel Channel, ADCCCharacterBase* Crawler,
+	const FString& HitBoxSuffix)
+{
+	const bool bCanSend = Crawler && Crawler->CanSendChatMessage();
+
+	AddHitBox(FVector2D(X, Y), FVector2D(300.0f, LineHeight),
+		FName(*FString::Printf(TEXT("ChatOpen|%s"), *HitBoxSuffix)), /*bConsumesInput=*/bCanSend, /*Priority=*/1);
+
+	if (!bCanSend)
+	{
+		DrawText(TEXT("  (that final message has already gone out)"), DimColour, X, Y);
+	}
+	else
+	{
+		DrawText(TEXT("  [click to type a message]"), DimColour, X, Y);
+	}
+
+	return Y + LineHeight;
+}
+
+float ADCCHUD::DrawChatterTab(float X, float Y)
+{
+	DrawText(TEXT("Chatter  -  the audience at home"), HeadingColour, X, Y);
+	Y += LineHeight;
+
+	return DrawChannelMessages(X, Y, EDCCChatChannel::Chatter, nullptr, 20);
+}
+
+float ADCCHUD::DrawAlliesTab(float X, float Y, ADCCCharacterBase* Crawler)
+{
+	DrawText(TEXT("Allies  -  everyone you've fist-bumped, still standing"), HeadingColour, X, Y);
+	Y += LineHeight;
+
+	UWorld* World = GetWorld();
+	int32 Count = 0;
+	if (World && Crawler)
+	{
+		for (TActorIterator<ADCCCharacterBase> It(World); It; ++It)
+		{
+			ADCCCharacterBase* Other = *It;
+			if (!Other || Other == Crawler || !Other->IsBefriended() || !Other->IsAlive())
+			{
+				continue;
+			}
+
+			const FString Name = Other->DisplayName.IsEmpty()
+				? Other->GetActorNameOrLabel()
+				: Other->DisplayName.ToString();
+
+			DrawText(FString::Printf(TEXT("  %s"), *Name), BodyColour, X, Y);
+			Y += LineHeight;
+			++Count;
+		}
+	}
+
+	if (Count == 0)
+	{
+		DrawText(TEXT("  Nobody yet - go bump some fists."), DimColour, X, Y);
+		Y += LineHeight;
+	}
+
+	Y += SectionGap;
+	Y = DrawChannelMessages(X, Y, EDCCChatChannel::Allies, Crawler, 6);
+	Y = DrawChatSendRow(X, Y, EDCCChatChannel::Allies, Crawler, TEXT("Allies"));
+
+	return Y;
+}
+
+float ADCCHUD::DrawWhispersTab(float X, float Y, ADCCCharacterBase* Crawler)
+{
+	DrawText(TEXT("Whispers  -  private, one name at a time"), HeadingColour, X, Y);
+	Y += LineHeight;
+
+	AddHitBox(FVector2D(X, Y), FVector2D(300.0f, LineHeight), TEXT("ChatOpen|WhisperTarget"),
+		/*bConsumesInput=*/true, /*Priority=*/1);
+	DrawText(FString::Printf(TEXT("  [click to set name]  Talking to: %s"),
+		WhisperTargetName.IsEmpty() ? TEXT("(nobody yet)") : *WhisperTargetName),
+		HeadingColour, X, Y);
+	Y += LineHeight + SectionGap;
+
+	if (WhisperTargetName.IsEmpty())
+	{
+		DrawText(TEXT("  Set a name above to open a conversation."), DimColour, X, Y);
+		return Y + LineHeight;
+	}
+
+	Y = DrawChannelMessages(X, Y, EDCCChatChannel::Whispers, Crawler, 8, WhisperTargetName);
+	Y = DrawChatSendRow(X, Y, EDCCChatChannel::Whispers, Crawler, TEXT("WhisperMsg"));
+
+	return Y;
+}
+
+void ADCCHUD::OpenChatInputForChannel(EDCCChatChannel Channel, EDCCChatInputMode Mode, float X, float Y)
+{
+	if (!PlayerOwner)
+	{
+		return;
+	}
+
+	if (!ChatInputWidget)
+	{
+		ChatInputWidget = CreateWidget<UDCCChatInputWidget>(PlayerOwner, UDCCChatInputWidget::StaticClass());
+		if (ChatInputWidget)
+		{
+			ChatInputWidget->OnSubmitted.AddDynamic(this, &ADCCHUD::HandleChatInputSubmitted);
+			ChatInputWidget->OnCancelled.AddDynamic(this, &ADCCHUD::HandleChatInputCancelled);
+		}
+	}
+
+	if (!ChatInputWidget)
+	{
+		return;
+	}
+
+	ActiveChatChannel = Channel;
+	ChatInputMode = Mode;
+
+	const FText Hint = Mode == EDCCChatInputMode::WhisperTarget
+		? NSLOCTEXT("DCC", "WhisperTargetHint", "Type a crawler's name...")
+		: NSLOCTEXT("DCC", "ChatMessageHint", "Type a message...");
+	ChatInputWidget->SetHintText(Hint);
+
+	if (!ChatInputWidget->IsInViewport())
+	{
+		ChatInputWidget->AddToViewport(100);
+	}
+
+	ChatInputWidget->SetPositionInViewport(FVector2D(X, Y), false);
+	ChatInputWidget->SetDesiredSizeInViewport(FVector2D(300.0f, LineHeight + 8.0f));
+	ChatInputWidget->FocusInput();
+}
+
+void ADCCHUD::CloseChatInput()
+{
+	if (ChatInputWidget && ChatInputWidget->IsInViewport())
+	{
+		ChatInputWidget->RemoveFromParent();
+	}
+	ChatInputMode = EDCCChatInputMode::None;
+}
+
+void ADCCHUD::HandleChatInputSubmitted(const FString& SubmittedText)
+{
+	ADCCCharacterBase* Crawler = GetOwningCrawler();
+
+	if (ChatInputMode == EDCCChatInputMode::WhisperTarget)
+	{
+		WhisperTargetName = SubmittedText;
+		CloseChatInput();
+
+		// Straight into typing the actual message - a name on its own isn't
+		// useful, so there's no reason to make that two separate clicks.
+		OpenChatInputForChannel(EDCCChatChannel::Whispers, EDCCChatInputMode::Message, 32.0f,
+			CachedViewportHeight - 90.0f);
+		return;
+	}
+
+	if (Crawler)
+	{
+		const FString WhisperTarget = ActiveChatChannel == EDCCChatChannel::Whispers ? WhisperTargetName : FString();
+		Crawler->Server_SendChatMessage(ActiveChatChannel, WhisperTarget, FText::FromString(SubmittedText));
+	}
+
+	CloseChatInput();
+}
+
+void ADCCHUD::HandleChatInputCancelled()
+{
+	CloseChatInput();
 }

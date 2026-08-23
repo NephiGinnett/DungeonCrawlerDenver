@@ -5,9 +5,14 @@
 
 #include "Characters/DCCCharacterBase.h"
 #include "Skills/DCCSkillComponent.h"
+#include "Favor/DCCFavorComponent.h"
+#include "Equipment/DCCEquipmentComponent.h"
+#include "Equipment/DCCEquipmentTypes.h"
 #include "GameFramework/WorldSettings.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
 #include "Net/UnrealNetwork.h"
+#include "UObject/ConstructorHelpers.h"
 
 ADCCGameState::ADCCGameState()
 {
@@ -20,6 +25,16 @@ ADCCGameState::ADCCGameState()
 
 	// Sits next to the feed it reads. Inert until switched on in Project Settings.
 	Narrator = CreateDefaultSubobject<UDCCNarratorComponent>(TEXT("Narrator"));
+
+	// Same self-healing pattern as DCCAchievementComponent's table: resolves at
+	// editor startup, so a table imported mid-session reads None until the next
+	// restart rather than being broken.
+	static ConstructorHelpers::FObjectFinder<UDataTable> DefaultChatterTable(
+		TEXT("/Game/DCC/UI/DT_DCCChatterLines.DT_DCCChatterLines"));
+	if (DefaultChatterTable.Succeeded())
+	{
+		ChatterTable = DefaultChatterTable.Object;
+	}
 }
 
 void ADCCGameState::AddLogEntry(EDCCLogCategory Category, const FText& Text)
@@ -93,6 +108,239 @@ void ADCCGameState::OnRep_EventLog()
 	LastAnnouncedEntryCount = EventLog.Num();
 }
 
+void ADCCGameState::LogRoll(const UObject* WorldContext, EDCCLogCategory Category, const FText& Text,
+	ADCCCharacterBase* Instigator, ADCCCharacterBase* RollTarget, bool bCriticalSuccess, bool bCriticalFailure)
+{
+	const UWorld* World = GEngine ? GEngine->GetWorldFromContextObject(WorldContext, EGetWorldErrorMode::ReturnNull) : nullptr;
+	if (!World || Text.IsEmpty())
+	{
+		return;
+	}
+
+	ADCCGameState* GameState = World->GetGameState<ADCCGameState>();
+	if (!GameState || !GameState->HasAuthority())
+	{
+		return;
+	}
+
+	FDCCEventLogEntry Entry;
+	Entry.Category = Category;
+	Entry.Text = Text;
+	Entry.TimeSeconds = World->GetTimeSeconds();
+	Entry.Instigator = Instigator;
+	Entry.RollTarget = RollTarget;
+	Entry.bCriticalSuccess = bCriticalSuccess;
+	Entry.bCriticalFailure = bCriticalFailure;
+
+	GameState->EventLog.Add(Entry);
+
+	while (GameState->EventLog.Num() > FMath::Max(1, GameState->MaxLogEntries))
+	{
+		GameState->EventLog.RemoveAt(0);
+	}
+
+	GameState->LastAnnouncedEntryCount = GameState->EventLog.Num();
+	GameState->OnEventLogged.Broadcast(Entry);
+
+	if (GameState->Narrator)
+	{
+		GameState->Narrator->Consider(Entry);
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("DCCLog: %s"), *Entry.Text.ToString());
+}
+
+void ADCCGameState::AddChatMessage(EDCCChatChannel Channel, const FString& SenderName, ADCCCharacterBase* SenderCharacter,
+	const FString& WhisperRecipientName, const FText& Text, bool bModerated)
+{
+	if (!HasAuthority() || Text.IsEmpty())
+	{
+		return;
+	}
+
+	FDCCChatMessage Message;
+	Message.Channel = Channel;
+	Message.SenderName = SenderName;
+	Message.SenderCharacter = SenderCharacter;
+	Message.WhisperRecipientName = WhisperRecipientName;
+	Message.Text = Text;
+	Message.TimeSeconds = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
+	Message.bModerated = bModerated;
+
+	ChatMessages.Add(Message);
+
+	while (ChatMessages.Num() > FMath::Max(1, MaxChatMessages))
+	{
+		ChatMessages.RemoveAt(0);
+	}
+}
+
+void ADCCGameState::OnRep_ChatMessages()
+{
+	// Nothing to announce incrementally yet - the HUD reads GetChatMessages()
+	// fresh each frame the same way it already does for the Feed, so this only
+	// exists to satisfy ReplicatedUsing. Left as its own function rather than
+	// wired to OnRep_EventLog's delegate so a future per-message notification
+	// (e.g. a "new message" ping) has somewhere to go without touching the Feed.
+}
+
+void ADCCGameState::RollChatterBatch(int32 Count)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World || !ChatterTable)
+	{
+		return;
+	}
+
+	// Living crawlers, for the buckets that need to name someone.
+	TArray<ADCCCharacterBase*> LivingCrawlers;
+	for (TActorIterator<ADCCCharacterBase> It(World); It; ++It)
+	{
+		if (ADCCCharacterBase* Candidate = *It)
+		{
+			if (Candidate->IsCrawler() && Candidate->IsAlive())
+			{
+				LivingCrawlers.Add(Candidate);
+			}
+		}
+	}
+
+	// Most recent Combat/Death/Encounter line, for the boss-battle bucket -
+	// reuses the Feed's own history instead of standing up a separate
+	// "notable moments" log nobody else reads.
+	FString RecentEventText;
+	for (int32 Index = EventLog.Num() - 1; Index >= 0; --Index)
+	{
+		const EDCCLogCategory Category = EventLog[Index].Category;
+		if (Category == EDCCLogCategory::Combat || Category == EDCCLogCategory::Death
+			|| Category == EDCCLogCategory::Encounter)
+		{
+			RecentEventText = EventLog[Index].Text.ToString();
+			break;
+		}
+	}
+
+	TArray<FDCCChatterLineDef*> AllRows;
+	ChatterTable->GetAllRows(TEXT("RollChatterBatch"), AllRows);
+	if (AllRows.IsEmpty())
+	{
+		return;
+	}
+
+	for (int32 Comment = 0; Comment < Count; ++Comment)
+	{
+		// Zoe's own percentages: 5% each for Sentiment/Equipment/BossBattle/
+		// Appearance/Emote/AlienLanguage, a small moderation chance, everything
+		// else (the majority) is Benign filler.
+		const float Roll = FMath::FRand();
+		EDCCChatterBucket Bucket = EDCCChatterBucket::Benign;
+
+		if (Roll < 0.05f)                       Bucket = EDCCChatterBucket::Sentiment;
+		else if (Roll < 0.10f)                  Bucket = EDCCChatterBucket::Equipment;
+		else if (Roll < 0.15f)                  Bucket = EDCCChatterBucket::BossBattle;
+		else if (Roll < 0.20f)                  Bucket = EDCCChatterBucket::Appearance;
+		else if (Roll < 0.25f)                  Bucket = EDCCChatterBucket::Emote;
+		else if (Roll < 0.30f)                  Bucket = EDCCChatterBucket::AlienLanguage;
+		else if (Roll < 0.33f)                  Bucket = EDCCChatterBucket::Moderated;
+
+		FString Name, Item, Event;
+		bool bBucketHasData = true;
+
+		switch (Bucket)
+		{
+		case EDCCChatterBucket::Sentiment:
+		{
+			// Positive about someone at >=60% Favor, negative about someone at
+			// <=40% - pick whichever crawlers actually qualify, skip the
+			// bucket for this comment if nobody does.
+			TArray<ADCCCharacterBase*> Qualifying;
+			for (ADCCCharacterBase* Crawler : LivingCrawlers)
+			{
+				if (const UDCCFavorComponent* FavorComp = Crawler->FindComponentByClass<UDCCFavorComponent>())
+				{
+					const float Percent = FMath::Clamp(FavorComp->Favor / (float)FMath::Max(1, FavorComp->MaxFavor), 0.0f, 1.0f);
+					if (Percent >= 0.6f || Percent <= 0.4f)
+					{
+						Qualifying.Add(Crawler);
+					}
+				}
+			}
+			bBucketHasData = !Qualifying.IsEmpty();
+			if (bBucketHasData)
+			{
+				Name = Qualifying[FMath::RandRange(0, Qualifying.Num() - 1)]->DisplayName.ToString();
+			}
+			break;
+		}
+		case EDCCChatterBucket::Equipment:
+		{
+			bBucketHasData = false;
+			if (!LivingCrawlers.IsEmpty())
+			{
+				ADCCCharacterBase* Crawler = LivingCrawlers[FMath::RandRange(0, LivingCrawlers.Num() - 1)];
+				if (const UDCCEquipmentComponent* Equip = Crawler->FindComponentByClass<UDCCEquipmentComponent>())
+				{
+					const FName EquippedId = Equip->GetEquippedId(EDCCEquipmentSlot::MainHand);
+					FDCCEquipmentDef Def;
+					if (!EquippedId.IsNone() && Equip->FindItem(EquippedId, Def))
+					{
+						Name = Crawler->DisplayName.ToString();
+						Item = Def.DisplayName.ToString();
+						bBucketHasData = true;
+					}
+				}
+			}
+			break;
+		}
+		case EDCCChatterBucket::BossBattle:
+			bBucketHasData = !RecentEventText.IsEmpty();
+			Event = RecentEventText;
+			break;
+		case EDCCChatterBucket::Appearance:
+			bBucketHasData = !LivingCrawlers.IsEmpty();
+			if (bBucketHasData)
+			{
+				Name = LivingCrawlers[FMath::RandRange(0, LivingCrawlers.Num() - 1)]->DisplayName.ToString();
+			}
+			break;
+		default:
+			break;
+		}
+
+		// A bucket that rolled but had nothing to talk about (no boss moment
+		// yet, nobody equipped) falls back to Benign rather than posting a
+		// line with an unfilled {token} in it.
+		if (!bBucketHasData)
+		{
+			Bucket = EDCCChatterBucket::Benign;
+		}
+
+		TArray<FDCCChatterLineDef*> MatchingRows;
+		for (FDCCChatterLineDef* Row : AllRows)
+		{
+			if (Row && Row->Bucket == Bucket)
+			{
+				MatchingRows.Add(Row);
+			}
+		}
+		if (MatchingRows.IsEmpty())
+		{
+			continue;
+		}
+
+		const FDCCChatterLineDef* Chosen = MatchingRows[FMath::RandRange(0, MatchingRows.Num() - 1)];
+		const FText Line = DCCChatter::SubstituteTokens(Chosen->Template, Name, Item, Event);
+
+		AddChatMessage(EDCCChatChannel::Chatter, Chosen->SenderHandle, nullptr, FString(), Line,
+			Bucket == EDCCChatterBucket::Moderated);
+	}
+}
+
 void ADCCGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -100,6 +348,7 @@ void ADCCGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	DOREPLIFETIME(ADCCGameState, bCombatPaused);
 	DOREPLIFETIME(ADCCGameState, QueuedActions);
 	DOREPLIFETIME(ADCCGameState, EventLog);
+	DOREPLIFETIME(ADCCGameState, ChatMessages);
 }
 
 void ADCCGameState::SetCombatPaused(bool bNewPaused)

@@ -1,0 +1,39 @@
+Name,LineId,Bucket,Template,SenderHandle
+Sentiment_Pos_01,Sentiment_Pos_01,Sentiment,"{Name} again?? day one fan right here",xXFloorFortyXx
+Sentiment_Pos_02,Sentiment_Pos_02,Sentiment,"{Name} carrying this whole crawl on their back, no notes",DebtFreeDaydream
+Sentiment_Pos_03,Sentiment_Pos_03,Sentiment,"put {Name} on the main broadcast already",WhoIsWatchingUs
+Sentiment_Pos_04,Sentiment_Pos_04,Sentiment,"{Name} is the reason I still tune in",QuarterlyGremlin
+Sentiment_Neg_01,Sentiment_Neg_01,Sentiment,"{Name} is so boring to watch, do something",BorantShillAcct7
+Sentiment_Neg_02,Sentiment_Neg_02,Sentiment,"why is {Name} even still down there",RatingsAreEverything
+Sentiment_Neg_03,Sentiment_Neg_03,Sentiment,"{Name} is not going to make it to the next floor, calling it now",VultureNumber12
+Equipment_01,Equipment_01,Equipment,"okay whoever gave {Name} that {Item} has taste",PropDeptFan
+Equipment_02,Equipment_02,Equipment,"{Name}'s {Item} is doing a LOT of heavy lifting",GearReviewGuy
+Equipment_03,Equipment_03,Equipment,"is that {Item} sponsored? feels sponsored",DisclosureDemander
+Equipment_04,Equipment_04,Equipment,"{Name} please for the love of god upgrade that {Item}",FashionCritic99
+BossBattle_01,BossBattle_01,BossBattle,"still thinking about {Event}, rewatching it right now",ReplayAddict
+BossBattle_02,BossBattle_02,BossBattle,"{Event} and I have not recovered emotionally",TooInvestedTBH
+BossBattle_03,BossBattle_03,BossBattle,"okay {Event} was actually insane, clip it",ClipItModsClipIt
+BossBattle_04,BossBattle_04,BossBattle,"did NOT expect {Event}, this show is unreal",FirstTimeWatcher
+Appearance_01,Appearance_01,Appearance,"{Name}'s whole look is so good, who's their stylist",AestheticsMatter
+Appearance_02,Appearance_02,Appearance,"{Name} looks tired, someone check on them",WorriedButHelpless
+Appearance_03,Appearance_03,Appearance,"{Name} could use a shower ngl",BluntHonesty22
+Appearance_04,Appearance_04,Appearance,"the confidence {Name} walks with, love that for them",VibesOnlyViewer
+Emote_01,Emote_01,Emote,":BORANT_W: :BORANT_W: :BORANT_W:",EmoteSpammer1
+Emote_02,Emote_02,Emote,":COLLAPSE_SOB: :DEBT_STONKS: :RATIO:",EmoteSpammer2
+Emote_03,Emote_03,Emote,":FLOOR_KEKW: :FLOOR_KEKW: :SPONSOR_HEART:",EmoteSpammer3
+Emote_04,Emote_04,Emote,":SYNDICATE_POG: :GG_CRAWLER:",EmoteSpammer4
+Alien_01,Alien_01,AlienLanguage,"vrek'tha ossuun MIL-402 grexet??",Unregistered_Viewer
+Alien_02,Alien_02,AlienLanguage,"[UNTRANSLATED - Kua-Tin dialect, Bloom-adjacent]",Unregistered_Viewer
+Alien_03,Alien_03,AlienLanguage,"tk'sst tk'sst BORANT-affiliate tk'sst",Unregistered_Viewer
+Alien_04,Alien_04,AlienLanguage,"[translation service unavailable for this region]",Unregistered_Viewer
+Moderated_01,Moderated_01,Moderated,"[comment removed for violating community guidelines]",
+Moderated_02,Moderated_02,Moderated,"[this viewer has been muted from Dungeon Crawler World: Earth]",
+Moderated_03,Moderated_03,Moderated,"[flagged and removed by Borant Trust and Safety]",
+Benign_01,Benign_01,Benign,"first time catching this live, hi everyone",NewToTheFeed
+Benign_02,Benign_02,Benign,"anyone know what floor this is",CasualScroller
+Benign_03,Benign_03,Benign,"lol",jk_lurker
+Benign_04,Benign_04,Benign,"this is better than anything on at home",InterstellarCouchPotato
+Benign_05,Benign_05,Benign,"wait what did I miss",LateToStream
+Benign_06,Benign_06,Benign,"chat is WILD today",ObserverOfChat
+Benign_07,Benign_07,Benign,"can we get a replay of that last bit",MissedItAgain
+Benign_08,Benign_08,Benign,"who else has this on in the background at work",MultitaskingViewer
