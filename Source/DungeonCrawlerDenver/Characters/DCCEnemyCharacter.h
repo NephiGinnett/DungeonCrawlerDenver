@@ -197,6 +197,36 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|AI|Gear", meta = (ClampMin = "0.0"))
 	float GearScanInterval = 3.0f;
 
+	// -------------------------------------------------------------------------
+	// FIRST AID - allies only, and only the ones flagged for it
+	//
+	// Off by default: not every ally should abandon a fight to go play medic,
+	// and a party that never designated a healer should not get one for free.
+	// CJ carries this by default (ADCCAlly_HockeyWings) - a caster is the
+	// natural pick, and "the one with the mana pool also knows first aid"
+	// reads as a choice rather than an arbitrary flag on one ally.
+	//
+	// Deliberately does NOT use the skill/mana system - it reuses the exact
+	// same BeginReviveChannel a player's own "Help Them Up" already runs, so
+	// there is one revive mechanic in the game, not two that can drift apart.
+	// -------------------------------------------------------------------------
+
+	/** Whether this ally will notice a downed party member and go help on its own. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|AI|FirstAid")
+	bool bHasFirstAid = false;
+
+	/** How far this ally will notice someone downed. Generous - missing a call for help should not be subtle. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|AI|FirstAid", meta = (ClampMin = "0.0"))
+	float FirstAidSearchRadius = 2000.0f;
+
+	/** How close the ally must actually be to start the revive channel. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|AI|FirstAid", meta = (ClampMin = "0.0"))
+	float FirstAidRange = 150.0f;
+
+	/** Seconds between first-aid scans - same throttling reasoning as every other AI scan here. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|AI|FirstAid", meta = (ClampMin = "0.0"))
+	float FirstAidScanInterval = 1.0f;
+
 	/**
 	 * Ordered to stand still via the interaction menu's "Hold position".
 	 *
@@ -333,6 +363,18 @@ protected:
 	 */
 	bool TryUseSkill(ADCCCharacterBase* Target);
 
+	/**
+	 * Server only, ally-only. If a downed party member is within
+	 * FirstAidSearchRadius, moves to them and starts BeginReviveChannel once
+	 * in range. Returns true when it has claimed this tick for first aid (so
+	 * the caller does not also try to chase a combat target the same frame).
+	 *
+	 * Deliberately only runs when this ally has no CurrentTarget - an ally
+	 * already mid-fight does not break off to play medic, the same
+	 * "self-defence is unaffected" line HoldPosition draws for combat.
+	 */
+	bool TryTickFirstAid(class AAIController* AIController);
+
 private:
 	UPROPERTY(Transient)
 	TObjectPtr<ADCCCharacterBase> CurrentTarget;
@@ -361,6 +403,17 @@ private:
 	/** Seconds between full world scans for a new target. */
 	UPROPERTY(EditAnywhere, Category = "DCC|AI", meta = (ClampMin = "0.0"))
 	float TargetScanInterval = 0.35f;
+
+	float NextFirstAidScanTime = 0.0f;
+
+	/**
+	 * Whoever this ally has committed to reaching. Kept across ticks so an
+	 * approach is not abandoned mid-walk the instant the scan timer lapses and
+	 * a different, momentarily-closer patient appears - that would flicker the
+	 * ally between two targets and never actually arrive at either.
+	 */
+	UPROPERTY(Transient)
+	TObjectPtr<ADCCCharacterBase> FirstAidTarget;
 
 	UPROPERTY(Transient)
 	TObjectPtr<ADCCCharacterBase> CachedLeader;

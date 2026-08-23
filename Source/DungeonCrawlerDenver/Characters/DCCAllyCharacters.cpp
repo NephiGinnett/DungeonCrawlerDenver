@@ -11,6 +11,11 @@ ADCCAlly_HockeyWings::ADCCAlly_HockeyWings()
 	// No mesh override needed - SK_HockeyWings was already on the shared
 	// skeleton before this session's consolidation even started.
 	DCCCrawlerAnimSet::Apply(*this);
+
+	// CJ is the party's designated healer, per Zoe's own call - a caster is
+	// the natural pick, and this is what makes "the one with the mana pool
+	// also knows first aid" a real, checkable fact rather than a headcanon.
+	bHasFirstAid = true;
 }
 
 ADCCAlly_OfficeAirplane::ADCCAlly_OfficeAirplane()

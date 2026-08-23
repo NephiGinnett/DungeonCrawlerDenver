@@ -477,6 +477,96 @@ void ADCCEnemyCharacter::TickFollowLeader(ADCCCharacterBase* Leader, AAIControll
 	}
 }
 
+bool ADCCEnemyCharacter::TryTickFirstAid(AAIController* AIController)
+{
+	if (!bIsAlly || !bHasFirstAid || !HasAuthority())
+	{
+		return false;
+	}
+
+	// Already channelling - BeginCastLock already stopped movement, so there is
+	// nothing to do but hold the tick so TickFollowLeader does not issue a
+	// competing move order out from under the revive.
+	if (bIsCasting)
+	{
+		return true;
+	}
+
+	// Drop a commitment that stopped being valid - revived by someone faster,
+	// died outright, or simply gone (level streaming, destroyed, etc.).
+	if (FirstAidTarget && (!IsValid(FirstAidTarget) || !FirstAidTarget->IsDowned()))
+	{
+		FirstAidTarget = nullptr;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return false;
+	}
+
+	// Only scan for someone NEW on the throttled interval. Once committed, keep
+	// walking toward the same patient every tick regardless of the scan timer -
+	// otherwise a momentarily-closer patient appearing mid-approach would
+	// flicker the target and the ally would never actually arrive at either.
+	if (!FirstAidTarget)
+	{
+		const float Now = World->GetTimeSeconds();
+		if (Now < NextFirstAidScanTime)
+		{
+			return false;
+		}
+
+		NextFirstAidScanTime = Now + FirstAidScanInterval * FMath::FRandRange(0.85f, 1.15f);
+
+		float BestDistanceSquared = FMath::Square(FirstAidSearchRadius);
+		for (TActorIterator<ADCCCharacterBase> It(World); It; ++It)
+		{
+			ADCCCharacterBase* Candidate = *It;
+			if (!Candidate || Candidate == this || !Candidate->IsDowned() || IsHostileTo(Candidate))
+			{
+				continue;
+			}
+
+			const float DistanceSquared = FVector::DistSquared(GetActorLocation(), Candidate->GetActorLocation());
+			if (DistanceSquared <= BestDistanceSquared)
+			{
+				FirstAidTarget = Candidate;
+				BestDistanceSquared = DistanceSquared;
+			}
+		}
+	}
+
+	if (!FirstAidTarget)
+	{
+		return false;
+	}
+
+	if (FVector::DistSquared(GetActorLocation(), FirstAidTarget->GetActorLocation()) <= FMath::Square(FirstAidRange))
+	{
+		if (AIController)
+		{
+			AIController->StopMovement();
+		}
+
+		BeginReviveChannel(FirstAidTarget);
+		FirstAidTarget = nullptr;
+		return true;
+	}
+
+	if (AIController)
+	{
+		SetMovementSpeedOverride(FollowWalkSpeed);
+
+		if (AIController->GetMoveStatus() == EPathFollowingStatus::Idle)
+		{
+			AIController->MoveToActor(FirstAidTarget, FirstAidRange * 0.8f);
+		}
+	}
+
+	return true;
+}
+
 bool ADCCEnemyCharacter::TryUseSkill(ADCCCharacterBase* Target)
 {
 	if (!bUseSkills || !Skills || !Target || !HasAuthority())
@@ -695,11 +785,14 @@ void ADCCEnemyCharacter::Tick(float DeltaSeconds)
 
 	if (!CurrentTarget)
 	{
-		// Nothing worth fighting. An ally falls back on escorting; a mob idles
-		// exactly as it always did.
+		// Nothing worth fighting. An ally checks for someone to save before
+		// falling back on escorting; a mob idles exactly as it always did.
 		if (bIsAlly)
 		{
-			TickFollowLeader(Leader, AIController);
+			if (!TryTickFirstAid(AIController))
+			{
+				TickFollowLeader(Leader, AIController);
+			}
 		}
 
 		return;
