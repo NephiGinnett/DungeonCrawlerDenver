@@ -734,6 +734,11 @@ it through the boss fight. A second copy silently removes that choice. It was *m
 
 ### Design documents — read these before adding content
 
+- `Docs/story-premise.md` — **the overarching theme and story, not just floor content.** Read
+  this FIRST, before any of the others below — it's the thing they're all in service of, and
+  it names what was previously only implicit (who Mile High Recovery Solutions is, why Denver
+  got repossessed, what the party's throughline is beyond "survive the next floor"). Living
+  document — update it in place as the story develops, same as `floor-01-design.md`.
 - `Docs/floor-01-design.md` — **Floor 1 is the Cliff Diver Cantina under new management.**
   Seven rooms with world coordinates, the Voldemortgage fight, what does not exist yet.
 - `Docs/dungeon-tone-bible.md` — the System AI's voice. Read before writing player-facing text.
