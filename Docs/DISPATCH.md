@@ -264,11 +264,14 @@ call to make. Priority order below is "cheapest/most-isolated first," not "most 
 item 3 (the ally bug) is probably the one Zoe actually cares most about.
 
 1. **Re-import `Docs/DT_DCCEquipment.csv`** into `/Game/DCC/Equipment/DT_DCCEquipment` — same
-   schema, three new rows only (`ConfettiCrossbow`, `NailGunPro`, `FlareGunEmergency`). Plain
-   re-import, no restart needed first.
-2. **Place the four curated chests** somewhere reachable — `ADCCLootContainer_KitchenDrawer`,
-   `_Armory`, `_Quartermaster`, `_ManagementLockbox` (`Items/DCCLootContainerVariants.h`). Pantry
-   or Bar are the least crowded rooms.
+   schema, eight new rows total now (`ConfettiCrossbow`, `NailGunPro`, `FlareGunEmergency`,
+   `SeveranceCheckUncashed`, `HighVisibilitySafetyVest`, `ComplaintFolderOverstuffed`). Plain
+   re-import, no restart needed first. **Also re-import `Docs/DT_DCCAchievements.csv`** — two new
+   rows (`EstateSale`, `AssetRecovery`) using a new stat, `ContainersLooted`, that the loot menu's
+   Loot All/Stow now actually records.
+2. **Place the six curated chests** somewhere reachable — `ADCCLootContainer_KitchenDrawer`,
+   `_Armory`, `_Quartermaster`, `_ManagementLockbox`, `_LostAndFound`, `_SafetyLocker`
+   (`Items/DCCLootContainerVariants.h`). Pantry or Bar are the least crowded rooms.
 3. **PIE, filter the log on `[DCC Talk]`, try to talk to an ally.** Names exactly which of four
    gates refused the attempt. If `IsHostileTo=1`, read `bIsAlly` off that specific placed
    instance next — trap #2 (Blueprint CDO true, placed instance false) is the leading theory,
@@ -277,7 +280,8 @@ item 3 (the ally bug) is probably the one Zoe actually cares most about.
    Loot All / Stow / Leave, not the old "Search the body." Compiled and deployed, never seen.
 5. **PIE-test the achievement reward-claim flow** — the HUD already draws a "Pending Rewards (N)"
    affordance and calls `RequestClaimReward`; unlock something and confirm clicking it actually
-   pays XP/Favor and clears the pending flag. Never exercised.
+   pays XP/Favor and clears the pending flag. Never exercised. Loot All/Stow on five containers
+   should also unlock `EstateSale` (new this pass, likewise never exercised).
 6. **PIE-test universal climbing again** — `ADCCClimbPoint::FindOrCreateForSurfaceHit` (the
    function that makes any wall climbable) did not exist in git until this pass; it's never been
    run. Known-good loop per CLAUDE.md: look at any wall, click, climbs or shows a "too far"/
