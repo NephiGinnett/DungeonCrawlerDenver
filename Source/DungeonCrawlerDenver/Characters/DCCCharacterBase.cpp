@@ -869,7 +869,7 @@ void ADCCCharacterBase::Server_RequestGenericClimb_Implementation(FVector HitLoc
 		return;
 	}
 
-	ADCCClimbPoint* Point = ADCCClimbPoint::FindOrCreateForSurfaceHit(World, Confirm.Location, Confirm.Normal);
+	ADCCClimbPoint* Point = ADCCClimbPoint::FindOrCreateForSurfaceHit(World, Confirm.Location, Confirm.Normal, this);
 	if (!Point)
 	{
 		Client_ShowClimbNotice(NSLOCTEXT("DCC", "ClimbNothingThere", "There is nothing to climb there."));

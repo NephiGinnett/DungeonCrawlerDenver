@@ -139,7 +139,8 @@ FVector ADCCClimbPoint::GetDismountLocation(const ADCCCharacterBase* Character) 
 	return Dismount;
 }
 
-ADCCClimbPoint* ADCCClimbPoint::FindOrCreateForSurfaceHit(UWorld* World, const FVector& HitLocation, const FVector& HitNormal)
+ADCCClimbPoint* ADCCClimbPoint::FindOrCreateForSurfaceHit(UWorld* World, const FVector& HitLocation,
+	const FVector& HitNormal, const AActor* IgnoreActor)
 {
 	if (!World)
 	{
@@ -169,6 +170,13 @@ ADCCClimbPoint* ADCCClimbPoint::FindOrCreateForSurfaceHit(UWorld* World, const F
 
 	FCollisionQueryParams Params;
 	Params.bTraceComplex = true;
+	if (IgnoreActor)
+	{
+		// Without this, the requesting character's own capsule - standing right
+		// where it clicked - could be what a probe hits instead of the wall,
+		// corrupting the estimated span.
+		Params.AddIgnoredActor(IgnoreActor);
+	}
 
 	// Bottom: search down for the floor this wall actually stands on. Falls
 	// back to a fixed drop below the hit if nothing is found, which just means

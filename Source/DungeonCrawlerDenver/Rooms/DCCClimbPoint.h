@@ -104,6 +104,13 @@ public:
 	 * both work off the component's world AABB and the character's own position
 	 * relative to it, not the box's facing, so a precisely-oriented panel was
 	 * never required - only that the AABB covers the reachable patch of wall.
+	 *
+	 * IgnoreActor is excluded from the up/down probe traces - without it, the
+	 * requesting character's own capsule (standing right where it clicked) can
+	 * be hit by a probe instead of the wall, corrupting the estimated span.
+	 * Optional rather than required so the signature stays usable from
+	 * contexts with no requesting actor to ignore.
 	 */
-	static ADCCClimbPoint* FindOrCreateForSurfaceHit(UWorld* World, const FVector& HitLocation, const FVector& HitNormal);
+	static ADCCClimbPoint* FindOrCreateForSurfaceHit(UWorld* World, const FVector& HitLocation,
+		const FVector& HitNormal, const AActor* IgnoreActor = nullptr);
 };
