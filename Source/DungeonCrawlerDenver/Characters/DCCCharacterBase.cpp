@@ -28,6 +28,9 @@
 #include "Blueprint/UserWidget.h"
 #include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
+#include "Camera/CameraComponent.h"
+#include "Camera/PlayerCameraManager.h"
+#include "UnrealClient.h"
 
 ADCCCharacterBase::ADCCCharacterBase()
 {
@@ -66,6 +69,16 @@ ADCCCharacterBase::ADCCCharacterBase()
 	// is UI that happens to live in the world, and UI does not take shadows.
 	Nameplate->SetTextRenderColor(FColor::White);
 	Nameplate->bHiddenInGame = false;
+
+	SelfieCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("SelfieCamera"));
+	SelfieCamera->SetupAttachment(RootComponent);
+	SelfieCamera->SetRelativeLocation(SelfieCameraOffset);
+	SelfieCamera->SetRelativeRotation(SelfieCameraRotation);
+
+	// Off until Selfie Mode actually opens - see ToggleSelfieMode. An always-on
+	// second camera would fight whatever the character Blueprint's own rig is
+	// doing every frame for no reason.
+	SelfieCamera->SetActive(false);
 }
 
 void ADCCCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -77,6 +90,8 @@ void ADCCCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	DOREPLIFETIME(ADCCCharacterBase, bIsCasting);
 	DOREPLIFETIME(ADCCCharacterBase, bBefriended);
 	DOREPLIFETIME(ADCCCharacterBase, bIsDowned);
+	DOREPLIFETIME(ADCCCharacterBase, DeathSaveSuccesses);
+	DOREPLIFETIME(ADCCCharacterBase, DeathSaveFailures);
 	DOREPLIFETIME(ADCCCharacterBase, bHasLoot);
 	DOREPLIFETIME(ADCCCharacterBase, PendingLoot);
 }
@@ -334,6 +349,13 @@ void ADCCCharacterBase::OnPrimaryPressed()
 				return;
 			}
 		}
+	}
+
+	// Posing for a photo wins too - a stray click should not swing a weapon
+	// while the character is holding still smiling at their own phone.
+	if (bInSelfieMode)
+	{
+		return;
 	}
 
 	// Climbing wins: while on a wall the button is the climb, not a swing.
@@ -1850,39 +1872,7 @@ void ADCCCharacterBase::Server_PerformInteraction_Implementation(
 		break;
 
 	case EDCCInteractionOption::Revive:
-		if (!Target->IsDowned())
-		{
-			return;
-		}
-
-		// Rooted for the channel, then they come up. Reusing the cast lock means
-		// a rescuer is interruptible exactly like a caster is - taking a hit
-		// mid-revive should cost you the attempt.
-		BeginCastLock(ReviveSeconds);
-
-		{
-			TWeakObjectPtr<ADCCCharacterBase> WeakTarget(Target);
-			TWeakObjectPtr<ADCCCharacterBase> WeakSelf(this);
-
-			FTimerDelegate Finish;
-			Finish.BindLambda([WeakSelf, WeakTarget]()
-			{
-				// Both ends re-checked on completion: the rescuer may have died
-				// during the channel, and the target may have bled out or been
-				// picked up by somebody faster.
-				if (WeakSelf.IsValid() && WeakTarget.IsValid()
-					&& WeakSelf->IsAlive() && WeakTarget->IsDowned())
-				{
-					WeakTarget->Revive(WeakSelf.Get());
-				}
-			});
-
-			GetWorldTimerManager().SetTimer(ReviveTimer, Finish, ReviveSeconds, false);
-		}
-
-		ADCCGameState::Log(this, EDCCLogCategory::Announcement, FText::Format(
-			NSLOCTEXT("DCC", "LogReviveStart", "{0} drops to help {1} up."),
-			FText::FromString(GetActorNameOrLabel()), TargetName));
+		BeginReviveChannel(Target);
 		break;
 
 	case EDCCInteractionOption::Inventory:
@@ -2494,6 +2484,7 @@ void ADCCCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	// F stows what is in hand; Tab opens the character menu. Tab is the near
 	// universal convention for an inventory screen, so it costs no explaining.
 	PlayerInputComponent->BindKey(EKeys::F, IE_Pressed, this, &ADCCCharacterBase::AttemptStow);
+	PlayerInputComponent->BindKey(EKeys::C, IE_Pressed, this, &ADCCCharacterBase::ToggleSelfieMode);
 	PlayerInputComponent->BindKey(EKeys::Tab, IE_Pressed, this, &ADCCCharacterBase::ToggleCharacterMenu);
 	PlayerInputComponent->BindKey(EKeys::L, IE_Pressed, this, &ADCCCharacterBase::CycleLogFilter);
 
@@ -3098,22 +3089,23 @@ void ADCCCharacterBase::HandleDied(UDCCStatsComponent* InStats)
 	// A crawler at zero goes DOWN, not out - the party gets a window to reach
 	// them. Mobs skip straight to dead, because a Debt Eater that gets back up
 	// is not a story beat.
-	if (IsCrawler() && BleedOutSeconds > 0.0f)
+	if (IsCrawler() && bCanBeDowned)
 	{
 		bIsDowned = true;
+		DeathSaveSuccesses = 0;
+		DeathSaveFailures = 0;
 		ApplyCollapsedBody();
 		PlayCharacterSound(DownedSound);
 
 		if (HasAuthority())
 		{
 			GetWorldTimerManager().SetTimer(
-				BleedOutTimer, this, &ADCCCharacterBase::HandleBleedOut, BleedOutSeconds, false);
+				DeathSaveTimer, this, &ADCCCharacterBase::RollDeathSave, DeathSaveIntervalSeconds, /*bLoop=*/true);
 
 			ADCCGameState::Log(this, EDCCLogCategory::Death, FText::Format(
 				NSLOCTEXT("DCC", "LogCrawlerDowned",
-					"{0} is down and bleeding out. Somebody has {1} seconds to care."),
-				DisplayName.IsEmpty() ? FText::FromString(GetActorNameOrLabel()) : DisplayName,
-				FText::AsNumber(FMath::RoundToInt(BleedOutSeconds))));
+					"{0} is down and rolling death saves. Somebody nearby could still change the outcome."),
+				DisplayName.IsEmpty() ? FText::FromString(GetActorNameOrLabel()) : DisplayName));
 		}
 
 		BP_OnDied();
@@ -3123,15 +3115,73 @@ void ADCCCharacterBase::HandleDied(UDCCStatsComponent* InStats)
 	FinishDying();
 }
 
-void ADCCCharacterBase::HandleBleedOut()
+void ADCCCharacterBase::RollDeathSave()
 {
-	if (!bIsDowned || bHasDied)
+	if (!HasAuthority() || !bIsDowned || bHasDied)
 	{
 		return;
 	}
 
+	const int32 Roll = FMath::RandRange(1, 20);
+	const bool bSuccess = Roll >= DeathSaveDC;
+	const FText Name = DisplayName.IsEmpty() ? FText::FromString(GetActorNameOrLabel()) : DisplayName;
+
+	if (bSuccess)
+	{
+		++DeathSaveSuccesses;
+
+		ADCCGameState::Log(this, EDCCLogCategory::Death, FText::Format(
+			NSLOCTEXT("DCC", "LogDeathSaveSuccess", "{0} rolls a {1} on the death save. Success ({2}/{3})."),
+			Name, FText::AsNumber(Roll), FText::AsNumber(DeathSaveSuccesses), FText::AsNumber(DeathSavesToStabilize)));
+	}
+	else
+	{
+		++DeathSaveFailures;
+
+		ADCCGameState::Log(this, EDCCLogCategory::Death, FText::Format(
+			NSLOCTEXT("DCC", "LogDeathSaveFailure", "{0} rolls a {1} on the death save. Failure ({2}/{3})."),
+			Name, FText::AsNumber(Roll), FText::AsNumber(DeathSaveFailures), FText::AsNumber(DeathSavesToExpire)));
+	}
+
+	// Checked in this order so a roll that happens to complete both counts in
+	// one pass - impossible under normal play since one side is cleared
+	// whenever bIsDowned flips false, but a designer-edited
+	// DeathSavesToStabilize/ToExpire pair could overlap, and stabilising is the
+	// friendlier outcome to prefer if it ever does.
+	if (DeathSaveSuccesses >= DeathSavesToStabilize)
+	{
+		StabilizeAtOneHitPoint();
+		return;
+	}
+
+	if (DeathSaveFailures >= DeathSavesToExpire)
+	{
+		GetWorldTimerManager().ClearTimer(DeathSaveTimer);
+		bIsDowned = false;
+		FinishDying();
+	}
+}
+
+void ADCCCharacterBase::StabilizeAtOneHitPoint()
+{
+	if (!HasAuthority() || !bIsDowned || bHasDied || !Stats)
+	{
+		return;
+	}
+
+	GetWorldTimerManager().ClearTimer(DeathSaveTimer);
+
 	bIsDowned = false;
-	FinishDying();
+	RestoreStandingBody();
+	PlayCharacterSound(ReviveSound);
+
+	// Exactly one point, always - the roll bought a second chance, not a good one.
+	Stats->Heal(1);
+
+	ADCCGameState::Log(this, EDCCLogCategory::Announcement, FText::Format(
+		NSLOCTEXT("DCC", "LogStabilize",
+			"{0} stabilises without any help at all. One hit point, and a story for later."),
+		DisplayName.IsEmpty() ? FText::FromString(GetActorNameOrLabel()) : DisplayName));
 }
 
 void ADCCCharacterBase::FinishDying()
@@ -3142,7 +3192,7 @@ void ADCCCharacterBase::FinishDying()
 	}
 	bHasDied = true;
 
-	GetWorldTimerManager().ClearTimer(BleedOutTimer);
+	GetWorldTimerManager().ClearTimer(DeathSaveTimer);
 
 	// Safe to call twice - a bled-out crawler already collapsed when it went
 	// down, and every step in here is idempotent.
@@ -3195,6 +3245,47 @@ void ADCCCharacterBase::OnRep_Downed()
 	}
 }
 
+void ADCCCharacterBase::BeginReviveChannel(ADCCCharacterBase* Target)
+{
+	if (!HasAuthority() || !Target || !Target->IsDowned())
+	{
+		return;
+	}
+
+	// Rooted for the channel, then they come up. Reusing the cast lock means
+	// a rescuer is interruptible exactly like a caster is - taking a hit
+	// mid-revive should cost you the attempt. Shared by both a player's own
+	// "Help Them Up" and an ally's first-aid AI, so the two mechanics can
+	// never quietly drift apart.
+	BeginCastLock(ReviveSeconds);
+
+	TWeakObjectPtr<ADCCCharacterBase> WeakTarget(Target);
+	TWeakObjectPtr<ADCCCharacterBase> WeakSelf(this);
+
+	FTimerDelegate Finish;
+	Finish.BindLambda([WeakSelf, WeakTarget]()
+	{
+		// Both ends re-checked on completion: the rescuer may have died
+		// during the channel, and the target may have bled out or been
+		// picked up by somebody faster.
+		if (WeakSelf.IsValid() && WeakTarget.IsValid()
+			&& WeakSelf->IsAlive() && WeakTarget->IsDowned())
+		{
+			WeakTarget->Revive(WeakSelf.Get());
+		}
+	});
+
+	GetWorldTimerManager().SetTimer(ReviveTimer, Finish, ReviveSeconds, false);
+
+	const FText TargetName = Target->DisplayName.IsEmpty()
+		? FText::FromString(Target->GetActorNameOrLabel())
+		: Target->DisplayName;
+
+	ADCCGameState::Log(this, EDCCLogCategory::Announcement, FText::Format(
+		NSLOCTEXT("DCC", "LogReviveStart", "{0} drops to help {1} up."),
+		FText::FromString(GetActorNameOrLabel()), TargetName));
+}
+
 void ADCCCharacterBase::Revive(ADCCCharacterBase* Rescuer)
 {
 	if (!HasAuthority() || !bIsDowned || bHasDied || !Stats)
@@ -3202,7 +3293,9 @@ void ADCCCharacterBase::Revive(ADCCCharacterBase* Rescuer)
 		return;
 	}
 
-	GetWorldTimerManager().ClearTimer(BleedOutTimer);
+	GetWorldTimerManager().ClearTimer(DeathSaveTimer);
+	DeathSaveSuccesses = 0;
+	DeathSaveFailures = 0;
 
 	bIsDowned = false;
 	RestoreStandingBody();
@@ -3225,7 +3318,7 @@ void ADCCCharacterBase::Revive(ADCCCharacterBase* Rescuer)
 	}
 }
 
-float ADCCCharacterBase::GetBleedOutRemaining() const
+float ADCCCharacterBase::GetTimeUntilNextDeathSave() const
 {
 	if (!bIsDowned)
 	{
@@ -3234,8 +3327,9 @@ float ADCCCharacterBase::GetBleedOutRemaining() const
 
 	// Only the server runs the timer, so a client asks its own world for the
 	// value and gets 0 - the countdown is authoritative and shown to the host.
-	// Clients still see the DOWN overlay, just without a ticking number.
-	return GetWorldTimerManager().GetTimerRemaining(BleedOutTimer);
+	// Clients still see the DOWN overlay and the replicated pips, just without
+	// a ticking number for "when."
+	return GetWorldTimerManager().GetTimerRemaining(DeathSaveTimer);
 }
 
 void ADCCCharacterBase::RollLootOntoBody()
@@ -3351,5 +3445,117 @@ void ADCCCharacterBase::StowInto(ADCCCharacterBase* Looter)
 	if (LootedCorpseLifeSpan > 0.0f)
 	{
 		SetLifeSpan(LootedCorpseLifeSpan);
+	}
+}
+
+void ADCCCharacterBase::ToggleSelfieMode()
+{
+	if (bInSelfieMode)
+	{
+		// Cancelled early - no shutter, no screenshot, just hand the camera back.
+		GetWorldTimerManager().ClearTimer(SelfieShutterTimer);
+		GetWorldTimerManager().ClearTimer(SelfieExitTimer);
+		ExitSelfieMode();
+		return;
+	}
+
+	EnterSelfieMode();
+}
+
+void ADCCCharacterBase::EnterSelfieMode()
+{
+	// Local only - every machine decides this for its own player, and there is
+	// no shared state to agree on. Refused while down or dead for the same
+	// reason a corpse cannot open the Tab menu: there is no camera worth
+	// posing with left to hold.
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	if (!PC || !SelfieCamera || bInSelfieMode || !IsAlive() || IsDowned())
+	{
+		return;
+	}
+
+	bInSelfieMode = true;
+
+	// Whatever else was providing the view steps aside, so SelfieCamera wins
+	// regardless of what the character Blueprint's own camera rig looks like -
+	// no assumption about a spring arm or its current settings required.
+	DeactivatedCamerasForSelfie.Reset();
+	TArray<UCameraComponent*> Cameras;
+	GetComponents<UCameraComponent>(Cameras);
+	for (UCameraComponent* Camera : Cameras)
+	{
+		if (Camera != SelfieCamera && Camera->IsActive())
+		{
+			Camera->SetActive(false);
+			DeactivatedCamerasForSelfie.Add(Camera);
+		}
+	}
+
+	SelfieCamera->SetActive(true);
+	PC->SetViewTargetWithBlend(this, 0.3f);
+
+	// A beat to actually strike a pose before the shutter fires - the point is
+	// a moment held for the camera, not an instant, unposed flash.
+	GetWorldTimerManager().SetTimer(
+		SelfieShutterTimer, this, &ADCCCharacterBase::TakeSelfieScreenshot, SelfiePoseSeconds, false);
+}
+
+void ADCCCharacterBase::TakeSelfieScreenshot()
+{
+	if (!bInSelfieMode)
+	{
+		return;
+	}
+
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		if (PC->PlayerCameraManager)
+		{
+			// A quick white flash reads as the shutter having actually fired,
+			// the same reason a real phone's screen flashes on capture.
+			PC->PlayerCameraManager->StartCameraFade(
+				0.0f, 1.0f, 0.06f, FLinearColor::White, /*bShouldFadeAudio=*/false, /*bHoldWhenFinished=*/false);
+		}
+	}
+
+	// Empty filename auto-generates one and lands it in Saved/Screenshots/ -
+	// exactly where the console "shot" command's own output goes, so nothing
+	// new to look for. bShowUI false: the point is the character, not the HUD.
+	FScreenshotRequest::RequestScreenshot(FString(), /*bShowUI=*/false, /*bAddFilenameSuffix=*/true);
+
+	ADCCGameState::Log(this, EDCCLogCategory::Announcement, FText::Format(
+		NSLOCTEXT("DCC", "LogSelfie", "{0} takes a selfie. The System AI has already seen it."),
+		DisplayName.IsEmpty() ? FText::FromString(GetActorNameOrLabel()) : DisplayName));
+
+	// A short hold so the flash and the capture both land before the camera cuts back.
+	GetWorldTimerManager().SetTimer(SelfieExitTimer, this, &ADCCCharacterBase::ExitSelfieMode, 0.4f, false);
+}
+
+void ADCCCharacterBase::ExitSelfieMode()
+{
+	if (!bInSelfieMode)
+	{
+		return;
+	}
+
+	bInSelfieMode = false;
+
+	if (SelfieCamera)
+	{
+		SelfieCamera->SetActive(false);
+	}
+
+	for (const TWeakObjectPtr<UCameraComponent>& Camera : DeactivatedCamerasForSelfie)
+	{
+		if (Camera.IsValid())
+		{
+			Camera->SetActive(true);
+		}
+	}
+	DeactivatedCamerasForSelfie.Reset();
+
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		PC->SetViewTargetWithBlend(this, 0.3f);
 	}
 }

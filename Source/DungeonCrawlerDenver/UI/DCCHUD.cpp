@@ -1586,24 +1586,42 @@ void ADCCHUD::DrawDownedScreen(ADCCCharacterBase* Crawler)
 	DrawText(Headline, FLinearColor(1.0f, 0.90f, 0.70f),
 		CentreX - HeadW * 0.5f, CentreY - 60.0f, GEngine->GetLargeFont(), 2.0f);
 
-	const float Remaining = Crawler ? Crawler->GetBleedOutRemaining() : 0.0f;
+	// Pips rather than a countdown - death saves are a beat, not a timer, and
+	// the tabletop rhythm is the point: three of one side ends the sequence,
+	// however long that actually takes.
+	auto BuildPips = [](int32 Count, int32 Needed) -> FString
+	{
+		FString Result;
+		for (int32 Index = 0; Index < Needed; ++Index)
+		{
+			Result += Index < Count ? TEXT("● ") : TEXT("○ ");
+		}
+		return Result;
+	};
 
-	// The countdown only resolves on the server, so a client gets the line
-	// without a number rather than a confident "0 seconds".
-	const FString Subtitle = Remaining > 0.0f
-		? FString::Printf(TEXT("Bleeding out. %.0f seconds of viewer interest remain."), Remaining)
-		: FString(TEXT("Bleeding out. Somebody is welcome to do something about it."));
+	const int32 Successes = Crawler ? Crawler->GetDeathSaveSuccesses() : 0;
+	const int32 Failures = Crawler ? Crawler->GetDeathSaveFailures() : 0;
 
-	float SubW = 0.0f, SubH = 0.0f;
-	GetTextSize(Subtitle, SubW, SubH, GEngine->GetMediumFont(), 1.0f);
-	DrawText(Subtitle, FLinearColor(0.95f, 0.88f, 0.78f),
-		CentreX - SubW * 0.5f, CentreY + 10.0f, GEngine->GetMediumFont(), 1.0f);
+	const FString SuccessLine = FString::Printf(TEXT("Successes   %s"),
+		*BuildPips(Successes, Crawler ? Crawler->DeathSavesToStabilize : 3));
+	const FString FailureLine = FString::Printf(TEXT("Failures    %s"),
+		*BuildPips(Failures, Crawler ? Crawler->DeathSavesToExpire : 3));
 
-	const FString Footer = TEXT("Any crawler may reach you and press E.");
+	float SuccessW = 0.0f, SuccessH = 0.0f;
+	GetTextSize(SuccessLine, SuccessW, SuccessH, GEngine->GetMediumFont(), 1.2f);
+	DrawText(SuccessLine, FLinearColor(0.45f, 0.90f, 0.55f),
+		CentreX - SuccessW * 0.5f, CentreY + 6.0f, GEngine->GetMediumFont(), 1.2f);
+
+	float FailureW = 0.0f, FailureH = 0.0f;
+	GetTextSize(FailureLine, FailureW, FailureH, GEngine->GetMediumFont(), 1.2f);
+	DrawText(FailureLine, FLinearColor(0.90f, 0.40f, 0.35f),
+		CentreX - FailureW * 0.5f, CentreY + 6.0f + SuccessH + 4.0f, GEngine->GetMediumFont(), 1.2f);
+
+	const FString Footer = TEXT("Any crawler may reach you and press E - or the dice might do it for you.");
 	float FootW = 0.0f, FootH = 0.0f;
 	GetTextSize(Footer, FootW, FootH, GEngine->GetMediumFont(), 1.0f);
 	DrawText(Footer, FLinearColor(0.82f, 0.75f, 0.65f),
-		CentreX - FootW * 0.5f, CentreY + 40.0f, GEngine->GetMediumFont(), 1.0f);
+		CentreX - FootW * 0.5f, CentreY + 6.0f + SuccessH + FailureH + 24.0f, GEngine->GetMediumFont(), 1.0f);
 }
 
 void ADCCHUD::DrawDeathScreen()

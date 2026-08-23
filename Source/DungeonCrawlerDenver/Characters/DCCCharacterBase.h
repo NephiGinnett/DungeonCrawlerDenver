@@ -20,6 +20,7 @@ class ADCCCharacterBase;
 class UUserWidget;
 class UTextRenderComponent;
 class USoundBase;
+class UCameraComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDCCCharacterDied, ADCCCharacterBase*, Character);
 
@@ -66,6 +67,14 @@ public:
 	 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "DCC")
 	TObjectPtr<UTextRenderComponent> Nameplate;
+
+	/**
+	 * Held out in front for a selfie. Inactive by default - only turned on for
+	 * the brief window Selfie Mode is open, so it never competes with whatever
+	 * camera rig the character Blueprint actually plays with day to day.
+	 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "DCC|Selfie")
+	TObjectPtr<UCameraComponent> SelfieCamera;
 
 	/** Tracks the party's achievements. Only meaningful on a crawler. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "DCC")
@@ -568,11 +577,49 @@ public:
 	UFUNCTION(BlueprintPure, Category = "DCC|Downed")
 	bool IsDowned() const { return bIsDowned; }
 
-	/** Seconds on the floor before a downed crawler dies for real. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Downed", meta = (ClampMin = "0.0"))
-	float BleedOutSeconds = 90.0f;
+	/** Whether hitting 0 HP downs this character at all. False means straight to dead - the old mob behaviour. */
+	UPROPERTY(EditDefaultsOnly, Category = "DCC|Downed")
+	bool bCanBeDowned = true;
 
-	/** Fraction of max HP restored by a revive. Deliberately not generous. */
+	// -------------------------------------------------------------------------
+	// DEATH SAVES
+	//
+	// Replaces the old flat bleed-out countdown with the tabletop's own beat:
+	// every few seconds, roll. Three successes stabilises on your own, at one
+	// hit point; three failures ends it. A rescuer's revive still works at any
+	// point in between and simply cuts the sequence short - the roll is what
+	// happens while nobody has reached you yet, not a replacement for being
+	// reached.
+	// -------------------------------------------------------------------------
+
+	/** Seconds between death-save rolls while downed. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Downed", meta = (ClampMin = "0.1"))
+	float DeathSaveIntervalSeconds = 3.0f;
+
+	/** d20 result needed to succeed. 11 means "above a 10", per how this was specified. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Downed", meta = (ClampMin = "1", ClampMax = "20"))
+	int32 DeathSaveDC = 11;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Downed", meta = (ClampMin = "1"))
+	int32 DeathSavesToStabilize = 3;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Downed", meta = (ClampMin = "1"))
+	int32 DeathSavesToExpire = 3;
+
+	/** Replicated so every machine can draw the same pips. Reset when a new down-state begins. */
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "DCC|Downed")
+	int32 DeathSaveSuccesses = 0;
+
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "DCC|Downed")
+	int32 DeathSaveFailures = 0;
+
+	UFUNCTION(BlueprintPure, Category = "DCC|Downed")
+	int32 GetDeathSaveSuccesses() const { return DeathSaveSuccesses; }
+
+	UFUNCTION(BlueprintPure, Category = "DCC|Downed")
+	int32 GetDeathSaveFailures() const { return DeathSaveFailures; }
+
+	/** Fraction of max HP restored by a RESCUED revive. Stabilising alone always gives exactly 1. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Downed", meta = (ClampMin = "0.01", ClampMax = "1.0"))
 	float ReviveHealthFraction = 0.35f;
 
@@ -587,9 +634,17 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Downed", meta = (ClampMin = "0.0"))
 	float ReviveSeconds = 4.0f;
 
-	/** Seconds left before bleeding out. 0 when not downed. */
+	/** Seconds until the next death-save roll. 0 when not downed. */
 	UFUNCTION(BlueprintPure, Category = "DCC|Downed")
-	float GetBleedOutRemaining() const;
+	float GetTimeUntilNextDeathSave() const;
+
+	/**
+	 * Server only. Starts the revive channel on Target - the one mechanic
+	 * behind both a player's "Help Them Up" and an ally's own first aid AI, so
+	 * the two can never drift out of sync with each other.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DCC|Downed")
+	void BeginReviveChannel(ADCCCharacterBase* Target);
 
 	/** Server only. Puts a downed crawler back on their feet. */
 	UFUNCTION(BlueprintCallable, Category = "DCC|Downed")
@@ -669,6 +724,35 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "DCC|Interaction")
 	virtual void SetHoldingPosition(bool bHold);
+
+	// -------------------------------------------------------------------------
+	// SELFIE MODE
+	//
+	// Entirely local and cosmetic - no server round trip, no replication, no
+	// gameplay state changes. Holds SelfieCamera out in front for a beat, flips
+	// the shutter (a quick white flash, matching a real phone), and requests a
+	// screenshot the normal way - it lands in Saved/Screenshots/ exactly like
+	// the console "shot" command's output would.
+	// -------------------------------------------------------------------------
+
+	/** `C`. Opens Selfie Mode, or cancels it early if already open. */
+	UFUNCTION(BlueprintCallable, Category = "DCC|Selfie")
+	void ToggleSelfieMode();
+
+	UFUNCTION(BlueprintPure, Category = "DCC|Selfie")
+	bool IsInSelfieMode() const { return bInSelfieMode; }
+
+	/** Where the phone sits, relative to the capsule - in front of the face, arm's length. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Selfie")
+	FVector SelfieCameraOffset = FVector(110.0f, 0.0f, 40.0f);
+
+	/** Yaw 180 so it looks back at the character, like a phone actually held out. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Selfie")
+	FRotator SelfieCameraRotation = FRotator(-8.0f, 180.0f, 0.0f);
+
+	/** Seconds to hold the pose before the shutter fires - long enough to see it coming and smile. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Selfie", meta = (ClampMin = "0.0"))
+	float SelfiePoseSeconds = 0.8f;
 
 	// -------------------------------------------------------------------------
 	// TEST CHEATS
@@ -1281,8 +1365,11 @@ protected:
 	/** Undoes ApplyCollapsedBody. Only ever called on a downed crawler. */
 	void RestoreStandingBody();
 
-	/** Bleed-out expiry: converts a downed crawler into a real corpse. */
-	void HandleBleedOut();
+	/** Server only. One death-save roll. Stabilises, ends it, or just logs and waits for the next. */
+	void RollDeathSave();
+
+	/** Server only. Auto-stabilises at 1 HP after DeathSavesToStabilize successes - no rescuer needed. */
+	void StabilizeAtOneHitPoint();
 
 	/** Everything the full death teardown does, once revival is off the table. */
 	void FinishDying();
@@ -1316,8 +1403,28 @@ protected:
 	/** World seconds the last reaction played, for the cooldown above. */
 	float LastHitReactionTime = -100.0f;
 
-	FTimerHandle BleedOutTimer;
+	FTimerHandle DeathSaveTimer;
 	FTimerHandle ReviveTimer;
+
+	/** Server-only concepts do not apply here - Selfie Mode is local, so this is not replicated. */
+	bool bInSelfieMode = false;
+
+	FTimerHandle SelfieShutterTimer;
+	FTimerHandle SelfieExitTimer;
+
+	/**
+	 * Whatever other camera components were active before SelfieCamera took
+	 * over, so ExitSelfieMode can hand the view back to exactly what was
+	 * showing rather than guessing at the character Blueprint's own rig.
+	 */
+	UPROPERTY(Transient)
+	TArray<TWeakObjectPtr<UCameraComponent>> DeactivatedCamerasForSelfie;
+
+	void EnterSelfieMode();
+	void ExitSelfieMode();
+
+	/** The shutter: a quick flash, the actual screenshot request, then a short beat before ExitSelfieMode. */
+	void TakeSelfieScreenshot();
 
 	/**
 	 * Mesh transform relative to the capsule, captured before anything ragdolls.
