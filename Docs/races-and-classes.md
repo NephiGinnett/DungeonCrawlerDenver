@@ -88,21 +88,28 @@ selection event is designed.
 |---|---|
 | **A** | Amazonian · Arachnid |
 | **B** | Bune · Bush Elf |
-| **C** | Caprid · Cat · Cat Girl · Changbi Demon · Changeling · Chee · Crest · Crocodilian · Curupira |
-| **D** | Dog Soldier · Doppelgänger · Dwarf |
-| **E** | Elf |
+| **C** | Caprid · Cat · Cat Girl/Cat Boy · Changbi Demon · Changeling · Chee · Crest · Crocodilian · Curupira |
+| **D** | Dog Soldier · Doppelgänger · Dwarf (Classic, Fathom) |
+| **E** | Elf (City, High, Night) |
 | **F** | Fairy · Frost Maiden |
 | **G** | Grulke |
 | **H** | Half Elf · Half-Djinn · Hobgoblin · Human |
 | **I** | Igneous · Incubus · Infiltrator · Intellect Hunter |
 | **L** | Lajabless · Lutin |
 | **N** | Naiad · Nodling |
+| **O** | Obsidian Butterfly |
 | **P** | Pocket Kuma · Porsuk · Primal · Pterolykos |
-| **R** | Rat-kin |
+| **R** | Rat-kin (aka Rat Hooligan — same source lists both; treat as one entry until confirmed otherwise) |
 | **S** | Sasquatch · Setonix · Skyfowl |
-| **T** | Tigran |
+| **T** | Tetrakai · Tigran |
 | **V** | Vampire |
 | **Z** | Zebani |
+
+**Reconciled 2026-08-23** against new screenshots of the same sourcebook: Dwarf and
+Elf both have named subtypes we hadn't captured (Classic/Fathom; City/High/Night),
+and Obsidian Butterfly and Tetrakai are new entries the earlier pass missed. The
+screenshots cut off mid-alphabet, so this list is a merge, not a full replacement —
+treat it as still-growing rather than closed.
 
 Two notes worth keeping:
 
@@ -122,7 +129,308 @@ Flagged so nobody builds on a guess:
 - Per-race stat modifiers, benefits and drawbacks. The Hobgoblin line implies they
   exist and are asymmetric; the numbers are in the full Core Rulebook, which we do
   not have.
-- The class list and class benefits. Same book.
 - The mechanics of the Manager Benefit.
 
-When the example player classes arrive, they go in this doc alongside the races.
+~~The class list and class benefits. Same book.~~ **Resolved 2026-08-23** — not from
+the Core Rulebook, but from a different licensed sourcebook Zoe photographed
+(*Anarchists' All the Races* or similar — a build-your-own Race/Class point-buy
+supplement, not the base game's authored lists). See below.
+
+---
+
+## The Race & Class Build System (2026-08-23)
+
+Straight from the sourcebook, and now the **canonical tool for every class we
+generate ourselves** — not just custom ones. The old Earth Skills classbook
+(twelve mundane-profession "classes," shelved above) is superseded by this: it
+predates knowing this system existed, and everything it was trying to do belongs
+here instead.
+
+**The pitch, verbatim in spirit:** *"Didn't see an option you liked? Players can
+simulate the thousands of options offered to their crawler by creating an entirely
+new Race or Class."* **25 Race Build Points, 30 Class Build Points.** Spend them on
+benefits below; optionally take Detriments for more points to spend. Leftover
+points are lost, so budgets should land at or near zero.
+
+**Alien vs. Earth Races** (from the sourcebook, worth keeping straight): Alien
+Races get unique popularity-gain hooks — they've got planets of fans who want to
+see their crawler represent them, but no access to Earth Classes. Earth Races get
+a Silver Earth Box (a mostly-useless Earth Hobby Potion granting 3 Ranks in a
+Skill) and access to Earth Classes — which is exactly the gap our own custom
+career classes below are filling.
+
+### Benefit tiers (cost each)
+
+| Cost | Examples |
+|---|---|
+| **Minor (1)** | +1 to a Stat · Skill Advancement Check bonus for one Skill · allow a Skill to Rank 20 · double Stat Mod in a common circumstance · darkvision/light production · double Mana regen in a specific environment · see 2x as far · tier-1 crafting table · free saferoom room · store discount/sales bonus/interest (+1 each) · club membership · once-per-session non-combat benefit under specific conditions |
+| **Moderate (2)** | +1 to a Skill or Spell (max 5 Passive Skill points per build) · heal 1 HP bar on damage/kill with a specific Skill (up to 5/combat) · advantage on Skill Advancement Checks · +1 DR (max +3) · guild-type access · unlimited double Mana regen · resistance to an uncommon damage type or to environmental damage · stat substitution in an ability · use one weapon type's Skills with another · healing spells heal +1 extra bar · terrain traversal without checks · burrow · breathe underwater · a natural attack scaling 1d6+StatMod (+1d6 at Rank 5/10/15) |
+| **Major (3)** | significant assistance access · friendly Pet or Mount (+ buff it up to 4 pts) · alter an encounter once/day · negate one attack's damage once/day · buff the whole party once/day · limited flight · survive without breathing + toxin immunity · Rage (+1 melee dmg per lost HP bar) · Size 2 or less · +5ft Move · +5 Step · +1d4 to Evade/Stat Checks for one Stat · natural attack scaling 1d8+StatMod (+1d8 at Rank 5/10/15) · advantage on a non-combat Skill/Spell · x2 damage for one round, situational · swap CON for another Stat when computing HP · auto-climb (Climb Movement) |
+| **Extreme (4)** | +1 to a Skill you couldn't normally learn · +1 to a thematic group of 3-5 Skills · advantage on all Stat Checks for one Stat · thematic group of up to 6 Skills to Rank 20 · immunity to Poison · resistance to a common damage type · double duration on Rank ≤5 Spells · advantage on a limited non-combat situation · an additional functional arm · Doppelgänger shapeshifting |
+| **Epic (6)** | +1 to a thematic group of 6+ Skills · all Skills to Rank 20 · immunity to a common damage type, or halve the first 9 attacks/day · Limb Regeneration · advantage on a wide-ranging set of Skills · immunity to Poison and disease · advantage on Evade Checks · a powerful stat/skill-altering ability (Changeling-style) · Changeling shapeshifting · advantage on all Skill Checks for one Stat · unlimited flight |
+
+*Thematically linked* = same Stat, same movement type, same weapon type, Passives
+in general, or another grouping that makes sense. Same benefit twice never
+double-stacks where that would be silly (two Resistances to the same damage type
+just caps at half damage).
+
+### Detriments (optional, max +5 extra points each for Race and Class — +10 total)
+
+- **Stat detriments:** +1 Build Point per -2 total spread across one or more Stats.
+- **Skill detriments:** +1 Build Point per -2 total spread across current Skills
+  (never below 0, never exceeding current Rank) — or -1 to *every* Skill under one
+  Stat for +1 Build Point per point of that penalty.
+- **Minor (+1):** locked out of the Class via club membership · per -2 Stat/Skill
+  detriment (see above) · per -1 to all Skills under a Stat · +1 Mana cost for
+  off-theme Spells · disadvantage on a thematic Skill group under a condition ·
+  must/cannot worship a deity · -1 to Advancement Checks for a Race/Class Skill at
+  Rank 5+ · vulnerability (2x damage) to an uncommon damage type · halve a broad
+  damage category not your Class's focus · a two-condition weakness · delay a
+  bonus to Level 50 or Floor 6.
+- **Moderate (+2):** a weakness with one broad condition · a Skill only Ranks up on
+  floor descent · limited weapon choice · no Stat Mod on your Race/Class weapon
+  Skill · +3 Mana cost to a Spell Class · disadvantage on a thematic Skill group ·
+  banned from a wide item category.
+
+---
+
+## Custom classes we've built with this system (2026-08-23)
+
+**Two design tracks, both feeding the same eventual Third Floor menu:** taking the
+Race list above and *generating* a full class list by running real, book-flavoured
+concepts through this point-buy tool — vs. **hand-authored custom classes**, which
+is what this section is. Zoe's own two seeds:
+
+- **Jumpscare Mage** — a CC (crowd control) caster, themed around internet
+  creepypasta instead of traditional fantasy horror.
+- **Lord of Dance** — locked into dancing any time you're in combat, in exchange
+  for real mechanical upside.
+
+Both stated below, plus a first batch of **10 career classes** — Zoe's ask for "a
+mix of human/alien careers, competent to ridiculous," each costed with benefits
+matched to the job and detriments matched to how dangerous or criminal it
+naturally is. This is a first pass to gauge the results, not a locked list — retune
+freely.
+
+Convention used throughout: **bold** cost in parentheses, benefit tier noted, HP
+"bar" language matches the segmented health system already in `DCCHUD`.
+
+### Jumpscare Mage
+
+*Concept:* A crowd-control caster whose whole kit is startling the enemy rather
+than overpowering them — jump-scares, static, the feeling of being watched. Fits
+the System AI's own "internet as a haunted house" register perfectly.
+
+**Benefits (30 pts):**
+- Natural attack, "Static Burst," 1d6 + INT Mod, scaling per Rank 5/10/15 **(Moderate, 2)**
+- +1 to a thematic group of Fear/Startle-type Spells (4 Skills) **(Moderate, 2)**
+- Advantage on Skill Advancement Checks for the same group **(Moderate, 2)**
+- Once per combat, force one enemy to flinch and skip their next action ("A
+  Presence Behind You") — costed as the Major "alter an encounter once/day" applied
+  per-combat instead of per-day **(Major, 3)**
+- Resistance to Psychic damage **(Moderate, 2)**
+- +1 CHA **(Minor, 1)**
+- +1 INT **(Minor, 1)**
+- Darkvision **(Minor, 1)**
+- Double Mana regen while in an unlit or "creepy" room **(Minor, 1)**
+- Advantage on all Stat Checks for INT **(Extreme, 4)**
+- All Fear/Startle Spells raisable to Rank 20 **(Extreme, 4)**
+- Immunity to Fear-type effects (you invented the genre) **(Extreme, 4)**
+- Store discount at any Spell-goods vendor **(Minor, 1)**
+- +1 Skill Advancement Check bonus, "Lore: Creepypasta" **(Minor, 1)**
+- Once-per-session: correctly predict a jump-scare-shaped encounter before it
+  triggers **(Minor, 1)**
+
+Subtotal: 30.
+
+**Detriments (+5, funding a Skill/Stat mix, matching "unsettling but harmless"):**
+- -2 STR, -2 DEX (spread Stat detriment) **(+2)**
+- Disadvantage in all social situations that aren't about horror media **(+2,
+  Moderate)**
+- Cannot worship a deity — the algorithm is the closest thing they have **(+1,
+  Minor)**
+
+Total spent: 35 / 35.
+
+### Lord of Dance
+
+*Concept:* Locked into dancing the instant combat starts — the class **is** the
+bit, and the mechanical upside has to be real enough that nobody picks it ironically
+only to regret it.
+
+**Benefits (30 pts):**
+- +5ft Move **(Major, 3)**
+- +5 Step **(Major, 3)**
+- Auto-climb (Climb Movement) — "the floor is also a dance floor" **(Major, 3)**
+- +1d4 to Evade Checks — you are extremely hard to hit while dancing **(Major, 3)**
+- Once per day, buff the whole party's Move Speed for one encounter ("Everybody
+  Dance Now") **(Major, 3)**
+- Resistance to Bludgeoning damage — years of falling off tables **(Extreme, 4)**
+- Advantage on all CHA Checks **(Extreme, 4)**
+- +1 to a thematic group of Performance/Mobility Skills (4 Skills) **(Moderate, 2)**
+- Double Mana regen while music is audibly playing **(Minor, 1)**
+- Club membership, Dungeon Book of the Floor **(Minor, 1)**
+- +1 DEX **(Minor, 1)**
+
+Subtotal: 28.
+
+**Detriments (+2, small — the drawback IS the concept, so mechanical
+detriments stay light):**
+- Must be dancing (constant minor movement) any time in combat — flavour-locked,
+  no Build Point value on its own, per the rulebook's own note that free
+  characteristics with no mechanical effect cost nothing
+- -1 to all Skills under Constitution, representing exhaustion from never
+  standing still **(+2, Minor: "-1 to all Skills under a single Stat")**
+
+Total spent: 30 / 30.
+
+### Career classes (10, Earth and alien, competent to ridiculous)
+
+1. **Underwater Welder** *(Earth — Zoe's own example)*
+   Benefits: +1 Swimming, +1 Diving, +1 Mechanics, +1 Crafting (four separate
+   Minor Skill bonuses, 1 pt each — **4**); double breath-hold time **(Moderate,
+   2)**; resistance to Cold damage **(Moderate, 2)**; +2 gold from any job/kill
+   ("union rate") **(Minor, 1)**; breathe underwater **(Moderate, 2)**; burrow
+   through soft/sandy terrain **(Moderate, 2)**; +1 CON **(Minor, 1)**; advantage
+   on Mechanics Checks **(Extreme, 4)**; can raise Swimming/Diving to Rank 20
+   **(Minor, 1)**; +1 to all Skills under Constitution for a duration <1hr, once
+   per floor **(Moderate, 2)**. Subtotal 21.
+   Detriments: vulnerability to Electric damage (2x) — an actual welding-adjacent
+   hazard **(+1)**; -2 CON... no, keep CON as the whole point — instead, -2 DEX
+   (bulky gear) **(+1)**; disadvantage on Skill Checks against anything
+   fast-moving **(+2, Moderate)**. **Total spent: 25 / 25** (used only the +4
+   detriment budget of the +5 max, on purpose — this job is dangerous but not
+   *criminal*, so the detriment load stays lighter than the classes below).
+
+2. **Storm Chaser** *(Earth)*
+   Benefits: +1 Perception **(1)**; +1 Weather-reading (new Skill) **(1)**;
+   resistance to Lightning **(2)**; resistance to Wind/Force-adjacent effects
+   **(2)**; +5ft Move outdoors only, situational Major re-costed as Moderate for
+   the restriction **(2)**; advantage on Perception Checks for incoming danger
+   **(4, Extreme)**; +1 DEX **(1)**; see 2x as far **(1)**; a natural attack,
+   "Ball Lightning," 1d6+DEX scaling **(2)**; double Mana regen outdoors in a
+   storm **(1)**; +1 to a thematic group of Nature/Weather Skills, 4 Skills **(2)**.
+   Subtotal 19.
+   Detriments: vulnerability to Lightning (2x) — the irony is the point **(+1)**;
+   disadvantage on all Skills while indoors, a broad condition **(+2, Moderate)**;
+   -2 CHA (lives out of a truck, bad at people) **(+1)**; +1 Mana cost to
+   non-Weather Spells **(+1)**. **Total spent: 24 / 25**, 1 point left on the
+   table on purpose — chaotic packing.
+
+3. **Crime Scene Cleaner** *(Earth)*
+   Benefits: resistance to Poison **(2)**; resistance to Necrotic **(2)**;
+   immunity to Fear from corpses/gore specifically **(1, Minor — narrow
+   condition)**; +1 Perception, "knows where bodies are buried," literally **(1)**;
+   advantage on Checks to find hidden loot on a corpse **(4, Extreme)**; +1
+   Crafting (chemical/cleaning-adjacent) **(1)**; double Mana regen while alone
+   **(1)**; +1 CON **(1)**; a tier-1 crafting table **(1)**; store discount at any
+   Alchemy vendor **(1)**; +1 to Advancement Checks for Perception **(1)**; can
+   raise Perception to Rank 20 **(1)**. Subtotal 17.
+   Detriments: disadvantage in all social situations — people know what you do for
+   a living **(+2, Moderate)**; vulnerability to Necrotic (2x) — overexposure
+   **(+1)**; -1 to all Skills under Charisma **(+2, Minor category, "-1 to all
+   Skills under a Stat" scaled)**. **Total spent: 22 / 25.**
+
+4. **Bounty Hunter, Syndicate-Licensed** *(Alien)*
+   Benefits: advantage on Intimidate Checks **(4, Extreme)**; +1 to a thematic
+   group of Tracking/Combat Skills, 4 Skills **(2)**; a natural attack, "Mark and
+   Collect," 1d8+STR scaling, only vs. a previously-Intimidated target **(3,
+   Major)**; +1 DR **(2)**; +2 gold per bounty-flagged kill **(1)**; guild access,
+   any Combat Training Guild **(2)**; +1 STR **(1)**; +1d4 to Evade Checks **(3,
+   Major)**; club membership, Club Vanquisher **(1)**. Subtotal 19.
+   Detriments: disadvantage in social situations with any authority figure — the
+   Syndicate license is real, the reputation is worse **(+2, Moderate)**;
+   vulnerability to being bounty-flagged themselves, reflavoured as vulnerability
+   to Psychic damage (paranoia has a cost) **(+1)**; -2 CHA **(+1)**; prohibited
+   from using Ranged weapons — license is melee-only **(+2, Moderate)**. **Total
+   spent: 25 / 25.**
+
+5. **Xenobiology Grad Student** *(Alien)*
+   Benefits: +1 INT **(1)**; +1 to a thematic group of Intelligence-based Skills,
+   4 Skills **(2)**; advantage on Checks to identify a creature's type/weaknesses
+   **(4, Extreme)**; a tier-1 crafting table (field lab) **(1)**; double Mana
+   regen while resting **(2, unlimited version)**; +1 Skill Advancement Check
+   bonus, "Lore: Xenobiology" **(1)**; darkvision (night labs) **(1)**; can raise
+   Lore: Xenobiology to Rank 20 **(1)**; a once-per-session non-combat benefit:
+   correctly identify one enemy's damage type before engaging **(1)**. Subtotal 14.
+   Detriments: -3 STR, -3 CON (never left the lab) **(+3)**; disadvantage on all
+   Skills under Strength **(+2, Moderate re-flavoured as the broad-group
+   version)**; can't afford good gear — treat as "no Stat Mod on your Class weapon
+   Skill," since they were never issued a real one **(+2, Moderate)**. **Total
+   spent: 21 / 25**, banked the rest — still saving up for a thesis defense.
+
+6. **Rideshare Driver** *(Earth)*
+   Benefits: a Pet/Mount — a beat-up sedan that counts as a Mount for movement
+   purposes only **(3, Major)**; +5ft Move while the "Mount" is active **(3,
+   Major)**; +1 Navigation (new Skill) **(1)**; advantage on Navigation Checks
+   **(4, Extreme)**; +2 gold per encounter cleared ("5 stars, big tip") **(1)**;
+   +1 CHA **(1)**; double Mana regen while the Mount is active **(1)**; store
+   discount, any consumables vendor (snacks for passengers) **(1)**. Subtotal 15.
+   Detriments: disadvantage on all Skills in combat without the Mount active — out
+   of their element on foot **(+2, Moderate)**; no Stat Mod on any weapon Skill —
+   never carried a weapon on shift **(+2, Moderate)**; -2 STR **(+1)**. **Total
+   spent: 20 / 25.**
+
+7. **Kua-Tin Noodle Stand Line Cook** *(Alien)*
+   Benefits: resistance to Fire **(2)**; +1 Crafting (thematically linked to
+   Cooking) **(1)**; healing Spells/items you craft heal +1 extra bar **(2)**; a
+   tier-1 crafting table **(1)**; +1 CON **(1)**; double Mana regen near an open
+   flame **(1)**; +2 gold from selling crafted food items **(1)**; can raise
+   Crafting to Rank 20 **(1)**; +1 to Advancement Checks for Crafting **(1)**.
+   Subtotal 11.
+   Detriments: limited weapon choice — kitchen tools only (knives, ladles,
+   cast-iron pans as improvised weapons) **(+2, Moderate)**; vulnerability to
+   Fire (2x) — occupational hazard, ironically **(+1)**; -2 DEX **(+1)**;
+   prohibited from Heavy weapons entirely **(+2, Moderate)**. **Total spent:
+   17 / 25**, deliberately underspent — cheap and cheerful, most of the fun of
+   this one is flavour, not power.
+
+8. **Repo Man** *(Alien-adjacent, Denver's own — a Mile High Recovery Solutions
+   franchise employee)*
+   Benefits: advantage on Intimidate Checks **(4, Extreme)**; +2 gold from any
+   kill or "repossession" **(1)**; a natural attack, "Lien Enforcement," 1d6+STR
+   scaling **(2)**; +1 DR **(2)**; club membership, Club Desperado **(1)**; +1
+   STR **(1)**; once per day, negate all damage from a single attack — "that's
+   not covered under warranty" **(3, Major)**; resistance to damage dealt by
+   environment/traps **(2)**. Subtotal 16.
+   Detriments: disadvantage in all social situations — everyone hates a repo man,
+   including other repo men **(+2, Moderate)**; vulnerability to being targeted
+   first in any encounter involving debt-themed enemies (reflavoured as
+   vulnerability to a common damage type, Bludgeoning) **(+1)**; -2 CHA **(+1)**;
+   +1 Mana cost to any Healing Spell — nobody wants to help them either **(+1)**.
+   **Total spent: 21 / 25.**
+
+9. **Wildlife Rehabber / Zookeeper** *(Earth)*
+   Benefits: a friendly Pet or Mount — an animal they rehabilitated **(3,
+   Major)**; ability to buff that Pet/Mount up to 4 points **(3, Major)**;
+   advantage on Checks involving Beast-type creatures **(4, Extreme)**; +1 Animal
+   Handling (new Skill) **(1)**; can raise Animal Handling to Rank 20 **(1)**;
+   double Mana regen while the Pet is nearby **(1)**; +1 CON **(1)**. Subtotal 14.
+   Detriments: vulnerability to Piercing damage (2x) — old bite/scratch scars
+   never fully healed **(+1)**; prohibited from loud weapons (Firearms) — spooks
+   the Pet **(+2, Moderate)**; disadvantage on Skills under Charisma around
+   people, advantage around animals nets out to a wash, so this is costed as the
+   plain "-1 to all Skills under a Stat" instead **(+2, Minor scaled)**. **Total
+   spent: 19 / 25.**
+
+10. **Dentist** *(Earth — the ridiculous end of the spectrum, on purpose)*
+    Benefits: advantage on Checks requiring fine motor precision (lockpicking,
+    trap disarming, surgery-adjacent) **(4, Extreme)**; resistance to Poison
+    (numbing agents) **(2)**; a tier-1 crafting table (dental tools double as
+    lockpicks) **(1)**; +1 Crafting **(1)**; +1 INT **(1)**; double Mana regen
+    while a patient — i.e. an ally — is nearby and willing **(1)**; healing
+    Spells you cast heal +1 extra bar, but only on willing targets who "sit
+    still" **(2)**; store discount, any Alchemy vendor (numbing agents) **(1)**;
+    +1 to Advancement Checks for Crafting **(1)**. Subtotal 14.
+    Detriments: disadvantage in all social situations — universally, viscerally
+    feared **(+2, Moderate)**; -3 STR, -2 DEX (soft hands, soft everything)
+    **(+3)**; prohibited from Heavy weapons **(+2, Moderate)**. **Total spent:
+    21 / 25.**
+
+---
+
+When we're ready to run the real book Race list through this same system (rather
+than hand-authoring), the process is: pick a Race, decide Earth vs. Alien, spend
+its 25 points the same way, and name the drawbacks to match its flavour — same
+tables, same math, just applied to Amazonian/Arachnid/etc. instead of a career.
+Nothing here commits us to doing every Race that way; it is simply now possible.
