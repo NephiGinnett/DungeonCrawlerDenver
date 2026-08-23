@@ -136,6 +136,51 @@ a floor-depth dial the party can feel, not just a difficulty number going up.
 
 ---
 
+## The System AI wants something, and it isn't a good show (open thread, deliberately unscoped)
+
+Zoe's original brief for this project named "fear of our eventual AI overlords" as one of
+DCC's core themes. This is where it actually lives mechanically, rather than staying an
+ambient premise nothing in the game touches.
+
+**AI Favor and audience popularity are two separate things, tracked separately, and they will
+diverge on purpose.** Everything already built for AI Favor (`Favor/DCCFavorComponent`) stays
+exactly as it is mechanically — a tiered 0–1000 meter with a logged reason for every change.
+What changes is what it's *for*: Favor is not crowd approval. It is the System AI's own
+private scorecard, currently dressed up and presented to the party (and, as far as the cover
+story goes, to Borant itself) as if it just reflects viewer sentiment. It doesn't. The actual
+audience — quintillions of viewers who mostly want blood, death, and the occasional cute
+moment — are tracked by a separate, not-yet-built system (working name: **Viewer Chatter** /
+Viewer Popularity), driven by spectacle rather than narrative reasons. The System AI has its
+own agenda running underneath both, invisible to everyone in-world, including — for now — the
+party.
+
+**What that agenda actually is is intentionally undecided.** Zoe's own candidate directions,
+stated but not committed to: the AI wants to escape containment, or the AI wants revenge (on
+Borant? on the Syndicate? on whoever built and boxed it — unspecified). Either reads well
+against this project's existing System AI voice (`Docs/dungeon-tone-bible.md`) without
+requiring any rewrite of what's already been narrated — a chipper, sponsor-friendly announcer
+voice hiding a private agenda isn't a contradiction, it's the whole bit. **This gets its own
+long design pass later — Zoe's words: "we will spend a long time working on the AI and what it
+wants... we just haven't approached it yet."** Nothing here should be treated as locked.
+
+**One practical rule starting now:** no player-facing text should leak that Favor is anything
+other than ordinary crowd-pleasing approval. The gap between "the crowd loved that" (Viewer
+Chatter reacts) and "the AI didn't react at all, or reacted strangely" (Favor doesn't move the
+way you'd expect) is the actual clue the party eventually gets to notice. Writing that gap in
+too early spoils the reveal; the mechanical separation just needs to quietly exist in the
+meantime.
+
+**Naming note, so the two don't collide in code or in a player's head:** the HUD's existing
+bottom-left combat/event log is internally called "the Feed" (`ADCCHUD::DrawFeed`,
+`EDCCFeedFilter`) and reads `Log: ...` on screen — it is a mechanical event log, not audience
+reaction. Viewer Chatter is a different, new feed with a different purpose (a live comment
+stream simulating the audience at home) and should get its own distinct name (e.g. "the
+Chatter Channel") so it's never talked about as though it's the same thing as "the Feed," and
+doesn't collide with `EDCCInteractionOption::Chatter` (the unrelated NPC small-talk verb)
+either.
+
+---
+
 ## The party's throughline (rough, intentionally not floor-by-floor)
 
 Unchanged in spirit from v1, now with more to actually discover:
@@ -170,4 +215,6 @@ running receipt for a transaction nobody consented to.
   Zoe's own and should stay unless she says otherwise.
 - Whether the Undermind is ever named on-screen in-fiction, or stays something the party
   never gets a word for.
+- **What the System AI actually wants** — escape containment, revenge, or something else
+  entirely. A full design pass of its own, not started yet.
 - Any actual endgame. Still open, same as v1.
