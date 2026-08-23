@@ -592,9 +592,9 @@ public:
 	// reached.
 	// -------------------------------------------------------------------------
 
-	/** Seconds between death-save rolls while downed. */
+	/** Seconds between death-save rolls while downed. 6s matches a d&d/DCC combat round. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Downed", meta = (ClampMin = "0.1"))
-	float DeathSaveIntervalSeconds = 3.0f;
+	float DeathSaveIntervalSeconds = 6.0f;
 
 	/** d20 result needed to succeed. 11 means "above a 10", per how this was specified. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Downed", meta = (ClampMin = "1", ClampMax = "20"))
