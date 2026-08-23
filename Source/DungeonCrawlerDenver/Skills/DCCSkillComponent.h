@@ -147,6 +147,17 @@ public:
 	void MarkSkillUsed(FName SkillId);
 
 	/**
+	 * Server only. Registers an untrained attempt at a Skill this character does
+	 * not know, so it becomes a candidate to be learned outright on the next
+	 * RunSkillAdvancement - the external-caller half of the untrained-attempt
+	 * flow ActivateSkillInternal already does for cast Skills. A social check,
+	 * a trap, a lock: anything resolved outside this component calls this
+	 * instead of MarkSkillUsed when the Skill isn't already known.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Skills")
+	void RecordUntrainedAttempt(FName SkillId);
+
+	/**
 	 * Server only. Rolls advancement for every marked skill, then clears all
 	 * marks - including on skills that failed their roll, exactly as the
 	 * published rule specifies.

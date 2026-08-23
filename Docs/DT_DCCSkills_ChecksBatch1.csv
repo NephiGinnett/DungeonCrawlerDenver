@@ -1,0 +1,12 @@
+Name,SkillId,DisplayName,FlavorText,Archetype,Targeting,CastingAbility,ManaCost,CooldownSeconds,CastTimeSeconds,Range,Radius,ConeHalfAngleDegrees,DifficultyClass,PowerDie,EffectDuration,EffectTag,bCanAttemptUntrained,bIsPassive,CastEffect,ImpactEffect,CastSocketName,ImpactEffectZOffset
+Intimidate,Intimidate,Intimidate,"Lean on someone. Works better with a weapon in frame.",Check,Self,Charisma,0,0,0,0,0,0,0,0,0,,True,False,,,,60
+Persuade,Persuade,Persuade,"Talk someone round without a weapon in frame.",Check,Self,Charisma,0,0,0,0,0,0,0,0,0,,True,False,,,,60
+Perception,Perception,Perception,"Notice the thing everyone else walked past.",Check,Self,Intelligence,0,0,0,0,0,0,0,0,0,,True,False,,,,60
+Navigation,Navigation,Navigation,"Know which way is out.",Check,Self,Intelligence,0,0,0,0,0,0,0,0,0,,True,False,,,,60
+WeatherReading,WeatherReading,Weather-Reading,"Read a room's storm before it arrives.",Check,Self,Intelligence,0,0,0,0,0,0,0,0,0,,True,False,,,,60
+AnimalHandling,AnimalHandling,Animal Handling,"Calm the thing that's about to bite someone.",Check,Self,Charisma,0,0,0,0,0,0,0,0,0,,True,False,,,,60
+LoreCreepypasta,LoreCreepypasta,"Lore: Creepypasta","Know exactly why this room feels wrong.",Check,Self,Intelligence,0,0,0,0,0,0,0,0,0,,True,False,,,,60
+LoreXenobiology,LoreXenobiology,"Lore: Xenobiology","Know what it is before it decides what you are.",Check,Self,Intelligence,0,0,0,0,0,0,0,0,0,,True,False,,,,60
+Mechanics,Mechanics,Mechanics,"Fix it, jam it, or tell it's already broken.",Check,Self,Intelligence,0,0,0,0,0,0,0,0,0,,True,False,,,,60
+Swimming,Swimming,Swimming,"Move like the water is the easy part.",Check,Self,Dexterity,0,0,0,0,0,0,0,0,0,,True,False,,,,60
+Diving,Diving,Diving,"Go under and mean it.",Check,Self,Dexterity,0,0,0,0,0,0,0,0,0,,True,False,,,,60

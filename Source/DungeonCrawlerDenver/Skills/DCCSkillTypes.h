@@ -46,6 +46,17 @@ enum class EDCCSkillArchetype : uint8
 	/** Brings friends. "Call in a swarm of rats." */
 	Summon             UMETA(DisplayName = "Summon"),
 
+	/**
+	 * A non-combat Skill Check with no activation of its own - Perception,
+	 * Navigation, Intimidate, any Lore. Never routes through TryActivateSkill;
+	 * the caller (an interaction, a climb attempt, a future trap/lock) reads
+	 * GetSkillRank and calls UDCCRuleset::ResolveSkillCheck directly, then
+	 * calls MarkSkillUsed itself. Every field below Archetype/CastingAbility on
+	 * a Check row is unused - kept present rather than split into a second
+	 * struct so this stays one shared table.
+	 */
+	Check              UMETA(DisplayName = "Check"),
+
 	MAX                UMETA(Hidden)
 };
 

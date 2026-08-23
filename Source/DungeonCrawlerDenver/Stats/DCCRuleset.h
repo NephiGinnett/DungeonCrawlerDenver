@@ -162,6 +162,12 @@ public:
 	 * An untrained attempt rolls at Disadvantage (2d20, keep the lower) and adds
 	 * no Rank, which is what makes trying something you are bad at a real risk
 	 * rather than a free lottery ticket.
+	 *
+	 * bAdvantage is separate from bUntrained on purpose: a trained crawler with
+	 * an Advantage-granting Race/Class benefit is a completely different case
+	 * from an untrained one, and the two need to be able to coexist and cancel -
+	 * Advantage and Disadvantage together fall back to a single ordinary roll,
+	 * same as they would on paper.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Ruleset|Skills")
 	virtual FDCCCheckResult ResolveSkillCheck(
@@ -170,7 +176,8 @@ public:
 		int32 SkillRank,
 		int32 DifficultyClass,
 		bool bUntrained = false,
-		int32 SituationalBonus = 0) const;
+		int32 SituationalBonus = 0,
+		bool bAdvantage = false) const;
 
 	/**
 	 * Server-only. Rolls whether a marked skill gains a Rank.

@@ -437,30 +437,44 @@ Nothing here commits us to doing every Race that way; it is simply now possible.
 
 ---
 
-## What it takes to actually build these (2026-08-23)
+## What it takes to actually build these (2026-08-23, corrected same day)
 
-Checked against the current code, not guessed. Two findings shape everything
-below: **`DCCRuleset::ResolveCheck` takes an Ability and a Difficulty Class but no
-Skill Rank and no Advantage/Disadvantage parameter yet** (a gap the code's own
-Skills-section comments already flag), and **there is no damage-type system at
+Checked against the current code, not guessed — and one of the original findings
+below turned out to be **wrong**, caught while actually starting the build rather
+than left to rot in the doc. Worth recording the correction in the open rather
+than quietly editing it away: **`ResolveSkillCheck` (as opposed to the plainer
+`ResolveCheck`) already existed** with a Skill Rank parameter and Disadvantage
+(2d20-take-lower for untrained attempts) fully implemented — `DCCSkillComponent`
+was already using it for every cast Skill. The real, narrower gap was that two
+of this project's own social checks (Persuade, Intimidate) were calling the
+plainer `ResolveCheck` instead, so Skill Rank and Disadvantage existed in the
+engine but weren't reaching those two checks. **Fixed same session, see the TODO
+tracker below.** The still-real gap is **there is no damage-type system at
 all** — damage is a flat `int32`, so "resistance to Fire" has nothing to attach
-to yet. Those two gaps are why this section exists: almost every benefit above
-routes through one of a handful of primitives, and building the primitive once
-means every future class gets it free from a DataTable row, the same way Skills,
-Achievements, and Equipment already work here.
+to yet.
 
 ### Foundational primitives (build once, unlock most of the list)
 
-1. **Skill Rank + a real non-combat Skill Check.** `ResolveCheck` needs a
-   `SkillRank` term added, and a generic Skill list needs to exist for things
-   that aren't castable spells — Perception, Navigation, Animal Handling,
-   Mechanics, Intimidate, every `Lore: X`. This is the single highest-leverage
-   piece: nearly every class above needs it. `Skills/` already has the shape for
-   this half-built — the doc's own note that `KnownSkills` should become
-   `{ SkillId, Rank, bMarked }` resolved against a shared table is exactly this.
-2. **Advantage/Disadvantage as a `ResolveCheck` parameter.** Roll 2, take the
-   better or worse. Small, mechanical, and every "Advantage on X Checks" benefit
-   across all twelve classes needs it — pairs naturally with #1.
+1. ~~Skill Rank + a real non-combat Skill Check.~~ **Done 2026-08-23** — turned
+   out to mostly already exist (`ResolveSkillCheck`, `FDCCKnownSkill`'s
+   `{ SkillId, Rank, bAdvancementMark }`, `MarkSkillUsed`). What was missing:
+   Persuade/Intimidate weren't routed through it, and there was no Skill
+   Archetype for a pure non-combat check with no activation. Added
+   `EDCCSkillArchetype::Check` for exactly that, rewired `ResolveSocialCheck` to
+   pull the caster's real Rank and mark/record the attempt, and added a public
+   `RecordUntrainedAttempt` so checks resolved outside `DCCSkillComponent` (a
+   social check today; a future trap or lock) can still make an untrained
+   attempt count toward being learned. New Skill rows staged in
+   `Docs/DT_DCCSkills_ChecksBatch1.csv` (Intimidate, Persuade, Perception,
+   Navigation, Weather-Reading, Animal Handling, Lore: Creepypasta, Lore:
+   Xenobiology, Mechanics, Swimming, Diving) — queued for import alongside the
+   Chatter table next time MCP is available.
+2. ~~Advantage/Disadvantage as a `ResolveCheck` parameter.~~ **Done 2026-08-23**
+   — `ResolveSkillCheck` now takes `bAdvantage` alongside the existing
+   `bUntrained`, and the two cancel out to a single ordinary roll when both are
+   true, same as they would on paper. Nothing yet *grants* Advantage from a
+   Class benefit — that's what #3 is for — but the mechanism is real and
+   build-verified.
 3. **A damage-type + resistance/vulnerability/immunity system.** The bigger
    lift. Needs an `EDCCDamageType` enum, every damage source (weapons, Skills,
    environment) tagged with one, and a resistance/vulnerability/immunity lookup
@@ -476,6 +490,14 @@ Achievements, and Equipment already work here.
    Enhanced stat layer. This is also, not incidentally, the actual Third Floor
    race/class selection system the design doc has been waiting on — worth
    treating as its own project phase rather than something bolted on reactively.
+   **Requirement, added 2026-08-23 per Zoe:** picking a Class must also grant a
+   themed starter equipment kit through the existing Equipment system — a
+   Dentist who never once sees a dental tool isn't fun, regardless of how
+   correct their Build Point math is. Every class below gets a short starter-kit
+   list as part of this component's data, authored as ordinary `DT_DCCEquipment`
+   rows (mostly Trinket-slot props, sometimes a thematic MainHand item that
+   doubles as the class's signature improvised weapon) and auto-equipped the
+   moment the Class is selected. See "Starter kits" below for the per-class list.
 5. **Pets/Mounts.** Only two of twelve classes need it (Rideshare Driver,
    Wildlife Rehabber), so lower priority. Rideshare Driver's "movement-only
    sedan" is the cheap version; a real combat pet is a bigger build — do the
@@ -522,22 +544,74 @@ Achievements, and Equipment already work here.
   so the benefit becomes buildable today instead of waiting on a system nobody
   has designed yet.
 
-### New Skill IDs the twelve classes need authored (once primitive #1 exists)
+### New Skill IDs the twelve classes need authored
 
-Navigation (Rideshare Driver) · Weather-reading (Storm Chaser) · Animal Handling
-(Wildlife Rehabber) · Lore: Creepypasta (Jumpscare Mage) · Lore: Xenobiology
-(Xenobiology Grad Student) · Mechanics, Swimming, Diving (Underwater Welder).
-**Intimidate already exists** as an interaction verb (`DCCInteractionTypes.h`) —
-Bounty Hunter and Repo Man's Intimidate benefits just need Skill Rank tracking
-layered on top of a verb that already resolves, once primitive #1 lands.
+**Done 2026-08-23** — staged in `Docs/DT_DCCSkills_ChecksBatch1.csv`, queued for
+import: Intimidate, Persuade, Perception, Navigation, Weather-Reading, Animal
+Handling, Lore: Creepypasta, Lore: Xenobiology, Mechanics, Swimming, Diving.
+`Intimidate` and `Persuade` are now also actually wired into
+`ResolveSocialCheck` — Rank and Advantage both do something, not just exist.
+
+### Starter kits (part of primitive #4, specified now so it's never lost)
+
+One themed prop set per class, mostly Trinket-slot, occasionally a MainHand
+item that doubles as the class's signature weapon (and, not coincidentally,
+usually explains its "limited weapon choice" detriment). Not yet authored as
+`DT_DCCEquipment` rows — most need real meshes sourced or reused from an
+installed Fab pack the same way `ADCCPickup_Jukebox` reuses a kitchen
+appliance; flagged `[needs mesh]` where nothing obvious exists yet.
+
+| Class | Starter kit |
+|---|---|
+| Underwater Welder | Welding Torch (MainHand) · Diving Mask (Head) · Wetsuit (Body) `[needs mesh]` |
+| Storm Chaser | Lightning-Rod Staff (MainHand) `[needs mesh]` · Anemometer (Trinket) `[needs mesh]` |
+| Crime Scene Cleaner | Industrial Mop (MainHand) · Hazmat Suit (Body) `[needs mesh]` · Bio-hazard Kit (Trinket) |
+| Bounty Hunter | Restraint Cuffs (Trinket) `[needs mesh]` · Syndicate Badge (Trinket) |
+| Xenobiology Grad Student | Field Microscope (Trinket) `[needs mesh]` · Lab Coat (Body) `[needs mesh]` |
+| Rideshare Driver | Phone Mount (Trinket) `[needs mesh]` — the sedan itself is the Pet/Mount grant, not equipment |
+| Kua-Tin Noodle Stand Cook | Cast-Iron Pan (MainHand) · Apron (Body) `[needs mesh]` |
+| Repo Man | Tow Chain (MainHand) `[needs mesh]` · Clipboard (Trinket) `[needs mesh]` |
+| Wildlife Rehabber | Pet Carrier (Trinket) `[needs mesh]` — separate from the Pet/Mount grant itself |
+| Dentist | Dental Tool Kit (MainHand) `[needs mesh]` · Numbing Kit (Trinket) |
+| Jumpscare Mage | Creepy Mask (Head) `[needs mesh]` · Flickering Lantern (OffHand) |
+| Lord of Dance | Boombox (Trinket) `[needs mesh]` — also the literal source of "music audibly playing" for its own Mana-regen benefit |
 
 ### Suggested build order
 
-1. Skill Rank + Check (unlocks almost everything downstream)
-2. Advantage/Disadvantage (pairs with #1, cheap once #1 exists)
-3. The Class Benefit component (the actual Third Floor unlock)
+1. ~~Skill Rank + Check~~ **Done 2026-08-23**
+2. ~~Advantage/Disadvantage~~ **Done 2026-08-23**
+3. The Class Benefit component, including starter-kit grants (the actual Third
+   Floor unlock — biggest remaining piece)
 4. Damage types, scoped to the eight actually in use above
 5. Natural attacks via existing Skill archetype rows — no dependency, buildable
    in parallel with any of the above, any time
 6. Pets/Mounts — only blocks 2 of 12 classes
 7. New movement modes — lowest priority, fewest classes depend on them
+
+---
+
+## Notes / TODO — engineering build tracker
+
+Living checklist. Update in place as each piece lands; don't create a dated
+"progress report" file next to this one.
+
+- [x] **Skill Rank + non-combat Skill Check** — 2026-08-23. Turned out to
+  mostly already exist (`ResolveSkillCheck`); fixed the real gap
+  (Persuade/Intimidate weren't using it) and added `EDCCSkillArchetype::Check`.
+  Build-verified, editor closed, real link. Not yet seen in PIE.
+- [x] **Advantage/Disadvantage** — 2026-08-23. `ResolveSkillCheck` takes
+  `bAdvantage` now, cancels correctly against `bUntrained`. Nothing grants it
+  from a benefit yet — that's #3.
+- [ ] **New Skill rows imported** — `Docs/DT_DCCSkills_ChecksBatch1.csv` written,
+  not yet imported (needs MCP).
+- [ ] **The Class Benefit component** — not started. The big one: applies a
+  selected Class's full benefit list at runtime, including starter equipment
+  kits (see above).
+- [ ] **Damage types + resistance/vulnerability/immunity** — not started.
+  Scoped to Fire/Cold/Electric/Poison/Necrotic/Psychic/Bludgeoning/Piercing.
+- [ ] **Pets/Mounts** — not started. Rideshare Driver's movement-only sedan is
+  the cheap version to build first.
+- [ ] **New movement modes** (burrow, breathe underwater, flight) — not
+  started. "+5 Step" still needs a decision — reinterpret or shelve.
+- [ ] **Starter-kit equipment rows** — designed (table above), not yet
+  authored as `DT_DCCEquipment` CSV rows or imported.

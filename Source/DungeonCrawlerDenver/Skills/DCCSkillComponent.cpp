@@ -165,6 +165,16 @@ void UDCCSkillComponent::MarkSkillUsed(FName SkillId)
 	}
 }
 
+void UDCCSkillComponent::RecordUntrainedAttempt(FName SkillId)
+{
+	if (GetOwnerRole() != ROLE_Authority || IsSkillKnown(SkillId))
+	{
+		return;
+	}
+
+	UntrainedAttempts.Add(SkillId);
+}
+
 int32 UDCCSkillComponent::RunSkillAdvancement()
 {
 	if (GetOwnerRole() != ROLE_Authority)

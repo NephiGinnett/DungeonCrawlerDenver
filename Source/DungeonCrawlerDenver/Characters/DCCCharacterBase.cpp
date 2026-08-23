@@ -1819,11 +1819,35 @@ void ADCCCharacterBase::ResolveSocialCheck(ADCCCharacterBase* Target, bool bInti
 
 	const int32 Difficulty = bIntimidate ? IntimidateDifficulty : PersuadeDifficulty;
 
+	// Routed through the Skill system (2026-08-23) rather than a flat CHA
+	// check, so Intimidate/Persuade Ranks - and any Race/Class benefit granting
+	// Advantage on them - actually do something. DT_DCCSkills needs "Intimidate"
+	// and "Persuade" rows for GetSkillRank to find (0/untrained until then,
+	// which is still correct, just ungrateful for Rank investment).
+	static const FName IntimidateSkillId(TEXT("Intimidate"));
+	static const FName PersuadeSkillId(TEXT("Persuade"));
+	const FName SkillId = bIntimidate ? IntimidateSkillId : PersuadeSkillId;
+
+	const bool bKnown = Skills && Skills->IsSkillKnown(SkillId);
+	const int32 SkillRank = Skills ? Skills->GetSkillRank(SkillId) : 0;
+
 	// Charisma, per the published social skills. The roll is real and the result
 	// is reported in full - the narrator layer describes outcomes, it never
 	// decides them.
-	const FDCCCheckResult Check = Ruleset->ResolveCheck(
-		Stats->GetEnhanced(), EDCCAbility::Charisma, Difficulty);
+	const FDCCCheckResult Check = Ruleset->ResolveSkillCheck(
+		Stats->GetEnhanced(), EDCCAbility::Charisma, SkillRank, Difficulty, /*bUntrained=*/!bKnown);
+
+	if (Skills)
+	{
+		if (bKnown)
+		{
+			Skills->MarkSkillUsed(SkillId);
+		}
+		else
+		{
+			Skills->RecordUntrainedAttempt(SkillId);
+		}
+	}
 
 	const FText SelfName = FText::FromString(GetActorNameOrLabel());
 	const FText TargetName = Target->DisplayName.IsEmpty()

@@ -219,20 +219,28 @@ FDCCCheckResult UDCCRuleset::ResolveSkillCheck(
 	int32 SkillRank,
 	int32 DifficultyClass,
 	bool bUntrained,
-	int32 SituationalBonus) const
+	int32 SituationalBonus,
+	bool bAdvantage) const
 {
 	const int32 DieSides = FMath::Max(1, GetCheckDieSides());
 
 	FDCCCheckResult Result;
 
-	if (bUntrained)
+	// Advantage and Disadvantage cancel out to a single ordinary roll, same as
+	// they would on paper - an untrained crawler with an Advantage-granting
+	// Class benefit is not stuck at Disadvantage forever, and isn't secretly
+	// rolling twice-Advantage either.
+	const bool bNetAdvantage = bAdvantage && !bUntrained;
+	const bool bNetDisadvantage = bUntrained && !bAdvantage;
+
+	if (bNetAdvantage || bNetDisadvantage)
 	{
-		// Disadvantage: two dice, keep the worse. Rolled here rather than by
-		// halving a bonus so that the critical rules below still see a real die
-		// face - an untrained fumble should be able to happen.
+		// Two dice, keep the better (Advantage) or the worse (Disadvantage).
+		// Rolled here rather than by shifting a bonus so the critical rules
+		// below still see a real die face either way.
 		const int32 FirstRoll = FMath::RandRange(1, DieSides);
 		const int32 SecondRoll = FMath::RandRange(1, DieSides);
-		Result.Roll = FMath::Min(FirstRoll, SecondRoll);
+		Result.Roll = bNetAdvantage ? FMath::Max(FirstRoll, SecondRoll) : FMath::Min(FirstRoll, SecondRoll);
 	}
 	else
 	{

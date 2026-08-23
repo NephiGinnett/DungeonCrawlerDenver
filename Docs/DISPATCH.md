@@ -250,6 +250,26 @@ PIE run above diagnosed:
 
 ---
 
+## Queued for whoever has MCP (2026-08-23, class Build System - Skill Check primitive)
+
+Built this session, no MCP: `Docs/races-and-classes.md`'s "Notes / TODO" section is now the
+live tracker for this work - check there first for current status before reading further here.
+Short version: `ResolveSkillCheck` (Rank + Advantage/Disadvantage) turned out to mostly already
+exist; the real gap was Persuade/Intimidate not using it, now fixed. Development-Editor-build-
+verified, editor closed, real link. Not yet seen in PIE.
+
+1. **Import `Docs/DT_DCCSkills_ChecksBatch1.csv`** into the existing skill table (same one
+   `DCCSkillComponent::SkillTable` already points at) - 11 new rows: Intimidate, Persuade,
+   Perception, Navigation, Weather-Reading, Animal Handling, Lore: Creepypasta, Lore:
+   Xenobiology, Mechanics, Swimming, Diving. Skip any that already exist under a different id.
+2. **PIE test: Persuade and Intimidate an NPC with and without the new Skill granted**, and
+   confirm the Rank is actually added to the roll (compare a Rank-0/untrained attempt, which
+   should show Disadvantage, against a granted-and-Ranked attempt).
+3. **Grant a test character a Rank in Intimidate or Persuade** (admin panel `DCCGrantSkill`,
+   already wired) and confirm `RunSkillAdvancement` still correctly marks/advances it same as
+   any cast Skill - this shares the exact same per-character tracking, just exercised from a
+   new call site.
+
 ## Queued for whoever has MCP (2026-08-23, chat/feed system)
 
 Built this session, no MCP: the Feed/Chatter/Party/Allies/Whispers chat system per Zoe's own
