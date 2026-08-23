@@ -38,3 +38,10 @@ ADCCQuestMarker_EastLedge::ADCCQuestMarker_EastLedge()
 	MarkerLabel = NSLOCTEXT("DCC", "MarkerEastLedge", "THE LEDGE");
 	ApplyPlaceholderBeacon(Beacon);
 }
+
+ADCCQuestMarker_BarEntrance::ADCCQuestMarker_BarEntrance()
+{
+	ObjectiveTag = TEXT("BarEntrance");
+	MarkerLabel = NSLOCTEXT("DCC", "MarkerBarEntrance", "THE BAR");
+	ApplyPlaceholderBeacon(Beacon);
+}

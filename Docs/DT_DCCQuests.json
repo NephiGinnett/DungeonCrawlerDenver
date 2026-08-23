@@ -159,5 +159,145 @@
 		"FavorReward": 60,
 		"NextQuestId": "None",
 		"bAutoStart": false
+	},
+	{
+		"Name": "TheOathgate",
+		"QuestId": "TheOathgate",
+		"Title": "Binding Arbitration",
+		"Summary": "Step through the Oathgate. Whatever is on the other side has already agreed to see you.",
+		"StartAnnouncement": "Somewhere on this floor there is a door that was never a door. Legal calls it a Mandatory Arbitration Clause. You will call it the Oathgate, right up until it calls you something else.",
+		"CompletionAnnouncement": "Arbitration concluded. The findings are, as ever, not in your favor. You are, however, still standing, which the contract technically allows for.",
+		"Objectives": [
+			{
+				"Description": "Step through the Oathgate",
+				"Type": "ReachLocation",
+				"TargetId": "Oathgate",
+				"RequiredCount": 1,
+				"bHidden": false
+			},
+			{
+				"Description": "Clear whatever is waiting on the other side",
+				"Type": "ClearEncounter",
+				"TargetId": "None",
+				"RequiredCount": 1,
+				"bHidden": false
+			}
+		],
+		"ExperienceReward": 400,
+		"FavorReward": 30,
+		"NextQuestId": "None",
+		"bAutoStart": false
+	},
+	{
+		"Name": "BountyCollectors",
+		"QuestId": "BountyCollectors",
+		"Title": "Debt Collection, Reversed",
+		"Summary": "Put down five of Voldemortgage's collectors. Turnabout, etc.",
+		"StartAnnouncement": "Every Debt Eater on this floor is, technically, an independent contractor. Independent contractors do not get benefits. Act accordingly.",
+		"CompletionAnnouncement": "Five collectors down. HR has opened five exit interviews and closed all five without comment.",
+		"Objectives": [
+			{
+				"Description": "Put down five collectors",
+				"Type": "Kill",
+				"TargetId": "None",
+				"RequiredCount": 5,
+				"bHidden": false
+			}
+		],
+		"ExperienceReward": 250,
+		"FavorReward": 15,
+		"NextQuestId": "RepeatCustomer",
+		"bAutoStart": false
+	},
+	{
+		"Name": "RepeatCustomer",
+		"QuestId": "RepeatCustomer",
+		"Title": "Frequent Flyer",
+		"Summary": "Twenty more. Loyalty is rewarded here. So is everything else.",
+		"StartAnnouncement": "The floor has noticed you keep coming back. Production has started a segment about it. You are not credited by name, for legal reasons.",
+		"CompletionAnnouncement": "Twenty. The segment has been renewed for another season. You were not consulted.",
+		"Objectives": [
+			{
+				"Description": "Put down twenty more hostiles",
+				"Type": "Kill",
+				"TargetId": "None",
+				"RequiredCount": 20,
+				"bHidden": false
+			}
+		],
+		"ExperienceReward": 700,
+		"FavorReward": 45,
+		"NextQuestId": "None",
+		"bAutoStart": false
+	},
+	{
+		"Name": "NetworkingOpportunity",
+		"QuestId": "NetworkingOpportunity",
+		"Title": "Last Call",
+		"Summary": "Reach the Bar and make two friends. The audience prefers this to the fighting, again.",
+		"StartAnnouncement": "There is a bar on this floor. It still has a bartender. He still has opinions about Voldemortgage, all of them actionable. Go and listen, and bring somebody with you while you're at it.",
+		"CompletionAnnouncement": "Two new alliances, logged from a barstool rather than a battlefield. Production is calling this content synergy. Nobody asked them to.",
+		"Objectives": [
+			{
+				"Description": "Reach the Bar",
+				"Type": "ReachLocation",
+				"TargetId": "BarEntrance",
+				"RequiredCount": 1,
+				"bHidden": false
+			},
+			{
+				"Description": "Fist-bump two allies",
+				"Type": "Befriend",
+				"TargetId": "None",
+				"RequiredCount": 2,
+				"bHidden": false
+			}
+		],
+		"ExperienceReward": 300,
+		"FavorReward": 35,
+		"NextQuestId": "None",
+		"bAutoStart": false
+	},
+	{
+		"Name": "FreeWeights",
+		"QuestId": "FreeWeights",
+		"Title": "Wellness Initiative",
+		"Summary": "Climb fifty metres, cumulative. Floor One has a wellness program. It is not optional.",
+		"StartAnnouncement": "Floor One's wellness program consists entirely of a very tall wall and the strong suggestion that you climb it. Repeatedly. There is no gym. There is only the wall.",
+		"CompletionAnnouncement": "Fifty metres, logged. Your Constitution score thanks you. Everything else about this floor does not.",
+		"Objectives": [
+			{
+				"Description": "Climb fifty metres",
+				"Type": "Climb",
+				"TargetId": "None",
+				"RequiredCount": 50,
+				"bHidden": false
+			}
+		],
+		"ExperienceReward": 350,
+		"FavorReward": 20,
+		"NextQuestId": "None",
+		"bAutoStart": false
+	},
+	{
+		"Name": "SecondHelping",
+		"QuestId": "SecondHelping",
+		"Title": "Second Helping",
+		"Summary": "Carry two more things out of the Pantry. Ownership is a muscle. Exercise it.",
+		"StartAnnouncement": "Dry storage was not fully cleared out the first time. There is more unclaimed property back there, and the definition of 'unclaimed' has not gotten any stricter.",
+		"CompletionAnnouncement": "Two more items, relocated. Dry storage is, once again, slightly less full and considerably less legal.",
+		"Objectives": [
+			{
+				"Description": "Carry two more things out of the Pantry",
+				"Type": "Collect",
+				"TargetId": "None",
+				"RequiredCount": 2,
+				"bHidden": false
+			}
+		],
+		"ExperienceReward": 300,
+		"FavorReward": 20,
+		"NextQuestId": "None",
+		"bAutoStart": false
 	}
 ]

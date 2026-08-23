@@ -39,3 +39,13 @@ class DUNGEONCRAWLERDENVER_API ADCCQuestMarker_EastLedge : public ADCCQuestMarke
 public:
 	ADCCQuestMarker_EastLedge();
 };
+
+/** The Bar (Room 5) - roughly x9200, y5000 per floor-01-design.md. */
+UCLASS()
+class DUNGEONCRAWLERDENVER_API ADCCQuestMarker_BarEntrance : public ADCCQuestMarker
+{
+	GENERATED_BODY()
+
+public:
+	ADCCQuestMarker_BarEntrance();
+};
