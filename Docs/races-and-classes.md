@@ -434,3 +434,110 @@ than hand-authoring), the process is: pick a Race, decide Earth vs. Alien, spend
 its 25 points the same way, and name the drawbacks to match its flavour — same
 tables, same math, just applied to Amazonian/Arachnid/etc. instead of a career.
 Nothing here commits us to doing every Race that way; it is simply now possible.
+
+---
+
+## What it takes to actually build these (2026-08-23)
+
+Checked against the current code, not guessed. Two findings shape everything
+below: **`DCCRuleset::ResolveCheck` takes an Ability and a Difficulty Class but no
+Skill Rank and no Advantage/Disadvantage parameter yet** (a gap the code's own
+Skills-section comments already flag), and **there is no damage-type system at
+all** — damage is a flat `int32`, so "resistance to Fire" has nothing to attach
+to yet. Those two gaps are why this section exists: almost every benefit above
+routes through one of a handful of primitives, and building the primitive once
+means every future class gets it free from a DataTable row, the same way Skills,
+Achievements, and Equipment already work here.
+
+### Foundational primitives (build once, unlock most of the list)
+
+1. **Skill Rank + a real non-combat Skill Check.** `ResolveCheck` needs a
+   `SkillRank` term added, and a generic Skill list needs to exist for things
+   that aren't castable spells — Perception, Navigation, Animal Handling,
+   Mechanics, Intimidate, every `Lore: X`. This is the single highest-leverage
+   piece: nearly every class above needs it. `Skills/` already has the shape for
+   this half-built — the doc's own note that `KnownSkills` should become
+   `{ SkillId, Rank, bMarked }` resolved against a shared table is exactly this.
+2. **Advantage/Disadvantage as a `ResolveCheck` parameter.** Roll 2, take the
+   better or worse. Small, mechanical, and every "Advantage on X Checks" benefit
+   across all twelve classes needs it — pairs naturally with #1.
+3. **A damage-type + resistance/vulnerability/immunity system.** The bigger
+   lift. Needs an `EDCCDamageType` enum, every damage source (weapons, Skills,
+   environment) tagged with one, and a resistance/vulnerability/immunity lookup
+   the Stats component consults on `ApplyDamage`. Don't build the full taxonomy
+   at once — the twelve classes above only actually use Fire, Cold, Electric,
+   Poison, Necrotic, Psychic, Bludgeoning, and Piercing. Start with those eight.
+4. **A Class Benefit component — the real piece this has all been leading to.**
+   Something has to actually *apply* a selected Class's benefit list at runtime:
+   stat bonuses, Skill bonuses, resistances, movement changes, once-per-X
+   triggers. Shape-wise this is `UDCCEquipmentComponent`'s pattern one level up —
+   a DataTable row per Class holding a list of typed benefit structs, folded
+   into the character the same way Equipment already folds gear bonuses into the
+   Enhanced stat layer. This is also, not incidentally, the actual Third Floor
+   race/class selection system the design doc has been waiting on — worth
+   treating as its own project phase rather than something bolted on reactively.
+5. **Pets/Mounts.** Only two of twelve classes need it (Rideshare Driver,
+   Wildlife Rehabber), so lower priority. Rideshare Driver's "movement-only
+   sedan" is the cheap version; a real combat pet is a bigger build — do the
+   cheap version first if only one is needed soon.
+6. **New movement modes: burrow, breathe underwater, flight.** Each is a custom
+   `CharacterMovementComponent` mode — genuinely new engineering, no existing
+   hook. **"+5 Step" doesn't map onto anything current** — this game runs
+   real-time-with-pause, not a turn/step economy, so either reinterpret Step as
+   something else (bonus dash distance?) or shelve it until/unless a turn-based
+   mode ever exists.
+
+### Already cheap — good news, existing hooks to reuse
+
+- **Natural attacks** (Static Burst, Ball Lightning, Mark and Collect, Lien
+  Enforcement) — these can likely just *be* `DCCSkillComponent` Damage-archetype
+  rows with near-zero mana cost and a short cooldown. The Rank-based damage-dice
+  scaling table (Rank 1 = +1, 2–3 = +1d2, etc.) already exists in the ruleset
+  notes. This is a DataTable row, not new code.
+- **Flat Stat bonuses** (+1 STR, +1 INT, etc.) — the Unenhanced stat layer
+  already takes writes from potions and level-ups; a Class benefit is the same
+  write from a different source.
+- **Move Speed bonuses** — `ADCCCharacterBase::MovementSpeedOverride` already
+  exists and is already read by movement prediction on every machine.
+- **Doubled Mana regen under a condition** — Mana regen already ticks on the
+  Stats component; this is a conditional multiplier on an existing tick, not a
+  new system.
+- **Gold bonuses on kill** — `AwardKillExperience` and the loot-roll functions
+  are the existing hook points.
+- **Club memberships** (Club Desperado, Club Vanquisher, Dungeon Book of the
+  Floor) — pure tags for now. No mechanical system needs to exist before these
+  can be recorded on a character; they only need to *do* something once a
+  system reads them, which can come later.
+
+### Blocked on systems that don't exist yet at all
+
+- **Store discounts, sales bonus, interest earned** — there is no shop or
+  vendor of any kind in the codebase yet. These benefits are unbuildable in
+  isolation; they're a line item for whenever an economy/vendor system gets
+  built, not something to chase per-class now.
+- **Once-per-day triggers** ("negate one attack, once per day," "buff the party
+  once per day") — there's no day/rest cycle tracked anywhere. Suggest
+  reinterpreting these as **once per floor** or **once per encounter** instead —
+  both already have real boundaries in the code (`ADCCRoom`/`ADCCEncounter`),
+  so the benefit becomes buildable today instead of waiting on a system nobody
+  has designed yet.
+
+### New Skill IDs the twelve classes need authored (once primitive #1 exists)
+
+Navigation (Rideshare Driver) · Weather-reading (Storm Chaser) · Animal Handling
+(Wildlife Rehabber) · Lore: Creepypasta (Jumpscare Mage) · Lore: Xenobiology
+(Xenobiology Grad Student) · Mechanics, Swimming, Diving (Underwater Welder).
+**Intimidate already exists** as an interaction verb (`DCCInteractionTypes.h`) —
+Bounty Hunter and Repo Man's Intimidate benefits just need Skill Rank tracking
+layered on top of a verb that already resolves, once primitive #1 lands.
+
+### Suggested build order
+
+1. Skill Rank + Check (unlocks almost everything downstream)
+2. Advantage/Disadvantage (pairs with #1, cheap once #1 exists)
+3. The Class Benefit component (the actual Third Floor unlock)
+4. Damage types, scoped to the eight actually in use above
+5. Natural attacks via existing Skill archetype rows — no dependency, buildable
+   in parallel with any of the above, any time
+6. Pets/Mounts — only blocks 2 of 12 classes
+7. New movement modes — lowest priority, fewest classes depend on them
