@@ -317,6 +317,17 @@ item 3 (the ally bug) is probably the one Zoe actually cares most about.
     section (Free Fantasy Weapon Sample Pack on Fab, ASIS Free Gun Weapons Pack on itch.io) —
     `ConfettiCrossbow` ships with no mesh at all and the other two ranged rows reuse an unrelated
     placeholder mesh until one lands.
+12. **PIE-test three more never-run features from this same session** (all pure C++, nothing to
+    place):
+    - **Death saves.** Get downed and watch the event feed - a roll every 3s, with pips on the
+      downed screen. Confirm 3 successes stabilises at 1 HP with no rescuer, and that a rescuer's
+      "Help Them Up" still works mid-sequence and cuts the sequence short.
+    - **CJ's first aid.** Down a party member near CJ with nobody else fighting - he should walk
+      over and start the same revive channel a player does. Never seen running.
+    - **Selfie mode.** Press `C`, hold the pose, confirm a screenshot actually lands in
+      `Saved/Screenshots/` (the `FScreenshotRequest` call is the one piece of this genuinely
+      unverified - it should work, matches the console `shot` command's own mechanism, but has
+      not been watched happen).
 
 ---
 
