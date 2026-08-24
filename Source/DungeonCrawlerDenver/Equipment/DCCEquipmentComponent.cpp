@@ -213,6 +213,39 @@ void UDCCEquipmentComponent::AccumulateAbilityBonuses(TArray<int32>& OutBonuses)
 	}
 }
 
+TArray<FDCCModifierSource> UDCCEquipmentComponent::GetAbilityBonusSources(EDCCAbility Ability) const
+{
+	TArray<FDCCModifierSource> Sources;
+
+	for (const FDCCEquippedItem& Entry : Equipped)
+	{
+		FDCCEquipmentDef Item;
+		if (!FindItem(Entry.ItemId, Item))
+		{
+			continue;
+		}
+
+		const int32 Bonuses[] = {
+			Item.BonusStrength,
+			Item.BonusIntelligence,
+			Item.BonusConstitution,
+			Item.BonusDexterity,
+			Item.BonusCharisma,
+		};
+
+		const int32 Index = static_cast<int32>(Ability);
+		const bool bValidIndex = Index >= 0 && Index < static_cast<int32>(UE_ARRAY_COUNT(Bonuses));
+		if (bValidIndex && Bonuses[Index] != 0)
+		{
+			FDCCModifierSource& Source = Sources.AddDefaulted_GetRef();
+			Source.Label = Item.DisplayName;
+			Source.Amount = Bonuses[Index];
+		}
+	}
+
+	return Sources;
+}
+
 float UDCCEquipmentComponent::GetAttackRangeOverride() const
 {
 	float Best = 0.0f;

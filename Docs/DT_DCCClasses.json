@@ -1,0 +1,162 @@
+[
+  {
+    "Name": "JumpscareMage",
+    "ClassId": "JumpscareMage",
+    "DisplayName": "Jumpscare Mage",
+    "FlavorText": "A crowd-control caster whose whole kit is startling the enemy rather than overpowering them.",
+    "bIsAlienClass": false,
+    "Benefits": [
+      { "Type": "StatBonus", "Ability": "Charisma", "Amount": 1, "SourceLabel": "Class: Jumpscare Mage" },
+      { "Type": "StatBonus", "Ability": "Intelligence", "Amount": 1, "SourceLabel": "Class: Jumpscare Mage" },
+      { "Type": "StatBonus", "Ability": "Strength", "Amount": -2, "SourceLabel": "Class: Jumpscare Mage (detriment)" },
+      { "Type": "StatBonus", "Ability": "Dexterity", "Amount": -2, "SourceLabel": "Class: Jumpscare Mage (detriment)" }
+    ],
+    "StarterEquipmentIds": ["CreepyMask", "FlickeringLantern"]
+  },
+  {
+    "Name": "LordOfDance",
+    "ClassId": "LordOfDance",
+    "DisplayName": "Lord of Dance",
+    "FlavorText": "Locked into dancing the instant combat starts. The class is the bit.",
+    "bIsAlienClass": false,
+    "Benefits": [
+      { "Type": "StatBonus", "Ability": "Dexterity", "Amount": 1, "SourceLabel": "Class: Lord of Dance" },
+      { "Type": "MoveSpeedBonus", "Amount": 50, "SourceLabel": "Class: Lord of Dance" }
+    ],
+    "StarterEquipmentIds": ["Boombox"]
+  },
+  {
+    "Name": "UnderwaterWelder",
+    "ClassId": "UnderwaterWelder",
+    "DisplayName": "Underwater Welder",
+    "FlavorText": "Earth. Zoe's own example class - the template every other career class follows.",
+    "bIsAlienClass": false,
+    "Benefits": [
+      { "Type": "StatBonus", "Ability": "Constitution", "Amount": 1, "SourceLabel": "Class: Underwater Welder" },
+      { "Type": "StatBonus", "Ability": "Dexterity", "Amount": -2, "SourceLabel": "Class: Underwater Welder (detriment)" },
+      { "Type": "SkillBonus", "SkillId": "Swimming", "Amount": 1, "SourceLabel": "Class: Underwater Welder" },
+      { "Type": "SkillBonus", "SkillId": "Diving", "Amount": 1, "SourceLabel": "Class: Underwater Welder" },
+      { "Type": "SkillBonus", "SkillId": "Mechanics", "Amount": 1, "SourceLabel": "Class: Underwater Welder" }
+    ],
+    "StarterEquipmentIds": ["WeldingTorch", "DivingMask"]
+  },
+  {
+    "Name": "StormChaser",
+    "ClassId": "StormChaser",
+    "DisplayName": "Storm Chaser",
+    "FlavorText": "Earth. Lives out of a truck, reads weather like a threat assessment.",
+    "bIsAlienClass": false,
+    "Benefits": [
+      { "Type": "StatBonus", "Ability": "Dexterity", "Amount": 1, "SourceLabel": "Class: Storm Chaser" },
+      { "Type": "StatBonus", "Ability": "Charisma", "Amount": -2, "SourceLabel": "Class: Storm Chaser (detriment)" },
+      { "Type": "SkillBonus", "SkillId": "Perception", "Amount": 1, "SourceLabel": "Class: Storm Chaser" },
+      { "Type": "SkillBonus", "SkillId": "WeatherReading", "Amount": 1, "SourceLabel": "Class: Storm Chaser" }
+    ],
+    "StarterEquipmentIds": ["LightningRodStaff"]
+  },
+  {
+    "Name": "CrimeSceneCleaner",
+    "ClassId": "CrimeSceneCleaner",
+    "DisplayName": "Crime Scene Cleaner",
+    "FlavorText": "Earth. Knows where the bodies are buried, literally.",
+    "bIsAlienClass": false,
+    "Benefits": [
+      { "Type": "StatBonus", "Ability": "Constitution", "Amount": 1, "SourceLabel": "Class: Crime Scene Cleaner" },
+      { "Type": "SkillBonus", "SkillId": "Perception", "Amount": 1, "SourceLabel": "Class: Crime Scene Cleaner" },
+      { "Type": "SkillBonus", "SkillId": "Mechanics", "Amount": 1, "SourceLabel": "Class: Crime Scene Cleaner" }
+    ],
+    "StarterEquipmentIds": ["IndustrialMop", "BioHazardKit"]
+  },
+  {
+    "Name": "BountyHunter",
+    "ClassId": "BountyHunter",
+    "DisplayName": "Bounty Hunter, Syndicate-Licensed",
+    "FlavorText": "Alien. The license is real, the reputation is worse.",
+    "bIsAlienClass": true,
+    "Benefits": [
+      { "Type": "StatBonus", "Ability": "Strength", "Amount": 1, "SourceLabel": "Class: Bounty Hunter" },
+      { "Type": "StatBonus", "Ability": "Charisma", "Amount": -2, "SourceLabel": "Class: Bounty Hunter (detriment)" },
+      { "Type": "SkillBonus", "SkillId": "Intimidate", "Amount": 2, "SourceLabel": "Class: Bounty Hunter" }
+    ],
+    "StarterEquipmentIds": ["RestraintCuffs", "SyndicateBadge"]
+  },
+  {
+    "Name": "XenobiologyGradStudent",
+    "ClassId": "XenobiologyGradStudent",
+    "DisplayName": "Xenobiology Grad Student",
+    "FlavorText": "Alien. Never left the lab. Still saving up for a thesis defense.",
+    "bIsAlienClass": true,
+    "Benefits": [
+      { "Type": "StatBonus", "Ability": "Intelligence", "Amount": 1, "SourceLabel": "Class: Xenobiology Grad Student" },
+      { "Type": "StatBonus", "Ability": "Strength", "Amount": -3, "SourceLabel": "Class: Xenobiology Grad Student (detriment)" },
+      { "Type": "StatBonus", "Ability": "Constitution", "Amount": -3, "SourceLabel": "Class: Xenobiology Grad Student (detriment)" },
+      { "Type": "SkillBonus", "SkillId": "LoreXenobiology", "Amount": 1, "SourceLabel": "Class: Xenobiology Grad Student" }
+    ],
+    "StarterEquipmentIds": ["FieldMicroscope"]
+  },
+  {
+    "Name": "RideshareDriver",
+    "ClassId": "RideshareDriver",
+    "DisplayName": "Rideshare Driver",
+    "FlavorText": "Earth. 5 stars, big tip. The sedan is a separate Pet/Mount grant, not built yet.",
+    "bIsAlienClass": false,
+    "Benefits": [
+      { "Type": "StatBonus", "Ability": "Charisma", "Amount": 1, "SourceLabel": "Class: Rideshare Driver" },
+      { "Type": "StatBonus", "Ability": "Strength", "Amount": -2, "SourceLabel": "Class: Rideshare Driver (detriment)" },
+      { "Type": "SkillBonus", "SkillId": "Navigation", "Amount": 1, "SourceLabel": "Class: Rideshare Driver" }
+    ],
+    "StarterEquipmentIds": ["PhoneMount"]
+  },
+  {
+    "Name": "NoodleStandCook",
+    "ClassId": "NoodleStandCook",
+    "DisplayName": "Kua-Tin Noodle Stand Line Cook",
+    "FlavorText": "Alien. Cheap and cheerful - most of the fun here is flavour, not power.",
+    "bIsAlienClass": true,
+    "Benefits": [
+      { "Type": "StatBonus", "Ability": "Constitution", "Amount": 1, "SourceLabel": "Class: Noodle Stand Cook" },
+      { "Type": "StatBonus", "Ability": "Dexterity", "Amount": -2, "SourceLabel": "Class: Noodle Stand Cook (detriment)" },
+      { "Type": "SkillBonus", "SkillId": "Mechanics", "Amount": 1, "SourceLabel": "Class: Noodle Stand Cook" }
+    ],
+    "StarterEquipmentIds": ["CastIronPan"]
+  },
+  {
+    "Name": "RepoMan",
+    "ClassId": "RepoMan",
+    "DisplayName": "Repo Man",
+    "FlavorText": "A Mile High Recovery Solutions franchise employee. Fits Denver's own theme almost too well.",
+    "bIsAlienClass": true,
+    "Benefits": [
+      { "Type": "StatBonus", "Ability": "Strength", "Amount": 1, "SourceLabel": "Class: Repo Man" },
+      { "Type": "StatBonus", "Ability": "Charisma", "Amount": -2, "SourceLabel": "Class: Repo Man (detriment)" },
+      { "Type": "SkillBonus", "SkillId": "Intimidate", "Amount": 1, "SourceLabel": "Class: Repo Man" }
+    ],
+    "StarterEquipmentIds": ["TowChain", "Clipboard"]
+  },
+  {
+    "Name": "WildlifeRehabber",
+    "ClassId": "WildlifeRehabber",
+    "DisplayName": "Wildlife Rehabber / Zookeeper",
+    "FlavorText": "Earth. The Pet/Mount grant this class is really about isn't built yet.",
+    "bIsAlienClass": false,
+    "Benefits": [
+      { "Type": "StatBonus", "Ability": "Constitution", "Amount": 1, "SourceLabel": "Class: Wildlife Rehabber" },
+      { "Type": "SkillBonus", "SkillId": "AnimalHandling", "Amount": 1, "SourceLabel": "Class: Wildlife Rehabber" }
+    ],
+    "StarterEquipmentIds": ["PetCarrier"]
+  },
+  {
+    "Name": "Dentist",
+    "ClassId": "Dentist",
+    "DisplayName": "Dentist",
+    "FlavorText": "Earth. The ridiculous end of the spectrum, on purpose.",
+    "bIsAlienClass": false,
+    "Benefits": [
+      { "Type": "StatBonus", "Ability": "Intelligence", "Amount": 1, "SourceLabel": "Class: Dentist" },
+      { "Type": "StatBonus", "Ability": "Strength", "Amount": -3, "SourceLabel": "Class: Dentist (detriment)" },
+      { "Type": "StatBonus", "Ability": "Dexterity", "Amount": -2, "SourceLabel": "Class: Dentist (detriment)" },
+      { "Type": "SkillBonus", "SkillId": "Mechanics", "Amount": 1, "SourceLabel": "Class: Dentist" }
+    ],
+    "StarterEquipmentIds": ["DentalToolKit", "NumbingKit"]
+  }
+]

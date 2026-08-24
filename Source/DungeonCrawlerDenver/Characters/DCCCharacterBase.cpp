@@ -15,7 +15,11 @@
 #include "Rooms/DCCClimbPoint.h"
 #include "Progression/DCCAchievementComponent.h"
 #include "Equipment/DCCEquipmentComponent.h"
+#include "Classes/DCCClassComponent.h"
 #include "Quests/DCCQuestComponent.h"
+#include "Dialogue/DCCDialogueNPC.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraSystem.h"
 #include "Components/TextRenderComponent.h"
 #include "Animation/AnimSequenceBase.h"
 #include "Net/UnrealNetwork.h"
@@ -51,6 +55,7 @@ ADCCCharacterBase::ADCCCharacterBase()
 	Inventory = CreateDefaultSubobject<UDCCInventoryComponent>(TEXT("Inventory"));
 	Achievements = CreateDefaultSubobject<UDCCAchievementComponent>(TEXT("Achievements"));
 	Equipment = CreateDefaultSubobject<UDCCEquipmentComponent>(TEXT("Equipment"));
+	Class = CreateDefaultSubobject<UDCCClassComponent>(TEXT("Class"));
 
 	Nameplate = CreateDefaultSubobject<UTextRenderComponent>(TEXT("Nameplate"));
 	Nameplate->SetupAttachment(RootComponent);
@@ -181,6 +186,12 @@ void ADCCCharacterBase::SetMovementSpeedOverride(float NewSpeed)
 	ApplyDerivedMovementSpeed();
 }
 
+void ADCCCharacterBase::SetClassMoveSpeedBonus(float NewBonus)
+{
+	ClassMoveSpeedBonus = NewBonus;
+	ApplyDerivedMovementSpeed();
+}
+
 void ADCCCharacterBase::ApplyDerivedMovementSpeed()
 {
 	UCharacterMovementComponent* Movement = GetCharacterMovement();
@@ -201,6 +212,10 @@ void ADCCCharacterBase::ApplyDerivedMovementSpeed()
 	{
 		Speed *= Ruleset->GetSprintSpeedMultiplier(Stats->GetEnhanced());
 	}
+
+	// A flat Class-benefit add, not another multiplier - "+5ft Move" means
+	// five feet, not five feet times whatever else is already in play.
+	Speed += ClassMoveSpeedBonus;
 
 	// Applied before the casting clamp so a rooted caster is still rooted, and
 	// after the sprint multiplier so an escorting ally cannot sprint by accident.
@@ -665,6 +680,65 @@ void ADCCCharacterBase::Server_SendChatMessage_Implementation(EDCCChatChannel Ch
 	{
 		bHasSentFinalMessage = true;
 	}
+}
+
+TArray<FDCCModifierSource> ADCCCharacterBase::GetAbilityScoreBreakdown(EDCCAbility Ability) const
+{
+	TArray<FDCCModifierSource> Sources;
+
+	if (Stats)
+	{
+		FDCCModifierSource& Base = Sources.AddDefaulted_GetRef();
+		Base.Label = NSLOCTEXT("DCC", "BreakdownBaseScore", "Starting Score");
+		Base.Amount = Stats->AbilityScores.GetScore(Ability);
+	}
+
+	if (Equipment)
+	{
+		Sources.Append(Equipment->GetAbilityBonusSources(Ability));
+	}
+
+	if (Class)
+	{
+		Sources.Append(Class->GetAbilityBonusSources(Ability));
+	}
+
+	return Sources;
+}
+
+TArray<FDCCModifierSource> ADCCCharacterBase::GetSkillRankBreakdown(FName SkillId) const
+{
+	TArray<FDCCModifierSource> Sources;
+
+	if (SkillId.IsNone())
+	{
+		return Sources;
+	}
+
+	if (Skills && Skills->IsSkillKnown(SkillId))
+	{
+		FDCCModifierSource& Trained = Sources.AddDefaulted_GetRef();
+		Trained.Label = NSLOCTEXT("DCC", "BreakdownTrainedRank", "Trained Rank");
+		Trained.Amount = Skills->GetSkillRank(SkillId);
+	}
+
+	// SelectClass grants Skill bonuses as a genuine Rank via GrantSkill (see
+	// UDCCClassComponent::ApplyBenefits) rather than a separate overlay, so
+	// this is informational, not additional - the Class's contribution is
+	// already folded into "Trained Rank" above, not stacked on top of it. Zero
+	// Amount here would still be worth showing "included in", but Amount is
+	// kept for context (how much of that Rank the Class alone accounts for).
+	if (Class)
+	{
+		for (FDCCModifierSource& ClassSource : Class->GetSkillBonusSources(SkillId))
+		{
+			ClassSource.Label = FText::Format(
+				NSLOCTEXT("DCC", "BreakdownClassIncluded", "{0} (included above)"), ClassSource.Label);
+			Sources.Add(ClassSource);
+		}
+	}
+
+	return Sources;
 }
 
 void ADCCCharacterBase::Server_RequestChatterBatch_Implementation()
@@ -1352,6 +1426,23 @@ AActor* ADCCCharacterBase::FindLootTargetUnderCursor() const
 	return Hit;
 }
 
+ADCCDialogueNPC* ADCCCharacterBase::FindDialogueNPCUnderCursor() const
+{
+	AActor* Hit = SweepForInteractionCandidate();
+	ADCCDialogueNPC* Speaker = Cast<ADCCDialogueNPC>(Hit);
+	if (!Speaker)
+	{
+		return nullptr;
+	}
+
+	if (FVector::Dist(GetActorLocation(), Speaker->GetActorLocation()) > InteractionRange)
+	{
+		return nullptr;
+	}
+
+	return Speaker;
+}
+
 void ADCCCharacterBase::BuildInteractionOptions()
 {
 	InteractionOptions.Reset();
@@ -1552,6 +1643,19 @@ void ADCCCharacterBase::HandleInteractPressed()
 		InteractionTarget = Target;
 		InteractionIndex = 0;
 		BuildInteractionOptions();
+		return;
+	}
+
+	// Still nobody to talk to as an ally: a non-combat speaker (the bartender
+	// and its kind) under the crosshair gets its own, much smaller
+	// interaction - say the next line - rather than the full ally menu above,
+	// which ADCCDialogueNPC deliberately cannot open (it is not an
+	// ADCCCharacterBase). No hostile-nearby confirm step, matching loot below -
+	// talking to the bartender mid-fight is odd, not dangerous.
+	if (ADCCDialogueNPC* Speaker = FindDialogueNPCUnderCursor())
+	{
+		PendingTalkTarget = nullptr;
+		Speaker->TryPlayerInteract();
 		return;
 	}
 
@@ -1861,21 +1965,23 @@ void ADCCCharacterBase::ResolveSocialCheck(ADCCCharacterBase* Target, bool bInti
 		Target->bBefriended = true;
 		Target->OnRep_Befriended();
 
-		ADCCGameState::Log(this, EDCCLogCategory::Skill, FText::Format(
+		ADCCGameState::LogRoll(this, EDCCLogCategory::Skill, FText::Format(
 			bIntimidate
 				? NSLOCTEXT("DCC", "LogIntimidateWin", "{0} leans on {1}. ({2} vs {3}) They decide agreeing is cheaper.")
 				: NSLOCTEXT("DCC", "LogPersuadeWin", "{0} talks {1} round. ({2} vs {3})"),
 			SelfName, TargetName,
-			FText::AsNumber(Check.Total), FText::AsNumber(Check.DifficultyClass)));
+			FText::AsNumber(Check.Total), FText::AsNumber(Check.DifficultyClass)),
+			this, Target, Check.bCriticalSuccess, Check.bCriticalFailure, EDCCAbility::Charisma, SkillId);
 	}
 	else
 	{
-		ADCCGameState::Log(this, EDCCLogCategory::Skill, FText::Format(
+		ADCCGameState::LogRoll(this, EDCCLogCategory::Skill, FText::Format(
 			bIntimidate
 				? NSLOCTEXT("DCC", "LogIntimidateFail", "{0} tries to lean on {1} and it lands badly. ({2} vs {3})")
 				: NSLOCTEXT("DCC", "LogPersuadeFail", "{0} fails to convince {1}. ({2} vs {3})"),
 			SelfName, TargetName,
-			FText::AsNumber(Check.Total), FText::AsNumber(Check.DifficultyClass)));
+			FText::AsNumber(Check.Total), FText::AsNumber(Check.DifficultyClass)),
+			this, Target, Check.bCriticalSuccess, Check.bCriticalFailure, EDCCAbility::Charisma, SkillId);
 	}
 
 	// Intimidation is content whichever way it goes, which is exactly the sort of
@@ -2479,7 +2585,7 @@ FDCCAttackResult ADCCCharacterBase::PerformAttack(ADCCCharacterBase* Target, boo
 		}
 
 		ADCCGameState::LogRoll(this, EDCCLogCategory::Combat, Line, this, Target,
-			Result.Check.bCriticalSuccess, Result.Check.bCriticalFailure);
+			Result.Check.bCriticalSuccess, Result.Check.bCriticalFailure, AttackAbility);
 	}
 
 	Multicast_PlayAttack(Target, Result.bHit);
@@ -3144,16 +3250,37 @@ void ADCCCharacterBase::ApplyCollapsedBody()
 	// one, and physics gives a different fall every time - which reads better
 	// than the same canned collapse on every mob in the room. Every skeletal mesh
 	// already has a physics asset from import, so this costs nothing extra.
-	if (USkeletalMeshComponent* MeshComponent = GetMesh())
+	if (bUseRagdollOnDeath)
 	{
-		MeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-		MeshComponent->SetCollisionObjectType(ECC_PhysicsBody);
-		MeshComponent->SetCollisionResponseToAllChannels(ECR_Block);
-		MeshComponent->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
+		if (USkeletalMeshComponent* MeshComponent = GetMesh())
+		{
+			MeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+			MeshComponent->SetCollisionObjectType(ECC_PhysicsBody);
+			MeshComponent->SetCollisionResponseToAllChannels(ECR_Block);
+			MeshComponent->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
 
-		MeshComponent->SetAllBodiesSimulatePhysics(true);
-		MeshComponent->SetSimulatePhysics(true);
-		MeshComponent->WakeAllRigidBodies();
+			MeshComponent->SetAllBodiesSimulatePhysics(true);
+			MeshComponent->SetSimulatePhysics(true);
+			MeshComponent->WakeAllRigidBodies();
+		}
+	}
+	else if (USkeletalMeshComponent* MeshComponent = GetMesh())
+	{
+		// No physics at all, rather than a tamed-down version of it - a bad
+		// Physics Asset does not get better by simulating it gently. The mesh
+		// freezes exactly where it stood, still blocking Visibility (so
+		// FindLootTargetUnderCursor still finds it) but never ECC_PhysicsBody,
+		// so nothing here can ever fight a constraint again.
+		MeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+		MeshComponent->SetCollisionObjectType(ECC_WorldStatic);
+		MeshComponent->SetCollisionResponseToAllChannels(ECR_Ignore);
+		MeshComponent->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+
+		if (UNiagaraSystem* DissolveSystem = DeathDissolveEffect.LoadSynchronous())
+		{
+			UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+				GetWorld(), DissolveSystem, GetActorLocation(), GetActorRotation());
+		}
 	}
 }
 

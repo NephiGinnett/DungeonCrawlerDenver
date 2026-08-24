@@ -580,8 +580,7 @@ appliance; flagged `[needs mesh]` where nothing obvious exists yet.
 
 1. ~~Skill Rank + Check~~ **Done 2026-08-23**
 2. ~~Advantage/Disadvantage~~ **Done 2026-08-23**
-3. The Class Benefit component, including starter-kit grants (the actual Third
-   Floor unlock — biggest remaining piece)
+3. ~~The Class Benefit component, including starter-kit grants~~ **Done 2026-08-23**
 4. Damage types, scoped to the eight actually in use above
 5. Natural attacks via existing Skill archetype rows — no dependency, buildable
    in parallel with any of the above, any time
@@ -601,12 +600,39 @@ Living checklist. Update in place as each piece lands; don't create a dated
   Build-verified, editor closed, real link. Not yet seen in PIE.
 - [x] **Advantage/Disadvantage** — 2026-08-23. `ResolveSkillCheck` takes
   `bAdvantage` now, cancels correctly against `bUntrained`. Nothing grants it
-  from a benefit yet — that's #3.
+  from a benefit yet.
+- [x] **The Class Benefit component** — 2026-08-23. `Classes/DCCClassComponent`
+  (new module), mirrors `UDCCEquipmentComponent`'s pattern one level up: a
+  `SelectClass(FName)` call applies Stat bonuses (folded into
+  `RecalculateEnhancedScores` alongside Equipment), Skill bonuses (granted as
+  real Ranks via `GrantSkill` — a Class-granted Skill is genuinely trained, not
+  an invisible overlay), a flat Move Speed bonus (new `ClassMoveSpeedBonus`
+  field — deliberately NOT reusing `MovementSpeedOverride`, which caps speed
+  rather than adding to it), and the starter equipment kit via
+  `UDCCEquipmentComponent::Equip`. `Docs/DT_DCCClasses.json` has all 12 classes
+  from the Build Notes section above, restricted to what's actually
+  implementable right now (Stat/Skill bonuses, Move Speed, starter kit ids) —
+  resistances, natural attacks, Pets, and thematic-skill-*group* bonuses are
+  documented in each class's full write-up above but not yet mechanical, since
+  their own primitives (#4–#7) don't exist yet. Written as JSON rather than
+  CSV because `Benefits` is an array of structs, which CSV import can't
+  express (same reason `DT_DCCQuests` is JSON) — needs the create/add_rows/
+  set_rows MCP route, not a plain CSV import. Build-verified, editor closed,
+  real link. Not yet seen in PIE.
+- [x] **Bonus, not originally scoped: click-to-inspect roll breakdown** —
+  2026-08-23, per Zoe's own request. Clicking a roll in the Feed that belongs
+  to the local crawler (marked with a `*`) opens a panel showing every source
+  contributing to that roll's Ability score (Starting Score, Equipment, Class)
+  and, when the roll used a Skill, its Rank sources too — reusing the exact
+  same `SourceLabel` text authored on each Class benefit, so "which specific
+  skill, class, race is giving them that" is answered by the same click that
+  shows the number, no second drill-down level needed. Race isn't in the
+  breakdown yet only because no Race system exists - the mechanism already
+  generalizes to it. Wired into both the always-on Feed and the Feed tab.
 - [ ] **New Skill rows imported** — `Docs/DT_DCCSkills_ChecksBatch1.csv` written,
   not yet imported (needs MCP).
-- [ ] **The Class Benefit component** — not started. The big one: applies a
-  selected Class's full benefit list at runtime, including starter equipment
-  kits (see above).
+- [ ] **`DT_DCCClasses.json` imported** — written, not yet imported (needs MCP,
+  create/add_rows/set_rows route per above).
 - [ ] **Damage types + resistance/vulnerability/immunity** — not started.
   Scoped to Fire/Cold/Electric/Poison/Necrotic/Psychic/Bludgeoning/Piercing.
 - [ ] **Pets/Mounts** — not started. Rideshare Driver's movement-only sedan is

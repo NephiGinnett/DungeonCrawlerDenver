@@ -141,6 +141,24 @@ struct FDCCCheckResult
 };
 
 /**
+ * One line in a roll's modifier breakdown - the Feed's click-to-inspect UI
+ * (ADCCCharacterBase::GetAbilityScoreBreakdown/GetSkillRankBreakdown). Lives
+ * here rather than in Equipment or Classes because both of those need to
+ * produce it and neither should depend on the other to do so.
+ */
+USTRUCT(BlueprintType)
+struct FDCCModifierSource
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Breakdown")
+	FText Label;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Breakdown")
+	int32 Amount = 0;
+};
+
+/**
  * The outcome of one attack: the to-hit check plus what it actually cost the
  * target. Damage is reported alongside the roll for the same reason the check
  * shows its arithmetic - the DM client and phone HUD both want to narrate the

@@ -70,6 +70,11 @@ public:
 	 */
 	void AccumulateAbilityBonuses(TArray<int32>& OutBonuses) const;
 
+	/** One entry per equipped item that bonuses Ability - the Feed roll-
+	 *  breakdown's "Equipment" row(s). */
+	UFUNCTION(BlueprintPure, Category = "Equipment")
+	TArray<FDCCModifierSource> GetAbilityBonusSources(EDCCAbility Ability) const;
+
 	/** Highest damage die among equipped items, or 0 if nothing overrides it. */
 	UFUNCTION(BlueprintPure, Category = "Equipment")
 	int32 GetWeaponDamageDie() const;

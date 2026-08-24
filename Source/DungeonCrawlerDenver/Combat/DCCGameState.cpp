@@ -109,7 +109,8 @@ void ADCCGameState::OnRep_EventLog()
 }
 
 void ADCCGameState::LogRoll(const UObject* WorldContext, EDCCLogCategory Category, const FText& Text,
-	ADCCCharacterBase* Instigator, ADCCCharacterBase* RollTarget, bool bCriticalSuccess, bool bCriticalFailure)
+	ADCCCharacterBase* Instigator, ADCCCharacterBase* RollTarget, bool bCriticalSuccess, bool bCriticalFailure,
+	EDCCAbility CheckAbility, FName CheckSkillId)
 {
 	const UWorld* World = GEngine ? GEngine->GetWorldFromContextObject(WorldContext, EGetWorldErrorMode::ReturnNull) : nullptr;
 	if (!World || Text.IsEmpty())
@@ -131,6 +132,8 @@ void ADCCGameState::LogRoll(const UObject* WorldContext, EDCCLogCategory Categor
 	Entry.RollTarget = RollTarget;
 	Entry.bCriticalSuccess = bCriticalSuccess;
 	Entry.bCriticalFailure = bCriticalFailure;
+	Entry.CheckAbility = CheckAbility;
+	Entry.CheckSkillId = CheckSkillId;
 
 	GameState->EventLog.Add(Entry);
 

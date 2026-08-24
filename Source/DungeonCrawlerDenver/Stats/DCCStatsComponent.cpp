@@ -2,6 +2,7 @@
 
 #include "Stats/DCCRuleset.h"
 #include "Equipment/DCCEquipmentComponent.h"
+#include "Classes/DCCClassComponent.h"
 #include "Net/UnrealNetwork.h"
 
 UDCCStatsComponent::UDCCStatsComponent()
@@ -248,6 +249,20 @@ void UDCCStatsComponent::RecalculateEnhancedScores(bool bRefillToFull)
 	if (const UDCCEquipmentComponent* Equipment = UDCCEquipmentComponent::Find(GetOwner()))
 	{
 		Equipment->AccumulateAbilityBonuses(Bonuses);
+	}
+
+	// Class benefits fold in exactly like Equipment's - same array, summed in
+	// place - so a class and a ring boosting the same Stat simply add.
+	if (const UDCCClassComponent* Class = UDCCClassComponent::Find(GetOwner()))
+	{
+		TArray<int32> ClassBonuses;
+		Class->AccumulateAbilityBonuses(ClassBonuses);
+
+		Bonuses.SetNumZeroed(FMath::Max(Bonuses.Num(), ClassBonuses.Num()));
+		for (int32 Index = 0; Index < ClassBonuses.Num(); ++Index)
+		{
+			Bonuses[Index] += ClassBonuses[Index];
+		}
 	}
 
 	for (int32 Index = 0; Index < Bonuses.Num(); ++Index)

@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/HUD.h"
 #include "UI/DCCChatTypes.h"
+#include "Stats/DCCAbilityTypes.h"
 #include "DCCHUD.generated.h"
 
 class ADCCCharacterBase;
@@ -466,4 +467,23 @@ private:
 
 	/** Name shown next to the feed so the active preset is never a guess. */
 	FString GetFeedFilterLabel() const;
+
+	/**
+	 * Registers a clickable hit box over a Feed line whose roll belongs to the
+	 * local crawler (CheckAbility set, Instigator is them), then draws the
+	 * line - shared by the always-on box and the Feed tab so both behave
+	 * identically. HitBoxIndex just needs to be unique within one frame's draw
+	 * pass; the entry's own Ability/SkillId ride along in the hit box name.
+	 */
+	float DrawFeedLine(const FDCCEventLogEntry& Entry, float X, float Y, const FLinearColor& Colour,
+		const ADCCCharacterBase* LocalCrawler, int32 HitBoxIndex);
+
+	/** The floating panel shown after clicking a roll - GetAbilityScoreBreakdown,
+	 *  and GetSkillRankBreakdown when the roll had a Skill. Drawn last so it
+	 *  sits over everything else. */
+	void DrawRollBreakdown(ADCCCharacterBase* LocalCrawler);
+
+	/** Which roll's breakdown is currently pinned open. MAX means none. */
+	EDCCAbility BreakdownAbility = EDCCAbility::MAX;
+	FName BreakdownSkillId;
 };

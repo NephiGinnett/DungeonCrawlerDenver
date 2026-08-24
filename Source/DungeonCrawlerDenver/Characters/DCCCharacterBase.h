@@ -8,6 +8,7 @@
 #include "UI/DCCInteractionTypes.h"
 #include "UI/DCCChatTypes.h"
 #include "Skills/DCCSkillTypes.h"
+#include "Classes/DCCClassTypes.h"
 #include "DCCCharacterBase.generated.h"
 
 class UDCCStatsComponent;
@@ -17,11 +18,14 @@ class UDCCCarryComponent;
 class UDCCInventoryComponent;
 class UDCCAchievementComponent;
 class UDCCEquipmentComponent;
+class UDCCClassComponent;
 class ADCCCharacterBase;
+class ADCCDialogueNPC;
 class UUserWidget;
 class UTextRenderComponent;
 class USoundBase;
 class UCameraComponent;
+class UNiagaraSystem;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDCCCharacterDied, ADCCCharacterBase*, Character);
 
@@ -84,6 +88,12 @@ public:
 	/** Worn gear. Feeds the Enhanced stat layer and hangs meshes off sockets. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "DCC")
 	TObjectPtr<UDCCEquipmentComponent> Equipment;
+
+	/** Third Floor Class selection. Also feeds the Enhanced stat layer, grants
+	 *  Skill Ranks, and equips a starter kit through Equipment above - see
+	 *  Docs/races-and-classes.md. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "DCC")
+	TObjectPtr<UDCCClassComponent> Class;
 
 	/**
 	 * Known skills and spells. On enemies too, so a boss casts through exactly
@@ -254,6 +264,19 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "DCC|Movement")
 	void SetMovementSpeedOverride(float NewSpeed);
+
+	/**
+	 * A flat, additive Class-benefit bonus (e.g. "+5ft Move"), unlike
+	 * MovementSpeedOverride above, which caps speed rather than adding to it -
+	 * the two would fight each other if this reused that field. Derived
+	 * identically on every machine from the same replicated ClassComponent
+	 * selection, so this itself does not need to replicate.
+	 */
+	UPROPERTY(BlueprintReadOnly, Category = "DCC|Movement")
+	float ClassMoveSpeedBonus = 0.0f;
+
+	UFUNCTION(BlueprintCallable, Category = "DCC|Movement")
+	void SetClassMoveSpeedBonus(float NewBonus);
 
 	// -------------------------------------------------------------------------
 	// SOUND
@@ -587,6 +610,23 @@ public:
 	 *  hasn't used their one final send yet. */
 	UFUNCTION(BlueprintPure, Category = "DCC|Chat")
 	bool CanSendChatMessage() const { return !bHasDied || !bHasSentFinalMessage; }
+
+	/**
+	 * Every source contributing to this character's current score for Ability -
+	 * base score, Equipment, Class - in that order, for the Feed's
+	 * click-to-inspect roll breakdown. Uses CURRENT stats, not a snapshot from
+	 * whenever the clicked roll actually happened; the two agree in the
+	 * overwhelming majority of cases (rolls are clicked shortly after they
+	 * land) and a perfect historical snapshot isn't worth the replication cost
+	 * of attaching a full breakdown to every single roll this game makes.
+	 */
+	UFUNCTION(BlueprintPure, Category = "DCC|Stats")
+	TArray<FDCCModifierSource> GetAbilityScoreBreakdown(EDCCAbility Ability) const;
+
+	/** Same idea as GetAbilityScoreBreakdown, for a Skill's Rank - earned Rank,
+	 *  then any Class contribution. Empty for a Skill nobody has ever granted. */
+	UFUNCTION(BlueprintPure, Category = "DCC|Stats")
+	TArray<FDCCModifierSource> GetSkillRankBreakdown(FName SkillId) const;
 
 	/**
 	 * Server only. Posts Text into Channel, or into a Whisper to
@@ -1342,6 +1382,18 @@ protected:
 	/** Finds a corpse or chest under the crosshair within range, or null. */
 	AActor* FindLootTargetUnderCursor() const;
 
+	/**
+	 * Finds a non-combat speaker (bartender and the like) under the crosshair
+	 * within range, or null.
+	 *
+	 * A separate check from FindInteractionTargetUnderCursor rather than a
+	 * branch inside it - ADCCDialogueNPC is deliberately not an
+	 * ADCCCharacterBase (see that class's own comment on why), so it needs its
+	 * own cast, and its "conversation" is a single SayNextLine call rather than
+	 * a whole BuildInteractionOptions menu.
+	 */
+	ADCCDialogueNPC* FindDialogueNPCUnderCursor() const;
+
 	/** Confirms the highlighted row of whichever loot menu page is open. */
 	void HandleLootMenuConfirm();
 
@@ -1497,6 +1549,31 @@ protected:
 	 */
 	UPROPERTY(EditDefaultsOnly, Category = "DCC")
 	float CorpseLifeSpan = 0.0f;
+
+	/**
+	 * On by default. A minority of imported skeletons turn out to have a
+	 * physics asset whose auto-generated constraints fight each other badly
+	 * enough that SetAllBodiesSimulatePhysics stretches the body into
+	 * something grotesque rather than a believable fall (confirmed on the
+	 * Debt Eater). Rather than hand-tune a Physics Asset in the Physics Asset
+	 * Editor - which this project's enabled MCP toolset has no tool for at
+	 * all - a character can just opt out here: ApplyCollapsedBody then freezes
+	 * the mesh in its last pose (still fully lootable, still blocking the
+	 * Visibility trace FindLootTargetUnderCursor needs) instead of simulating
+	 * physics on it.
+	 */
+	UPROPERTY(EditDefaultsOnly, Category = "DCC")
+	bool bUseRagdollOnDeath = true;
+
+	/**
+	 * Optional one-shot VFX played at the death location when
+	 * bUseRagdollOnDeath is false, so "no ragdoll" still reads as a death beat
+	 * rather than the character just going statue-still. Soft rather than a
+	 * hard ConstructorHelpers load - this is cosmetic, not something anything
+	 * else depends on existing.
+	 */
+	UPROPERTY(EditDefaultsOnly, Category = "DCC")
+	TSoftObjectPtr<UNiagaraSystem> DeathDissolveEffect;
 
 	/**
 	 * Seconds an emptied body sticks around after being looted.

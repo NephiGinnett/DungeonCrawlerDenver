@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Stats/DCCAbilityTypes.h"
 #include "DCCEventLogTypes.generated.h"
 
 class ADCCCharacterBase;
@@ -107,4 +108,17 @@ struct FDCCEventLogEntry
 	/** Natural 1. Feed colours this red. */
 	UPROPERTY(BlueprintReadOnly, Category = "Log")
 	bool bCriticalFailure = false;
+
+	/**
+	 * Which Ability/Skill this roll checked, so the Feed's click-to-inspect
+	 * breakdown (ADCCCharacterBase::GetAbilityScoreBreakdown/
+	 * GetSkillRankBreakdown) knows what to look up. EDCCAbility::MAX means "not
+	 * applicable" - most entries never rolled anything.
+	 */
+	UPROPERTY(BlueprintReadOnly, Category = "Log")
+	EDCCAbility CheckAbility = EDCCAbility::MAX;
+
+	/** NAME_None when this roll had no Skill involved (a flat Ability check). */
+	UPROPERTY(BlueprintReadOnly, Category = "Log")
+	FName CheckSkillId;
 };

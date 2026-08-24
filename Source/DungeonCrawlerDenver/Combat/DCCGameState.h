@@ -152,7 +152,8 @@ public:
 	 */
 	static void LogRoll(const UObject* WorldContext, EDCCLogCategory Category, const FText& Text,
 		ADCCCharacterBase* Instigator, ADCCCharacterBase* RollTarget,
-		bool bCriticalSuccess, bool bCriticalFailure);
+		bool bCriticalSuccess, bool bCriticalFailure,
+		EDCCAbility CheckAbility = EDCCAbility::MAX, FName CheckSkillId = NAME_None);
 
 	UFUNCTION(BlueprintPure, Category = "Log")
 	const TArray<FDCCEventLogEntry>& GetEventLog() const { return EventLog; }

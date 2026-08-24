@@ -209,6 +209,31 @@ void ADCCHUD::NotifyHitBoxClick(FName BoxName)
 		return;
 	}
 
+	// "RollBreak|<uniqueIndex>|<abilityIndex>|<skillId>" - clicking the same
+	// roll again closes the panel, same toggle pattern as achievement rows.
+	if (AsString.StartsWith(TEXT("RollBreak|")))
+	{
+		TArray<FString> Parts;
+		AsString.ParseIntoArray(Parts, TEXT("|"));
+		if (Parts.Num() >= 4)
+		{
+			const EDCCAbility ClickedAbility = static_cast<EDCCAbility>(FCString::Atoi(*Parts[2]));
+			const FName ClickedSkillId = Parts[3] == TEXT("None") ? NAME_None : FName(*Parts[3]);
+
+			if (BreakdownAbility == ClickedAbility && BreakdownSkillId == ClickedSkillId)
+			{
+				BreakdownAbility = EDCCAbility::MAX;
+				BreakdownSkillId = NAME_None;
+			}
+			else
+			{
+				BreakdownAbility = ClickedAbility;
+				BreakdownSkillId = ClickedSkillId;
+			}
+		}
+		return;
+	}
+
 	// Stowed-remains rows: emptying one at the player's feet. Server-authoritative
 	// like everything else that spawns loot - this call just asks.
 	if (AsString.StartsWith(TEXT("Stow|")))
@@ -312,6 +337,7 @@ void ADCCHUD::DrawHUD()
 	DrawInspectedGear(Crawler);
 	DrawAdminPanel(Crawler);
 	DrawNotice();
+	DrawRollBreakdown(Crawler);
 
 	if (!bShowMenu || !Crawler)
 	{
@@ -2485,12 +2511,98 @@ float ADCCHUD::DrawFeed(float X, float Y)
 	{
 		const float Age = static_cast<float>(ShownIndex) / FMath::Max(1, Shown.Num() - 1);
 
-		DrawText(Shown[ShownIndex]->Text.ToString(),
-			FeedEntryColour(*Shown[ShownIndex], Age, BodyColour, DimColour), X, Y);
-		Y += LineHeight;
+		Y = DrawFeedLine(*Shown[ShownIndex], X, Y,
+			FeedEntryColour(*Shown[ShownIndex], Age, BodyColour, DimColour), LocalCrawler, ShownIndex);
 	}
 
 	return Y;
+}
+
+float ADCCHUD::DrawFeedLine(const FDCCEventLogEntry& Entry, float X, float Y, const FLinearColor& Colour,
+	const ADCCCharacterBase* LocalCrawler, int32 HitBoxIndex)
+{
+	// Only the local crawler's own rolls are inspectable - Zoe's own wording,
+	// "only for their own rolls" - so a click on someone else's crit does
+	// nothing rather than exposing a stranger's stat sheet.
+	const bool bClickable = LocalCrawler && Entry.Instigator == LocalCrawler && Entry.CheckAbility != EDCCAbility::MAX;
+
+	if (bClickable)
+	{
+		AddHitBox(FVector2D(X, Y), FVector2D(440.0f, LineHeight),
+			FName(*FString::Printf(TEXT("RollBreak|%d|%d|%s"), HitBoxIndex,
+				static_cast<int32>(Entry.CheckAbility), *Entry.CheckSkillId.ToString())),
+			/*bConsumesInput=*/true, /*Priority=*/1);
+
+		// A small marker so a clickable roll is discoverable without being
+		// told - otherwise nothing on screen hints that this line is special.
+		DrawText(TEXT("*"), HeadingColour, X - 12.0f, Y);
+	}
+
+	DrawText(Entry.Text.ToString(), Colour, X, Y);
+
+	return Y + LineHeight;
+}
+
+void ADCCHUD::DrawRollBreakdown(ADCCCharacterBase* LocalCrawler)
+{
+	if (BreakdownAbility == EDCCAbility::MAX || !LocalCrawler || !Canvas || !LocalCrawler->Stats)
+	{
+		return;
+	}
+
+	UDCCRuleset* Ruleset = LocalCrawler->Stats->GetRuleset();
+	if (!Ruleset)
+	{
+		return;
+	}
+
+	static const TCHAR* AbilityNames[] = { TEXT("Strength"), TEXT("Intelligence"), TEXT("Constitution"), TEXT("Dexterity"), TEXT("Charisma") };
+	const int32 AbilityIndex = FMath::Clamp(static_cast<int32>(BreakdownAbility), 0, UE_ARRAY_COUNT(AbilityNames) - 1);
+
+	const TArray<FDCCModifierSource> AbilitySources = LocalCrawler->GetAbilityScoreBreakdown(BreakdownAbility);
+	const TArray<FDCCModifierSource> SkillSources = LocalCrawler->GetSkillRankBreakdown(BreakdownSkillId);
+
+	int32 ScoreTotal = 0;
+	for (const FDCCModifierSource& Source : AbilitySources)
+	{
+		ScoreTotal += Source.Amount;
+	}
+
+	const float PanelW = 380.0f;
+	const int32 ExtraLines = SkillSources.Num() > 0 ? SkillSources.Num() + 2 : 0;
+	const float PanelH = (AbilitySources.Num() + ExtraLines + 3) * LineHeight + 20.0f;
+	const float PanelX = Canvas->SizeX - PanelW - 40.0f;
+	const float PanelY = 120.0f;
+
+	DrawRect(FLinearColor(0.42f, 0.44f, 0.52f, 0.5f), PanelX - 10.0f, PanelY - 10.0f, PanelW + 20.0f, PanelH + 20.0f);
+	DrawRect(FLinearColor(0.02f, 0.03f, 0.06f, 0.92f), PanelX - 8.0f, PanelY - 8.0f, PanelW + 16.0f, PanelH + 16.0f);
+
+	float Y = PanelY;
+	DrawText(FString::Printf(TEXT("%s  -  click the roll again to close"), AbilityNames[AbilityIndex]), HeadingColour, PanelX, Y);
+	Y += LineHeight + 4.0f;
+
+	for (const FDCCModifierSource& Source : AbilitySources)
+	{
+		DrawText(FString::Printf(TEXT("  %+d   %s"), Source.Amount, *Source.Label.ToString()), BodyColour, PanelX, Y);
+		Y += LineHeight;
+	}
+
+	const int32 Modifier = Ruleset->GetAbilityModifier(ScoreTotal);
+	DrawText(FString::Printf(TEXT("  = Score %d  ->  %+d to the roll"), ScoreTotal, Modifier), HeadingColour, PanelX, Y);
+	Y += LineHeight;
+
+	if (!SkillSources.IsEmpty())
+	{
+		Y += 4.0f;
+		DrawText(FString::Printf(TEXT("Skill: %s"), *BreakdownSkillId.ToString()), HeadingColour, PanelX, Y);
+		Y += LineHeight;
+
+		for (const FDCCModifierSource& Source : SkillSources)
+		{
+			DrawText(FString::Printf(TEXT("  %+d   %s"), Source.Amount, *Source.Label.ToString()), BodyColour, PanelX, Y);
+			Y += LineHeight;
+		}
+	}
 }
 
 float ADCCHUD::DrawFeedTab(float X, float Y)
@@ -2535,9 +2647,10 @@ float ADCCHUD::DrawFeedTab(float X, float Y)
 	for (int32 ShownIndex = Shown.Num() - 1; ShownIndex >= 0; --ShownIndex)
 	{
 		const float Age = static_cast<float>(ShownIndex) / FMath::Max(1, Shown.Num() - 1);
-		DrawText(Shown[ShownIndex]->Text.ToString(),
-			FeedEntryColour(*Shown[ShownIndex], Age, BodyColour, DimColour), X, Y);
-		Y += LineHeight;
+		// +10000 keeps this tab's hit box names from colliding with the
+		// always-on box's, which can both be on screen in the same frame.
+		Y = DrawFeedLine(*Shown[ShownIndex], X, Y,
+			FeedEntryColour(*Shown[ShownIndex], Age, BodyColour, DimColour), LocalCrawler, 10000 + ShownIndex);
 	}
 
 	return Y;

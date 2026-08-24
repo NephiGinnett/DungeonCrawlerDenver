@@ -250,6 +250,34 @@ PIE run above diagnosed:
 
 ---
 
+## Queued for whoever has MCP (2026-08-23, class Build System - Class Benefit component)
+
+Built this session, no MCP: `Classes/DCCClassComponent` - the Third Floor Class selection
+system, applying a selected Class's Stat/Skill/Move-Speed bonuses and starter equipment kit at
+runtime. `Docs/races-and-classes.md`'s "Notes / TODO" section is the live tracker; check there
+first. Development-Editor-build-verified, editor closed, real link. Not yet seen in PIE.
+
+1. **Import `Docs/DT_DCCClasses.json`** as `/Game/DCC/Classes/DT_DCCClasses` - this is JSON, not
+   CSV (the `Benefits` field is an array of structs, same reason `DT_DCCQuests` is JSON), so it
+   needs the create → add_rows → set_rows route, not a plain CSV import. `UDCCClassComponent`'s
+   constructor already looks for the table at that exact path.
+2. **Import `Docs/DT_DCCSkills_ChecksBatch1.csv` first if it hasn't been already** - the Class
+   table's `SkillBonus` benefits (Swimming, Diving, Perception, etc.) reference those Skill ids
+   and will silently no-op against rows that don't exist yet.
+3. **PIE test: call `SelectClass` on a test character** (admin panel doesn't have a button for
+   this yet - use a Blueprint/console call, or ask for one) **for a few different classes and
+   confirm**: Stat bonuses show up in the Character tab, granted Skills show up as genuinely
+   trained (not grey/untrained), Lord of Dance's Move Speed bonus is visible, and the starter
+   kit auto-equips (will silently no-op until item 4 below is also done).
+4. **Author `DT_DCCEquipment` rows for the starter kits** - the per-class list and `[needs mesh]`
+   flags are in `Docs/races-and-classes.md`'s "Starter kits" section. None of this is blocking;
+   `Equip()` already no-ops gracefully on an unknown id.
+5. **PIE test the new roll-breakdown feature**: as any player, land an attack or a Persuade/
+   Intimidate check, then click that line in the Feed (marked with a small `*`) and confirm the
+   breakdown panel shows Starting Score / Equipment / Class sources correctly, sums to the right
+   modifier, and clicking the same line again closes it. Only your own rolls should be clickable
+   - confirm a teammate's or an enemy's roll does nothing when clicked.
+
 ## Queued for whoever has MCP (2026-08-23, class Build System - Skill Check primitive)
 
 Built this session, no MCP: `Docs/races-and-classes.md`'s "Notes / TODO" section is now the
