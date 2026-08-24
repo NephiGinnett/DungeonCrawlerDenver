@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Engine/DataTable.h"
 #include "Stats/DCCAbilityTypes.h"
+#include "Stats/DCCDamageTypes.h"
 #include "DCCClassTypes.generated.h"
 
 // -----------------------------------------------------------------------------
@@ -35,6 +36,10 @@ enum class EDCCClassBenefitType : uint8
 	/** Adds Amount (cm/s) to the character's movement speed override. */
 	MoveSpeedBonus UMETA(DisplayName = "Move Speed Bonus"),
 
+	/** Sets ResistDamageType to ResistLevel - see EDCCResistanceLevel for how
+	 *  multiple sources disagreeing (this and an equipped item, say) resolve. */
+	DamageResistance UMETA(DisplayName = "Damage Resistance"),
+
 	MAX         UMETA(Hidden)
 };
 
@@ -66,6 +71,14 @@ struct FDCCClassBenefit
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Benefit")
 	int32 Amount = 0;
+
+	/** Read for DamageResistance only. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Benefit")
+	EDCCDamageType ResistDamageType = EDCCDamageType::Physical;
+
+	/** Read for DamageResistance only. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Benefit")
+	EDCCResistanceLevel ResistLevel = EDCCResistanceLevel::Normal;
 
 	/** e.g. "Class: Storm Chaser" - shown in the roll breakdown UI. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Benefit")

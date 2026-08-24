@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Engine/DataTable.h"
 #include "Stats/DCCAbilityTypes.h"
+#include "Stats/DCCDamageTypes.h"
 #include "DCCEquipmentTypes.generated.h"
 
 class UStaticMesh;
@@ -102,6 +103,11 @@ struct FDCCEquipmentDef : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment|Combat", meta = (ClampMin = "0"))
 	int32 WeaponDamageDie = 0;
 
+	/** What type WeaponDamageDie deals. Ignored when WeaponDamageDie is 0 -
+	 *  nothing to type on a non-weapon. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment|Combat")
+	EDCCDamageType WeaponDamageType = EDCCDamageType::Physical;
+
 	/** Flat addition to Evade, DCC's name for the value an attack must beat. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment|Combat")
 	int32 EvadeBonus = 0;
@@ -130,6 +136,15 @@ struct FDCCEquipmentDef : public FTableRowBase
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment", meta = (ClampMin = "0.0"))
 	float MassKilograms = 0.0f;
+
+	/** Normal (the default) means this item grants no resistance at all -
+	 *  most items leave this alone. See EDCCResistanceLevel for how Resistant/
+	 *  Vulnerable from different sources interact. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment|Combat")
+	EDCCDamageType ResistanceDamageType = EDCCDamageType::Physical;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment|Combat")
+	EDCCResistanceLevel ResistanceLevel = EDCCResistanceLevel::Normal;
 
 	// -- Presentation -------------------------------------------------------
 

@@ -2525,7 +2525,13 @@ FDCCAttackResult ADCCCharacterBase::PerformAttack(ADCCCharacterBase* Target, boo
 				FMath::RoundToInt(FinalDamage * TargetBoss->GetIncomingDamageMultiplier()));
 		}
 
-		TargetStats->ApplyDamage(FinalDamage);
+		// Physical (the default) for an unarmed swing; whatever the equipped
+		// weapon authors otherwise. Read fresh here rather than cached
+		// alongside WeaponDamageDie, since a damage type changes only as
+		// often as gear does and isn't worth a second member field to track.
+		const EDCCDamageType AttackDamageType = Equipment ? Equipment->GetWeaponDamageType() : EDCCDamageType::Physical;
+
+		TargetStats->ApplyDamage(FinalDamage, AttackDamageType);
 		Target->PlayCharacterSound(Target->HurtSound);
 
 		// Staggered away from whoever swung, so the direction of the blow is

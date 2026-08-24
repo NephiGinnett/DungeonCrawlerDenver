@@ -581,7 +581,7 @@ appliance; flagged `[needs mesh]` where nothing obvious exists yet.
 1. ~~Skill Rank + Check~~ **Done 2026-08-23**
 2. ~~Advantage/Disadvantage~~ **Done 2026-08-23**
 3. ~~The Class Benefit component, including starter-kit grants~~ **Done 2026-08-23**
-4. Damage types, scoped to the eight actually in use above
+4. ~~Damage types, scoped to the eight actually in use above~~ **Done 2026-08-23**
 5. Natural attacks via existing Skill archetype rows — no dependency, buildable
    in parallel with any of the above, any time
 6. Pets/Mounts — only blocks 2 of 12 classes
@@ -633,8 +633,27 @@ Living checklist. Update in place as each piece lands; don't create a dated
   not yet imported (needs MCP).
 - [ ] **`DT_DCCClasses.json` imported** — written, not yet imported (needs MCP,
   create/add_rows/set_rows route per above).
-- [ ] **Damage types + resistance/vulnerability/immunity** — not started.
-  Scoped to Fire/Cold/Electric/Poison/Necrotic/Psychic/Bludgeoning/Piercing.
+- [x] **Damage types + resistance/vulnerability/immunity** — 2026-08-23. New
+  `Stats/DCCDamageTypes.h` (`EDCCDamageType`, `EDCCResistanceLevel`,
+  `FDCCResistanceSource`). `FDCCEquipmentDef` gained `WeaponDamageType` and a
+  `ResistanceDamageType`/`ResistanceLevel` pair; `FDCCClassBenefit` gained a
+  `DamageResistance` benefit type reusing the same fields. `ApplyDamage` — "the
+  one funnel every damage source shares," per its own existing doc comment —
+  gained an `EDCCDamageType` parameter defaulting to `Physical`, so **every
+  one of its 9 existing call sites keeps working unchanged**; only the actual
+  attack-resolution call site was updated to pass the equipped weapon's real
+  type. Resistant halves, Vulnerable doubles, Immune zeroes, applied inside
+  `ApplyDamage` itself. **Two sources disagreeing on the same type (Equipment
+  Resistant + Class Vulnerable, say) cancel to Normal** rather than one
+  silently overriding the other — counted, not "last write wins". Retrofitted
+  onto 3 of the 12 classes as a working demonstration: Underwater Welder
+  (Cold Resistant), Crime Scene Cleaner (Poison + Necrotic Resistant), Noodle
+  Stand Cook (Fire Resistant *and* Fire Vulnerable — deliberately keeps both
+  halves of the original joke stat block, which now correctly cancel to
+  Normal). The other 9 classes' resistances documented in the Custom Classes
+  section above are still just flavour text — retrofitting them is pure data
+  entry now that the mechanism exists, no code needed. Build-verified, editor
+  closed, real link. Not yet seen in PIE.
 - [ ] **Pets/Mounts** — not started. Rideshare Driver's movement-only sedan is
   the cheap version to build first.
 - [ ] **New movement modes** (burrow, breathe underwater, flight) — not

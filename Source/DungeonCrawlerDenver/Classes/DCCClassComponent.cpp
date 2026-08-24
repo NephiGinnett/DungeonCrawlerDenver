@@ -204,6 +204,26 @@ TArray<FDCCModifierSource> UDCCClassComponent::GetSkillBonusSources(FName SkillI
 	return Sources;
 }
 
+void UDCCClassComponent::AccumulateDamageResistances(TArray<FDCCResistanceSource>& OutSources) const
+{
+	FDCCClassDef ClassDef;
+	if (!FindClass(SelectedClassId, ClassDef))
+	{
+		return;
+	}
+
+	for (const FDCCClassBenefit& Benefit : ClassDef.Benefits)
+	{
+		if (Benefit.Type == EDCCClassBenefitType::DamageResistance && Benefit.ResistLevel != EDCCResistanceLevel::Normal)
+		{
+			FDCCResistanceSource& Source = OutSources.AddDefaulted_GetRef();
+			Source.Label = !Benefit.SourceLabel.IsEmpty() ? Benefit.SourceLabel : ClassDef.DisplayName;
+			Source.Type = Benefit.ResistDamageType;
+			Source.Level = Benefit.ResistLevel;
+		}
+	}
+}
+
 UDCCClassComponent* UDCCClassComponent::Find(AActor* Actor)
 {
 	return Actor ? Actor->FindComponentByClass<UDCCClassComponent>() : nullptr;

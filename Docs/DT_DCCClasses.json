@@ -36,7 +36,8 @@
       { "Type": "StatBonus", "Ability": "Dexterity", "Amount": -2, "SourceLabel": "Class: Underwater Welder (detriment)" },
       { "Type": "SkillBonus", "SkillId": "Swimming", "Amount": 1, "SourceLabel": "Class: Underwater Welder" },
       { "Type": "SkillBonus", "SkillId": "Diving", "Amount": 1, "SourceLabel": "Class: Underwater Welder" },
-      { "Type": "SkillBonus", "SkillId": "Mechanics", "Amount": 1, "SourceLabel": "Class: Underwater Welder" }
+      { "Type": "SkillBonus", "SkillId": "Mechanics", "Amount": 1, "SourceLabel": "Class: Underwater Welder" },
+      { "Type": "DamageResistance", "ResistDamageType": "Cold", "ResistLevel": "Resistant", "SourceLabel": "Class: Underwater Welder" }
     ],
     "StarterEquipmentIds": ["WeldingTorch", "DivingMask"]
   },
@@ -63,7 +64,9 @@
     "Benefits": [
       { "Type": "StatBonus", "Ability": "Constitution", "Amount": 1, "SourceLabel": "Class: Crime Scene Cleaner" },
       { "Type": "SkillBonus", "SkillId": "Perception", "Amount": 1, "SourceLabel": "Class: Crime Scene Cleaner" },
-      { "Type": "SkillBonus", "SkillId": "Mechanics", "Amount": 1, "SourceLabel": "Class: Crime Scene Cleaner" }
+      { "Type": "SkillBonus", "SkillId": "Mechanics", "Amount": 1, "SourceLabel": "Class: Crime Scene Cleaner" },
+      { "Type": "DamageResistance", "ResistDamageType": "Poison", "ResistLevel": "Resistant", "SourceLabel": "Class: Crime Scene Cleaner" },
+      { "Type": "DamageResistance", "ResistDamageType": "Necrotic", "ResistLevel": "Resistant", "SourceLabel": "Class: Crime Scene Cleaner" }
     ],
     "StarterEquipmentIds": ["IndustrialMop", "BioHazardKit"]
   },
@@ -116,7 +119,9 @@
     "Benefits": [
       { "Type": "StatBonus", "Ability": "Constitution", "Amount": 1, "SourceLabel": "Class: Noodle Stand Cook" },
       { "Type": "StatBonus", "Ability": "Dexterity", "Amount": -2, "SourceLabel": "Class: Noodle Stand Cook (detriment)" },
-      { "Type": "SkillBonus", "SkillId": "Mechanics", "Amount": 1, "SourceLabel": "Class: Noodle Stand Cook" }
+      { "Type": "SkillBonus", "SkillId": "Mechanics", "Amount": 1, "SourceLabel": "Class: Noodle Stand Cook" },
+      { "Type": "DamageResistance", "ResistDamageType": "Fire", "ResistLevel": "Resistant", "SourceLabel": "Class: Noodle Stand Cook" },
+      { "Type": "DamageResistance", "ResistDamageType": "Fire", "ResistLevel": "Vulnerable", "SourceLabel": "Class: Noodle Stand Cook (detriment - occupational hazard, ironically)" }
     ],
     "StarterEquipmentIds": ["CastIronPan"]
   },

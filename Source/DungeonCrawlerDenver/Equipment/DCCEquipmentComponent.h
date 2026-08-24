@@ -80,6 +80,18 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Equipment")
 	float GetTotalEquippedMass() const;
 
+	/** The damage type of whichever equipped item is currently winning
+	 *  GetWeaponDamageDie's "best equipped" comparison - the two always refer
+	 *  to the same item, since a die and a type from different weapons would
+	 *  mean nothing. */
+	UFUNCTION(BlueprintPure, Category = "Equipment")
+	EDCCDamageType GetWeaponDamageType() const;
+
+	/** Every equipped item granting a real resistance (Level != Normal), one
+	 *  entry per item - UDCCStatsComponent::RecalculateDamageResistances
+	 *  merges this with UDCCClassComponent's own list. */
+	void AccumulateDamageResistances(TArray<FDCCResistanceSource>& OutSources) const;
+
 	/** Highest damage die among equipped items, or 0 if nothing overrides it. */
 	UFUNCTION(BlueprintPure, Category = "Equipment")
 	int32 GetWeaponDamageDie() const;

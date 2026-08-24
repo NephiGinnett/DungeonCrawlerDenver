@@ -21,6 +21,7 @@ void UDCCStatsComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 
 	DOREPLIFETIME(UDCCStatsComponent, AbilityScores);
 	DOREPLIFETIME(UDCCStatsComponent, EnhancedScores);
+	DOREPLIFETIME(UDCCStatsComponent, DamageResistanceLevels);
 	DOREPLIFETIME(UDCCStatsComponent, CurrentHitPoints);
 	DOREPLIFETIME(UDCCStatsComponent, MaxHitPoints);
 	DOREPLIFETIME(UDCCStatsComponent, CurrentManaPoints);
@@ -285,6 +286,78 @@ void UDCCStatsComponent::RecalculateEnhancedScores(bool bRefillToFull)
 	// bRefillToFull is almost always false - see this function's header comment
 	// for the one exception (the initial post-spawn call).
 	RecalculateDerivedStats(bRefillToFull);
+
+	RecalculateDamageResistances();
+}
+
+void UDCCStatsComponent::RecalculateDamageResistances()
+{
+	if (GetOwnerRole() != ROLE_Authority)
+	{
+		return;
+	}
+
+	TArray<FDCCResistanceSource> Sources;
+	if (const UDCCEquipmentComponent* Equipment = UDCCEquipmentComponent::Find(GetOwner()))
+	{
+		Equipment->AccumulateDamageResistances(Sources);
+	}
+	if (const UDCCClassComponent* Class = UDCCClassComponent::Find(GetOwner()))
+	{
+		Class->AccumulateDamageResistances(Sources);
+	}
+
+	// Counted rather than "last one wins", so a Resistant from Equipment and a
+	// Vulnerable from a Class benefit on the same type cancel to Normal
+	// regardless of which happened to be accumulated first - see
+	// EDCCResistanceLevel's own comment for why that is the intended rule.
+	TArray<int32> ResistantCount, VulnerableCount;
+	TArray<bool> Immune;
+	const int32 TypeCount = static_cast<int32>(EDCCDamageType::MAX);
+	ResistantCount.SetNumZeroed(TypeCount);
+	VulnerableCount.SetNumZeroed(TypeCount);
+	Immune.SetNumZeroed(TypeCount);
+
+	for (const FDCCResistanceSource& Source : Sources)
+	{
+		const int32 Index = static_cast<int32>(Source.Type);
+		if (!ResistantCount.IsValidIndex(Index))
+		{
+			continue;
+		}
+
+		switch (Source.Level)
+		{
+		case EDCCResistanceLevel::Resistant:  ++ResistantCount[Index]; break;
+		case EDCCResistanceLevel::Vulnerable: ++VulnerableCount[Index]; break;
+		case EDCCResistanceLevel::Immune:     Immune[Index] = true; break;
+		default: break;
+		}
+	}
+
+	DamageResistanceLevels.SetNumZeroed(TypeCount);
+	for (int32 Index = 0; Index < TypeCount; ++Index)
+	{
+		EDCCResistanceLevel Final = EDCCResistanceLevel::Normal;
+		if (Immune[Index])
+		{
+			Final = EDCCResistanceLevel::Immune;
+		}
+		else if ((ResistantCount[Index] > 0) != (VulnerableCount[Index] > 0))
+		{
+			Final = ResistantCount[Index] > 0 ? EDCCResistanceLevel::Resistant : EDCCResistanceLevel::Vulnerable;
+		}
+
+		DamageResistanceLevels[Index] = static_cast<uint8>(Final);
+	}
+}
+
+EDCCResistanceLevel UDCCStatsComponent::GetResistanceLevel(EDCCDamageType DamageType) const
+{
+	const int32 Index = static_cast<int32>(DamageType);
+	return DamageResistanceLevels.IsValidIndex(Index)
+		? static_cast<EDCCResistanceLevel>(DamageResistanceLevels[Index])
+		: EDCCResistanceLevel::Normal;
 }
 
 void UDCCStatsComponent::SetInvulnerable(bool bNewInvulnerable)
@@ -440,7 +513,7 @@ void UDCCStatsComponent::RecoverStamina(float Amount)
 	CurrentStamina = FMath::Min(MaxStamina, CurrentStamina + Amount);
 }
 
-void UDCCStatsComponent::ApplyDamage(int32 Amount)
+void UDCCStatsComponent::ApplyDamage(int32 Amount, EDCCDamageType DamageType)
 {
 	if (GetOwnerRole() != ROLE_Authority)
 	{
@@ -453,6 +526,17 @@ void UDCCStatsComponent::ApplyDamage(int32 Amount)
 	if (bInvulnerable)
 	{
 		return;
+	}
+
+	// Applied before the Amount<=0 early-out on purpose: Immune reducing a hit
+	// to 0 should read as "no damage", the same outcome as any other 0-damage
+	// hit, rather than needing a second special case.
+	switch (GetResistanceLevel(DamageType))
+	{
+	case EDCCResistanceLevel::Resistant:  Amount = FMath::CeilToInt32(Amount * 0.5f); break;
+	case EDCCResistanceLevel::Vulnerable: Amount *= 2; break;
+	case EDCCResistanceLevel::Immune:     Amount = 0; break;
+	default: break;
 	}
 
 	if (Amount <= 0 || !IsAlive())

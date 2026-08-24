@@ -74,6 +74,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Class")
 	TArray<FDCCModifierSource> GetSkillBonusSources(FName SkillId) const;
 
+	/** Every DamageResistance benefit on the selected Class - merged with
+	 *  Equipment's own list by UDCCStatsComponent::RecalculateDamageResistances. */
+	void AccumulateDamageResistances(TArray<FDCCResistanceSource>& OutSources) const;
+
 	/** Convenience finder, mirroring UDCCAchievementComponent::Find. */
 	UFUNCTION(BlueprintPure, Category = "Class")
 	static UDCCClassComponent* Find(AActor* Actor);

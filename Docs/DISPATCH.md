@@ -250,6 +250,148 @@ PIE run above diagnosed:
 
 ---
 
+## Queued for whoever has MCP (2026-08-23, damage types + resistances)
+
+Built this session, no MCP. `Docs/races-and-classes.md`'s "Notes / TODO" has the full writeup.
+Short version: `ApplyDamage` (the one funnel every damage source already shares) now takes an
+`EDCCDamageType`, defaulting to `Physical` so none of its 9 existing call sites needed to
+change; Resistant/Vulnerable/Immune are merged from Equipment + the selected Class, counted so
+two sources disagreeing on the same type cancel to Normal rather than one silently winning.
+Development-Editor-build-verified, editor closed, real link. Not seen in PIE.
+
+1. **Re-import `Docs/DT_DCCClasses.json`** (unchanged path, `/Game/DCC/Classes/DT_DCCClasses|`) -
+   three of the twelve classes now carry a `DamageResistance` benefit (Underwater Welder: Cold
+   Resistant; Crime Scene Cleaner: Poison + Necrotic Resistant; Noodle Stand Cook: Fire Resistant
+   *and* Fire Vulnerable, deliberately - they cancel to Normal, which is the joke).
+2. **Author `WeaponDamageType`/`ResistanceDamageType`+`ResistanceLevel` on a couple of
+   `DT_DCCEquipment` rows** so there's something to actually test against - every row reads the
+   defaults (Physical / Normal) today, so nothing is typed or resistant yet in practice.
+3. **PIE test: hit a Crime-Scene-Cleaner-classed character with a Poison-typed attack** (once
+   item 2 gives you one) **and confirm the damage is halved**, then try the same with no Class
+   selected and confirm it isn't. Also worth deliberately testing the cancellation case (equip
+   something Fire-Vulnerable on the Noodle Stand Cook, who's already Fire-Resistant from their
+   Class, and confirm damage comes out unmodified, not double-reduced or doubled).
+
+## Queued for whoever has MCP (2026-08-23, six of Zoe's chore-break notes)
+
+No MCP this session (editor was not running). Development-Editor-build-verified with the
+`DungeonCrawlerDenver` DebugGame compile-check, which also verified cleanly against every
+concurrent change from the two other sessions running at the same time (class system, skill
+breakdown UI) - nothing here conflicts with either. **Not yet deployed** - needs the usual
+close-editor Development Editor build before any of this is live.
+
+Zoe listed six things she'd noticed and asked them sorted by impact/effort, worked top-down, with
+at most one more session to finish what needed MCP. Three were fixable in code alone and are done;
+three are level/asset work that categorically needs the editor and are diagnosed + prepped below.
+**This next session should be with Zoe present, MCP live, for exactly these three.**
+
+### Done this session (code only, compiled, not yet deployed)
+
+1. **Bartender (and every `ADCCDialogueNPC`) now responds to E**, not just proximity. It was
+   ambient-only before - `ADCCDialogueNPC` is deliberately not an `ADCCCharacterBase` (see its own
+   class comment), so `FindInteractionTargetUnderCursor` could never see it, and E on a bartender
+   fell straight through to `AttemptPickupOrDrop`. Added `ADCCCharacterBase::
+   FindDialogueNPCUnderCursor()` (same camera sweep as the ally/loot checks) and
+   `ADCCDialogueNPC::TryPlayerInteract()` (says the next line, or skips an already-showing one
+   ahead) into `HandleInteractPressed`'s chain, between the ally-conversation check and the loot
+   check. The existing walk-up-and-it-talks behaviour is untouched - E is additive, so the "wide
+   array of non-aggressive NPCs" ask can still use either convention per NPC.
+2. **A charge-spawned minion embedding in terrain, real bug, found and fixed:**
+   `UDCCBossComponent::SpawnChargeMinion` placed every minion at `GroundedZ` - the BOSS's own floor
+   height, captured at the boss's own XY when the charge began - rather than tracing the ground at
+   the minion's own `Offset` position. On any arena floor that isn't dead flat (and the code's own
+   comment already says "the arena floor is not flat"), a minion spawned meters away over a rise
+   lands embedded in it; over a dip, floating. That reads exactly like "spawns inside terrain,
+   melee can't reach it, ranged still can" - melee proximity fails against an embedded capsule,
+   ranged/skill targeting (distance + line of sight) still connects. Fixed with a straight-down
+   trace at the actual spawn XY, same ground-snap pattern `ADCCCrowdSpawner` already uses. **If
+   the NPC Zoe saw was placed by hand rather than charge-spawned, this fix doesn't touch it** -
+   worth checking both in the next session.
+3. **Debt Eater no longer ragdolls.** Its imported Physics Asset (`SK_DebtEater_PhysicsAsset`)
+   stretches the body into something grotesque under `SetAllBodiesSimulatePhysics` - a bad
+   constraint setup, not a code bug, and this project's enabled MCP toolset has no Physics Asset
+   Editor tool to retune it with anyway. Took Zoe's own suggested fallback: added
+   `ADCCCharacterBase::bUseRagdollOnDeath` (default true, untouched for everyone else) and
+   `DeathDissolveEffect` (a soft Niagara reference). Debt Eater sets the bool false and points the
+   effect at `/Game/Alien_Portal/FX/Smoke/NS_Smoke_01` (an existing pack asset, not new content).
+   With ragdoll off, the mesh freezes in its last pose - no physics, so nothing to deform - while
+   still blocking the Visibility trace the loot menu's `FindLootTargetUnderCursor` needs, so it
+   stays fully lootable exactly like a ragdolled corpse. **Not seen in PIE - confirm the smoke
+   reads as a death beat and doesn't look like a bug, and confirm looting still works on it.**
+
+### Diagnosed and prepped, needs MCP - the buff/don minion texture bug
+
+**Root cause confirmed, not guessed:** inspected both source `.glb`s directly with Blender
+(`Tools/inspect_glb_materials.py`, new this session) rather than assuming. Each one is clean
+independently - one mesh, one material named `Material_1`, one image named `texture_0` - Meshy
+always uses those exact generic names (see CLAUDE.md's note on `texture_0` collisions elsewhere in
+this project). **Both Buff Minion and Don Minion were imported into the same folder**
+(`/Game/DCC/Characters/Minions/`), which only contains ONE `Material_1.uasset` / `texture_0.uasset`
+pair for both meshes. Whichever import went second either reused or overwrote the first's material
+asset instead of getting its own, which is exactly what a "patchwork/camo" mixed-skin look on one
+character looks like - two different UV layouts sharing one baked texture. The lacrosse stick
+being the wrong colour is very likely the same failure mode (a shared-name material collision on
+import) hitting a different asset; nobody documented that prop's import, so it needs a look too.
+
+**Prepped so the fix is a straight re-import, no more Blender needed:** re-converted each
+character's source `.glb` independently into its own folder - `SourceArt/BuffMinion/SK_BuffMinion.fbx`
+and `SourceArt/DonMinion/SK_DonMinion.fbx` - so a fresh import of each can't collide again. Also
+split both characters' merged-animation `.glb`s (neither had been split before - `Minions/` has no
+`Anims/` subfolder at all yet):
+- `SourceArt/BuffMinion/Anims/`: `A_BuffMinion_Running.fbx`, `A_BuffMinion_Walking.fbx`.
+- `SourceArt/DonMinion/Anims/`: `A_DonMinion_Running.fbx`, `A_DonMinion_Walking.fbx`, plus three
+  flavour clips - `Angry_Ground_Stomp`, `Angry_To_Tantrum_Sit`, `Cough_While_Sleeping` - that read
+  like a "Don" mob-boss character and are worth keeping as idle/taunt variety rather than discarding.
+
+**Next-session recipe:** delete the existing shared `Minions/Material_1`, `texture_0`,
+`texture_0_ncl1_1` (check nothing else references them first), re-import `SK_BuffMinion.fbx` and
+`SK_DonMinion.fbx` each into their own subfolder, import the animation FBXes bound to each
+mesh's own Skeleton, and check the lacrosse stick prop's material the same way if it's already
+placed somewhere findable.
+
+**A design question for Zoe, not decided here:** what these two minions are *for*. Nothing in
+`Docs/DT_DCCEnemies.json` or `enemy-roster.md` has a Buff Minion or Don Minion entry, so there's no
+stat block to wire them to a combat class the way `ADCCEnemyCharacter_DebtEater` was. They read as
+plausible ambient/crowd NPCs (the "wide array of non-aggressive NPCs" ask) as easily as new combat
+mobs - didn't want to invent gameplay numbers unprompted. Worth deciding before writing whichever
+C++/Blueprint wiring fits.
+
+### Still needed - replacing ally-body placeholders more broadly
+
+Confirmed the specific complaint: `BP_DCCEnemy_HockeyWings`/`_ArmsOut`/`_DiceWinged`/`_OfficeAirplane`
+(generic mobs) and even `ADCCEnemyCharacter_TestBoss` all render CJ/Scott/Kyle/Marcel's own
+`SK_HockeyWings`/`SK_ArmsOut`/`SK_DiceWinged`/`SK_OfficeAirplane` meshes - literally the players'
+own bodies worn by enemies and NPCs, which is exactly what read as "many NPCs still using my
+allies' bodies." **The Meshy pipeline is not down - it's mid-flight with a large backlog already
+generated**, sitting unconverted in `Content/Characters/`: `Dune Popcorn.glb`, `League Minion.glb`,
+`League Minion Blue.glb`, `Minion eyes.glb`, `Scott Lacrosse.glb`, `debt collector.zip`,
+`voldemortgage 2.glb`, `waterbottle.glb`, plus the already-imported-but-broken Buff/Don Minion above
+and the not-yet-imported-at-all `Meshy_AI_Gaunt_undead_lich_ro_biped/`. That's roughly a session's
+worth of Blender-convert + MCP-import + wiring on its own - didn't attempt all of it blind without
+Zoe's steer on which NPCs each is meant to become.
+
+### Still needed - the wider map
+
+Not attempted - level layout/placement is categorically MCP-only, and this is the single biggest
+item on Zoe's list. Recorded here so the next session has a concrete starting point rather than a
+blank page:
+
+- **Scale target, from Zoe's own words:** her cyberpunk playground scene read as "1 unit"; the
+  real dungeon should read as 30-40x that footprint, wide rather than tall - "enough space for 5
+  million people," even if players only ever walk through 1% of it early on.
+- **Distant-skyline packs already installed and unused for this purpose:** `Synthwave_city` and
+  `Megastructure_Scifi_World` each ship their own `Sky_system` (a sky dome/backdrop, not just
+  props) plus a pre-built demo `Level`; `Sci_Fi_city` and `Dam_city` ship pre-built `Maps` too.
+  Pulling one pack's distant-building dressing into the DCC level wholesale (visual-only collision,
+  players never reach it) is far cheaper than hand-placing buildings one at a time, and reads
+  immediately as "big city" rather than "box surrounded by sky."
+- **The mirror trick Zoe suggested herself** ("mirrors for neighbouring territories"): duplicate the
+  same distant-building cluster at intervals around a ring rather than authoring unique skyline per
+  direction - cheap repetition sells scale the same way a game-industry matte painting does.
+- Needs a decision on where this backdrop sits relative to the existing seven Floor 1 rooms
+  (floor-01-design.md's coordinates) before placing anything, so the skyline reads as "the rest of
+  the dungeon, out there" rather than floating disconnected from the playable rooms.
+
 ## Queued for whoever has MCP (2026-08-23, Skills wired into physical actions + a real bug fix)
 
 Built this session, no MCP. `Docs/races-and-classes.md`'s "Notes / TODO" has the full writeup;

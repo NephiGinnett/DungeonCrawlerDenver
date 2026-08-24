@@ -297,6 +297,41 @@ int32 UDCCEquipmentComponent::GetWeaponDamageDie() const
 	return Best;
 }
 
+EDCCDamageType UDCCEquipmentComponent::GetWeaponDamageType() const
+{
+	int32 Best = 0;
+	EDCCDamageType BestType = EDCCDamageType::Physical;
+
+	// Tracks the die and its type together, so "best equipped" never reports
+	// one weapon's die with a different weapon's type.
+	for (const FDCCEquippedItem& Entry : Equipped)
+	{
+		FDCCEquipmentDef Item;
+		if (FindItem(Entry.ItemId, Item) && Item.WeaponDamageDie > Best)
+		{
+			Best = Item.WeaponDamageDie;
+			BestType = Item.WeaponDamageType;
+		}
+	}
+
+	return BestType;
+}
+
+void UDCCEquipmentComponent::AccumulateDamageResistances(TArray<FDCCResistanceSource>& OutSources) const
+{
+	for (const FDCCEquippedItem& Entry : Equipped)
+	{
+		FDCCEquipmentDef Item;
+		if (FindItem(Entry.ItemId, Item) && Item.ResistanceLevel != EDCCResistanceLevel::Normal)
+		{
+			FDCCResistanceSource& Source = OutSources.AddDefaulted_GetRef();
+			Source.Label = Item.DisplayName;
+			Source.Type = Item.ResistanceDamageType;
+			Source.Level = Item.ResistanceLevel;
+		}
+	}
+}
+
 int32 UDCCEquipmentComponent::GetEvadeBonus() const
 {
 	int32 Total = 0;

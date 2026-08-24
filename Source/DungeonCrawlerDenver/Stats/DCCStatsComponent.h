@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "Stats/DCCAbilityTypes.h"
+#include "Stats/DCCDamageTypes.h"
 #include "DCCStatsComponent.generated.h"
 
 class UDCCRuleset;
@@ -66,6 +67,12 @@ public:
 	 */
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Stats")
 	FDCCAbilityScoreSet EnhancedScores;
+
+	/** One EDCCResistanceLevel per EDCCDamageType, indexed by the enum value -
+	 *  same array-indexed-by-enum shape as FDCCAbilityScoreSet::Scores.
+	 *  Rebuilt by RecalculateDamageResistances; read via GetResistanceLevel. */
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Stats")
+	TArray<uint8> DamageResistanceLevels;
 
 	/**
 	 * What the rules should read. Every check, attack, carry limit and throw
@@ -323,9 +330,32 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Stats")
 	UDCCRuleset* GetRuleset() const;
 
-	/** Server only. Negative amounts are ignored; use Heal instead. */
+	/**
+	 * Server only. Negative amounts are ignored; use Heal instead.
+	 *
+	 * DamageType defaults to Physical - the untyped bucket everything that
+	 * predates this system already deals, and nothing is ever resistant to it
+	 * by design, so every existing call site keeps working unchanged.
+	 * Resistant/Vulnerable/Immune are applied here, before the amount is
+	 * clamped and subtracted, so an Immune hit already reads as "no damage"
+	 * to every check below rather than needing a second early-out.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Stats")
-	void ApplyDamage(int32 Amount);
+	void ApplyDamage(int32 Amount, EDCCDamageType DamageType = EDCCDamageType::Physical);
+
+	/** This character's current reaction to DamageType, merged from Equipment
+	 *  and Class - see RecalculateDamageResistances. */
+	UFUNCTION(BlueprintPure, Category = "Stats")
+	EDCCResistanceLevel GetResistanceLevel(EDCCDamageType DamageType) const;
+
+	/**
+	 * Server only. Rebuilds DamageResistanceLevels from scratch from Equipment
+	 * and Class, the same "recompute, never adjust in place" shape
+	 * RecalculateEnhancedScores already uses. Called from there, so anything
+	 * that already triggers a stat recalc (equipping gear, selecting a Class)
+	 * keeps resistances in sync for free.
+	 */
+	void RecalculateDamageResistances();
 
 	UFUNCTION(BlueprintCallable, Category = "Stats")
 	void Heal(int32 Amount);
