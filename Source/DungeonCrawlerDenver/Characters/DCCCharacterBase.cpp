@@ -1168,6 +1168,15 @@ void ADCCCharacterBase::TickStamina(float DeltaSeconds)
 		? Skills->GetSkillRank(ActiveClimbPoint->ClimbSkillId)
 		: 0;
 
+	const int32 AthleticsRank = Skills ? Skills->GetSkillRank(TEXT("Athletics")) : 0;
+
+	// Excess over the threshold, not raw mass - GetStaminaRegenRate treats
+	// this as "how overloaded", already net of what Heavy Armor Training buys
+	// back, so it never has to re-derive the threshold itself.
+	const int32 HeavyArmorTrainingRank = Skills ? Skills->GetSkillRank(TEXT("HeavyArmorTraining")) : 0;
+	const float EquippedMassKg = Equipment ? Equipment->GetTotalEquippedMass() : 0.0f;
+	const float ExcessMassKg = FMath::Max(0.0f, EquippedMassKg - Ruleset->GetEncumbranceThresholdKg(HeavyArmorTrainingRank));
+
 	bool bExerting = false;
 
 	if (ActiveClimbPoint)
@@ -1244,8 +1253,13 @@ void ADCCCharacterBase::TickStamina(float DeltaSeconds)
 		{
 			bExerting = true;
 
+			if (Skills)
+			{
+				Skills->MarkSkillUsed(TEXT("Athletics"));
+			}
+
 			if (!Stats->ConsumeStamina(
-				Ruleset->GetSprintStaminaCost(Stats->GetEnhanced()) * DeltaSeconds))
+				Ruleset->GetSprintStaminaCost(Stats->GetEnhanced(), AthleticsRank) * DeltaSeconds))
 			{
 				Server_SetSprinting_Implementation(false);
 			}
@@ -1254,7 +1268,8 @@ void ADCCCharacterBase::TickStamina(float DeltaSeconds)
 
 	if (!bExerting)
 	{
-		Stats->RecoverStamina(Ruleset->GetStaminaRegenRate(Stats->GetEnhanced()) * DeltaSeconds);
+		Stats->RecoverStamina(
+			Ruleset->GetStaminaRegenRate(Stats->GetEnhanced(), AthleticsRank, ExcessMassKg) * DeltaSeconds);
 	}
 }
 
@@ -1924,12 +1939,12 @@ void ADCCCharacterBase::ResolveSocialCheck(ADCCCharacterBase* Target, bool bInti
 	const int32 Difficulty = bIntimidate ? IntimidateDifficulty : PersuadeDifficulty;
 
 	// Routed through the Skill system (2026-08-23) rather than a flat CHA
-	// check, so Intimidate/Persuade Ranks - and any Race/Class benefit granting
-	// Advantage on them - actually do something. DT_DCCSkills needs "Intimidate"
-	// and "Persuade" rows for GetSkillRank to find (0/untrained until then,
-	// which is still correct, just ungrateful for Rank investment).
-	static const FName IntimidateSkillId(TEXT("Intimidate"));
-	static const FName PersuadeSkillId(TEXT("Persuade"));
+	// check, so Rank - and any Race/Class benefit granting Advantage - actually
+	// do something. FirstImpressions/QuickWit are this project's own existing
+	// ids for Intimidate/Persuade (below still marks whichever one fired, so
+	// there is exactly one mark call for this function, not two).
+	static const FName IntimidateSkillId(TEXT("FirstImpressions"));
+	static const FName PersuadeSkillId(TEXT("QuickWit"));
 	const FName SkillId = bIntimidate ? IntimidateSkillId : PersuadeSkillId;
 
 	const bool bKnown = Skills && Skills->IsSkillKnown(SkillId);
@@ -1990,13 +2005,6 @@ void ADCCCharacterBase::ResolveSocialCheck(ADCCCharacterBase* Target, bool bInti
 	{
 		Favor->AwardFavor(Check.bSuccess ? 2 : 1, EDCCFavorEvent::DirectorCall,
 			NSLOCTEXT("DCC", "FavorIntimidate", "A raised voice in a quiet room."));
-	}
-
-	// Marks the skill either way, matching the published rule that an attempt
-	// marks a skill whether it succeeds or fails.
-	if (Skills)
-	{
-		Skills->MarkSkillUsed(bIntimidate ? TEXT("FirstImpressions") : TEXT("QuickWit"));
 	}
 }
 

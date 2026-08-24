@@ -3,6 +3,7 @@
 #include "Stats/DCCRuleset.h"
 #include "Equipment/DCCEquipmentComponent.h"
 #include "Classes/DCCClassComponent.h"
+#include "Skills/DCCSkillComponent.h"
 #include "Net/UnrealNetwork.h"
 
 UDCCStatsComponent::UDCCStatsComponent()
@@ -339,7 +340,13 @@ void UDCCStatsComponent::RecalculateDerivedStats(bool bRefillToFull)
 	MaxManaPoints = GetRuleset()->GetMaxManaPoints(EnhancedScores, Level);
 	CurrentManaPoints = bRefillToFull ? MaxManaPoints : FMath::Clamp(CurrentManaPoints, 0, MaxManaPoints);
 
-	MaxStamina = GetRuleset()->GetMaxStamina(EnhancedScores, Level);
+	int32 AthleticsRank = 0;
+	if (const UDCCSkillComponent* Skills = GetOwner() ? GetOwner()->FindComponentByClass<UDCCSkillComponent>() : nullptr)
+	{
+		AthleticsRank = Skills->GetSkillRank(TEXT("Athletics"));
+	}
+
+	MaxStamina = GetRuleset()->GetMaxStamina(EnhancedScores, Level, AthleticsRank);
 	CurrentStamina = bRefillToFull ? MaxStamina : FMath::Clamp(CurrentStamina, 0.0f, MaxStamina);
 
 	if (CurrentHitPoints != PreviousHitPoints)

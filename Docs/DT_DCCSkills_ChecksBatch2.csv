@@ -1,0 +1,3 @@
+Name,SkillId,DisplayName,FlavorText,Archetype,Targeting,CastingAbility,ManaCost,CooldownSeconds,CastTimeSeconds,Range,Radius,ConeHalfAngleDegrees,DifficultyClass,PowerDie,EffectDuration,EffectTag,bCanAttemptUntrained,bIsPassive,CastEffect,ImpactEffect,CastSocketName,ImpactEffectZOffset
+Athletics,Athletics,Athletics,"General conditioning. Raises stamina, cuts what sprinting costs.",Check,Self,Constitution,0,0,0,0,0,0,0,0,0,,True,False,,,,60
+HeavyArmorTraining,HeavyArmorTraining,"Heavy Armor Training","Carry more before it starts costing you.",Check,Self,Constitution,0,0,0,0,0,0,0,0,0,,False,True,,,,60

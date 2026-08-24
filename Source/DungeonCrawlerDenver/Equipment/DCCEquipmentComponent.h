@@ -75,6 +75,11 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Equipment")
 	TArray<FDCCModifierSource> GetAbilityBonusSources(EDCCAbility Ability) const;
 
+	/** Summed MassKilograms across every equipped item - "wearing heavy
+	 *  armour," read by the stamina regen formula. */
+	UFUNCTION(BlueprintPure, Category = "Equipment")
+	float GetTotalEquippedMass() const;
+
 	/** Highest damage die among equipped items, or 0 if nothing overrides it. */
 	UFUNCTION(BlueprintPure, Category = "Equipment")
 	int32 GetWeaponDamageDie() const;

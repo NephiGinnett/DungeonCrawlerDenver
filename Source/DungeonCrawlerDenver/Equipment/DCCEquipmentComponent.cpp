@@ -246,6 +246,22 @@ TArray<FDCCModifierSource> UDCCEquipmentComponent::GetAbilityBonusSources(EDCCAb
 	return Sources;
 }
 
+float UDCCEquipmentComponent::GetTotalEquippedMass() const
+{
+	float Total = 0.0f;
+
+	for (const FDCCEquippedItem& Entry : Equipped)
+	{
+		FDCCEquipmentDef Item;
+		if (FindItem(Entry.ItemId, Item))
+		{
+			Total += Item.MassKilograms;
+		}
+	}
+
+	return Total;
+}
+
 float UDCCEquipmentComponent::GetAttackRangeOverride() const
 {
 	float Best = 0.0f;

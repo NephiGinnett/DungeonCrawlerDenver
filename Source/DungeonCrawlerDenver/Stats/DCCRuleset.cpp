@@ -149,7 +149,7 @@ int32 UDCCRuleset::GetMaxSkillRank() const
 	return 15;
 }
 
-float UDCCRuleset::GetMaxStamina(const FDCCAbilityScoreSet& AbilityScores, int32 Level) const
+float UDCCRuleset::GetMaxStamina(const FDCCAbilityScoreSet& AbilityScores, int32 Level, int32 AthleticsRank) const
 {
 	// The SCORE, not the modifier - the banded modifier flattens 3, 4 and 5 all
 	// to +2, which would give most of the party identical stamina and make the
@@ -157,8 +157,10 @@ float UDCCRuleset::GetMaxStamina(const FDCCAbilityScoreSet& AbilityScores, int32
 	const int32 ConstitutionScore = FMath::Max(1, AbilityScores.GetScore(EDCCAbility::Constitution));
 
 	// 40 base + 20 per point. On the 2-6 band that is 80 to 160, so Vaughn
-	// (Con 6) climbs roughly twice as long as Nephi (Con 2).
-	return 40.0f + (ConstitutionScore * 20.0f);
+	// (Con 6) climbs roughly twice as long as Nephi (Con 2). +2 per Athletics
+	// Rank on top - modest on purpose, since this is a ceiling raised through
+	// conditioning, not a second Constitution.
+	return 40.0f + (ConstitutionScore * 20.0f) + (FMath::Max(0, AthleticsRank) * 2.0f);
 }
 
 float UDCCRuleset::GetClingStaminaCost(int32 ClimbSkillRank) const
@@ -185,11 +187,19 @@ float UDCCRuleset::GetClimbSpeed(const FDCCAbilityScoreSet& AbilityScores, int32
 	return 90.0f + (StrengthScore * 12.0f) + (ClimbSkillRank * 6.0f);
 }
 
-float UDCCRuleset::GetStaminaRegenRate(const FDCCAbilityScoreSet& AbilityScores) const
+float UDCCRuleset::GetStaminaRegenRate(const FDCCAbilityScoreSet& AbilityScores, int32 AthleticsRank, float EquippedMassKg) const
 {
 	const int32 ConstitutionScore = FMath::Max(1, AbilityScores.GetScore(EDCCAbility::Constitution));
 
-	return 6.0f + (ConstitutionScore * 2.0f);
+	const float BaseRate = 6.0f + (ConstitutionScore * 2.0f) + (FMath::Max(0, AthleticsRank) * 0.2f);
+
+	// EquippedMassKg is already the excess over GetEncumbranceThresholdKg - the
+	// caller subtracts the threshold (and its own Heavy Armor Training Rank)
+	// before calling this, so this function only has to know about the
+	// leftover weight, not re-derive the threshold itself. Never lets regen go
+	// negative; a badly overloaded crawler stalls at zero recovery rather than
+	// actively losing stamina just standing still.
+	return FMath::Max(0.0f, BaseRate - (FMath::Max(0.0f, EquippedMassKg) * 0.5f));
 }
 
 float UDCCRuleset::GetSprintSpeedMultiplier(const FDCCAbilityScoreSet& AbilityScores) const
@@ -203,14 +213,25 @@ float UDCCRuleset::GetSprintSpeedMultiplier(const FDCCAbilityScoreSet& AbilitySc
 	return 1.5f + ((DexterityScore - 4) * 0.05f);
 }
 
-float UDCCRuleset::GetSprintStaminaCost(const FDCCAbilityScoreSet& AbilityScores) const
+float UDCCRuleset::GetSprintStaminaCost(const FDCCAbilityScoreSet& AbilityScores, int32 AthleticsRank) const
 {
 	const int32 ConstitutionScore = FMath::Max(1, AbilityScores.GetScore(EDCCAbility::Constitution));
 
 	// Tuned so a Constitution 4 crawler sprints roughly 12 seconds from full and
 	// recovers it in about 10 - long enough to cross a room or escape a fight,
-	// far too short to travel the map on.
-	return FMath::Max(4.0f, 12.0f - (ConstitutionScore * 1.0f));
+	// far too short to travel the map on. Athletics trims it further, the same
+	// "cheaper, not automatic" shape as Climb Rank on climbing.
+	return FMath::Max(2.0f, 12.0f - (ConstitutionScore * 1.0f) - (FMath::Max(0, AthleticsRank) * 0.3f));
+}
+
+float UDCCRuleset::GetEncumbranceThresholdKg(int32 HeavyArmorTrainingRank) const
+{
+	// 30kg is roughly "a loaded pack plus real armour" - enough that a
+	// lightly-equipped crawler never notices this exists. +1kg per Rank in
+	// Heavy Armor Training raises how much can be carried before it costs
+	// stamina, rather than discounting the cost directly - "you can carry
+	// more," not "the same load somehow weighs less."
+	return 30.0f + FMath::Max(0, HeavyArmorTrainingRank);
 }
 
 FDCCCheckResult UDCCRuleset::ResolveSkillCheck(

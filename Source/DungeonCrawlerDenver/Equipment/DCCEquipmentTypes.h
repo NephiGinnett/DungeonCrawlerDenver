@@ -121,6 +121,16 @@ struct FDCCEquipmentDef : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment|Combat", meta = (ClampMin = "0.0"))
 	float AttackRangeOverride = 0.0f;
 
+	/**
+	 * How heavy this item is to wear/wield, in kilograms - feeds
+	 * UDCCEquipmentComponent::GetTotalEquippedMass, which UDCCRuleset's stamina
+	 * regen formula reads once the total crosses GetEncumbranceThresholdKg.
+	 * Zero (the default) means "weightless" - a trinket or a light garment
+	 * should not need every row touched just to opt out of encumbrance.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment", meta = (ClampMin = "0.0"))
+	float MassKilograms = 0.0f;
+
 	// -- Presentation -------------------------------------------------------
 
 	/**

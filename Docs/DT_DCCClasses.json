@@ -76,7 +76,7 @@
     "Benefits": [
       { "Type": "StatBonus", "Ability": "Strength", "Amount": 1, "SourceLabel": "Class: Bounty Hunter" },
       { "Type": "StatBonus", "Ability": "Charisma", "Amount": -2, "SourceLabel": "Class: Bounty Hunter (detriment)" },
-      { "Type": "SkillBonus", "SkillId": "Intimidate", "Amount": 2, "SourceLabel": "Class: Bounty Hunter" }
+      { "Type": "SkillBonus", "SkillId": "FirstImpressions", "Amount": 2, "SourceLabel": "Class: Bounty Hunter" }
     ],
     "StarterEquipmentIds": ["RestraintCuffs", "SyndicateBadge"]
   },
@@ -129,7 +129,7 @@
     "Benefits": [
       { "Type": "StatBonus", "Ability": "Strength", "Amount": 1, "SourceLabel": "Class: Repo Man" },
       { "Type": "StatBonus", "Ability": "Charisma", "Amount": -2, "SourceLabel": "Class: Repo Man (detriment)" },
-      { "Type": "SkillBonus", "SkillId": "Intimidate", "Amount": 1, "SourceLabel": "Class: Repo Man" }
+      { "Type": "SkillBonus", "SkillId": "FirstImpressions", "Amount": 1, "SourceLabel": "Class: Repo Man" }
     ],
     "StarterEquipmentIds": ["TowChain", "Clipboard"]
   },

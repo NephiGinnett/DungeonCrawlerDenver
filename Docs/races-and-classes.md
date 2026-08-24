@@ -641,3 +641,34 @@ Living checklist. Update in place as each piece lands; don't create a dated
   started. "+5 Step" still needs a decision — reinterpret or shelve.
 - [ ] **Starter-kit equipment rows** — designed (table above), not yet
   authored as `DT_DCCEquipment` CSV rows or imported.
+- [x] **Skills wired into physical actions** — 2026-08-23, per Zoe's request.
+  Climbing turned out to already be fully wired to a real Skill Rank
+  (`GetClimbSpeed`/`GetClimbStaminaCost`/`GetClingStaminaCost` all already took
+  a `ClimbSkillRank`, and `ActiveClimbPoint->ClimbSkillId` was already marking
+  it on use - nothing to build there. Newly wired: `GetMaxStamina` and
+  `GetSprintStaminaCost` take an Athletics Rank now (a new Skill, marked on
+  actual sprint use, same "cheaper, not automatic" shape as Climbing);
+  `GetStaminaRegenRate` takes both Athletics Rank and encumbrance. **"Wearing
+  heavy armour" is now literal**: `FDCCEquipmentDef` gained `MassKilograms`,
+  `UDCCEquipmentComponent::GetTotalEquippedMass()` sums it, and stamina regen
+  suffers past `GetEncumbranceThresholdKg` (30kg baseline) - a new
+  Heavy-Armor-Training Skill (Class-grantable through the component built
+  above, no new code needed for that part) raises the threshold rather than
+  discounting the penalty. **Stamina drain while swimming is still blocked** -
+  there is no swim movement mode at all yet (confirmed, not just assumed -
+  grepped for it), so this waits on primitive #6 above. New rows in
+  `Docs/DT_DCCSkills_ChecksBatch2.csv` (Athletics, Heavy Armor Training).
+  Build-verified, editor closed, real link. Not yet seen in PIE.
+- [x] **Real bug found and fixed while wiring the above** — `ResolveSocialCheck`
+  (Persuade/Intimidate) was marking **two different Skill ids** for the same
+  action: this session's own new "Intimidate"/"Persuade" rows, and a
+  pre-existing "FirstImpressions"/"QuickWit" pair the function was already
+  using before this session touched it. The pre-existing ids were almost
+  certainly the ones with real data behind them; the newly-invented ones were
+  the mistake. Fixed by standardising on `FirstImpressions`/`QuickWit`
+  everywhere (the Skill CSV batch and `DT_DCCClasses.json`'s Bounty Hunter/Repo
+  Man rows both updated to match) and removing the now-redundant second mark
+  call. **If `FirstImpressions`/`QuickWit` already exist as imported rows,
+  re-importing `Docs/DT_DCCSkills_ChecksBatch1.csv` will overwrite them** with
+  this session's authored values - check what's already there first rather
+  than importing blind.

@@ -1,6 +1,6 @@
 Name,SkillId,DisplayName,FlavorText,Archetype,Targeting,CastingAbility,ManaCost,CooldownSeconds,CastTimeSeconds,Range,Radius,ConeHalfAngleDegrees,DifficultyClass,PowerDie,EffectDuration,EffectTag,bCanAttemptUntrained,bIsPassive,CastEffect,ImpactEffect,CastSocketName,ImpactEffectZOffset
-Intimidate,Intimidate,Intimidate,"Lean on someone. Works better with a weapon in frame.",Check,Self,Charisma,0,0,0,0,0,0,0,0,0,,True,False,,,,60
-Persuade,Persuade,Persuade,"Talk someone round without a weapon in frame.",Check,Self,Charisma,0,0,0,0,0,0,0,0,0,,True,False,,,,60
+FirstImpressions,FirstImpressions,Intimidate,"Lean on someone. Works better with a weapon in frame.",Check,Self,Charisma,0,0,0,0,0,0,0,0,0,,True,False,,,,60
+QuickWit,QuickWit,Persuade,"Talk someone round without a weapon in frame.",Check,Self,Charisma,0,0,0,0,0,0,0,0,0,,True,False,,,,60
 Perception,Perception,Perception,"Notice the thing everyone else walked past.",Check,Self,Intelligence,0,0,0,0,0,0,0,0,0,,True,False,,,,60
 Navigation,Navigation,Navigation,"Know which way is out.",Check,Self,Intelligence,0,0,0,0,0,0,0,0,0,,True,False,,,,60
 WeatherReading,WeatherReading,Weather-Reading,"Read a room's storm before it arrives.",Check,Self,Intelligence,0,0,0,0,0,0,0,0,0,,True,False,,,,60

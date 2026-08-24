@@ -250,6 +250,29 @@ PIE run above diagnosed:
 
 ---
 
+## Queued for whoever has MCP (2026-08-23, Skills wired into physical actions + a real bug fix)
+
+Built this session, no MCP. `Docs/races-and-classes.md`'s "Notes / TODO" has the full writeup;
+short version below. Development-Editor-build-verified, editor closed, real link. Not seen in PIE.
+
+1. **Check whether `FirstImpressions` and `QuickWit` already exist as Skill rows before
+   importing `Docs/DT_DCCSkills_ChecksBatch1.csv`** - a real bug this session found and fixed:
+   `ResolveSocialCheck` (Persuade/Intimidate) had been marking two different Skill ids for the
+   same action, this session's own newly-invented "Intimidate"/"Persuade" plus a pre-existing
+   "FirstImpressions"/"QuickWit" pair the function already used before this session touched it.
+   Fixed by standardising on the pre-existing ids everywhere. **If they already have real,
+   tuned data, a blind CSV re-import will overwrite it** with this session's placeholder values
+   - open the table and look first.
+2. **Import `Docs/DT_DCCSkills_ChecksBatch2.csv`** - two new rows, Athletics and Heavy Armor
+   Training.
+3. **PIE test: sprint until stamina depletes, with and without Athletics granted**, and confirm
+   the drain rate and max stamina both visibly change. Then **equip enough mass to cross 30kg
+   and confirm stamina regen slows** while standing still - `MassKilograms` needs authoring on
+   at least a couple of `DT_DCCEquipment` rows first (all read 0 today, so nothing is encumbering
+   yet by default).
+4. **Confirm Climbing didn't regress** - it was already fully wired to a real Skill Rank before
+   this session touched anything nearby; a quick climb test is just insurance.
+
 ## Queued for whoever has MCP (2026-08-23, class Build System - Class Benefit component)
 
 Built this session, no MCP: `Classes/DCCClassComponent` - the Third Floor Class selection

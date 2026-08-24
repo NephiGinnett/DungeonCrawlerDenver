@@ -128,9 +128,14 @@ public:
 	// the Endurance checks that gate long grinding sessions.
 	// -------------------------------------------------------------------------
 
-	/** Total stamina. Constitution-driven, on the same 2-6 score scale. */
+	/**
+	 * Total stamina. Constitution-driven, on the same 2-6 score scale, refined
+	 * by Athletics Rank the same way Climb Rank refines climbing - a novice
+	 * and a veteran share the same Constitution-set baseline, but conditioning
+	 * raises the ceiling.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Ruleset|Stamina")
-	virtual float GetMaxStamina(const FDCCAbilityScoreSet& AbilityScores, int32 Level) const;
+	virtual float GetMaxStamina(const FDCCAbilityScoreSet& AbilityScores, int32 Level, int32 AthleticsRank = 0) const;
 
 	/** Stamina per second spent while hanging on a surface doing nothing. */
 	UFUNCTION(BlueprintCallable, Category = "Ruleset|Stamina")
@@ -144,17 +149,33 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Ruleset|Stamina")
 	virtual float GetClimbSpeed(const FDCCAbilityScoreSet& AbilityScores, int32 ClimbSkillRank) const;
 
-	/** Stamina per second recovered when not exerting. */
+	/**
+	 * Stamina per second recovered when not exerting. EquippedMassKg is a flat
+	 * subtraction from the final rate rather than a multiplier - encumbrance
+	 * should be able to stall recovery outright for someone badly overloaded,
+	 * not just slow it, and a multiplier on an already-small number can never
+	 * do that.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Ruleset|Stamina")
-	virtual float GetStaminaRegenRate(const FDCCAbilityScoreSet& AbilityScores) const;
+	virtual float GetStaminaRegenRate(const FDCCAbilityScoreSet& AbilityScores, int32 AthleticsRank = 0, float EquippedMassKg = 0.0f) const;
 
 	/** Walk-speed multiplier while sprinting. Dexterity-driven. */
 	UFUNCTION(BlueprintCallable, Category = "Ruleset|Stamina")
 	virtual float GetSprintSpeedMultiplier(const FDCCAbilityScoreSet& AbilityScores) const;
 
-	/** Stamina per second spent while actually sprinting. */
+	/** Stamina per second spent while actually sprinting, cheaper with Athletics Rank. */
 	UFUNCTION(BlueprintCallable, Category = "Ruleset|Stamina")
-	virtual float GetSprintStaminaCost(const FDCCAbilityScoreSet& AbilityScores) const;
+	virtual float GetSprintStaminaCost(const FDCCAbilityScoreSet& AbilityScores, int32 AthleticsRank = 0) const;
+
+	/**
+	 * Kilograms of equipped gear before stamina regen starts suffering for it -
+	 * "wearing heavy armour" made literal. A Heavy Armor Training Skill (Class-
+	 * grantable, same mechanism as everything else in Classes/) raises this
+	 * rather than reducing the penalty directly, so the two compose as "you can
+	 * carry more before it costs you" rather than a flat discount.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Ruleset|Stamina")
+	virtual float GetEncumbranceThresholdKg(int32 HeavyArmorTrainingRank) const;
 
 	/**
 	 * Server-only. A skill check: the core check plus the character's Rank.
