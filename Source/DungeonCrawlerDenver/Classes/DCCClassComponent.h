@@ -78,6 +78,13 @@ public:
 	 *  Equipment's own list by UDCCStatsComponent::RecalculateDamageResistances. */
 	void AccumulateDamageResistances(TArray<FDCCResistanceSource>& OutSources) const;
 
+	/** True if the selected Class has a GrantsMount benefit, with its Move
+	 *  Speed bonus and label. False (and both out params untouched) otherwise -
+	 *  ToggleMount uses this to refuse the toggle for a class that never
+	 *  granted one. */
+	UFUNCTION(BlueprintPure, Category = "Class")
+	bool GetMountBenefit(float& OutMoveSpeedBonus, FText& OutLabel) const;
+
 	/** Convenience finder, mirroring UDCCAchievementComponent::Find. */
 	UFUNCTION(BlueprintPure, Category = "Class")
 	static UDCCClassComponent* Find(AActor* Actor);

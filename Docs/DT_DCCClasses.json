@@ -101,12 +101,13 @@
     "Name": "RideshareDriver",
     "ClassId": "RideshareDriver",
     "DisplayName": "Rideshare Driver",
-    "FlavorText": "Earth. 5 stars, big tip. The sedan is a separate Pet/Mount grant, not built yet.",
+    "FlavorText": "Earth. 5 stars, big tip. Press [M] to summon the sedan.",
     "bIsAlienClass": false,
     "Benefits": [
       { "Type": "StatBonus", "Ability": "Charisma", "Amount": 1, "SourceLabel": "Class: Rideshare Driver" },
       { "Type": "StatBonus", "Ability": "Strength", "Amount": -2, "SourceLabel": "Class: Rideshare Driver (detriment)" },
-      { "Type": "SkillBonus", "SkillId": "Navigation", "Amount": 1, "SourceLabel": "Class: Rideshare Driver" }
+      { "Type": "SkillBonus", "SkillId": "Navigation", "Amount": 1, "SourceLabel": "Class: Rideshare Driver" },
+      { "Type": "GrantsMount", "Amount": 80, "SourceLabel": "Class: Rideshare Driver (the sedan)" }
     ],
     "StarterEquipmentIds": ["PhoneMount"]
   },

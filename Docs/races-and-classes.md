@@ -584,7 +584,9 @@ appliance; flagged `[needs mesh]` where nothing obvious exists yet.
 4. ~~Damage types, scoped to the eight actually in use above~~ **Done 2026-08-23**
 5. Natural attacks via existing Skill archetype rows — no dependency, buildable
    in parallel with any of the above, any time
-6. Pets/Mounts — only blocks 2 of 12 classes
+6. Pets/Mounts — **half done 2026-08-23.** The movement-only Mount toggle
+   (Rideshare Driver's sedan) is built; the real spawned/following/combat-
+   capable Pet (Wildlife Rehabber's actual ask) is not — see the TODO tracker.
 7. New movement modes — lowest priority, fewest classes depend on them
 
 ---
@@ -654,8 +656,20 @@ Living checklist. Update in place as each piece lands; don't create a dated
   section above are still just flavour text — retrofitting them is pure data
   entry now that the mechanism exists, no code needed. Build-verified, editor
   closed, real link. Not yet seen in PIE.
-- [ ] **Pets/Mounts** — not started. Rideshare Driver's movement-only sedan is
-  the cheap version to build first.
+- [~] **Pets/Mounts** — 2026-08-23, half done. New `EDCCClassBenefitType::
+  GrantsMount` grants a toggleable (`[M]`) flat Move Speed bonus while
+  active — `ADCCCharacterBase::bIsMounted`/`ToggleMount`, wired into
+  `ApplyDerivedMovementSpeed` as its own additive term (deliberately not
+  reusing `MovementSpeedOverride`, which is a speed *cap* — see this same
+  mistake almost happening with `ClassMoveSpeedBonus` earlier this session).
+  Rideshare Driver's `DT_DCCClasses.json` entry now grants it. **Compiled via
+  the DebugGame check (editor was open this pass — Zoe or another session at
+  the keyboard), not yet Development-Editor-deployed.** Wildlife Rehabber's
+  actual ask — a real spawned, following, combat-capable Pet — is **not
+  started**: no Pet actor class, no spawn/despawn/follow logic, no combat
+  participation. That's a genuinely bigger build (closer in size to the
+  Class Benefit component than to this toggle) and deserves its own pass
+  rather than a rushed version bolted onto this one.
 - [ ] **New movement modes** (burrow, breathe underwater, flight) — not
   started. "+5 Step" still needs a decision — reinterpret or shelve.
 - [ ] **Starter-kit equipment rows** — designed (table above), not yet

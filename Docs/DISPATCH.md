@@ -250,6 +250,123 @@ PIE run above diagnosed:
 
 ---
 
+## Done this session (2026-08-24, MCP live, editor freshly rebuilt) — backlog cleanup
+
+Fresh session, full MCP (editor rebuilt 2026-08-23 22:31, confirmed no numbered hot-reload DLL
+in `Binaries/Win64/` — the whole pile below this section, through the class/consumable/chat
+work, is genuinely deployed, not just compiled). Coordinated with two peer sessions
+("Ally models, map scale, NPC bugs" and "Ally/loot interaction + preview polish") by reading
+live editor/asset state rather than their transcripts (session-transcript tool was unavailable
+cross-session) — found they'd already fixed `bIsAlly` on all 8 ally instances (verified true
+everywhere) but had NOT yet fixed the wrong-rig mesh overrides this file flagged. Did that plus
+a stack of still-missing DataTable imports this file and CLAUDE.md had queued across several
+prior sessions. Everything below is read-back-verified and saved.
+
+**Real fix — the wrong-rig instance overrides.** `Scott_OfficeAirplane_Demo`,
+`Kyle_ArmsOut_Demo`, `Marcel_DiceWinged_Demo` still had a per-instance `SkeletalMeshAsset`
+override pointing at the old pre-merge meshes (`SK_OfficeAirplane`/`SK_ArmsOut`/`SK_DiceWinged`,
+each still on its own skeleton) even though the three Blueprint CDOs correctly point at
+`*_Shared`. Cleared all three via `ObjectTools.set_properties` on each actor's
+`SkeletalMeshComponent`, confirmed by read-back, confirmed again by a PIE run
+(`bSimulate=true`) showing **zero** `[DCC Anim]` "wrong rig" lines — previously three every run.
+Also confirmed via the same PIE run that `Crawler_Kyle` now shows `ParkingLotSpecial`/`QuickWit`
+in `[DCC Cast]` (the "two Kyles" skill-granting question from the 2026-08-18 diagnosis is
+resolved — both Kyle instances grant correctly now). `Mob_Brute_Courtyard` still logs
+"knows nothing" — `BP_DCCEnemy_Brute`'s `StartingSkillIds` authoring (POST_BUILD_TASKS.md §3)
+is still the one open item there.
+
+**DataTable imports — three tables that never existed, still causing constructor errors:**
+`DT_DCCClasses`, `DT_DCCConsumables`, `DT_DCCChatterLines` did not exist in `/Game/DCC/` despite
+being queued repeatedly. Confirmed via `LogUObjectGlobals: Error: CDO Constructor` on the fresh
+editor boot log (`DCCClassComponent`, `DCCInventoryComponent`, `DCCGameState` each failed to find
+their table). Created and populated all three from their `Docs/` source files
+(`DT_DCCClasses.json` → 12 classes with full nested `Benefits` arrays, `DT_DCCConsumables.json`
+→ 5 drinks with nested `Effects`, `DT_DCCChatterLines.csv` → plain CSV) at the exact paths their
+C++ constructors already expect. **Still needs an editor restart** to actually resolve — these
+are `ConstructorHelpers::FObjectFinder` defaults that only re-resolve at class construction, so a
+second PIE run in the same editor session still showed no new errors only because nothing
+re-triggers that constructor mid-session, not because it's fixed live. Ask Zoe to restart before
+trusting Class selection, Consumables, or Chatter to work.
+
+**DataTable additions — merged new rows into existing tables, did NOT blind-reimport:**
+`Docs/DT_DCCEquipment.csv` and `Docs/DT_DCCAchievements.csv` are **stale relative to the live
+tables** — a peer session added ~15 equipment rows live via MCP (`PokemonMasterTrainer`,
+`DunePopcornBucket`, `ScottLacrosseStick`, `MinionEyes`, `WaterBottle`, several bar-fight props)
+that were never backported into the CSV. A reimport of either CSV would have silently deleted
+those. Instead, diffed live rows against the CSV and `add_rows`/`set_rows`'d only the genuinely
+missing ones: **9 equipment rows** (`ThrownBottle`, `ServiceKnifeSet`, `SodaGun`,
+`ConfettiCrossbow`, `NailGunPro`, `FlareGunEmergency`, `SeveranceCheckUncashed`,
+`HighVisibilitySafetyVest`, `ComplaintFolderOverstuffed`) and **2 achievement rows**
+(`EstateSale`, `AssetRecovery`, both on the already-existing `ContainersLooted` stat). Also added
+**11 new Skill rows** from `DT_DCCSkills_ChecksBatch1.csv`/`Batch2.csv` (`Perception`,
+`Navigation`, `WeatherReading`, `AnimalHandling`, `LoreCreepypasta`, `LoreXenobiology`,
+`Mechanics`, `Swimming`, `Diving`, `Athletics`, `HeavyArmorTraining`) — **skipped that CSV's own
+`FirstImpressions`/`QuickWit` rows on purpose**, since the live table already has real tuned data
+for both (different DisplayName, DC, cooldown) and the CSV's copies are this project's own
+documented placeholder duplicates. And **6 new Quest rows** from `DT_DCCQuests.json`
+(`TheOathgate`, `BountyCollectors`, `RepeatCustomer`, `NetworkingOpportunity`, `FreeWeights`,
+`SecondHelping`), nested `Objectives` arrays and `NextQuestId` chaining all confirmed by
+read-back. **General lesson for the next session**: before any DataTable "re-import", diff
+`list_rows` against the source file — this project's live tables now drift from their CSV/JSON
+masters when someone authors rows straight through MCP.
+
+**Real fix — the Buff/Don Minion shared-material texture bug, using the prep already staged.**
+Confirmed via `get_dependencies` that both `SK_BuffMinion` and `SK_DonMinion` (old, shared
+`/Game/DCC/Characters/Minions/`) referenced the same `Material_1`/`texture_0`/`texture_0_ncl1_1`
+— the exact collision this file already diagnosed, with nothing else referencing those three
+assets. Re-imported `SourceArt/BuffMinion/SK_BuffMinion.fbx` and `SourceArt/DonMinion/SK_DonMinion.fbx`
+(materials+textures+physics asset) into their own new subfolders, `.../Minions/BuffMinion/` and
+`.../Minions/DonMinion/` — each now has its own independent `Material_1`/`texture_0` pair,
+confirmed by walking the material graph (`MaterialTools.get_property_input` → `MP_BaseColor` →
+`TextureSample_0` → each one's own local `texture_0`, not the old shared one). Repointed both
+live NPC actors' `SkeletalMeshComponent.SkeletalMeshAsset` to the new meshes and confirmed by
+read-back; a viewport capture of the bartender (Don Minion) shows a clean, uniform skin, no
+patchwork. **The old shared assets in `Minions/` root were deliberately left in place, not
+deleted** — `get_referencers` still listed external-actor-file referencers for both, even after
+saving the level, which reads as a stale World Partition asset-registry cache but wasn't fully
+run to ground. Safe to delete once someone confirms nothing still points at them (the two fixed
+NPCs and the not-yet-placed `ADCCEnemyCharacter_Guard`/`ADCCVendorNPC` subclasses do not).
+**Animations were not re-imported this pass** — `SourceArt/{BuffMinion,DonMinion}/Anims/*.fbx`
+are still waiting, same per-animation-FBX-bound-to-the-new-skeleton process used for the four
+crawlers' `_Shared` sets.
+
+**Found, not acted on — a stray duplicate Bartender.** `DCCDialogueNPC_Bartender2` (SpeakerId
+`Bartender`, mesh **still on the old shared `SK_DonMinion`**) sits at x9133/y-718 — nowhere near
+the real Bar (x8600-9800/y4700-5300), out near spawn. Reads like a leftover test placement from
+before the real Bar existed, matching this project's own documented "duplicate actors" pattern
+(the two Kyles/two Scotts). Did not delete unilaterally since it's placed content; flagging for
+Zoe to confirm before culling it (also: as long as it exists, it's one more actor referencing the
+old shared mesh, so it should be fixed or deleted before that mesh can be safely removed).
+
+**Still open, none of it attempted this session (needs Zoe's visual judgment, not just MCP
+plumbing):** guard patrol point placement, the six curated loot chests, the Oathgate pair,
+`ADCCQuestMarker_BarEntrance`, the `DCCCrowdSpawner`/Nuclear Family placements, and the wider
+map-scale/skyline work. Also worth doing next MCP session: swap the placeholder
+`DCCDialogueNPC_Bartender`/`BarGuard` actors in the Bar for the real `ADCCVendorNPC`/
+`ADCCEnemyCharacter_Guard` subclasses (their C++ has existed for a session already but nothing
+in the level uses it yet) — `SellableConsumableIds` can now point at all five real rows in the
+freshly-imported `DT_DCCConsumables` (`TapWater`, `HouseAle`, `WellWhiskey`, `RotgutSpecial`,
+`EnergyTonic`), and `SellableEquipmentIds` at bar-appropriate rows already in `DT_DCCEquipment`
+(`ThrownBottle`, `ServiceTray`, `Torch`, `SodaGun`). All still described in detail further down
+this file. Equipment rows for the 12 new Classes' starter kits (`CreepyMask`, `Boombox`,
+`WeldingTorch`, etc.) are still unauthored too — `Equip()` no-ops gracefully on an unknown id so
+this isn't blocking, just cosmetic-less starter kits for now.
+
+## Queued (2026-08-23, Mount toggle - compiled, NOT yet deployed)
+
+Built this session, then the editor came up mid-session (Zoe or another session at the
+keyboard) - only DebugGame-compile-checked from that point on, not linked into a closed-editor
+Development build. **This needs a full close-editor Development Editor build before anything
+below is live, on top of the usual MCP re-import.** `Docs/races-and-classes.md`'s TODO tracker
+has the full writeup.
+
+1. **Close the editor, run the Development Editor build, confirm no numbered hot-reload DLL,**
+   before doing anything else in this list.
+2. **Re-import `Docs/DT_DCCClasses.json`** - Rideshare Driver now grants a Mount.
+3. **PIE test: select Rideshare Driver, press [M], confirm movement speed actually increases**
+   and press it again to confirm it toggles back off. Also press M as a character with no Class
+   selected (or a Class without `GrantsMount`) and confirm it's a silent no-op, not an error.
+
 ## Queued for whoever has MCP (2026-08-23, damage types + resistances)
 
 Built this session, no MCP. `Docs/races-and-classes.md`'s "Notes / TODO" has the full writeup.
@@ -271,6 +388,206 @@ Development-Editor-build-verified, editor closed, real link. Not seen in PIE.
    selected and confirm it isn't. Also worth deliberately testing the cancellation case (equip
    something Fire-Vulnerable on the Noodle Stand Cook, who's already Fire-Resistant from their
    Class, and confirm damage comes out unmodified, not double-reduced or doubled).
+
+## Queued for whoever has MCP (2026-08-23, bartender/guard follow-up)
+
+Zoe clarified the bartender/guard roles from the batch below: bartender is a merchant (sells
+drinks/items, tells you about quests - the last half already worked via ambient dialogue hints,
+untouched here); the buff-minion guard is decorative/security - patrols, ignores everyone, and
+only fights if a fight actually breaks out near it. No MCP this session (editor still not
+running). DebugGame compile-check passed. **Not deployed - needs the usual close-editor
+Development build.**
+
+### Done: a real vendor system, not just a stub
+
+New `Dialogue/DCCVendorNPC.h/.cpp` - `ADCCVendorNPC : public ADCCDialogueNPC`. Ambient
+talk-on-approach is untouched (ADCCDialogueNPC's ambient script still plays, so "tell you about
+quests" via hint lines works exactly as before); E now opens a shop instead of advancing the
+script, via `TryPlayerInteract` being made `virtual` and taking the interactor (base behaviour -
+say the next line - is unchanged for every other dialogue NPC; only the override on this subclass
+diverges).
+
+- **A full menu, not a placeholder**: `ADCCCharacterBase` gained `VendorTargetActor`/
+  `VendorMenuIndex`, `CycleVendorMenu`/`CloseVendorMenu`/`HandleVendorMenuConfirm`, and two server
+  RPCs (`Server_PurchaseEquipment`, `Server_PurchaseDrink`) - same "client picks, server
+  re-validates range/gold/existence" shape as the loot menu, deliberately kept as its own
+  parallel set of names rather than reusing LootTargetActor's state, so the two never collide.
+  `DCCHUD::DrawVendorMenu` draws a flat list (equipment rows, then drinks, then Leave - no
+  itemised sub-page, unlike loot, because there's nothing to take-some-leave-some of) with
+  unaffordable rows dimmed against the buyer's current gold. Wheel cycles, E buys, Esc leaves -
+  wired into the existing `InteractionScrollUp/Down` dispatch and `CloseInteraction`.
+- **Equipment purchases reuse the existing grant path exactly** -
+  `Equipment->FindItem`/`Equipment->Equip`, the same calls `ADCCPickup::OnPickedUp` already makes,
+  so a vendor sale is mechanically identical to picking the same item off the floor. Any row in
+  `DT_DCCEquipment` can be sold by adding its `ItemId` to a vendor's `SellableEquipmentIds`.
+- **Drinks are flavour only, on purpose - see the open question below.** `FDCCVendorDrink` is
+  just `{FText Name; int32 Price;}`. No consumable/potion system exists anywhere in `Source/`
+  (checked directly, not assumed) to hang a mechanical effect on, so a drink purchase spends gold
+  and logs a Feed line and does nothing else yet. Real gold sink, real vendor interaction, todays
+  version of "sells drinks" - just not a buff/heal until that system exists.
+- **Not yet authored: what this bartender actually sells.** `SellableEquipmentIds`/`Drinks` are
+  empty arrays on the class, meant to be set per placed instance via `set_properties` once Zoe
+  decides the list. A starter suggestion, cheap to change later: existing `DT_DCCEquipment` rows
+  that already fit a bar (`ThrownBottle`, `ServiceTray`, `Torch`) plus a handful of flavour-only
+  drinks using the mug/bottle meshes found below.
+
+### Done: the guard patrols and only fights if violence breaks out nearby
+
+New `ADCCEnemyCharacter::bPassiveUntilProvoked` (default false, so no existing mob/ally changes
+behaviour) plus a new static delegate, `ADCCCharacterBase::OnAnyAttackAttempted`, broadcast once
+per real swing attempt inside `PerformAttack` (hit or miss). A passive character binds to it in
+`BeginPlay` (unbinds in a new `EndPlay` override) and otherwise never calls
+`FindNearestHostileTarget` at all - the only way it ever gets a `CurrentTarget` is
+`HandleNearbyAttack` reacting to a swing landing within `ViolenceWatchRadius` (900 units default)
+of itself or of the swing's target. Once that target dies or leashes away (the same drop-logic
+every enemy already has), nothing re-arms the normal scan, so it goes back to patrolling on its
+own rather than picking a fresh fight - matches "just for appearances... attacks if a fight breaks
+out" exactly.
+
+- **Patrol**: `PatrolPoints` (`TArray<FVector>`, empty by default - a guard with none just stands
+  still), `PatrolPointTolerance`, `PatrolWaitSeconds`. `TickPatrol` walks the loop via the same
+  `AAIController` the chase/follow logic already uses - no new dependency. **Points are authored
+  per placed instance, not generated** - needs MCP to actually set `PatrolPoints` on whichever
+  guard(s) end up in the Bar.
+- **New `ADCCEnemyCharacter_Guard`** (`Characters/DCCEnemyCharacter_Guard.h/.cpp`) - `bIsAlly =
+  false`, `bPassiveUntilProvoked = true`, mesh pointed at the already-imported
+  `/Game/DCC/Characters/Minions/SK_BuffMinion` (confirmed this is "the buff minion guard" from
+  Zoe's own wording). **Stat block is an invented placeholder** (STR 5 / CON 5, d6 unarmed, no
+  `DT_DCCEnemies.json` row exists for a bar guard) - retune freely, nothing depends on the exact
+  numbers.
+- **Not yet placed or animated.** SK_BuffMinion still has the shared-material texture bug from the
+  batch below (fix it before anyone sees this in a room), and its walk/run animations are
+  converted and staged in `SourceArt/BuffMinion/Anims/` but not imported - it will T-pose/idle
+  until that import happens.
+
+### Free assets for the bar: already installed, nothing to download
+
+Checked `Content/` directly rather than guessing or reaching for a web search first, per Zoe's
+"pull from assets we've considered before" steer. **Real tavern props already sit unused in
+already-installed packs:**
+
+- `Legendary_Forge/Meshes/Mug/Sm_mug.uasset` (+ `_02`/`_03`/`_04` - four mug variants) and its own
+  `T_mug`/`Mi_mug` textures - literal bar mugs, never referenced anywhere in `Source/` or the
+  equipment CSVs.
+- `Modern_villa_kit/Meshes/Bottle/SM_bottle_01/02/03.uasset` and `SM_glass_01/02.uasset` - wine
+  bottles and glasses, same pack `SodaGun`/`ChefsKnife` already borrow from.
+- `Cave_Camp/Meshes/SM_bottle.uasset` - already in use, as `ThrownBottle`'s mesh.
+- `Legendary_Forge/Meshes/Barrel/SM_barrel_01/02.uasset` (+ its own `SM_stool`) and
+  `Cave_Camp/Meshes/Props_02/SM_barrel_01..04.uasset` - kegs/barrels for behind-the-bar dressing.
+
+Enough on its own for drink props (held items, shelf dressing, or both) without touching Fab or
+downloading anything. Only reach for an external free pack if a *specific* need turns up that none
+of these thirty-odd installed packs cover - haven't found one yet for this ask.
+
+### Open questions for Zoe, not decided here
+
+**Answered, both of them - see the newer section directly below for what got built as a result.**
+Question 1 (mechanical drinks): yes, build the real thing - health up/down, temporary stat
+buffs/debuffs (Woozy, Charisma boost, whatever fits), a Drink Now/Stow choice, and "a wealth of
+tags" on every item created. Question 2 (Don Minion): confirmed as the bartender itself, not a
+second guard.
+
+1. ~~Should a drink ever do something mechanical~~ - **decided: yes, build it.**
+2. ~~What is Don Minion for~~ - **decided: the bartender.**
+3. **What should this bartender actually sell?** Still open. Five starter drinks now exist
+   (`Docs/DT_DCCConsumables.json`, see below) and can be assigned as-is or replaced; equipment
+   still needs a real list before `SellableEquipmentIds` gets set on the placed instance.
+
+## Queued for whoever has MCP (2026-08-23, real consumables: tags, effects, Drink Now/Stow)
+
+Zoe's answers to the two open questions above, acted on the same session. No MCP (editor still not
+running). DebugGame compile-check passed, including against this session's own earlier
+guard/vendor work and both other sessions' commits. **Not deployed.**
+
+### Done: a real item-tag system, not per-struct free text
+
+Added the `GameplayTags` module to `DungeonCrawlerDenver.Build.cs` (previously only reachable
+transitively through AIModule/StateTree, which does not guarantee the public headers are visible -
+now an explicit, direct dependency) and a `FGameplayTagContainer Tags` field on **both**
+`FDCCEquipmentDef` and the new `FDCCConsumableDef` (below) - "every item created" per Zoe's ask, not
+just drinks. New `Config/DefaultGameplayTags.ini` registers a starter dictionary so tags are
+actually usable rather than silently rejected on import: `Item.Consumable`, `Item.Liquid`,
+`Item.Alcohol`, `Item.Flammable`, `Item.Organic`, `Item.Craftable`, `Item.Weapon`, `Item.Armor`,
+`Item.Trinket`, `Item.QuestItem`. Add more freely, no C++ change needed - just an editor restart to
+pick up new entries. **Not read by any code yet** - this is the classification layer for a future
+crafting/interaction system, authored ahead of time on purpose so items don't need re-tagging later.
+
+### Done: a real consumable system - effects, temporary buffs, Drink Now vs Stow
+
+New `Items/DCCConsumableTypes.h` - `FDCCConsumableDef` (DataTable row: ItemId, DisplayName,
+Description, GoldValue, Tags, `TArray<FDCCConsumableEffect> Effects`, an optional held/stowed
+Mesh) and `FDCCConsumableEffect` (`InstantHealthChange` - heals if positive, hurts if negative;
+`ModifiedAbility`/`ModifierAmount`/`ModifierDurationSeconds` - a signed temporary nudge to one
+ability score, so "Woozy" and "Charisma boost" are the same mechanism with a different sign).
+Multiple effects per drink combine freely - the Rotgut Special below hurts a little AND leaves you
+Woozy AND gives a Charisma bump, all at once, all from three rows in one array.
+
+- **A genuinely new mechanic, added at the right architectural layer.** `UDCCStatsComponent`
+  gained `ApplyTimedAbilityModifier(Ability, Amount, DurationSeconds)` and a private
+  `TimedAbilityModifiers` list, pruned every tick (piggybacked on the existing `TickRegeneration`
+  call rather than a new timer) and folded into `RecalculateEnhancedScores` exactly like
+  Equipment's and Class's bonuses - same array, summed in place. **Stats/ itself never hears the
+  word "consumable" or "drink"** - per this project's own architecture rule that layer stays
+  ruleset-agnostic. The translation lives on `ADCCCharacterBase::ApplyConsumableEffects`, which is
+  the one place that knows both what a consumable is and how Stats primitives work.
+- **`UDCCInventoryComponent` gained a third stowed-items array**, `StowedConsumables`
+  (`{ItemId, DisplayName, Quantity}`, stacking - buying three of the same round is one row, not
+  three) - kept separate from `Items`/`StowedRemains` for the same reason those two are already
+  separate from each other (different shape, see that file's own comment). `ConsumableTable`
+  defaults via `ConstructorHelpers` to `/Game/DCC/Items/DT_DCCConsumables`, same self-healing
+  pattern as every other content table in this project.
+- **The vendor menu's drink flow, not just equipment's.** Picking a drink row no longer buys it
+  immediately - it arms a two-row sub-prompt (Drink Now / Stow For Later), reusing the same
+  wheel-to-choose-E-to-confirm input the rest of the menu already uses. `Server_PurchaseDrink` took
+  on a `bool bDrinkNow` parameter; Drink Now applies `Effects` on the spot, Stow adds to
+  `StowedConsumables`. `DCCHUD::DrawVendorMenu` draws the sub-prompt as its own small panel.
+- **Stowed drinks are drinkable later from the Tab menu's Inventory page**, exactly the way
+  Stowed Remains rows are already clickable to empty - same `AddHitBox`/`NotifyHitBoxClick`
+  convention, a new `"Drink|%d"` tag alongside the existing `"Stow|%d"` one, routed to a new
+  `ADCCCharacterBase::DCCConsumeStowedDrink`/`Server_ConsumeStowedDrink` pair mirroring
+  `DCCEmptyStowedRemains` exactly.
+- **`ADCCVendorNPC::Drinks` (the placeholder `FDCCVendorDrink{Name,Price}` struct from the first
+  pass) is gone**, replaced by `SellableConsumableIds` (`TArray<FName>`, same shape as
+  `SellableEquipmentIds`) resolved through the buyer's own `Inventory->FindConsumable` - one less
+  data shape to keep in sync, and real drinks instead of a flavour-only stub.
+
+### Five starter drinks, ready to import - `Docs/DT_DCCConsumables.json`
+
+Written in the same row-per-JSON-object shape as `DT_DCCQuests.json` (this project's own
+established pattern for a DataTable a plain CSV can't express - here because of the nested
+`Effects` array and `Tags` container, same reason quests needed JSON instead of CSV rather than a
+guess). Mesh paths point at already-installed, already-verified assets from the section above
+(`Sm_mug`, `Sm_mug_02`, `SM_bottle.SM_bottle` - the same asset `ThrownBottle` already uses, a
+deliberate continuity nod: "the house pour, returned to the customer at speed" is the same bottle
+you can also just drink), not anything invented or unverified:
+
+| Drink | Gold | Tags | Effect |
+|---|---|---|---|
+| Tap Water, Complimentary | 0 | Liquid, Organic | +1 HP |
+| House Ale | 8 | Liquid, Alcohol | Cha +1, 120s |
+| Well Whiskey | 12 | Liquid, Alcohol, Flammable | Cha +2 / Dex -1, 90s |
+| Rotgut Special | 4 | Liquid, Alcohol, Flammable, Craftable | -2 HP, Cha +3 / Dex -3, 60s (this is "Woozy") |
+| Energy Tonic, Sponsored Flavor | 15 | Liquid, Craftable | +6 HP |
+
+**Import as JSON needs the same `create` → `add_rows` → `set_rows` route `DT_DCCQuests.json` used**,
+not a plain CSV import (`CSVImportFactory` cannot read `.json`, and even converted to CSV the
+nested `Effects` array would not survive a flat-column import) - `Config/DefaultGameplayTags.ini`
+must land and the editor must have restarted once (to register the tags) before `Tags` will import
+correctly rather than silently empty.
+
+### Not attempted this pass, flagged rather than guessed
+
+- **No mesh-in-hand visual for "Drink Now".** `FDCCConsumableDef::Mesh` exists and is populated
+  for all five starter drinks, but nothing attaches it to a socket or plays a drinking animation -
+  the effect applies and a Feed line logs, same ceremony as everything else, but there is no
+  visual beat yet. A deliberate scope cut this pass, not an oversight - wiring a temporary
+  held-mesh attachment blind, with no PIE to check it against, risked shipping something that
+  looks broken rather than just plain.
+- **What the bartender (Don Minion) should actually stock** - the five drinks above are a
+  starting suggestion, not a final list, and `SellableEquipmentIds` is still empty.
+- **Everything from the batch below this one is still true and still needed**: the shared-material
+  texture bug, Buff Minion's unimported animations, guard patrol point placement, and the wider
+  ally-body-replacement backlog.
 
 ## Queued for whoever has MCP (2026-08-23, six of Zoe's chore-break notes)
 

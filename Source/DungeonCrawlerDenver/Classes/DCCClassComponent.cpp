@@ -224,6 +224,27 @@ void UDCCClassComponent::AccumulateDamageResistances(TArray<FDCCResistanceSource
 	}
 }
 
+bool UDCCClassComponent::GetMountBenefit(float& OutMoveSpeedBonus, FText& OutLabel) const
+{
+	FDCCClassDef ClassDef;
+	if (!FindClass(SelectedClassId, ClassDef))
+	{
+		return false;
+	}
+
+	for (const FDCCClassBenefit& Benefit : ClassDef.Benefits)
+	{
+		if (Benefit.Type == EDCCClassBenefitType::GrantsMount)
+		{
+			OutMoveSpeedBonus = static_cast<float>(Benefit.Amount);
+			OutLabel = !Benefit.SourceLabel.IsEmpty() ? Benefit.SourceLabel : ClassDef.DisplayName;
+			return true;
+		}
+	}
+
+	return false;
+}
+
 UDCCClassComponent* UDCCClassComponent::Find(AActor* Actor)
 {
 	return Actor ? Actor->FindComponentByClass<UDCCClassComponent>() : nullptr;

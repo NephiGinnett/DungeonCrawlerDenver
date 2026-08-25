@@ -5,6 +5,7 @@
 #include "Stats/DCCAbilityTypes.h"
 #include "Items/DCCLootTypes.h"
 #include "Items/DCCLootSource.h"
+#include "Items/DCCConsumableTypes.h"
 #include "UI/DCCInteractionTypes.h"
 #include "UI/DCCChatTypes.h"
 #include "Skills/DCCSkillTypes.h"
@@ -28,6 +29,16 @@ class UCameraComponent;
 class UNiagaraSystem;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDCCCharacterDied, ADCCCharacterBase*, Character);
+
+/**
+ * Broadcast on the server whenever any character actually attempts a swing
+ * (hit or miss - see PerformAttack). Plain C++ delegate, not a UPROPERTY, and
+ * static rather than per-instance: a passive guard (see
+ * ADCCEnemyCharacter::bPassiveUntilProvoked) needs to notice violence
+ * anywhere nearby without holding a reference to every possible combatant
+ * ahead of time, which a per-instance delegate would require.
+ */
+DECLARE_MULTICAST_DELEGATE_TwoParams(FDCCAttackAttempted, ADCCCharacterBase* /*Attacker*/, ADCCCharacterBase* /*Target*/);
 
 /**
  * Common ground for anything that fights: players and enemies both derive from
@@ -147,6 +158,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "DCC")
 	FDCCCharacterDied OnCharacterDied;
+
+	/** See FDCCAttackAttempted's own comment. Server-side only - nothing broadcasts this on a client. */
+	static FDCCAttackAttempted OnAnyAttackAttempted;
 
 	/**
 	 * Per-character HUD, created only for the local player.
@@ -568,12 +582,13 @@ public:
 	// BindKey carries no payload, so the wheel needs one thunk per direction -
 	// the same reason the five skill slots each have their own function.
 	//
-	// Routed to whichever menu is actually open. The two are mutually
-	// exclusive in practice - opening one closes the other - but checking
-	// LootTargetActor first costs nothing and means the wheel never silently
-	// does nothing because it was driving the wrong menu's index.
-	void InteractionScrollUp() { LootTargetActor ? CycleLootMenu(-1) : CycleInteractionOption(-1); }
-	void InteractionScrollDown() { LootTargetActor ? CycleLootMenu(1) : CycleInteractionOption(1); }
+	// Routed to whichever menu is actually open. The three are mutually
+	// exclusive in practice - opening one closes the others - but checking
+	// VendorTargetActor and LootTargetActor first costs nothing and means the
+	// wheel never silently does nothing because it was driving the wrong
+	// menu's index.
+	void InteractionScrollUp() { VendorTargetActor ? CycleVendorMenu(-1) : LootTargetActor ? CycleLootMenu(-1) : CycleInteractionOption(-1); }
+	void InteractionScrollDown() { VendorTargetActor ? CycleVendorMenu(1) : LootTargetActor ? CycleLootMenu(1) : CycleInteractionOption(1); }
 
 	UFUNCTION(BlueprintCallable, Category = "DCC|Interaction")
 	void CloseInteraction();
@@ -777,6 +792,41 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DCC|Loot")
 	void CloseLootMenu();
 
+	// -------------------------------------------------------------------------
+	// VENDOR - a dialogue NPC who also sells things (see ADCCVendorNPC)
+	//
+	// Deliberately its own menu rather than reusing the loot menu's shape -
+	// buying is not looting. Equipment buys immediately; a drink instead arms
+	// a tiny two-row sub-prompt (Drink Now / Stow For Later) - see
+	// bVendorConfirmingDrink - because unlike equipment a drink has a real
+	// choice attached to it. Same wheel-to-choose, E-to-confirm,
+	// client-picks-server-re-validates shape as everything else.
+	// -------------------------------------------------------------------------
+
+	/** The vendor currently open in the shop menu, or null. */
+	UFUNCTION(BlueprintPure, Category = "DCC|Vendor")
+	AActor* GetVendorTarget() const { return VendorTargetActor; }
+
+	UFUNCTION(BlueprintPure, Category = "DCC|Vendor")
+	int32 GetVendorMenuIndex() const { return VendorMenuIndex; }
+
+	/** True once a drink row has been picked and the Drink Now/Stow sub-prompt is showing. */
+	UFUNCTION(BlueprintPure, Category = "DCC|Vendor")
+	bool IsConfirmingVendorDrink() const { return bVendorConfirmingDrink; }
+
+	UFUNCTION(BlueprintPure, Category = "DCC|Vendor")
+	FName GetVendorPendingDrinkId() const { return VendorPendingDrinkId; }
+
+	/** Opens Vendor's shop menu on this character. Local, like OpenChat. */
+	void OpenVendorMenu(AActor* Vendor) { VendorTargetActor = Vendor; VendorMenuIndex = 0; }
+
+	/** Moves the highlight in the shop menu, or in the Drink Now/Stow sub-prompt if that's open. Wraps. */
+	UFUNCTION(BlueprintCallable, Category = "DCC|Vendor")
+	void CycleVendorMenu(int32 Delta);
+
+	UFUNCTION(BlueprintCallable, Category = "DCC|Vendor")
+	void CloseVendorMenu();
+
 	/**
 	 * Empties one Stowed Remains record from this crawler's own pack, at their
 	 * feet - the Tab menu's Inventory page calls this on a clicked row.
@@ -787,6 +837,15 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "DCC|Loot")
 	void DCCEmptyStowedRemains(int32 Index);
+
+	/**
+	 * Drinks one stowed consumable from this crawler's own pack - the Tab
+	 * menu's Inventory page calls this on a clicked row. Same routing reason
+	 * as DCCEmptyStowedRemains: UDCCInventoryComponent::ConsumeStowedConsumable
+	 * refuses outright without authority.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DCC|Vendor")
+	void DCCConsumeStowedDrink(int32 Index);
 
 	/**
 	 * Party command: stop escorting and stand still, or resume.
@@ -1057,6 +1116,23 @@ public:
 	UFUNCTION(BlueprintPure, Category = "DCC|Movement")
 	bool IsSprinting() const { return bIsSprinting; }
 
+	/**
+	 * The "cheap version" of Pets/Mounts (see Classes/DCCClassTypes.h's
+	 * GrantsMount comment) - a toggleable Move Speed bonus for classes that
+	 * grant one, standing in for Rideshare Driver's sedan until a real
+	 * spawned Pet/Mount actor exists. Refused silently (no state change) for
+	 * a character whose Class never granted GrantsMount.
+	 */
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_Mounted, Category = "DCC|Movement")
+	bool bIsMounted = false;
+
+	/** Held-input setter, bound to M. Safe to call from a client. */
+	UFUNCTION(BlueprintCallable, Category = "DCC|Movement")
+	void ToggleMount();
+
+	UFUNCTION(BlueprintPure, Category = "DCC|Movement")
+	bool IsMounted() const { return bIsMounted; }
+
 	// -------------------------------------------------------------------------
 	// Casting
 	//
@@ -1204,6 +1280,9 @@ protected:
 	void Server_EmptyStowedRemains(int32 Index);
 
 	UFUNCTION(Server, Reliable)
+	void Server_ConsumeStowedDrink(int32 Index);
+
+	UFUNCTION(Server, Reliable)
 	void Server_BeginClimb(ADCCClimbPoint* Point);
 
 	/**
@@ -1228,6 +1307,9 @@ protected:
 
 	UFUNCTION(Server, Reliable)
 	void Server_SetSprinting(bool bNewSprinting);
+
+	UFUNCTION(Server, Reliable)
+	void Server_ToggleMount();
 
 	UFUNCTION()
 	void OnRep_ActiveClimbPoint();
@@ -1271,6 +1353,9 @@ protected:
 
 	UFUNCTION()
 	void OnRep_Sprinting();
+
+	UFUNCTION()
+	void OnRep_Mounted();
 
 	UFUNCTION()
 	void OnRep_Casting();
@@ -1415,6 +1500,25 @@ protected:
 	UFUNCTION(Server, Reliable)
 	void Server_StowLootSource(AActor* Source);
 
+	/** Confirms the highlighted row of the vendor menu. */
+	void HandleVendorMenuConfirm();
+
+	/**
+	 * Server-side resolution of the vendor menu's two verbs - buying a piece
+	 * of equipment or a drink. Same "client picks, server re-validates" shape
+	 * as the loot RPCs above: re-checks range, gold, and that VendorActor
+	 * actually sells the thing being bought.
+	 */
+	UFUNCTION(Server, Reliable)
+	void Server_PurchaseEquipment(AActor* VendorActor, FName ItemId);
+
+	/** bDrinkNow: apply effects immediately. False: add to StowedConsumables instead. */
+	UFUNCTION(Server, Reliable)
+	void Server_PurchaseDrink(AActor* VendorActor, FName ConsumableItemId, bool bDrinkNow);
+
+	/** Translates one consumable's Effects into calls on this character's own Stats. Server only. */
+	void ApplyConsumableEffects(const TArray<FDCCConsumableEffect>& Effects);
+
 	/** Runs one social check and narrates the result into the event feed. */
 	void ResolveSocialCheck(ADCCCharacterBase* Target, bool bIntimidate);
 
@@ -1445,6 +1549,17 @@ protected:
 
 	/** False: top menu. True: the itemised Check Inventory submenu. */
 	bool bLootShowingItems = false;
+
+	/** Whichever vendor this crawler has the shop menu open on. Local - same as LootTargetActor. */
+	UPROPERTY(Transient)
+	TObjectPtr<AActor> VendorTargetActor;
+
+	int32 VendorMenuIndex = 0;
+
+	/** True once a drink row is picked and the Drink Now/Stow sub-prompt owns VendorMenuIndex instead. */
+	bool bVendorConfirmingDrink = false;
+
+	FName VendorPendingDrinkId;
 
 	UFUNCTION()
 	void OnRep_Downed();

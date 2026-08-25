@@ -40,6 +40,18 @@ enum class EDCCClassBenefitType : uint8
 	 *  multiple sources disagreeing (this and an equipped item, say) resolve. */
 	DamageResistance UMETA(DisplayName = "Damage Resistance"),
 
+	/**
+	 * Grants the ability to toggle a Mount (bound to [M]) that adds Amount
+	 * (cm/s) to movement speed while active - a Class-scoped counterpart to
+	 * MoveSpeedBonus above that only applies conditionally. This is
+	 * deliberately the "cheap version" of Pets/Mounts per
+	 * Docs/races-and-classes.md's own gap analysis: a real spawned, following,
+	 * combat-capable Pet (Wildlife Rehabber's actual ask) is a separate,
+	 * bigger build, not yet started - see that doc's TODO tracker. A
+	 * movement-only toggle is the whole of what Rideshare Driver needs.
+	 */
+	GrantsMount UMETA(DisplayName = "Grants Mount"),
+
 	MAX         UMETA(Hidden)
 };
 

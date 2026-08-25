@@ -18,6 +18,7 @@
 #include "Classes/DCCClassComponent.h"
 #include "Quests/DCCQuestComponent.h"
 #include "Dialogue/DCCDialogueNPC.h"
+#include "Dialogue/DCCVendorNPC.h"
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraSystem.h"
 #include "Components/TextRenderComponent.h"
@@ -35,6 +36,8 @@
 #include "Camera/CameraComponent.h"
 #include "Camera/PlayerCameraManager.h"
 #include "UnrealClient.h"
+
+FDCCAttackAttempted ADCCCharacterBase::OnAnyAttackAttempted;
 
 ADCCCharacterBase::ADCCCharacterBase()
 {
@@ -92,6 +95,7 @@ void ADCCCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 
 	DOREPLIFETIME(ADCCCharacterBase, ActiveClimbPoint);
 	DOREPLIFETIME(ADCCCharacterBase, bIsSprinting);
+	DOREPLIFETIME(ADCCCharacterBase, bIsMounted);
 	DOREPLIFETIME(ADCCCharacterBase, bIsCasting);
 	DOREPLIFETIME(ADCCCharacterBase, bBefriended);
 	DOREPLIFETIME(ADCCCharacterBase, bIsDowned);
@@ -216,6 +220,20 @@ void ADCCCharacterBase::ApplyDerivedMovementSpeed()
 	// A flat Class-benefit add, not another multiplier - "+5ft Move" means
 	// five feet, not five feet times whatever else is already in play.
 	Speed += ClassMoveSpeedBonus;
+
+	// Same shape as the always-on Class bonus above, but conditional on
+	// actually being mounted - re-reads the Class each call rather than
+	// caching, since toggling is rare and this keeps GrantsMount as the one
+	// source of truth instead of a second field that could drift from it.
+	if (bIsMounted && Class)
+	{
+		float MountBonus = 0.0f;
+		FText MountLabel;
+		if (Class->GetMountBenefit(MountBonus, MountLabel))
+		{
+			Speed += MountBonus;
+		}
+	}
 
 	// Applied before the casting clamp so a rooted caster is still rooted, and
 	// after the sprint multiplier so an escorting ally cannot sprint by accident.
@@ -1156,6 +1174,37 @@ void ADCCCharacterBase::OnRep_Sprinting()
 	ApplyDerivedMovementSpeed();
 }
 
+void ADCCCharacterBase::ToggleMount()
+{
+	if (HasAuthority())
+	{
+		Server_ToggleMount_Implementation();
+		return;
+	}
+
+	Server_ToggleMount();
+}
+
+void ADCCCharacterBase::Server_ToggleMount_Implementation()
+{
+	// Silently refused for a Class that never granted GrantsMount, same as
+	// pressing 1-5 with no Skill in that slot does nothing rather than erroring.
+	float MoveSpeedBonus = 0.0f;
+	FText Label;
+	if (!Class || !Class->GetMountBenefit(MoveSpeedBonus, Label))
+	{
+		return;
+	}
+
+	bIsMounted = !bIsMounted;
+	ApplyDerivedMovementSpeed();
+}
+
+void ADCCCharacterBase::OnRep_Mounted()
+{
+	ApplyDerivedMovementSpeed();
+}
+
 void ADCCCharacterBase::TickStamina(float DeltaSeconds)
 {
 	UDCCRuleset* Ruleset = Stats ? Stats->GetRuleset() : nullptr;
@@ -1546,8 +1595,14 @@ void ADCCCharacterBase::HandleInteractPressed()
 		return;
 	}
 
-	// The loot menu owns E first, if one is open - same reason the
+	// The vendor and loot menus own E first, if one is open - same reason the
 	// conversation menu is checked before anything else below.
+	if (VendorTargetActor)
+	{
+		HandleVendorMenuConfirm();
+		return;
+	}
+
 	if (LootTargetActor)
 	{
 		HandleLootMenuConfirm();
@@ -1670,7 +1725,7 @@ void ADCCCharacterBase::HandleInteractPressed()
 	if (ADCCDialogueNPC* Speaker = FindDialogueNPCUnderCursor())
 	{
 		PendingTalkTarget = nullptr;
-		Speaker->TryPlayerInteract();
+		Speaker->TryPlayerInteract(this);
 		return;
 	}
 
@@ -1814,6 +1869,259 @@ void ADCCCharacterBase::CloseLootMenu()
 	bLootShowingItems = false;
 }
 
+void ADCCCharacterBase::CycleVendorMenu(int32 Delta)
+{
+	// The Drink Now/Stow sub-prompt owns the wheel while it is open - just two
+	// rows, no Leave (Esc still cancels the whole menu, same as everywhere else).
+	if (bVendorConfirmingDrink)
+	{
+		VendorMenuIndex = ((VendorMenuIndex + Delta) % 2 + 2) % 2;
+		return;
+	}
+
+	const ADCCVendorNPC* Vendor = Cast<ADCCVendorNPC>(VendorTargetActor.Get());
+	if (!Vendor)
+	{
+		return;
+	}
+
+	// +1 for the trailing "Leave" row, same convention as CycleLootMenu.
+	const int32 Count = Vendor->SellableEquipmentIds.Num() + Vendor->SellableConsumableIds.Num() + 1;
+	if (Count <= 0)
+	{
+		return;
+	}
+
+	VendorMenuIndex = ((VendorMenuIndex + Delta) % Count + Count) % Count;
+}
+
+void ADCCCharacterBase::CloseVendorMenu()
+{
+	VendorTargetActor = nullptr;
+	VendorMenuIndex = 0;
+	bVendorConfirmingDrink = false;
+	VendorPendingDrinkId = NAME_None;
+}
+
+void ADCCCharacterBase::HandleVendorMenuConfirm()
+{
+	ADCCVendorNPC* Vendor = Cast<ADCCVendorNPC>(VendorTargetActor.Get());
+	if (!Vendor)
+	{
+		CloseVendorMenu();
+		return;
+	}
+
+	// Walking away closes the menu, same as the conversation and loot ones.
+	if (FVector::Dist(GetActorLocation(), Vendor->GetActorLocation()) > InteractionRange)
+	{
+		CloseVendorMenu();
+		return;
+	}
+
+	// The sub-prompt confirms first if it is open - same "innermost menu owns
+	// E first" rule HandleInteractPressed already applies at the top level.
+	if (bVendorConfirmingDrink)
+	{
+		const bool bDrinkNow = (VendorMenuIndex == 0);
+		const FName ConsumableItemId = VendorPendingDrinkId;
+
+		bVendorConfirmingDrink = false;
+		VendorPendingDrinkId = NAME_None;
+		VendorMenuIndex = 0;
+
+		if (HasAuthority())
+		{
+			Server_PurchaseDrink_Implementation(Vendor, ConsumableItemId, bDrinkNow);
+		}
+		else
+		{
+			Server_PurchaseDrink(Vendor, ConsumableItemId, bDrinkNow);
+		}
+		return;
+	}
+
+	const int32 EquipCount = Vendor->SellableEquipmentIds.Num();
+	const int32 DrinkCount = Vendor->SellableConsumableIds.Num();
+	const int32 LeaveIndex = EquipCount + DrinkCount;
+
+	if (VendorMenuIndex < 0 || VendorMenuIndex >= LeaveIndex)
+	{
+		CloseVendorMenu();
+		return;
+	}
+
+	// Equipment buys immediately and the menu stays open, like the loot
+	// menu's "take one" - buying a round is one trip to the bar, not one item.
+	if (VendorMenuIndex < EquipCount)
+	{
+		const FName ItemId = Vendor->SellableEquipmentIds[VendorMenuIndex];
+
+		if (HasAuthority())
+		{
+			Server_PurchaseEquipment_Implementation(Vendor, ItemId);
+		}
+		else
+		{
+			Server_PurchaseEquipment(Vendor, ItemId);
+		}
+		return;
+	}
+
+	// A drink is a choice, not a one-step buy - arm the sub-prompt instead of
+	// spending gold yet. Nothing is bought until that confirms.
+	VendorPendingDrinkId = Vendor->SellableConsumableIds[VendorMenuIndex - EquipCount];
+	bVendorConfirmingDrink = true;
+	VendorMenuIndex = 0;
+}
+
+void ADCCCharacterBase::Server_PurchaseEquipment_Implementation(AActor* VendorActor, FName ItemId)
+{
+	const ADCCVendorNPC* Vendor = Cast<ADCCVendorNPC>(VendorActor);
+	if (!Vendor || !Vendor->SellableEquipmentIds.Contains(ItemId) || !IsAlive() || IsDowned())
+	{
+		return;
+	}
+
+	if (FVector::Dist(GetActorLocation(), Vendor->GetActorLocation()) > InteractionRange)
+	{
+		return;
+	}
+
+	if (!Equipment || !Stats)
+	{
+		return;
+	}
+
+	FDCCEquipmentDef Def;
+	if (!Equipment->FindItem(ItemId, Def))
+	{
+		return;
+	}
+
+	if (!Stats->SpendGold(Def.GoldValue))
+	{
+		ADCCGameState::Log(this, EDCCLogCategory::Announcement, FText::Format(
+			NSLOCTEXT("DCC", "LogPurchaseFailed", "{0} can't afford {1} ({2}g)."),
+			FText::FromString(GetActorNameOrLabel()), Def.DisplayName, FText::AsNumber(Def.GoldValue)));
+		return;
+	}
+
+	// Same grant path a picked-up ground item already uses (see
+	// ADCCPickup::OnPickedUp) - buying is just skipping the trip to the floor.
+	Equipment->Equip(ItemId);
+
+	ADCCGameState::Log(this, EDCCLogCategory::Announcement, FText::Format(
+		NSLOCTEXT("DCC", "LogPurchase", "{0} buys {1} from {2} for {3}g."),
+		FText::FromString(GetActorNameOrLabel()), Def.DisplayName, Vendor->DisplayName, FText::AsNumber(Def.GoldValue)));
+}
+
+void ADCCCharacterBase::ApplyConsumableEffects(const TArray<FDCCConsumableEffect>& Effects)
+{
+	if (!Stats)
+	{
+		return;
+	}
+
+	// This is the whole translation layer between "a drink" (a DCC/Items
+	// concept) and the Stats component's ruleset-agnostic primitives - see
+	// FDCCConsumableEffect's own comment on why Stats itself never hears the
+	// word "consumable".
+	for (const FDCCConsumableEffect& Effect : Effects)
+	{
+		if (Effect.InstantHealthChange > 0)
+		{
+			Stats->Heal(Effect.InstantHealthChange);
+		}
+		else if (Effect.InstantHealthChange < 0)
+		{
+			Stats->ApplyDamage(-Effect.InstantHealthChange);
+		}
+
+		if (Effect.ModifierAmount != 0)
+		{
+			Stats->ApplyTimedAbilityModifier(Effect.ModifiedAbility, Effect.ModifierAmount, Effect.ModifierDurationSeconds);
+		}
+	}
+}
+
+void ADCCCharacterBase::Server_PurchaseDrink_Implementation(AActor* VendorActor, FName ConsumableItemId, bool bDrinkNow)
+{
+	const ADCCVendorNPC* Vendor = Cast<ADCCVendorNPC>(VendorActor);
+	if (!Vendor || !Vendor->SellableConsumableIds.Contains(ConsumableItemId) || !IsAlive() || IsDowned() || !Stats || !Inventory)
+	{
+		return;
+	}
+
+	if (FVector::Dist(GetActorLocation(), Vendor->GetActorLocation()) > InteractionRange)
+	{
+		return;
+	}
+
+	FDCCConsumableDef Def;
+	if (!Inventory->FindConsumable(ConsumableItemId, Def))
+	{
+		return;
+	}
+
+	if (!Stats->SpendGold(Def.GoldValue))
+	{
+		ADCCGameState::Log(this, EDCCLogCategory::Announcement, FText::Format(
+			NSLOCTEXT("DCC", "LogDrinkFailed", "{0} can't afford {1} ({2}g)."),
+			FText::FromString(GetActorNameOrLabel()), Def.DisplayName, FText::AsNumber(Def.GoldValue)));
+		return;
+	}
+
+	if (bDrinkNow)
+	{
+		ApplyConsumableEffects(Def.Effects);
+
+		ADCCGameState::Log(this, EDCCLogCategory::Announcement, FText::Format(
+			NSLOCTEXT("DCC", "LogDrinkBought", "{0} orders a {1} from {2} and drinks it right there. {3}g well spent."),
+			FText::FromString(GetActorNameOrLabel()), Def.DisplayName, Vendor->DisplayName, FText::AsNumber(Def.GoldValue)));
+	}
+	else
+	{
+		Inventory->AddConsumable(ConsumableItemId, 1);
+
+		ADCCGameState::Log(this, EDCCLogCategory::Announcement, FText::Format(
+			NSLOCTEXT("DCC", "LogDrinkStowed", "{0} buys a {1} from {2} and pockets it for later. {3}g well spent."),
+			FText::FromString(GetActorNameOrLabel()), Def.DisplayName, Vendor->DisplayName, FText::AsNumber(Def.GoldValue)));
+	}
+}
+
+void ADCCCharacterBase::DCCConsumeStowedDrink(int32 Index)
+{
+	if (HasAuthority())
+	{
+		Server_ConsumeStowedDrink_Implementation(Index);
+	}
+	else
+	{
+		Server_ConsumeStowedDrink(Index);
+	}
+}
+
+void ADCCCharacterBase::Server_ConsumeStowedDrink_Implementation(int32 Index)
+{
+	if (!Inventory || !IsAlive() || IsDowned())
+	{
+		return;
+	}
+
+	FDCCConsumableDef Def;
+	if (!Inventory->ConsumeStowedConsumable(Index, Def))
+	{
+		return;
+	}
+
+	ApplyConsumableEffects(Def.Effects);
+
+	ADCCGameState::Log(this, EDCCLogCategory::Announcement, FText::Format(
+		NSLOCTEXT("DCC", "LogDrinkFromPack", "{0} finally gets around to that {1}."),
+		FText::FromString(GetActorNameOrLabel()), Def.DisplayName));
+}
+
 void ADCCCharacterBase::Server_LootOne_Implementation(AActor* Source, int32 Index)
 {
 	IDCCLootSource* LootSource = Cast<IDCCLootSource>(Source);
@@ -1923,9 +2231,11 @@ void ADCCCharacterBase::CloseInteraction()
 	InteractionIndex = 0;
 
 	// Esc is bound to this function alone, so it has to close whichever of the
-	// two menus is actually open - harmless to call when the loot menu was
-	// already closed, CloseLootMenu just resets fields that are reset already.
+	// menus is actually open - harmless to call when a menu was already
+	// closed, CloseLootMenu/CloseVendorMenu just reset fields that are reset
+	// already.
 	CloseLootMenu();
+	CloseVendorMenu();
 }
 
 void ADCCCharacterBase::ResolveSocialCheck(ADCCCharacterBase* Target, bool bIntimidate)
@@ -2489,6 +2799,11 @@ FDCCAttackResult ADCCCharacterBase::PerformAttack(ADCCCharacterBase* Target, boo
 		return Result;
 	}
 
+	// A real swing is happening, hit or miss - broadcast before resolving it
+	// so a passive guard (ADCCEnemyCharacter::bPassiveUntilProvoked) can
+	// notice violence the same frame it starts, not one frame late.
+	OnAnyAttackAttempted.Broadcast(this, Target);
+
 	UDCCStatsComponent* TargetStats = Target->Stats;
 	if (!Stats || !TargetStats)
 	{
@@ -2724,6 +3039,7 @@ void ADCCCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	PlayerInputComponent->BindKey(EKeys::Tab, IE_Pressed, this, &ADCCCharacterBase::ToggleCharacterMenu);
 	PlayerInputComponent->BindKey(EKeys::L, IE_Pressed, this, &ADCCCharacterBase::CycleLogFilter);
 	PlayerInputComponent->BindKey(EKeys::K, IE_Pressed, this, &ADCCCharacterBase::CycleFeedVisibility);
+	PlayerInputComponent->BindKey(EKeys::M, IE_Pressed, this, &ADCCCharacterBase::ToggleMount);
 
 	// F1 for the DM panel. A function key rather than a letter because it is not
 	// a game action - it should not compete with anything a player might press
