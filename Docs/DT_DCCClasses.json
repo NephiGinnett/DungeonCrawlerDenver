@@ -9,7 +9,8 @@
       { "Type": "StatBonus", "Ability": "Charisma", "Amount": 1, "SourceLabel": "Class: Jumpscare Mage" },
       { "Type": "StatBonus", "Ability": "Intelligence", "Amount": 1, "SourceLabel": "Class: Jumpscare Mage" },
       { "Type": "StatBonus", "Ability": "Strength", "Amount": -2, "SourceLabel": "Class: Jumpscare Mage (detriment)" },
-      { "Type": "StatBonus", "Ability": "Dexterity", "Amount": -2, "SourceLabel": "Class: Jumpscare Mage (detriment)" }
+      { "Type": "StatBonus", "Ability": "Dexterity", "Amount": -2, "SourceLabel": "Class: Jumpscare Mage (detriment)" },
+      { "Type": "SkillBonus", "SkillId": "StaticBurst", "Amount": 1, "SourceLabel": "Class: Jumpscare Mage (signature attack)" }
     ],
     "StarterEquipmentIds": ["CreepyMask", "FlickeringLantern"]
   },
@@ -51,7 +52,8 @@
       { "Type": "StatBonus", "Ability": "Dexterity", "Amount": 1, "SourceLabel": "Class: Storm Chaser" },
       { "Type": "StatBonus", "Ability": "Charisma", "Amount": -2, "SourceLabel": "Class: Storm Chaser (detriment)" },
       { "Type": "SkillBonus", "SkillId": "Perception", "Amount": 1, "SourceLabel": "Class: Storm Chaser" },
-      { "Type": "SkillBonus", "SkillId": "WeatherReading", "Amount": 1, "SourceLabel": "Class: Storm Chaser" }
+      { "Type": "SkillBonus", "SkillId": "WeatherReading", "Amount": 1, "SourceLabel": "Class: Storm Chaser" },
+      { "Type": "SkillBonus", "SkillId": "BallLightning", "Amount": 1, "SourceLabel": "Class: Storm Chaser (signature attack)" }
     ],
     "StarterEquipmentIds": ["LightningRodStaff"]
   },
@@ -79,7 +81,8 @@
     "Benefits": [
       { "Type": "StatBonus", "Ability": "Strength", "Amount": 1, "SourceLabel": "Class: Bounty Hunter" },
       { "Type": "StatBonus", "Ability": "Charisma", "Amount": -2, "SourceLabel": "Class: Bounty Hunter (detriment)" },
-      { "Type": "SkillBonus", "SkillId": "FirstImpressions", "Amount": 2, "SourceLabel": "Class: Bounty Hunter" }
+      { "Type": "SkillBonus", "SkillId": "FirstImpressions", "Amount": 2, "SourceLabel": "Class: Bounty Hunter" },
+      { "Type": "SkillBonus", "SkillId": "MarkAndCollect", "Amount": 1, "SourceLabel": "Class: Bounty Hunter (signature attack)" }
     ],
     "StarterEquipmentIds": ["RestraintCuffs", "SyndicateBadge"]
   },
@@ -135,7 +138,8 @@
     "Benefits": [
       { "Type": "StatBonus", "Ability": "Strength", "Amount": 1, "SourceLabel": "Class: Repo Man" },
       { "Type": "StatBonus", "Ability": "Charisma", "Amount": -2, "SourceLabel": "Class: Repo Man (detriment)" },
-      { "Type": "SkillBonus", "SkillId": "FirstImpressions", "Amount": 1, "SourceLabel": "Class: Repo Man" }
+      { "Type": "SkillBonus", "SkillId": "FirstImpressions", "Amount": 1, "SourceLabel": "Class: Repo Man" },
+      { "Type": "SkillBonus", "SkillId": "LienEnforcement", "Amount": 1, "SourceLabel": "Class: Repo Man (signature attack)" }
     ],
     "StarterEquipmentIds": ["TowChain", "Clipboard"]
   },

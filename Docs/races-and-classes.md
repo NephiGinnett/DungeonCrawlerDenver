@@ -582,8 +582,7 @@ appliance; flagged `[needs mesh]` where nothing obvious exists yet.
 2. ~~Advantage/Disadvantage~~ **Done 2026-08-23**
 3. ~~The Class Benefit component, including starter-kit grants~~ **Done 2026-08-23**
 4. ~~Damage types, scoped to the eight actually in use above~~ **Done 2026-08-23**
-5. Natural attacks via existing Skill archetype rows — no dependency, buildable
-   in parallel with any of the above, any time
+5. ~~Natural attacks via existing Skill archetype rows~~ **Done 2026-08-26**
 6. Pets/Mounts — **half done 2026-08-23.** The movement-only Mount toggle
    (Rideshare Driver's sedan) is built; the real spawned/following/combat-
    capable Pet (Wildlife Rehabber's actual ask) is not — see the TODO tracker.
@@ -674,6 +673,20 @@ Living checklist. Update in place as each piece lands; don't create a dated
   started. "+5 Step" still needs a decision — reinterpret or shelve.
 - [ ] **Starter-kit equipment rows** — designed (table above), not yet
   authored as `DT_DCCEquipment` CSV rows or imported.
+- [x] **Natural attacks** — 2026-08-26. Four Damage-archetype Skill rows in
+  `Docs/DT_DCCSkills_NaturalAttacksBatch1.csv` (Static Burst, Ball Lightning,
+  Mark and Collect, Lien Enforcement), each granted at Rank 1 as a `SkillBonus`
+  on its class in `DT_DCCClasses.json` — selecting the class now grants the
+  signature attack as a real, trained, hotbar-eligible Skill, no extra system
+  needed, exactly as the gap analysis predicted. **Deliberately left untyped
+  (Physical damage)** rather than tagging Static Burst/Ball Lightning as
+  Electric — `FDCCSkillDef` has no `DamageType` field yet, and another session
+  was actively mid-edit on that exact file tonight (adding an Icon field for
+  the hotbar work); wiring Skill-level damage types touches the same struct
+  and was deferred on purpose to avoid a collision rather than raced. Small
+  follow-up once that settles: add `DamageType` to `FDCCSkillDef`, pass it
+  through the `ApplyDamage` call in `DCCSkillComponent.cpp`'s Damage-archetype
+  resolution (currently untyped), then retag these four rows.
 - [x] **Skills wired into physical actions** — 2026-08-23, per Zoe's request.
   Climbing turned out to already be fully wired to a real Skill Rank
   (`GetClimbSpeed`/`GetClimbStaminaCost`/`GetClingStaminaCost` all already took

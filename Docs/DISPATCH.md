@@ -352,6 +352,47 @@ this file. Equipment rows for the 12 new Classes' starter kits (`CreepyMask`, `B
 `WeldingTorch`, etc.) are still unauthored too — `Equip()` no-ops gracefully on an unknown id so
 this isn't blocking, just cosmetic-less starter kits for now.
 
+## 2026-08-26 overnight session — status and what's deliberately NOT done
+
+Zoe went to bed; instructed to keep working autonomously via file/git edits, explicitly NOT to
+push into live MCP editor operations tonight (placing actors, importing DataTables, PIE
+testing) since that needs someone able to verify the actual result and catch a bad write in
+real time, which nobody can do overnight. That constraint was mine to hold to, not just hers to
+set — every MCP session this project's own history describes was done with her present for
+exactly this reason (see this file's own many "read a value back" and "two 'fixes' were
+recorded as done and were not" notes below). So: **nothing below required a live editor was
+touched tonight.** What follows is what a live session should pick up first.
+
+**Also blocked specifically on the Radial Selector plugin**, separate from the general MCP
+question above: it needs an editor restart to activate, which needs Zoe's live approval, which
+wasn't available tonight. `Docs/hotbar-radial-plan.md` covers the full plan; nothing in it that
+depends on the plugin itself was started - only the plugin-independent pieces (Skill icon data,
+see below) are safe to build blind.
+
+**Built tonight (file/git only, no MCP):**
+1. **Four natural-attack Skill rows** - `Docs/DT_DCCSkills_NaturalAttacksBatch1.csv` (Static
+   Burst, Ball Lightning, Mark and Collect, Lien Enforcement), each now granted at Rank 1 via a
+   `SkillBonus` on its class in `DT_DCCClasses.json` (Jumpscare Mage, Storm Chaser, Bounty
+   Hunter, Repo Man respectively). Selecting the class grants the attack as a real trained
+   Skill. **Deliberately left as Physical damage** - `FDCCSkillDef` has no `DamageType` field
+   yet, and another session was actively mid-edit on that same file tonight (an Icon field for
+   the hotbar work); touching the same struct for damage types was deferred to avoid a
+   collision, not forgotten. `Docs/races-and-classes.md`'s TODO tracker has the full note.
+2. Nothing else - the rest of tonight was spent confirming what NOT to do live, per above.
+
+**Queued, needs live MCP (import + verify, not urgent, do whenever normal):**
+1. Import `Docs/DT_DCCSkills_NaturalAttacksBatch1.csv` and the updated `DT_DCCClasses.json`.
+2. PIE test: select Jumpscare Mage/Storm Chaser/Bounty Hunter/Repo Man in turn, confirm the
+   signature attack shows up on the hotbar at Rank 1 and actually deals damage.
+
+**Still queued from earlier tonight, unchanged, still needs a live session:**
+- The Mount toggle (`[M]`) - compiled via DebugGame check, not yet Development-Editor-deployed.
+- The Class Benefit component's `DT_DCCClasses.json` (full import, not just tonight's addition).
+- The damage-type system's equipment authoring (`MassKilograms`, `WeaponDamageType`,
+  `ResistanceDamageType`/`Level` all read defaults on every existing `DT_DCCEquipment` row).
+- Everything under "Queued (2026-08-23, Mount toggle...)" and the sections below it - still
+  accurate, nothing in them has changed.
+
 ## Queued (2026-08-23, Mount toggle - compiled, NOT yet deployed)
 
 Built this session, then the editor came up mid-session (Zoe or another session at the
@@ -388,6 +429,239 @@ Development-Editor-build-verified, editor closed, real link. Not seen in PIE.
    selected and confirm it isn't. Also worth deliberately testing the cancellation case (equip
    something Fire-Vulnerable on the Noodle Stand Cook, who's already Fire-Resistant from their
    Class, and confirm damage comes out unmodified, not double-reduced or doubled).
+
+## Overnight session, 2026-08-25 - morning handoff
+
+Asked to work autonomously overnight on two fronts while Zoe slept: (1) run the DarkPaperVerse/PolyReady
+rigging pipeline on newly-landed Fab assets, (2) continue the map-scale and NPC-bug work. **Honest split:
+one was blocked on a real discrepancy, the other produced verified, working results.**
+
+### (1) Blocked - the assets were not actually on disk
+
+Checked `Content/` repeatedly (`find Content -maxdepth 1 -type d -newermt ...`) through the night. **None
+of the requested assets ever appeared**: Low Poly Fighter Starter Pack, PolyReady's Undead Skeleton, and
+all seven DarkPaperVerse items (Tin Guardsman, Synthetic Droid, Humanoid Cactus, Dice Golem, Torsion Helix,
+Helianthus Stalker, Fossilized Vespiary) plus Abyssal Reaper and Crimson Knight - none of these exist on
+disk as of this handoff, despite being described as having "just landed via Fab." This matches the exact
+failure mode already documented earlier the same day (Fab's "Add to Project" UI reporting success for
+items that never actually wrote files) - worth Zoe specifically re-checking these in the Fab panel herself
+once she's back, rather than assuming the overnight session simply didn't get to them. **Nothing was
+fabricated or assumed here - there was nothing to run the rigging script against, so it wasn't run.**
+
+The Unreal Editor itself was confirmed running overnight (for the Radial Selector / MetaHuman Creator
+plugin activation), but this session still has no Unreal MCP connection - consistent with the
+already-documented finding that a new MCP connection needs a fresh Claude Code session, not just a
+running editor. Blender MCP remained live throughout and is what made (2) below possible.
+
+### (2) Real progress - the shared-skeleton bug now has a verified fix for all three characters
+
+The arithmetic-based bone fix attempted earlier the same day (see "Confirmed real bug" section below) was
+wrong, and admitted as wrong at the time. **Found the right technique overnight and verified it actually
+works**, on all three affected characters, not just Marcel:
+
+**The technique:** don't compute deltas. Each character's own ORIGINAL skeleton (still on disk,
+`SourceArt/{Marcel,Kyle,Scott_OfficeAirplane}/fbx/SK_*.fbx`) already has its joints correctly positioned
+for that exact mesh - Meshy's own auto-rig fitted it. So: import that original skeleton alongside the
+shared one, read every relevant bone's absolute world-space head/tail position directly off it, then copy
+those exact coordinates onto the shared skeleton's corresponding bones (converting through
+`matrix_world`/its inverse, which is what sidesteps the 0.01-object-scale bug that broke the arithmetic
+attempt). No lengths, no starting-point assumptions, no unit conversion errors - just "put this joint
+exactly where this character's own correctly-fitted rig already says it goes."
+
+**Verified with real renders, not assumed** - bind pose plus a posed test (leg lifted, arms raised) for
+all three:
+
+- **Marcel** - clean. No tearing, no stretching, knee and elbow bend exactly where they should.
+- **Kyle** - clean, same as Marcel.
+- **Scott** - clean overall; the lifted-leg foot reads slightly oddly in the render angle used, worth a
+  second look but nothing structurally broken (no tearing/floating geometry like the original bug showed).
+
+This is a dramatic difference from the original bug's own render (bones visibly floating above the actual
+feet) and from this same session's earlier failed arithmetic attempt (foot ended up **below the floor**).
+
+**Saved and ready for review, not yet imported to the live game:**
+
+- `SourceArt/Marcel/rig_fit_FIXED_Marcel.blend`
+- `SourceArt/Kyle/rig_fit_FIXED_Kyle.blend`
+- `SourceArt/Scott_OfficeAirplane/rig_fit_FIXED_Scott.blend`
+
+Each has the shared skeleton, correctly repositioned, bound to that character's real mesh, saved in a
+neutral rest pose. The original (broken-proportions) `rig_fit_check_*.blend` files from earlier are left
+alone for side-by-side comparison, not deleted.
+
+Also new, promoted into the repo: **`Tools/fix_rig_to_own_proportions.py`** - the exact script that
+produced all three fixes above, reusable headlessly (`blender --background --python
+Tools/fix_rig_to_own_proportions.py -- <shared_skeleton.fbx> <character_own_skeleton+mesh.fbx>
+<out.blend> <render_prefix>`). **The Nuclear Family and the Oathgate's `FinePrint`/`Arbiter` do NOT need a
+separate check** - they use the identical three `_Shared` meshes as Scott/Kyle/Marcel (confirmed in the
+original bug write-up below), so the same measured mismatch and the same fix apply to them automatically
+once Scott/Kyle/Marcel's fix is confirmed good and re-imported. No new Blender work needed there, just the
+same re-import step repeated per Blueprint.
+
+**What Zoe should do with this, once she's back:**
+
+1. Open one of the three `.blend` files, eyeball it herself (this was the whole reason she wanted a
+   hands-on Blender workflow rather than a silent auto-fix) - confirm the renders aren't hiding something
+   a live look would catch.
+2. If it looks right: export as FBX, re-import into Unreal **bound to a new Skeleton asset per character**
+   (not back onto `SK_DCCCrawler_Skeleton` itself - see the original bug write-up below for why one
+   skeleton can't fit three different bodies).
+3. Then the still-unverified follow-up from earlier: check whether UE5's Compatible Skeletons list is
+   really what lets the existing shared Walk/Run animations keep playing on these new, individually-fitted
+   skeletons. Flagged as unconfirmed both times it's come up - still true.
+
+### Map-scale work
+
+No new progress to report - still blocked on the same thing it was blocked on before (MCP/editor
+placement access, which this session never had). Nothing padded in here; the existing plan in
+`Docs/asset-needs-meshy-pipeline.md` stands unchanged.
+
+## Wiring in the Fab downloads as they land (2026-08-25, live session)
+
+Zoe started clicking "Add to Project" in the in-editor Fab panel for the confirmed-download list from
+earlier the same day. No Unreal MCP this session (editor not running, confirmed repeatedly), so
+verification was filesystem-only (`find Content -maxdepth 1 -type d -newermt ...`) rather than trusting
+the Fab UI, which she'd already flagged as unreliable. Real gap surfaced: **two of the highest-priority
+picks reported "succeeded" in the UI but never appeared on disk** - Low Poly Fighter Starter Pack and
+PolyReady's Undead Skeleton, the two meant to cover the Oathgate arena roster and the generic-NPC gap,
+were still missing as of the last check this session. What DID land:
+
+- `AIGeneratedRobots1` - confirmed static-mesh-only (MechanicalHeron/MotorcycleDog/RobotOstrich, all
+  `SM_`, no skeleton) - matches the earlier "skip for enemies" flag exactly. Fine as background dressing.
+- `SciFiWorld` - a sci-fi lab/research-room environment kit (hologram alien props, lab capsules, sci-fi
+  doors). Wasn't on anyone's list - possible stray click, not acted on.
+- `NY_Subway` - **this is the Turnstile/Vending Machine pack**, confirmed with the exact assets hoped for:
+  `SM_RSG_Subway_Vending_Machine_Snacks`, `_Water`, `SM_RSG_Subway_Ticket_Vending_01`, turnstile meshes.
+  All static props - genuinely useful for dressing the bartender/vendor scene, but placement is an
+  MCP/editor task, not something this session could wire in code.
+- `RPGClassIcons` - both the Rogue and the Psion/Mindweaver icon sets landed together in one pack
+  (`PSI_Psion_Mindweaver/`, `ROG_Rogue/` both present). **Acted on this one** - see below.
+
+### Built: a real Skill icon system, since RPGClassIcons finally gave the hotbar something to show
+
+`FDCCSkillDef` had no `Icon` field at all before this - the hotbar (`DCCHUD::DrawHotbar`) was always
+text-label-only, flagged as a gap back when the icon packs were first found in Zoe's library. Added:
+
+- `TSoftObjectPtr<UTexture2D> Icon` on `FDCCSkillDef` (`Skills/DCCSkillTypes.h`) - optional, soft
+  reference so the ~50 already-authored skill rows without one don't pay any loading cost.
+- `DrawHotbar` now draws the icon via `AHUD::DrawTexture` when a row has one (dimmed while on cooldown,
+  same as the text label already was), and **falls back to the exact original text-label behaviour when
+  it doesn't** - nothing regresses for any skill that isn't given an icon.
+
+DebugGame compile-check passed. **Not deployed** - reflection change (new `UPROPERTY`), needs the usual
+close-editor Development build. **Not wired to any specific skill yet** - the system exists, but nobody
+has picked which of the ~500 Rogue/Psion icons fits which of DCD's actual skills (Persuade, Intimidate,
+Fire Fingers, etc.). That's a content pass, not a code one - a natural next MCP-session task once the
+editor's open: open `DT_DCCSkills`, browse `RPGClassIcons/ROG_Rogue` and `PSI_Psion_Mindweaver` for
+matches, set `Icon` per row.
+
+### Not attempted
+
+New C++ enemy classes for the Oathgate roster / generic-NPC gaps, since neither Low Poly Fighter Starter
+Pack nor Undead Skeleton have actually landed on disk yet (see above) - there's nothing to point a
+`ConstructorHelpers::FObjectFinder` at. This is the very next thing to do the moment either shows up;
+worth Zoe re-checking the Fab panel for those two specifically rather than assuming the UI's "succeeded"
+was accurate. NY_Subway's vending machines and SciFiWorld are both placement/set-dressing tasks for the
+next MCP session, not something codable in the meantime.
+
+## Confirmed real bug: the shared skeleton doesn't fit Scott/Kyle/Marcel's proportions (2026-08-25)
+
+Zoe reported messy animation on the shared-skeleton characters - "elbows sitting too high, a leg not
+fitting the skeleton's proportions at all." Traced and confirmed with real measurements, not guessed - this
+is the exact "untested risk" CLAUDE.md's own consolidation note already flagged and never followed up on:
+**"identical hierarchy does not guarantee identical proportions or bind pose, so shared animation may
+drift visually. Test on one character before committing."** Nobody had. This is that test, and the risk
+was real.
+
+**What's actually true:** `SK_DCCCrawler_Skeleton` is CJ's own original skeleton (`SK_HockeyWings_Skeleton`,
+renamed) from the 2026-08-15 consolidation. Scott, Kyle and Marcel's meshes were re-bound onto it, but their
+own original skeletons (still on disk in `SourceArt/{Scott_OfficeAirplane,Kyle,Marcel}/fbx/SK_*.fbx`) have
+noticeably different limb proportions. Measured bone lengths, original-rig vs. the shared skeleton they
+now stand on (metres):
+
+| Segment | CJ (= shared skeleton) | Scott | Kyle | Marcel |
+|---|---|---|---|---|
+| Thigh (LeftUpLeg) | 0.2608 | 0.3511 (+35%) | 0.3820 (+46%) | **0.4327 (+66%)** |
+| Shin (LeftLeg) | 0.2883 | 0.3666 (+27%) | 0.3204 (+11%) | 0.3097 (+7%) |
+| Spine02 | 0.1680 | 0.1236 (-26%) | 0.1380 (-18%) | 0.1272 (-24%) |
+| Upper arm | 0.2183 | 0.2256 | 0.2484 | 0.2193 |
+
+Marcel is worst (thigh 66% too short on the shared skeleton relative to his real proportions), Kyle next,
+Scott least-bad but still off by over a quarter on both leg segments. **CJ himself is unaffected** - the
+skeleton is his own body's rig, nothing to mismatch.
+
+**This also means every OTHER thing built on those same three `_Shared` meshes inherits the identical
+problem**, not just the players: the Nuclear Family (`ADCCEnemyCharacter_NuclearFamily.cpp`, all three
+members) and the Oathgate's `FinePrint`/`Arbiter` (`SK_ArmsOut_Shared`/`SK_DiceWinged_Shared`). Same fix,
+same root cause, four+ places it shows up.
+
+**Visually confirmed, not just numerically** - bound Marcel's real mesh to a copy of the shared skeleton
+(automatic weights; Blender logged "Bone Heat Weighting: failed to find solution for one or more bones",
+itself a symptom) and screenshotted it in X-ray: the ankle/foot bone sits well above his actual feet, a
+visible gap between the last bone segment and his shoes.
+
+### Blender MCP was down, and is now back up
+
+Confirmed dead first (`get_scene_info` failed - "Could not connect to Blender," and no `blender.exe`
+process existed, only stale bridge processes). **Fixed by simply launching Blender** (`Start-Process
+"D:\Blender\blender.exe"`) - the MCP addon was already installed and set to auto-start from Zoe's prior use
+on other projects, so it reconnected the moment a real Blender window existed. No addon reinstall needed;
+if it drops again, relaunching Blender is very likely all that's needed.
+
+### The right fix technique - and the wrong one, learned the hard way this session
+
+Tried fixing Marcel's leg by copying his old skeleton's segment *lengths* onto the shared skeleton via raw
+edit-bone Z-coordinate arithmetic. **Do not do this** - it requires knowing the correct starting reference
+point (hip height) too, not just segment length, and it's very easy to get the local-space vs. world-space
+scale wrong (this project's shared skeleton has a 0.01 object scale from the original FBX import - a
+delta measured in world metres has to be multiplied by 100 before applying it to `edit_bone.head/tail`,
+which are in the armature's unscaled local space). Got the arithmetic wrong twice in a row before reverting
+- once undershooting by 100x, once overshooting so far the foot ended up below the floor.
+
+**The actual right technique - visual, not arithmetic, and it's the same "hands-on, see it, fix it"
+workflow Zoe already likes from the socket work:**
+
+1. Open the relevant `rig_fit_check_<Name>.blend` (prepared this session, see below) - shared skeleton
+   already bound to that character's real mesh via automatic weights, armature already set to show in
+   front (X-ray) so bones are visible through the mesh.
+2. Select the mesh, enter Edit Mode, find the actual joint crease (e.g. the knee bend, the ankle) on the
+   real geometry. Select a vertex right at that crease.
+3. `Shift+S` -> **Cursor to Selected** - snaps the 3D cursor exactly to that point on the mesh.
+4. Switch to the armature, enter Edit Mode, select the bone joint that should sit there (e.g. the
+   thigh bone's tail, which is also the shin bone's head if they're meant to meet at the knee).
+5. `Shift+S` -> **Selection to Cursor** - snaps the bone joint exactly onto that mesh point. No manual
+   coordinate math, no scale-factor bugs - this sidesteps the entire class of mistake made above.
+6. Repeat per joint that looks wrong (knee, ankle, elbow, wrist...). Mirror left-side fixes to the right
+   side with Armature -> Symmetrize, or repeat the same snap on the right-side vertex/bone.
+7. Exit Edit Mode and eyeball it in Pose Mode - pose a few bones by hand (rotate the leg, the arm) and
+   confirm the mesh now bends at the right points instead of tearing.
+8. Export as FBX, re-import into Unreal. **Import bound to a *new* Skeleton asset** (e.g.
+   `SK_DiceWinged_Fixed_Skeleton`), not back onto `SK_DCCCrawler_Skeleton` itself - the whole reason this
+   bug exists is that one skeleton can't correctly fit three different bodies at once, so fixing Marcel's
+   copy by editing the literal shared asset would just break it for Kyle and Scott.
+9. **Follow-up this creates, not yet done:** once each character has its own correctly-fitted skeleton,
+   the existing shared `DCCCrawlerAnimSet` clips (authored against `SK_DCCCrawler_Skeleton`) need a way to
+   keep playing on skeletons that are no longer literally that same asset. UE5's **Compatible Skeletons**
+   list (mark the new skeleton compatible with `SK_DCCCrawler_Skeleton`) is very likely the right, low-effort
+   mechanism - bone names/hierarchy stay identical, only lengths differ, and animation is rotation-driven
+   so that shouldn't matter. Not verified against this project's actual 5.8 editor UI yet - flag this as the
+   first thing to confirm once Zoe's doing this hands-on, before assuming it's this simple.
+
+### Prepared and waiting
+
+Three ready-to-open files, each with the shared skeleton already bound to that character's real mesh via
+automatic weights (X-ray display already on), reverted to the original (broken) shared-skeleton
+proportions so nothing is pre-fixed or presumed:
+
+- `SourceArt/Marcel/rig_fit_check_Marcel.blend` (worst offender - start here)
+- `SourceArt/Kyle/rig_fit_check_Kyle.blend`
+- `SourceArt/Scott_OfficeAirplane/rig_fit_check_Scott.blend`
+
+Also new and reusable: `Tools/rig_to_shared_skeleton.py` (built for the DarkPaperVerse ask, general-purpose
+headless OBJ/FBX/glTF -> shared-skeleton auto-rig-and-export; works but automatic weights alone are not
+enough when bone *positions* don't fit - that's this whole finding) and `Tools/inspect_glb_materials.py`
+(from the Buff/Don Minion texture-bug diagnosis, reused this session for bone-length measurement's mesh
+half).
 
 ## Queued for whoever has MCP (2026-08-23, bartender/guard follow-up)
 

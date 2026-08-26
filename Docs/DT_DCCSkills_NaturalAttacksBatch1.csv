@@ -1,0 +1,5 @@
+Name,SkillId,DisplayName,FlavorText,Archetype,Targeting,CastingAbility,ManaCost,CooldownSeconds,CastTimeSeconds,Range,Radius,ConeHalfAngleDegrees,DifficultyClass,PowerDie,EffectDuration,EffectTag,bCanAttemptUntrained,bIsPassive,CastEffect,ImpactEffect,CastSocketName,ImpactEffectZOffset
+StaticBurst,StaticBurst,Static Burst,"A jolt of borrowed dread. The Jumpscare Mage's signature strike.",Damage,SingleTarget,Intelligence,0,5,0,600,0,0,10,6,0,,True,False,,,,60
+BallLightning,BallLightning,Ball Lightning,"A crackling orb, thrown with more confidence than the Storm Chaser's insurance would cover.",Damage,SingleTarget,Dexterity,0,6,0,700,0,0,10,6,0,,True,False,,,,60
+MarkAndCollect,MarkAndCollect,Mark and Collect,"The Bounty Hunter's closer. Hits harder against someone already rattled.",Damage,SingleTarget,Strength,0,7,0,250,0,0,10,8,0,,True,False,,,,60
+LienEnforcement,LienEnforcement,Lien Enforcement,"The Repo Man's answer to a missed payment.",Damage,SingleTarget,Strength,0,5,0,250,0,0,10,6,0,,True,False,,,,60
