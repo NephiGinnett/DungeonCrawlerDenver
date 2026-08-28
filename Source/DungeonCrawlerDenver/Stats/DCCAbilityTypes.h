@@ -141,6 +141,31 @@ struct FDCCCheckResult
 };
 
 /**
+ * One temporary nudge to a single ability score, expiring on its own.
+ *
+ * Ruleset-agnostic on purpose, same as everything else here: "something wore
+ * off after a while" is a mechanic any ruleset might want, not a DCC-specific
+ * idea. The first caller is a drink (see Items/DCCConsumableTypes.h) but
+ * nothing here knows that - it is just a signed amount and an expiry time.
+ */
+USTRUCT(BlueprintType)
+struct FDCCTimedAbilityModifier
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Abilities")
+	EDCCAbility Ability = EDCCAbility::Strength;
+
+	/** Positive or negative. */
+	UPROPERTY(BlueprintReadOnly, Category = "Abilities")
+	int32 Amount = 0;
+
+	/** World seconds after which this stops contributing and gets pruned. */
+	UPROPERTY(BlueprintReadOnly, Category = "Abilities")
+	float ExpiryWorldTime = 0.0f;
+};
+
+/**
  * One line in a roll's modifier breakdown - the Feed's click-to-inspect UI
  * (ADCCCharacterBase::GetAbilityScoreBreakdown/GetSkillRankBreakdown). Lives
  * here rather than in Equipment or Classes because both of those need to

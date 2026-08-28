@@ -361,6 +361,16 @@ public:
 	void Heal(int32 Amount);
 
 	/**
+	 * Server only. Adds a temporary, signed nudge to one ability score, folded
+	 * into EnhancedScores alongside Equipment and Class until it expires - see
+	 * FDCCTimedAbilityModifier. Ruleset-agnostic on purpose: this layer has no
+	 * idea a drink is what's calling it (see ADCCCharacterBase's own
+	 * consumable-effect translation, which is where that concept lives).
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Stats")
+	void ApplyTimedAbilityModifier(EDCCAbility Ability, int32 Amount, float DurationSeconds);
+
+	/**
 	 * Server only. Returns false and spends nothing if the cost is not
 	 * affordable, so callers can use it directly as the gate on casting.
 	 */
@@ -407,6 +417,18 @@ protected:
 private:
 	/** Recalculates MaxHitPoints from the ruleset, clamping current HP to fit. */
 	void RecalculateDerivedStats(bool bRefillToFull);
+
+	/**
+	 * Removes any TimedAbilityModifiers whose ExpiryWorldTime has passed and
+	 * recalculates if that changed anything. Called from TickRegeneration,
+	 * which every character already ticks - a modifier that outlives its
+	 * duration by up to one tick is not worth a dedicated timer over.
+	 */
+	void PruneExpiredTimedAbilityModifiers();
+
+	/** Not replicated - EnhancedScores (the result) already is, same as Equipment's contribution. */
+	UPROPERTY(Transient)
+	TArray<FDCCTimedAbilityModifier> TimedAbilityModifiers;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UDCCRuleset> CachedRuleset;

@@ -78,6 +78,8 @@ void UDCCStatsComponent::TickRegeneration(float DeltaSeconds)
 		return;
 	}
 
+	PruneExpiredTimedAbilityModifiers();
+
 	UDCCRuleset* Ruleset = GetRuleset();
 	if (!Ruleset)
 	{
@@ -264,6 +266,22 @@ void UDCCStatsComponent::RecalculateEnhancedScores(bool bRefillToFull)
 		for (int32 Index = 0; Index < ClassBonuses.Num(); ++Index)
 		{
 			Bonuses[Index] += ClassBonuses[Index];
+		}
+	}
+
+	// A drink's temporary nudge folds in exactly like Equipment/Class's - same
+	// array, summed in place - so it stacks or cancels with the rest rather
+	// than needing its own special-cased pass.
+	if (!TimedAbilityModifiers.IsEmpty())
+	{
+		Bonuses.SetNumZeroed(FMath::Max(Bonuses.Num(), static_cast<int32>(EDCCAbility::MAX)));
+		for (const FDCCTimedAbilityModifier& Modifier : TimedAbilityModifiers)
+		{
+			const int32 Index = static_cast<int32>(Modifier.Ability);
+			if (Bonuses.IsValidIndex(Index))
+			{
+				Bonuses[Index] += Modifier.Amount;
+			}
 		}
 	}
 
@@ -581,6 +599,46 @@ void UDCCStatsComponent::Heal(int32 Amount)
 	if (CurrentHitPoints != PreviousHitPoints)
 	{
 		OnHealthChanged.Broadcast(this, CurrentHitPoints, CurrentHitPoints - PreviousHitPoints);
+	}
+}
+
+void UDCCStatsComponent::ApplyTimedAbilityModifier(EDCCAbility Ability, int32 Amount, float DurationSeconds)
+{
+	if (GetOwnerRole() != ROLE_Authority || Amount == 0 || DurationSeconds <= 0.0f)
+	{
+		return;
+	}
+
+	const UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	FDCCTimedAbilityModifier& Modifier = TimedAbilityModifiers.AddDefaulted_GetRef();
+	Modifier.Ability = Ability;
+	Modifier.Amount = Amount;
+	Modifier.ExpiryWorldTime = World->GetTimeSeconds() + DurationSeconds;
+
+	RecalculateEnhancedScores();
+}
+
+void UDCCStatsComponent::PruneExpiredTimedAbilityModifiers()
+{
+	if (TimedAbilityModifiers.IsEmpty())
+	{
+		return;
+	}
+
+	const UWorld* World = GetWorld();
+	const float Now = World ? World->GetTimeSeconds() : 0.0f;
+
+	const int32 RemovedCount = TimedAbilityModifiers.RemoveAll(
+		[Now](const FDCCTimedAbilityModifier& Modifier) { return Now >= Modifier.ExpiryWorldTime; });
+
+	if (RemovedCount > 0)
+	{
+		RecalculateEnhancedScores();
 	}
 }
 

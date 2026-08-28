@@ -6,6 +6,7 @@
 #include "DCCSkillTypes.generated.h"
 
 class UNiagaraSystem;
+class UTexture2D;
 
 // -----------------------------------------------------------------------------
 // SKILL ARCHETYPE SYSTEM
@@ -234,6 +235,15 @@ struct FDCCSkillDef : public FTableRowBase
 	/** Height above the target's origin to play ImpactEffect at. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill|FX")
 	float ImpactEffectZOffset = 60.0f;
+
+	/**
+	 * Hotbar icon. Optional - a row with none set still draws exactly as every
+	 * skill did before this field existed (the slot number and a text label,
+	 * see DCCHUD::DrawHotbar), so nothing regresses for the ~50 skills already
+	 * authored without one.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill|FX")
+	TSoftObjectPtr<UTexture2D> Icon;
 };
 
 /**
