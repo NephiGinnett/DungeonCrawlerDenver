@@ -22,7 +22,15 @@ public class DungeonCrawlerDenver : ModuleRules
 			// Skill cast and impact effects. Niagara is enabled by default in UE5,
 			// and every VFX in the installed Fab packs is an NS_ Niagara system, so
 			// this is the format to target rather than legacy Cascade.
-			"Niagara"
+			"Niagara",
+			// FGameplayTag/FGameplayTagContainer for item tags (Liquid, Alcohol,
+			// Flammable, Organic, Craftable...) - see Items/DCCConsumableTypes.h.
+			// Distinct from the editor-only "GameplayTagsToolset" MCP plugin in
+			// the .uproject: this is the always-available runtime module every
+			// UE5 project ships, and nothing here previously depended on it
+			// directly (only transitively through AIModule/StateTree, which
+			// does not guarantee the public headers are visible).
+			"GameplayTags"
 		});
 
 		// The AI narrator talks to a local model over plain HTTP (Ollama, LM Studio).

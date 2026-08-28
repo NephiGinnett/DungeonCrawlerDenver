@@ -11,6 +11,7 @@ class USphereComponent;
 class UTextRenderComponent;
 class UAnimationAsset;
 class UDataTable;
+class ADCCCharacterBase;
 
 /**
  * Someone who talks and does not fight.
@@ -109,6 +110,23 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Dialogue")
 	bool HasMoreToSay() const;
+
+	/**
+	 * Called when a player presses E on this NPC (see
+	 * ADCCCharacterBase::FindDialogueNPCUnderCursor). Advances the script one
+	 * line, same as walking up already does via HandleTalkOverlapBegin - but on
+	 * demand, so a deliberate press works even on an NPC nobody is required to
+	 * stand still in front of, and a line already showing gets skipped ahead
+	 * rather than waited out. Purely local, like the rest of this class - see
+	 * BeginPlay's comment on why nothing here is server-authoritative.
+	 *
+	 * Virtual, and takes the interactor, so ADCCVendorNPC can redirect E to
+	 * opening a shop on THEM specifically instead of saying a line - the base
+	 * implementation ignores the parameter, since ambient dialogue has nobody
+	 * in particular to address.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Dialogue")
+	virtual void TryPlayerInteract(ADCCCharacterBase* Interactor);
 
 protected:
 	UFUNCTION()

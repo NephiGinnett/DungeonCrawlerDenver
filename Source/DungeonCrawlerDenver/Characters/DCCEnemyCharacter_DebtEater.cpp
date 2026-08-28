@@ -5,6 +5,7 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/SkeletalMesh.h"
 #include "Animation/AnimSequence.h"
+#include "NiagaraSystem.h"
 #include "UObject/ConstructorHelpers.h"
 
 ADCCEnemyCharacter_DebtEater::ADCCEnemyCharacter_DebtEater()
@@ -40,6 +41,18 @@ ADCCEnemyCharacter_DebtEater::ADCCEnemyCharacter_DebtEater()
 	AttackCooldownSeconds = 1.2f;
 	AttackRange = 180.0f;
 	AggroRadius = 1400.0f;
+
+	// SK_DebtEater's imported Physics Asset ragdolls into a grotesquely
+	// stretched mess (constraints fighting each other) rather than a
+	// believable fall - reported directly by Zoe, who suggested a pile of
+	// ash as the fallback if it couldn't be tuned. Tuning it means the
+	// Physics Asset Editor, which needs the running editor and isn't reached
+	// by any tool this project's MCP toolset enables, so this takes the
+	// suggested fallback: no ragdoll at all, just a puff of smoke as the
+	// dissolve beat. See ADCCCharacterBase::bUseRagdollOnDeath.
+	bUseRagdollOnDeath = false;
+	DeathDissolveEffect = TSoftObjectPtr<UNiagaraSystem>(
+		FSoftObjectPath(TEXT("/Game/Alien_Portal/FX/Smoke/NS_Smoke_01.NS_Smoke_01")));
 
 	// The whole of "Repossession Nip". OnDamageDealt on the base class already
 	// steals gold on a successful hit and feeds it to whichever character in the

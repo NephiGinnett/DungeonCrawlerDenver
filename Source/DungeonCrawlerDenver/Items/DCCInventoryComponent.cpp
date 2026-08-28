@@ -3,11 +3,19 @@
 #include "Items/DCCPickup.h"
 #include "Engine/World.h"
 #include "Net/UnrealNetwork.h"
+#include "UObject/ConstructorHelpers.h"
 
 UDCCInventoryComponent::UDCCInventoryComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 	SetIsReplicatedByDefault(true);
+
+	static ConstructorHelpers::FObjectFinder<UDataTable> DefaultConsumableTable(
+		TEXT("/Game/DCC/Items/DT_DCCConsumables.DT_DCCConsumables"));
+	if (DefaultConsumableTable.Succeeded())
+	{
+		ConsumableTable = DefaultConsumableTable.Object;
+	}
 }
 
 void UDCCInventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -16,6 +24,7 @@ void UDCCInventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 
 	DOREPLIFETIME(UDCCInventoryComponent, Items);
 	DOREPLIFETIME(UDCCInventoryComponent, StowedRemains);
+	DOREPLIFETIME(UDCCInventoryComponent, StowedConsumables);
 }
 
 float UDCCInventoryComponent::GetTotalMass() const
@@ -174,6 +183,80 @@ bool UDCCInventoryComponent::LootAllFromStowed(int32 RemainsIndex, const FVector
 }
 
 void UDCCInventoryComponent::OnRep_StowedRemains()
+{
+	OnInventoryChanged.Broadcast(this);
+}
+
+bool UDCCInventoryComponent::FindConsumable(FName ItemId, FDCCConsumableDef& OutItem) const
+{
+	if (!ConsumableTable || ItemId.IsNone())
+	{
+		return false;
+	}
+
+	static const FString Context(TEXT("UDCCInventoryComponent::FindConsumable"));
+	if (const FDCCConsumableDef* Row = ConsumableTable->FindRow<FDCCConsumableDef>(ItemId, Context))
+	{
+		OutItem = *Row;
+		return true;
+	}
+
+	return false;
+}
+
+void UDCCInventoryComponent::AddConsumable(FName ItemId, int32 Quantity)
+{
+	if (GetOwnerRole() != ROLE_Authority || ItemId.IsNone() || Quantity <= 0)
+	{
+		return;
+	}
+
+	for (FDCCStowedConsumable& Existing : StowedConsumables)
+	{
+		if (Existing.ItemId == ItemId)
+		{
+			Existing.Quantity += Quantity;
+			OnInventoryChanged.Broadcast(this);
+			return;
+		}
+	}
+
+	FDCCConsumableDef Def;
+	FDCCStowedConsumable& NewEntry = StowedConsumables.AddDefaulted_GetRef();
+	NewEntry.ItemId = ItemId;
+	NewEntry.Quantity = Quantity;
+	NewEntry.DisplayName = FindConsumable(ItemId, Def) ? Def.DisplayName : FText::FromName(ItemId);
+
+	OnInventoryChanged.Broadcast(this);
+}
+
+bool UDCCInventoryComponent::ConsumeStowedConsumable(int32 Index, FDCCConsumableDef& OutDef)
+{
+	if (GetOwnerRole() != ROLE_Authority || !StowedConsumables.IsValidIndex(Index))
+	{
+		return false;
+	}
+
+	if (!FindConsumable(StowedConsumables[Index].ItemId, OutDef))
+	{
+		return false;
+	}
+
+	FDCCStowedConsumable& Entry = StowedConsumables[Index];
+	--Entry.Quantity;
+
+	// Empties the same way a corpse record does once its last item leaves -
+	// no zero-quantity rows lingering in the list for the HUD to skip over.
+	if (Entry.Quantity <= 0)
+	{
+		StowedConsumables.RemoveAt(Index);
+	}
+
+	OnInventoryChanged.Broadcast(this);
+	return true;
+}
+
+void UDCCInventoryComponent::OnRep_StowedConsumables()
 {
 	OnInventoryChanged.Broadcast(this);
 }

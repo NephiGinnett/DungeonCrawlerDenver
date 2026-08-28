@@ -116,6 +116,55 @@ public:
 	ADCCCharacterBase* GetCurrentTarget() const { return CurrentTarget; }
 
 	// -------------------------------------------------------------------------
+	// PASSIVE / PATROL - a guard, not a mob
+	//
+	// "There for appearances, keeps the place safe" (Zoe's own words for the
+	// bar guard): normally ignores everyone and walks a patrol loop, and only
+	// turns hostile once violence actually happens nearby - never by simply
+	// noticing a player exist, which is what every other mob does. Off by
+	// default, so nothing about an ordinary mob's behaviour changes.
+	// -------------------------------------------------------------------------
+
+	/**
+	 * On: this character never auto-acquires a target by proximity - see the
+	 * skipped FindNearestHostileTarget call in Tick. The only way it ever gets
+	 * a CurrentTarget is HandleNearbyAttack, below. Once that target is lost
+	 * (dies, or leashes away - the same top-of-Tick logic every enemy already
+	 * has), it goes back to patrolling rather than picking a new fight on its
+	 * own, because nothing here ever re-arms FindNearestHostileTarget.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|AI|Guard")
+	bool bPassiveUntilProvoked = false;
+
+	/**
+	 * How close a real attack (see ADCCCharacterBase::OnAnyAttackAttempted)
+	 * has to land - to the attacker or to the target - before this guard
+	 * treats it as a disturbance worth responding to. Deliberately a
+	 * "watching the room" radius rather than AggroRadius, which this
+	 * character never uses while passive.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|AI|Guard", meta = (ClampMin = "0.0"))
+	float ViolenceWatchRadius = 900.0f;
+
+	/**
+	 * World-space points this character walks between while passive and
+	 * unprovoked. Empty means "stand still" - a guard does not need a patrol
+	 * to be a guard. Authored per-instance once placed; there is no in-editor
+	 * path generator here, on purpose, the same reason the encounter system
+	 * uses hand-placed waves instead of procedural ones.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|AI|Guard")
+	TArray<FVector> PatrolPoints;
+
+	/** How close counts as "arrived" at a patrol point. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|AI|Guard", meta = (ClampMin = "1.0"))
+	float PatrolPointTolerance = 80.0f;
+
+	/** Seconds spent standing at each patrol point before moving to the next. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|AI|Guard", meta = (ClampMin = "0.0"))
+	float PatrolWaitSeconds = 3.0f;
+
+	// -------------------------------------------------------------------------
 	// ESCORT BEHAVIOUR - allies only
 	//
 	// Everything below is ignored unless bIsAlly is true. A mob's job is to find
@@ -375,12 +424,46 @@ protected:
 	 */
 	bool TryTickFirstAid(class AAIController* AIController);
 
+	/**
+	 * Walks between PatrolPoints, pausing PatrolWaitSeconds at each. Called
+	 * from Tick's idle branch only when bPassiveUntilProvoked and there is no
+	 * CurrentTarget - a provoked guard falls through to the normal chase/swing
+	 * path below exactly like any other enemy.
+	 */
+	void TickPatrol(class AAIController* AIController);
+
+	/**
+	 * Bound to ADCCCharacterBase::OnAnyAttackAttempted when bPassiveUntilProvoked,
+	 * in BeginPlay. Server only - the delegate is only ever broadcast there.
+	 * Ignores everything except a genuine disturbance: already fighting,
+	 * dead, no attacker, or too far away from both the attacker and the
+	 * target all fall through without doing anything.
+	 */
+	void HandleNearbyAttack(ADCCCharacterBase* Attacker, ADCCCharacterBase* Target);
+
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
 private:
 	UPROPERTY(Transient)
 	TObjectPtr<ADCCCharacterBase> CurrentTarget;
 
 	/** Set while a move order is outstanding, so we do not re-issue it every frame. */
 	bool bIsChasing = false;
+
+	// -------------------------------------------------------------------------
+	// PATROL STATE - see TickPatrol
+	// -------------------------------------------------------------------------
+
+	int32 CurrentPatrolIndex = -1;
+
+	/** True on the frame after the patrol move order was last issued and still running. */
+	bool bWasPatrolMoving = false;
+
+	/** World time before which a just-arrived patrol stands still. */
+	float PatrolWaitUntil = 0.0f;
+
+	/** Set true once HandleNearbyAttack is bound, so EndPlay only unbinds what BeginPlay actually bound. */
+	bool bBoundToAttackDelegate = false;
 
 	// -------------------------------------------------------------------------
 	// SCAN THROTTLING

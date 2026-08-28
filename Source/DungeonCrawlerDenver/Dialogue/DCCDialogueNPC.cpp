@@ -164,6 +164,21 @@ void ADCCDialogueNPC::SayNextLine()
 	ShowLine(Script[NextLineIndex++]);
 }
 
+void ADCCDialogueNPC::TryPlayerInteract(ADCCCharacterBase* Interactor)
+{
+	// Already mid-line: E skips ahead instead of waiting out the timer, the
+	// same convention as any dialogue box with a "press to continue" prompt.
+	if (bSpeaking)
+	{
+		ShowIdleText();
+	}
+
+	if (HasMoreToSay() || bLoopWhenExhausted)
+	{
+		SayNextLine();
+	}
+}
+
 void ADCCDialogueNPC::ShowLine(const FDCCDialogueLine& Line)
 {
 	bSpeaking = true;

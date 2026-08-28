@@ -374,10 +374,36 @@ void UDCCBossComponent::SpawnChargeMinion()
 	// Placed on the ground beneath him rather than at his altitude, so the swarm
 	// lands between the party and the boss instead of raining out of the sky.
 	const FVector2D Offset = FMath::RandPointInCircle(MinionSpawnRadius);
-	const FVector SpawnLocation(
+	FVector SpawnLocation(
 		Owner->GetActorLocation().X + Offset.X,
 		Owner->GetActorLocation().Y + Offset.Y,
 		GroundedZ);
+
+	// GroundedZ is the boss's OWN floor height, captured at his own XY when the
+	// charge began (see the comment where it's set) - reusing it verbatim here
+	// is wrong on any arena floor that isn't perfectly flat, since Offset can
+	// land the minion meters away over a rise or a dip. Re-trace straight down
+	// at the actual spawn XY instead, same pattern as ADCCCrowdSpawner's
+	// ground-snap, so a minion lands ON the floor there rather than embedded in
+	// it (or floating above it) - the likely cause of a charge-spawned minion
+	// turning up half-buried in terrain and only reachable at range.
+	{
+		FHitResult Hit;
+		const FVector TraceStart = SpawnLocation + FVector(0.0f, 0.0f, 500.0f);
+		const FVector TraceEnd = SpawnLocation - FVector(0.0f, 0.0f, 2000.0f);
+
+		FCollisionQueryParams Params;
+		Params.AddIgnoredActor(Owner);
+
+		if (World->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_WorldStatic, Params))
+		{
+			SpawnLocation.Z = Hit.Location.Z;
+		}
+		// Nothing found straight down (a hole, or off the edge of the floor):
+		// fall back to GroundedZ rather than skip the spawn outright - a charge
+		// minion missing entirely reads as a bigger bug than one that lands a
+		// little off, and the charge mechanic expects a fixed body count.
+	}
 
 	// Owned by the encounter, same as a wave-authored spawn - without this,
 	// ADCCEnemyCharacter::OnDamageDealt's Cast<ADCCEncounter>(GetOwner()) lookup

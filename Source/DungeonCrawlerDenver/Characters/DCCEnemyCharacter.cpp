@@ -128,7 +128,26 @@ void ADCCEnemyCharacter::BeginPlay()
 		}
 
 		LogCastingReadiness();
+
+		// A passive guard is the only thing that needs to hear about violence
+		// it didn't start itself - see bPassiveUntilProvoked's own comment.
+		if (bPassiveUntilProvoked)
+		{
+			ADCCCharacterBase::OnAnyAttackAttempted.AddUObject(this, &ADCCEnemyCharacter::HandleNearbyAttack);
+			bBoundToAttackDelegate = true;
+		}
 	}
+}
+
+void ADCCEnemyCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (bBoundToAttackDelegate)
+	{
+		ADCCCharacterBase::OnAnyAttackAttempted.RemoveAll(this);
+		bBoundToAttackDelegate = false;
+	}
+
+	Super::EndPlay(EndPlayReason);
 }
 
 void ADCCEnemyCharacter::LogCastingReadiness() const
@@ -770,7 +789,11 @@ void ADCCEnemyCharacter::Tick(float DeltaSeconds)
 			return;
 		}
 
-		ADCCCharacterBase* Candidate = FindNearestHostileTarget();
+		// A passive guard never auto-acquires by proximity - the only way it
+		// ever gets a target is HandleNearbyAttack. Skipping the scan here
+		// rather than filtering its result is what lets it go back to
+		// patrolling on its own once that target is lost: nothing re-arms.
+		ADCCCharacterBase* Candidate = bPassiveUntilProvoked ? nullptr : FindNearestHostileTarget();
 
 		// Mobs take whatever they find. Allies hold formation unless the fight
 		// has actually come to the party.
@@ -786,13 +809,18 @@ void ADCCEnemyCharacter::Tick(float DeltaSeconds)
 	if (!CurrentTarget)
 	{
 		// Nothing worth fighting. An ally checks for someone to save before
-		// falling back on escorting; a mob idles exactly as it always did.
+		// falling back on escorting; a passive guard patrols; a mob idles
+		// exactly as it always did.
 		if (bIsAlly)
 		{
 			if (!TryTickFirstAid(AIController))
 			{
 				TickFollowLeader(Leader, AIController);
 			}
+		}
+		else if (bPassiveUntilProvoked)
+		{
+			TickPatrol(AIController);
 		}
 
 		return;
@@ -907,6 +935,72 @@ void ADCCEnemyCharacter::Tick(float DeltaSeconds)
 			AIController->MoveToActor(CurrentTarget, StopDistance);
 		}
 	}
+}
+
+void ADCCEnemyCharacter::TickPatrol(AAIController* AIController)
+{
+	if (!AIController || PatrolPoints.IsEmpty())
+	{
+		return;
+	}
+
+	const bool bMovingNow = AIController->GetMoveStatus() != EPathFollowingStatus::Idle;
+	if (bMovingNow)
+	{
+		bWasPatrolMoving = true;
+		return;
+	}
+
+	const float Now = GetWorld()->GetTimeSeconds();
+
+	// The move that just finished this frame: start the pause clock rather
+	// than immediately setting off again. Distinguishing "just arrived" from
+	// "still resting from a previous arrival" is the whole reason this is a
+	// bool rather than just checking GetMoveStatus() == Idle - that alone is
+	// also true before the very first move ever starts.
+	if (bWasPatrolMoving)
+	{
+		bWasPatrolMoving = false;
+		PatrolWaitUntil = Now + PatrolWaitSeconds;
+		return;
+	}
+
+	if (Now < PatrolWaitUntil)
+	{
+		return;
+	}
+
+	CurrentPatrolIndex = (CurrentPatrolIndex + 1) % PatrolPoints.Num();
+	AIController->MoveToLocation(PatrolPoints[CurrentPatrolIndex], PatrolPointTolerance);
+}
+
+void ADCCEnemyCharacter::HandleNearbyAttack(ADCCCharacterBase* Attacker, ADCCCharacterBase* Target)
+{
+	// HasAuthority() is implicit - this is only ever bound from the
+	// server-only branch of BeginPlay, and OnAnyAttackAttempted is only ever
+	// broadcast from the server side of PerformAttack.
+	if (!bPassiveUntilProvoked || CurrentTarget || !IsAlive() || !Attacker || Attacker == this)
+	{
+		return;
+	}
+
+	// Only react to violence close enough to have actually seen or heard it -
+	// otherwise every passive guard on the floor piles onto a fight three
+	// rooms away the instant anyone swings anywhere.
+	const bool bNearAttacker =
+		FVector::DistSquared(GetActorLocation(), Attacker->GetActorLocation()) <= FMath::Square(ViolenceWatchRadius);
+	const bool bNearTarget = Target &&
+		FVector::DistSquared(GetActorLocation(), Target->GetActorLocation()) <= FMath::Square(ViolenceWatchRadius);
+
+	if (!bNearAttacker && !bNearTarget)
+	{
+		return;
+	}
+
+	// Always the attacker, never the target - the guard is breaking up a
+	// fight, not picking a side in whatever it was about.
+	CurrentTarget = Attacker;
+	bIsChasing = false;
 }
 
 void ADCCEnemyCharacter::OnDamageDealt(ADCCCharacterBase* Target, int32 Damage)

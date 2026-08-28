@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "Items/DCCLootTypes.h"
+#include "Items/DCCConsumableTypes.h"
 #include "DCCInventoryComponent.generated.h"
 
 class ADCCPickup;
@@ -55,6 +56,31 @@ struct FDCCStowedRemains
 	/** Snapshot of whatever the source had not yet been looted of. */
 	UPROPERTY(BlueprintReadOnly, Category = "Inventory")
 	TArray<FDCCRolledLoot> Contents;
+};
+
+/**
+ * A drink (or future food) stowed for later rather than drunk on the spot.
+ *
+ * A third, separate array rather than folded into Items - same reasoning as
+ * StowedRemains above: a stack of identical bottles is a different shape
+ * (ItemId + Quantity) than a one-class-per-prop pickup record
+ * (PickupClass + mass), and mixing the two would mean every reader has to
+ * check which kind of entry it is looking at.
+ */
+USTRUCT(BlueprintType)
+struct FDCCStowedConsumable
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Inventory")
+	FName ItemId;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Inventory")
+	FText DisplayName;
+
+	/** Stacks rather than one row per bottle - buying three of the same round should not cost three slots. */
+	UPROPERTY(BlueprintReadOnly, Category = "Inventory")
+	int32 Quantity = 0;
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDCCInventoryChanged, UDCCInventoryComponent*, Inventory);
@@ -142,10 +168,41 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	bool LootAllFromStowed(int32 RemainsIndex, const FVector& WorldLocation);
 
+	// -- Consumables -------------------------------------------------------
+	// Drinks bought and stowed for later rather than drunk on the spot - see
+	// ADCCVendorNPC and ADCCCharacterBase::Server_PurchaseDrink.
+
+	/** Defaulted via ConstructorHelpers to /Game/DCC/Items/DT_DCCConsumables, same pattern as every other content table in this project. */
+	UPROPERTY(EditDefaultsOnly, Category = "Inventory")
+	TObjectPtr<UDataTable> ConsumableTable;
+
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	bool FindConsumable(FName ItemId, FDCCConsumableDef& OutItem) const;
+
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_StowedConsumables, Category = "Inventory")
+	TArray<FDCCStowedConsumable> StowedConsumables;
+
+	/** Server only. Stacks onto an existing entry for the same ItemId rather than adding a new row. */
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void AddConsumable(FName ItemId, int32 Quantity = 1);
+
+	/**
+	 * Server only. Resolves Index's ItemId to its full def (for the caller to
+	 * apply Effects against the drinker's own Stats - this component only
+	 * owns the record, not the drinking) and decrements Quantity, removing the
+	 * row entirely once it hits zero. Returns false and leaves OutDef default
+	 * if Index was invalid.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	bool ConsumeStowedConsumable(int32 Index, FDCCConsumableDef& OutDef);
+
 protected:
 	UFUNCTION()
 	void OnRep_Items();
 
 	UFUNCTION()
 	void OnRep_StowedRemains();
+
+	UFUNCTION()
+	void OnRep_StowedConsumables();
 };

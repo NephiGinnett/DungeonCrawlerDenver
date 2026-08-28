@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataTable.h"
+#include "GameplayTagContainer.h"
 #include "Stats/DCCAbilityTypes.h"
 #include "Stats/DCCDamageTypes.h"
 #include "DCCEquipmentTypes.generated.h"
@@ -145,6 +146,16 @@ struct FDCCEquipmentDef : public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment|Combat")
 	EDCCResistanceLevel ResistanceLevel = EDCCResistanceLevel::Normal;
+
+	/**
+	 * Free-form classification - Liquid, Alcohol, Flammable, Organic,
+	 * Craftable, whatever fits (per Zoe's own steer that every item type
+	 * should carry a wealth of these). Same idea as FDCCConsumableDef::Tags -
+	 * not read by any code yet, so an empty container here is not a bug, just
+	 * nothing downstream asking yet.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment")
+	FGameplayTagContainer Tags;
 
 	// -- Presentation -------------------------------------------------------
 
