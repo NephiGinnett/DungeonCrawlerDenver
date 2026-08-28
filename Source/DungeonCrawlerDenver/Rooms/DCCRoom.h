@@ -41,6 +41,15 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Room")
 	EDCCRoomType RoomType = EDCCRoomType::Combat;
 
+	/**
+	 * Friendly label for players, e.g. "Cliff Diver Cantina" - RoomId ("Room07")
+	 * is a stable data key, not something to put in front of a player. Falls
+	 * back to RoomId when left blank, so an unauthored room still shows
+	 * something rather than nothing.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Room")
+	FText RoomDisplayName;
+
 	/** The fight this room arms on entry. Optional; non-combat rooms leave it unset. */
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "Room")
 	TObjectPtr<ADCCEncounter> Encounter;

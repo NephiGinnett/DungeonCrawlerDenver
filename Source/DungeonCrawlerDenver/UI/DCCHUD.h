@@ -7,6 +7,7 @@
 #include "DCCHUD.generated.h"
 
 class ADCCCharacterBase;
+class ADCCIntroDirector;
 class UDCCStatsComponent;
 class UDCCChatInputWidget;
 enum class EDCCLogCategory : uint8;
@@ -197,6 +198,25 @@ protected:
 	void DrawStaminaBar(ADCCCharacterBase* Crawler);
 
 	/**
+	 * Small always-on tag near the top of the screen naming the room the local
+	 * crawler currently physically occupies (ADCCCharacterBase::CurrentRoomDisplayName,
+	 * itself mirrored from ADCCRoom's existing occupancy tracking - no separate
+	 * room-tracking system here). Draws nothing while the value is empty, i.e.
+	 * whenever the crawler is not inside any authored ADCCRoom volume, rather
+	 * than showing a stale or placeholder label.
+	 */
+	void DrawRoomTag(ADCCCharacterBase* Crawler);
+
+	/**
+	 * "Waiting for other players (n/m ready)" - shown while the local crawler
+	 * has reached the Collapse's exit trigger but the rest of the party has
+	 * not. Reads ADCCIntroDirector::ReadyForCollapse directly (a replicated
+	 * array every client already has) rather than an RPC-driven flag, so
+	 * there is nothing here to keep in sync by hand.
+	 */
+	void DrawWaitingForPartyBanner(ADCCCharacterBase* Crawler);
+
+	/**
 	 * Always-on health, mana and XP bars.
 	 *
 	 * Drawn here rather than in WBP_PlayerHUD because a Canvas bar is recomputed
@@ -301,6 +321,14 @@ protected:
 	 * (Check Inventory / Loot All / Stow / Leave) or the itemised submenu.
 	 */
 	void DrawLootMenu(ADCCCharacterBase* Crawler);
+
+	/**
+	 * The vendor menu: opened on a shopkeeper NPC (ADCCVendorNPC) instead of a
+	 * corpse or a chest. One flat list - equipment rows, then drinks, then
+	 * Leave - no itemised sub-page, unlike DrawLootMenu, because there is
+	 * nothing here to take some-and-leave-some of.
+	 */
+	void DrawVendorMenu(ADCCCharacterBase* Crawler);
 
 	/**
 	 * The DM panel: buttons for everything the exec commands do.
@@ -486,4 +514,11 @@ private:
 	/** Which roll's breakdown is currently pinned open. MAX means none. */
 	EDCCAbility BreakdownAbility = EDCCAbility::MAX;
 	FName BreakdownSkillId;
+
+	/** Lazily resolved and cached - there is exactly one per level, so this
+	 *  finds it once rather than searching every frame. */
+	TWeakObjectPtr<ADCCIntroDirector> CachedIntroDirector;
+
+	/** Finds (and caches) the level's ADCCIntroDirector, or null if none is placed. */
+	ADCCIntroDirector* GetIntroDirector();
 };

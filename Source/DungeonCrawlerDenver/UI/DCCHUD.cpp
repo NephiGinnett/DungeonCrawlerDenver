@@ -11,6 +11,7 @@
 #include "Items/DCCLootTypes.h"
 #include "Progression/DCCAchievementComponent.h"
 #include "Equipment/DCCEquipmentComponent.h"
+#include "Dialogue/DCCVendorNPC.h"
 #include "Engine/DataTable.h"
 #include "Progression/DCCCrowdCrawler.h"
 #include "Characters/DCCAllyCharacters.h"
@@ -21,11 +22,13 @@
 #include "Quests/DCCQuestComponent.h"
 #include "Quests/DCCQuestMarker.h"
 #include "Combat/DCCGameState.h"
+#include "Intro/DCCIntroDirector.h"
 #include "UI/DCCEventLogTypes.h"
 #include "UI/DCCChatInputWidget.h"
 #include "Blueprint/UserWidget.h"
 #include "Rooms/DCCClimbPoint.h"
 #include "Engine/Canvas.h"
+#include "Engine/Texture2D.h"
 #include "Engine/Engine.h"
 #include "EngineUtils.h"
 #include "Components/CapsuleComponent.h"
@@ -246,6 +249,18 @@ void ADCCHUD::NotifyHitBoxClick(FName BoxName)
 		return;
 	}
 
+	// Stowed-drink rows: drinking one from the pack. Same server-authoritative
+	// "this call just asks" shape as Stow| above.
+	if (AsString.StartsWith(TEXT("Drink|")))
+	{
+		const int32 Index = FCString::Atoi(*AsString.RightChop(6));
+		if (ADCCCharacterBase* Crawler = GetOwningCrawler())
+		{
+			Crawler->DCCConsumeStowedDrink(Index);
+		}
+		return;
+	}
+
 	// Reward rows are prefixed for the same reason DM panel buttons are: an
 	// achievement id must never be mistaken for a request to open its reward.
 	if (AsString.StartsWith(TEXT("Claim|")))
@@ -297,6 +312,8 @@ void ADCCHUD::DrawHUD()
 	DrawVitals(Crawler);
 	DrawNearbyHealthBars(Crawler);
 	DrawSkillTargetingOverlay(Crawler);
+	DrawRoomTag(Crawler);
+	DrawWaitingForPartyBanner(Crawler);
 
 	// Being down is not being dead, and the overlay must not say otherwise - a
 	// crawler on the floor with forty seconds left is still in the game, and
@@ -334,6 +351,7 @@ void ADCCHUD::DrawHUD()
 	DrawHotbar(Crawler);
 	DrawInteractionMenu(Crawler);
 	DrawLootMenu(Crawler);
+	DrawVendorMenu(Crawler);
 	DrawInspectedGear(Crawler);
 	DrawAdminPanel(Crawler);
 	DrawNotice();
@@ -427,6 +445,65 @@ void ADCCHUD::ShowNotice(const FText& Message, float Seconds)
 {
 	NoticeText = Message;
 	NoticeExpiryTime = GetWorld() ? GetWorld()->GetTimeSeconds() + Seconds : 0.0f;
+}
+
+void ADCCHUD::DrawRoomTag(ADCCCharacterBase* Crawler)
+{
+	if (!Canvas || !Crawler || Crawler->CurrentRoomDisplayName.IsEmpty())
+	{
+		return;
+	}
+
+	const FString Line = Crawler->CurrentRoomDisplayName.ToString();
+
+	float W = 0.0f, H = 0.0f;
+	GetTextSize(Line, W, H, GEngine->GetMediumFont(), 1.0f);
+
+	const float X = (Canvas->SizeX - W) * 0.5f;
+	const float Y = 20.0f;
+
+	DrawRect(FLinearColor(0.02f, 0.03f, 0.06f, 0.65f), X - 14.0f, Y - 5.0f, W + 28.0f, H + 10.0f);
+	DrawText(Line, DimColour, X, Y, GEngine->GetMediumFont(), 1.0f);
+}
+
+ADCCIntroDirector* ADCCHUD::GetIntroDirector()
+{
+	if (CachedIntroDirector.IsValid())
+	{
+		return CachedIntroDirector.Get();
+	}
+
+	if (UWorld* World = GetWorld())
+	{
+		for (TActorIterator<ADCCIntroDirector> It(World); It; ++It)
+		{
+			CachedIntroDirector = *It;
+			return *It;
+		}
+	}
+
+	return nullptr;
+}
+
+void ADCCHUD::DrawWaitingForPartyBanner(ADCCCharacterBase* Crawler)
+{
+	ADCCIntroDirector* Director = GetIntroDirector();
+	if (!Canvas || !Crawler || !Director || !Director->IsReadyForCollapse(Crawler))
+	{
+		return;
+	}
+
+	const FString Line = FString::Printf(TEXT("Waiting for other players... (%d/%d ready)"),
+		Director->GetReadyCount(), Director->GetExpectedPartySize());
+
+	float W = 0.0f, H = 0.0f;
+	GetTextSize(Line, W, H, GEngine->GetMediumFont(), 1.0f);
+
+	const float X = (Canvas->SizeX - W) * 0.5f;
+	const float Y = Canvas->SizeY * 0.15f;
+
+	DrawRect(FLinearColor(0.02f, 0.03f, 0.06f, 0.75f), X - 16.0f, Y - 8.0f, W + 32.0f, H + 16.0f);
+	DrawText(Line, HeadingColour, X, Y, GEngine->GetMediumFont(), 1.0f);
 }
 
 void ADCCHUD::DrawNotice()
@@ -2033,6 +2110,29 @@ float ADCCHUD::DrawInventory(float X, float Y, ADCCCharacterBase* Crawler)
 		}
 	}
 
+	// Drinks bought and stowed for later rather than drunk at the bar. Click a
+	// row to drink one now - same click-to-act convention as Stowed Remains
+	// above, just a different verb.
+	if (!Inventory->StowedConsumables.IsEmpty())
+	{
+		Y += 4.0f;
+		DrawText(TEXT("  Stowed drinks (click to drink)"), HeadingColour, X, Y);
+		Y += LineHeight;
+
+		for (int32 Index = 0; Index < Inventory->StowedConsumables.Num(); ++Index)
+		{
+			const FDCCStowedConsumable& Stowed = Inventory->StowedConsumables[Index];
+
+			constexpr float RowWidth = 380.0f;
+			AddHitBox(FVector2D(X, Y), FVector2D(RowWidth, LineHeight),
+				FName(*FString::Printf(TEXT("Drink|%d"), Index)), /*bConsumesInput=*/true, /*Priority=*/1);
+
+			DrawText(FString::Printf(TEXT("    %s x%d"), *Stowed.DisplayName.ToString(), Stowed.Quantity),
+				BodyColour, X, Y);
+			Y += LineHeight;
+		}
+	}
+
 	return Y;
 }
 
@@ -2100,8 +2200,21 @@ void ADCCHUD::DrawHotbar(ADCCCharacterBase* Crawler)
 
 		DrawText(FString::Printf(TEXT("%d"), Index + 1), HeadingColour, SlotX + 5.0f, Y + 3.0f);
 
-		const FString Name = bFound ? Def.DisplayName.ToString() : Slot.SkillId.ToString();
-		DrawText(Name.Left(13), bReady ? BodyColour : DimColour, SlotX + 19.0f, Y + 3.0f);
+		// Icon is optional per-row (see FDCCSkillDef::Icon) - draw it when the
+		// row has one, otherwise fall back to the text label exactly as every
+		// skill authored before this field existed already does.
+		UTexture2D* IconTexture = bFound ? Def.Icon.LoadSynchronous() : nullptr;
+		if (IconTexture)
+		{
+			constexpr float IconSize = 28.0f;
+			DrawTexture(IconTexture, SlotX + 19.0f, Y + 2.0f, IconSize, IconSize,
+				0.0f, 0.0f, 1.0f, 1.0f, bReady ? FLinearColor::White : FLinearColor(0.5f, 0.5f, 0.5f, 1.0f));
+		}
+		else
+		{
+			const FString Name = bFound ? Def.DisplayName.ToString() : Slot.SkillId.ToString();
+			DrawText(Name.Left(13), bReady ? BodyColour : DimColour, SlotX + 19.0f, Y + 3.0f);
+		}
 
 		// Rank always; mana only when it costs any. A row of "0 mana" on melee
 		// skills is noise that makes the real costs harder to spot.
@@ -2402,6 +2515,137 @@ void ADCCHUD::DrawLootMenu(ADCCCharacterBase* Crawler)
 
 	Y += 6.0f;
 	DrawText(TEXT("Wheel to choose  ·  E to confirm  ·  Esc to leave"), DimColour, X, Y);
+}
+
+void ADCCHUD::DrawVendorMenu(ADCCCharacterBase* Crawler)
+{
+	if (!Crawler || !Canvas)
+	{
+		return;
+	}
+
+	const ADCCVendorNPC* Vendor = Cast<ADCCVendorNPC>(Crawler->GetVendorTarget());
+	if (!Vendor)
+	{
+		return;
+	}
+
+	const int32 Gold = Crawler->Stats ? Crawler->Stats->Gold : 0;
+	const int32 Selected = Crawler->GetVendorMenuIndex();
+
+	constexpr float PanelW = 380.0f;
+	const float X = Canvas->SizeX - PanelW - 40.0f;
+
+	// The Drink Now/Stow sub-prompt replaces the whole list while it is open -
+	// there is nothing useful to show behind it, and it is only ever two rows.
+	if (Crawler->IsConfirmingVendorDrink())
+	{
+		FDCCConsumableDef Def;
+		const bool bResolved = Crawler->Inventory && Crawler->Inventory->FindConsumable(Crawler->GetVendorPendingDrinkId(), Def);
+
+		constexpr int32 RowCount = 2;
+		float Y = Canvas->SizeY * 0.5f - (RowCount * LineHeight) * 0.5f;
+		const float PanelH = (RowCount + 3) * LineHeight + 16.0f;
+
+		DrawRect(FLinearColor(0.42f, 0.44f, 0.52f, 0.55f), X - 14.0f, Y - 34.0f, PanelW + 28.0f, PanelH + 12.0f);
+		DrawRect(FLinearColor(0.02f, 0.03f, 0.06f, 0.90f), X - 12.0f, Y - 32.0f, PanelW + 24.0f, PanelH + 8.0f);
+
+		DrawText(bResolved ? *Def.DisplayName.ToString() : TEXT("Drink"), HeadingColour, X, Y - 26.0f);
+		Y += 4.0f;
+
+		static const TCHAR* SubLabels[] = { TEXT("Drink it now"), TEXT("Stow it for later") };
+		for (int32 Index = 0; Index < 2; ++Index)
+		{
+			const bool bSelected = Index == Selected;
+			if (bSelected)
+			{
+				DrawRect(FLinearColor(0.16f, 0.18f, 0.26f, 0.9f), X - 6.0f, Y - 1.0f, PanelW + 4.0f, LineHeight);
+			}
+			DrawText(FString::Printf(TEXT("%s %s"), bSelected ? TEXT(">") : TEXT(" "), SubLabels[Index]),
+				bSelected ? FLinearColor(1.0f, 0.92f, 0.70f) : BodyColour, X, Y);
+			Y += LineHeight;
+		}
+
+		Y += 6.0f;
+		DrawText(TEXT("Wheel to choose  ·  E to confirm  ·  Esc to leave"), DimColour, X, Y);
+		return;
+	}
+
+	const int32 EquipCount = Vendor->SellableEquipmentIds.Num();
+	const int32 DrinkCount = Vendor->SellableConsumableIds.Num();
+
+	// +1 for the trailing Leave row - no itemised sub-page here, unlike the
+	// loot menu, so the row count is just everything this vendor sells.
+	const int32 RowCount = EquipCount + DrinkCount + 1;
+
+	float Y = Canvas->SizeY * 0.5f - (RowCount * LineHeight) * 0.5f;
+	const float PanelH = (RowCount + 3) * LineHeight + 16.0f;
+
+	DrawRect(FLinearColor(0.42f, 0.44f, 0.52f, 0.55f), X - 14.0f, Y - 34.0f, PanelW + 28.0f, PanelH + 12.0f);
+	DrawRect(FLinearColor(0.02f, 0.03f, 0.06f, 0.90f), X - 12.0f, Y - 32.0f, PanelW + 24.0f, PanelH + 8.0f);
+
+	DrawText(FString::Printf(TEXT("%s (%dg)"), *Vendor->DisplayName.ToString(), Gold), HeadingColour, X, Y - 26.0f);
+	Y += 4.0f;
+
+	int32 RowIndex = 0;
+
+	for (const FName& ItemId : Vendor->SellableEquipmentIds)
+	{
+		FDCCEquipmentDef Def;
+		const bool bResolved = Crawler->Equipment && Crawler->Equipment->FindItem(ItemId, Def);
+		const bool bAffordable = bResolved && Gold >= Def.GoldValue;
+		const bool bSelected = RowIndex == Selected;
+
+		if (bSelected)
+		{
+			DrawRect(FLinearColor(0.16f, 0.18f, 0.26f, 0.9f), X - 6.0f, Y - 1.0f, PanelW + 4.0f, LineHeight);
+		}
+
+		const FLinearColor Colour = !bAffordable ? DimColour
+			: bSelected ? FLinearColor(1.0f, 0.92f, 0.70f) : BodyColour;
+
+		DrawText(FString::Printf(TEXT("%s %s - %dg"), bSelected ? TEXT(">") : TEXT(" "),
+			bResolved ? *Def.DisplayName.ToString() : *ItemId.ToString(),
+			bResolved ? Def.GoldValue : 0),
+			Colour, X, Y);
+		Y += LineHeight;
+		++RowIndex;
+	}
+
+	for (const FName& ItemId : Vendor->SellableConsumableIds)
+	{
+		FDCCConsumableDef Def;
+		const bool bResolved = Crawler->Inventory && Crawler->Inventory->FindConsumable(ItemId, Def);
+		const bool bAffordable = bResolved && Gold >= Def.GoldValue;
+		const bool bSelected = RowIndex == Selected;
+
+		if (bSelected)
+		{
+			DrawRect(FLinearColor(0.16f, 0.18f, 0.26f, 0.9f), X - 6.0f, Y - 1.0f, PanelW + 4.0f, LineHeight);
+		}
+
+		const FLinearColor Colour = !bAffordable ? DimColour
+			: bSelected ? FLinearColor(1.0f, 0.92f, 0.70f) : BodyColour;
+
+		DrawText(FString::Printf(TEXT("%s %s - %dg"), bSelected ? TEXT(">") : TEXT(" "),
+			bResolved ? *Def.DisplayName.ToString() : *ItemId.ToString(),
+			bResolved ? Def.GoldValue : 0),
+			Colour, X, Y);
+		Y += LineHeight;
+		++RowIndex;
+	}
+
+	const bool bLeaveSelected = RowIndex == Selected;
+	if (bLeaveSelected)
+	{
+		DrawRect(FLinearColor(0.16f, 0.18f, 0.26f, 0.9f), X - 6.0f, Y - 1.0f, PanelW + 4.0f, LineHeight);
+	}
+	DrawText(FString::Printf(TEXT("%s Leave"), bLeaveSelected ? TEXT(">") : TEXT(" ")),
+		bLeaveSelected ? FLinearColor(1.0f, 0.92f, 0.70f) : BodyColour, X, Y);
+	Y += LineHeight;
+
+	Y += 6.0f;
+	DrawText(TEXT("Wheel to choose  ·  E to buy  ·  Esc to leave"), DimColour, X, Y);
 }
 
 bool ADCCHUD::PassesFeedFilter(const FDCCEventLogEntry& Entry, const ADCCCharacterBase* LocalCrawler) const

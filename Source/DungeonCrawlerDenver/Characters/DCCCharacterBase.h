@@ -22,6 +22,7 @@ class UDCCEquipmentComponent;
 class UDCCClassComponent;
 class ADCCCharacterBase;
 class ADCCDialogueNPC;
+class ADCCCliffLift;
 class UUserWidget;
 class UTextRenderComponent;
 class USoundBase;
@@ -412,6 +413,21 @@ public:
 	bool IsBefriended() const { return bBefriended; }
 
 	/**
+	 * Which DCCRoom this character is currently standing in, per the server's
+	 * existing occupancy tracking (ADCCRoom::AddOccupant/RemoveOccupant) - not a
+	 * second room-tracking system, just that one's result mirrored onto the
+	 * character so the HUD can read it without touching ADCCRoom itself.
+	 * RoomId is kept alongside the display name purely so RemoveOccupant can
+	 * tell "the room I'm leaving" from "the room I'm still in" when two room
+	 * volumes briefly overlap - it is not otherwise meant to be read directly.
+	 */
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "DCC|Room")
+	FText CurrentRoomDisplayName;
+
+	UPROPERTY(BlueprintReadOnly, Category = "DCC|Room")
+	FName CurrentRoomId;
+
+	/**
 	 * How close you have to be to offer a fist bump. Generous, because missing a
 	 * social interaction by 20cm is only ever annoying.
 	 */
@@ -664,6 +680,20 @@ public:
 	 *  directly when the Chatter tab opens. */
 	UFUNCTION(Server, Reliable)
 	void Server_RequestChatterBatch();
+
+	/**
+	 * Client's request to ride a specific ADCCCliffLift, e.g. via
+	 * ADCCDialogueNPC_LiftAttendant. Public for the same reason
+	 * Server_SendChatMessage is - the dialogue NPC calling it is not a member
+	 * of this class. The lift itself only ever mutates its replicated state
+	 * from server code (ADCCCliffLift::RequestRaise already no-ops without
+	 * authority), so this exists purely to get the request from whichever
+	 * client pressed E onto the server at all - same "nominate, don't dictate"
+	 * shape as Server_RequestGenericClimb, re-checking distance rather than
+	 * trusting the client was actually close enough.
+	 */
+	UFUNCTION(Server, Reliable)
+	void Server_RequestCliffLift(ADCCCliffLift* Lift);
 
 	/** Whether hitting 0 HP downs this character at all. False means straight to dead - the old mob behaviour. */
 	UPROPERTY(EditDefaultsOnly, Category = "DCC|Downed")
@@ -1616,6 +1646,37 @@ protected:
 
 	FTimerHandle SelfieShutterTimer;
 	FTimerHandle SelfieExitTimer;
+
+	/**
+	 * Wall-clock (GetWorld()->GetRealTimeSeconds(), NOT dilated) timestamp Selfie
+	 * Mode was last entered - -1 means not currently in it. Exists solely so Tick
+	 * can force an exit if SelfieShutterTimer/SelfieExitTimer haven't fired within
+	 * SelfieMaxRealSeconds of real time.
+	 *
+	 * Found the hard way (2026-08-26): this project's own combat-pause system
+	 * (ADCCGameState::SetCombatPaused) sets GLOBAL WorldSettings::TimeDilation to
+	 * PausedTimeDilation (0.03 by default) while paused, and every FTimerManager
+	 * timer - including SelfieShutterTimer/SelfieExitTimer above - slows down
+	 * right along with it, because that is just how UWorld's timer manager works;
+	 * there is no "ignore dilation" flag on a plain SetTimer call. Pausing combat
+	 * during or right after taking a selfie stretches the normal ~1.2s pose+flash
+	 * hold to roughly 40 real seconds, which reads exactly like "the camera is
+	 * stuck on my own face and will not let go" - Zoe hit this live. Pressing `C`
+	 * again always escapes it instantly (ToggleSelfieMode clears both timers
+	 * unconditionally, so it does not depend on them ever firing), but nothing
+	 * previously forced an exit if the player didn't know that. This real-time
+	 * ceiling is the backstop: whatever the reason a Selfie timer stalls -
+	 * combat pause, or anything else that might slow or jam world time in the
+	 * future - the camera is guaranteed back within SelfieMaxRealSeconds of
+	 * actual wall-clock time, full stop.
+	 */
+	double SelfieModeEnteredRealTimeSeconds = -1.0;
+
+	/** See SelfieModeEnteredRealTimeSeconds. Generous margin above the normal
+	 *  ~1.2s pose+flash hold, so this never fires in ordinary play - it only
+	 *  matters when something has stalled the normal exit path. */
+	UPROPERTY(EditDefaultsOnly, Category = "DCC|Selfie", meta = (ClampMin = "1.0"))
+	float SelfieMaxRealSeconds = 5.0f;
 
 	/**
 	 * Whatever other camera components were active before SelfieCamera took

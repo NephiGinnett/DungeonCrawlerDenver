@@ -13,6 +13,7 @@
 #include "UI/DCCFloatingText.h"
 #include "UI/DCCHUD.h"
 #include "Rooms/DCCClimbPoint.h"
+#include "Rooms/DCCCliffLift.h"
 #include "Progression/DCCAchievementComponent.h"
 #include "Equipment/DCCEquipmentComponent.h"
 #include "Classes/DCCClassComponent.h"
@@ -50,6 +51,24 @@ ADCCCharacterBase::ADCCCharacterBase()
 	// reach clients by replication, so the actor itself must replicate.
 	bReplicates = true;
 	SetReplicateMovement(true);
+
+	// The stock "Pawn" collision profile only overrides Visibility to Ignore
+	// (checked directly against Engine/Config/BaseEngine.ini - nothing in this
+	// project's own config touches it either) - every other channel, Camera
+	// included, falls back to Pawn's default response, which is Block. The
+	// third-person spring arm's collision probe traces on the Camera channel,
+	// so without this, standing close to ANY other character (an ally, an
+	// enemy, a cluster of tutorial dummies) pins the camera against - or
+	// inside - whichever capsule the trace hits first. This is the actual
+	// cause of "the camera is jammed against an NPC and won't pull back" -
+	// not anything specific to one NPC's mesh being oversized. Every
+	// character sharing this base class now ignores camera collision, which
+	// is the standard fix in third-person UE games generally: the boom
+	// should only ever collide with the environment, never with a pawn.
+	if (UCapsuleComponent* Capsule = GetCapsuleComponent())
+	{
+		Capsule->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
+	}
 
 	Stats = CreateDefaultSubobject<UDCCStatsComponent>(TEXT("Stats"));
 	Skills = CreateDefaultSubobject<UDCCSkillComponent>(TEXT("Skills"));
@@ -98,6 +117,7 @@ void ADCCCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	DOREPLIFETIME(ADCCCharacterBase, bIsMounted);
 	DOREPLIFETIME(ADCCCharacterBase, bIsCasting);
 	DOREPLIFETIME(ADCCCharacterBase, bBefriended);
+	DOREPLIFETIME(ADCCCharacterBase, CurrentRoomDisplayName);
 	DOREPLIFETIME(ADCCCharacterBase, bIsDowned);
 	DOREPLIFETIME(ADCCCharacterBase, DeathSaveSuccesses);
 	DOREPLIFETIME(ADCCCharacterBase, DeathSaveFailures);
@@ -1073,6 +1093,23 @@ void ADCCCharacterBase::Server_RequestGenericClimb_Implementation(FVector HitLoc
 void ADCCCharacterBase::Client_ShowClimbNotice_Implementation(const FText& Message)
 {
 	ShowLocalNotice(Message);
+}
+
+void ADCCCharacterBase::Server_RequestCliffLift_Implementation(ADCCCliffLift* Lift)
+{
+	if (!IsAlive() || !Lift)
+	{
+		return;
+	}
+
+	// Same reach the dialogue/talk interactions already use - a lift request comes
+	// from standing at the NPC offering it, not from anywhere on the floor.
+	if (FVector::Dist(Lift->GetActorLocation(), GetActorLocation()) > 500.0f)
+	{
+		return;
+	}
+
+	Lift->RequestRaise();
 }
 
 void ADCCCharacterBase::SetClimbInput(bool bUp, bool bDown)
@@ -3425,6 +3462,20 @@ void ADCCCharacterBase::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
+	// Safety net for Selfie Mode's own exit chain - see
+	// SelfieModeEnteredRealTimeSeconds's comment for why this is necessary and
+	// why it deliberately uses real time rather than another SetTimer call.
+	if (bInSelfieMode && SelfieModeEnteredRealTimeSeconds >= 0.0 && GetWorld()
+		&& GetWorld()->GetRealTimeSeconds() - SelfieModeEnteredRealTimeSeconds > SelfieMaxRealSeconds)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%s: Selfie Mode force-released after exceeding its %.1fs real-time ceiling - its normal exit timers likely stalled (e.g. combat pause slowing world time)."),
+			*GetName(), SelfieMaxRealSeconds);
+
+		GetWorldTimerManager().ClearTimer(SelfieShutterTimer);
+		GetWorldTimerManager().ClearTimer(SelfieExitTimer);
+		ExitSelfieMode();
+	}
+
 	// Runs on every machine: locomotion is cosmetic and each client should pick
 	// its clip from the movement it can already see, rather than replicating a
 	// state that velocity already implies.
@@ -4049,6 +4100,7 @@ void ADCCCharacterBase::EnterSelfieMode()
 	}
 
 	bInSelfieMode = true;
+	SelfieModeEnteredRealTimeSeconds = GetWorld() ? GetWorld()->GetRealTimeSeconds() : -1.0;
 
 	// Whatever else was providing the view steps aside, so SelfieCamera wins
 	// regardless of what the character Blueprint's own camera rig looks like -
@@ -4113,6 +4165,7 @@ void ADCCCharacterBase::ExitSelfieMode()
 	}
 
 	bInSelfieMode = false;
+	SelfieModeEnteredRealTimeSeconds = -1.0;
 
 	if (SelfieCamera)
 	{

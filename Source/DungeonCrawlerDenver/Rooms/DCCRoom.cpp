@@ -123,6 +123,11 @@ void ADCCRoom::AddOccupant(ADCCCharacterBase* Character)
 		return;
 	}
 
+	// Mirrors onto the character so the HUD's room tag can read it without a
+	// second room-tracking system - see CurrentRoomDisplayName's own comment.
+	Character->CurrentRoomId = RoomId;
+	Character->CurrentRoomDisplayName = RoomDisplayName.IsEmpty() ? FText::FromName(RoomId) : RoomDisplayName;
+
 	BP_OnPlayerEntered(Character);
 
 	if (bStartEncounterOnEntry)
@@ -136,6 +141,15 @@ void ADCCRoom::RemoveOccupant(ADCCCharacterBase* Character)
 	if (Occupants.Remove(Character) > 0)
 	{
 		OnOccupancyChanged.Broadcast(this, Occupants.Num());
+
+		// Only clear if this was still the room on record for them - two room
+		// volumes can briefly overlap at a doorway, and the other room's own
+		// AddOccupant may already have overwritten this before we get here.
+		if (Character && Character->CurrentRoomId == RoomId)
+		{
+			Character->CurrentRoomId = NAME_None;
+			Character->CurrentRoomDisplayName = FText::GetEmpty();
+		}
 	}
 }
 

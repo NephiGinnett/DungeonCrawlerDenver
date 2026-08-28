@@ -6,8 +6,51 @@
 
 class UBoxComponent;
 class UCameraComponent;
+class UNiagaraSystem;
+class USoundBase;
 class ADCCCharacterBase;
 class APlayerController;
+
+/** One background building or one hero-building chunk, animated during Collapsing. */
+USTRUCT()
+struct FDCCCollapsingBuilding
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, Category = "Intro|Collapse")
+	TObjectPtr<AActor> BuildingActor;
+
+	/**
+	 * Extra delay, in seconds, before this building starts falling - stacked on
+	 * top of the automatic distance-based stagger below. Leave at 0 for the
+	 * background skyline; a hero-building chunk can be nudged so pieces don't
+	 * all let go on the exact same frame.
+	 */
+	UPROPERTY(EditAnywhere, Category = "Intro|Collapse", meta = (ClampMin = "0.0"))
+	float ExtraDelaySeconds = 0.0f;
+
+	/**
+	 * True for the handful of hero-building chunks: tumbles with a topple
+	 * rotation and a larger fall distance instead of a plain squash. Reserve
+	 * this for pieces the camera is actually close to - it costs nothing extra
+	 * per-actor, but a distant skyline building tumbling reads as jitter rather
+	 * than a fall.
+	 */
+	UPROPERTY(EditAnywhere, Category = "Intro|Collapse")
+	bool bIsHeroChunk = false;
+
+	/** Cached at collapse start so Tick can Lerp away from a known-good value. */
+	FVector CachedScale = FVector::OneVector;
+	FVector CachedLocation = FVector::ZeroVector;
+	FRotator CachedRotation = FRotator::ZeroRotator;
+
+	/** Deterministic per-building fall direction, derived from its own position
+	 *  rather than replicated - every client computes the same tumble without
+	 *  needing a synced random seed. */
+	FVector TumbleAxis = FVector::UpVector;
+
+	bool bDustSpawned = false;
+};
 
 // ---------------------------------------------------------------------------
 // THE MORNING OF, AND THEN THE COLLAPSE
@@ -73,6 +116,7 @@ public:
 	ADCCIntroDirector();
 
 	virtual void Tick(float DeltaSeconds) override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	/**
 	 * The doorway out of the apartment. Crossing it starts the collapse.
@@ -90,6 +134,16 @@ public:
 	 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Intro")
 	TObjectPtr<UCameraComponent> IntroCamera;
+
+	/**
+	 * The establishing shot for the Collapse: pulled back far enough to show
+	 * the hero building and the skyline around it, rather than IntroCamera's
+	 * first-person eye height. Position and aim this in the editor once the
+	 * skyline is placed - it is a plain child component, so it moves with the
+	 * director like everything else here.
+	 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Intro|Collapse")
+	TObjectPtr<UCameraComponent> CollapseCamera;
 
 	// --- Timings -----------------------------------------------------------
 
@@ -168,6 +222,117 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Intro")
 	bool bRunOnBeginPlay = true;
 
+	// --- Party-ready gate ----------------------------------------------------
+	//
+	// The Collapse is one shared cutscene and has to start for everyone at
+	// once, so the door does not fire on the first crawler through it the way
+	// it used to. Instead each arrival is parked here; whoever is not last
+	// sees "Waiting for other players" and is otherwise free to keep exploring
+	// the demo space - there is no cinematic lock while waiting, because the
+	// Collapsing phase already forces every client's camera onto
+	// CollapseCamera regardless of where their pawn physically stands, so
+	// nothing is gained by freezing them at the door and Street's own existing
+	// comment about not punishing a player for walking outside still applies.
+
+	/**
+	 * Crawlers who have reached the exit and are waiting on the rest of the
+	 * party. Membership rather than a count: the HUD needs to ask "is it ME
+	 * who is waiting", not just "how many so far".
+	 */
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Intro")
+	TArray<TObjectPtr<ADCCCharacterBase>> ReadyForCollapse;
+
+	UFUNCTION(BlueprintPure, Category = "Intro")
+	bool IsReadyForCollapse(const ADCCCharacterBase* Crawler) const { return ReadyForCollapse.Contains(Crawler); }
+
+	UFUNCTION(BlueprintPure, Category = "Intro")
+	int32 GetReadyCount() const { return ReadyForCollapse.Num(); }
+
+	/**
+	 * How many crawlers the gate is waiting for.
+	 *
+	 * Reads GameState's connected PlayerArray rather than a hardcoded five, so
+	 * a two-player PIE test gates on two instead of hanging forever waiting
+	 * for three players who were never going to connect - the same reasoning
+	 * ADCCGameMode::PostLogin already uses for its own player-count line.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Intro")
+	int32 GetExpectedPartySize() const;
+
+	// --- The Collapse: buildings, shake, sound, dust --------------------------
+	//
+	// Cheap procedural collapse, not Chaos destruction - see the design doc
+	// (Docs/the-collapse-cutscene.md) for why. Background buildings are a
+	// plain squash toward the ground; hero-building chunks additionally
+	// tumble. Sound, camera shake and dust are what actually sell it - see
+	// CollapseCrashSounds and DustEffect below.
+
+	/**
+	 * The distant skyline. Squash-scales toward the ground, staggered by
+	 * distance from this actor so the collapse reads as spreading outward
+	 * from the hero building rather than every building dropping in unison.
+	 */
+	UPROPERTY(EditAnywhere, Category = "Intro|Collapse")
+	TArray<FDCCCollapsingBuilding> SkylineBuildings;
+
+	/**
+	 * The building the party was just inside. Expected to be 4-8 separate
+	 * static mesh actors - modular kit pieces stacked to form one building,
+	 * not one mesh - so each can tumble independently without needing any
+	 * mesh-fracturing tool this project's MCP setup does not have. Mark each
+	 * entry's bIsHeroChunk true.
+	 */
+	UPROPERTY(EditAnywhere, Category = "Intro|Collapse")
+	TArray<FDCCCollapsingBuilding> HeroBuildingChunks;
+
+	/** How long one building takes to squash from full height to flat. */
+	UPROPERTY(EditAnywhere, Category = "Intro|Collapse", meta = (ClampMin = "0.1"))
+	float BuildingCollapseDuration = 1.1f;
+
+	/** How much farther a hero chunk falls and rotates, on top of the squash. */
+	UPROPERTY(EditAnywhere, Category = "Intro|Collapse", meta = (ClampMin = "0.0"))
+	float HeroChunkFallDistance = 220.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Intro|Collapse", meta = (ClampMin = "0.0"))
+	float HeroChunkTumbleDegrees = 70.0f;
+
+	/**
+	 * Seconds of stagger per meter of distance from this actor - the
+	 * "spreading outward" timing. Purely a function of each building's own
+	 * static position, so every client computes an identical schedule with no
+	 * replicated random seed required.
+	 */
+	UPROPERTY(EditAnywhere, Category = "Intro|Collapse", meta = (ClampMin = "0.0"))
+	float CollapseStaggerSecondsPerMeter = 0.006f;
+
+	/** Gap between each successive entry in CollapseCrashSounds - the "layered/
+	 *  staggered slightly per building" texture the design doc asks for. */
+	UPROPERTY(EditAnywhere, Category = "Intro|Collapse|FX", meta = (ClampMin = "0.0"))
+	float CrashSoundStaggerSeconds = 0.2f;
+
+	/**
+	 * One or more crash sounds, played 2D (not attenuated by distance) so the
+	 * whole party hears the same wall of noise regardless of where their own
+	 * pawn happens to be standing - this is a shared cutscene, not five
+	 * separate positional events. Layer a few staggered plays for scale per
+	 * the design doc; left unassigned by default because no crash/impact SFX
+	 * exists anywhere in this project yet (see Docs/the-collapse-cutscene.md).
+	 * Silent-but-functional if never assigned - camera shake and dust still
+	 * carry the moment.
+	 */
+	UPROPERTY(EditAnywhere, Category = "Intro|Collapse|FX")
+	TArray<TSoftObjectPtr<USoundBase>> CollapseCrashSounds;
+
+	/**
+	 * Dust/debris puff spawned at each building's base the instant it starts
+	 * falling. Defaults to Dam_city's own smoke system via a constructor
+	 * default (same asset pack as the default skyline meshes, so the look is
+	 * already coherent) but is overridable per the project's established
+	 * "C++ default, Blueprint/instance override" split.
+	 */
+	UPROPERTY(EditAnywhere, Category = "Intro|Collapse|FX")
+	TSoftObjectPtr<UNiagaraSystem> DustEffect;
+
 	/** Server only. Puts the local crawler to sleep and starts the sequence. */
 	UFUNCTION(BlueprintCallable, Category = "Intro")
 	void BeginIntro();
@@ -229,6 +394,30 @@ protected:
 	 */
 	void TeleportAllCrawlersToDungeon() const;
 
+	/**
+	 * Runs once, the instant Collapsing begins: caches every configured
+	 * building's starting transform, derives its deterministic tumble axis,
+	 * and plays the first crash sound. Called from every machine's ApplyPhase
+	 * rather than gated to the server, so a dedicated server's own copy of
+	 * the cached data (never rendered, but still evaluated by Tick below)
+	 * stays consistent with what players see.
+	 */
+	void BeginCollapseSequence();
+
+	/**
+	 * Per-frame building animation for Collapsing: squash for the skyline,
+	 * squash-plus-tumble for hero chunks. Every input (PhaseElapsed, each
+	 * building's own cached starting transform) is already synced or
+	 * deterministic, so this runs identically on every machine with no
+	 * replication of the result required - the same trick Tick's hand-rolled
+	 * camera shake already relies on.
+	 */
+	void TickCollapsingBuildings();
+
+	/** Seconds a building waits before it starts moving: distance-based
+	 *  stagger plus its own authored ExtraDelaySeconds. */
+	float GetBuildingStaggerDelay(const FDCCCollapsingBuilding& Building) const;
+
 private:
 	EDCCIntroPhase Phase = EDCCIntroPhase::Idle;
 
@@ -236,9 +425,18 @@ private:
 	float PhaseElapsed = 0.0f;
 
 	/**
-	 * Latched so a second crawler walking through the doorway cannot restart a
+	 * Latched once every crawler has reached the exit, so a sixth overlap (a
+	 * waiting player wandering back through the trigger) cannot restart a
 	 * collapse that is already underway - the same guard ADCCFloorExit uses to
 	 * stop five people printing five floor-complete announcements.
 	 */
 	bool bCollapseTriggered = false;
+
+	/** CollapseCamera's authored relative transform, cached once at collapse
+	 *  start so Tick's shake has a fixed baseline to offset from. */
+	FVector CollapseCameraBaseLocation = FVector::ZeroVector;
+	FRotator CollapseCameraBaseRotation = FRotator::ZeroRotator;
+
+	/** How many of CollapseCrashSounds have played so far this collapse. */
+	int32 NextCrashSoundIndex = 0;
 };
