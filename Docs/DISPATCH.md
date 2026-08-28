@@ -393,6 +393,212 @@ see below) are safe to build blind.
 - Everything under "Queued (2026-08-23, Mount toggle...)" and the sections below it - still
   accurate, nothing in them has changed.
 
+## Camera bug fix + room-name HUD tag (2026-08-26, live playtest report from Zoe)
+
+Both DebugGame-compile-checked clean (editor was open throughout, no numbered hot-reload DLL in
+`Binaries/Win64/` afterward). **Both touch new `UPROPERTY`s, so neither is live until the usual
+close-editor → Development Editor build → reopen cycle.**
+
+### 1. Camera locked on the player's own face, close-up - root cause found and fixed
+
+**Correction to this section, same day:** the first pass at this diagnosed the dark humanoid model
+in Zoe's screenshot as an NPC the camera had collided with. She corrected that: it was her OWN
+character, viewed head-on from the front, very close up, and it stayed that way rather than
+resolving itself. That ruled out the spring-arm-collision-with-a-pawn theory entirely (the earlier
+`ECC_Camera` capsule-ignore fix below is still left in - it is still correct third-person hygiene,
+a spring arm should never collide with a pawn - but it was not the cause of this bug and would not
+have fixed it).
+
+**Actual root cause: Selfie Mode (`C`), stuck open because its own auto-exit timers got slowed to
+a crawl by this project's own combat-pause system.** `SelfieCamera` (`DCCCharacterBase.h`) is a
+literal selfie-stick camera - `SelfieCameraOffset = (110, 0, 40)`, `SelfieCameraRotation` yaw 180° -
+mounted in front of the character facing back at it. That is exactly "own model, head-on, close up."
+Entering it (`EnterSelfieMode`) deactivates the normal camera and activates `SelfieCamera`; getting
+back out again is normally automatic, chained through two `SetTimer` calls: a `SelfiePoseSeconds`
+(0.8s) pose hold, then a 0.4s post-flash hold, then `ExitSelfieMode()` - about 1.2s total, ordinarily
+unnoticeable.
+
+The trap: `ADCCGameState::SetCombatPaused` sets **global** `WorldSettings::TimeDilation` to
+`PausedTimeDilation` (0.03 by default) while combat is paused (`P`), and every `FTimerManager` timer
+created with a plain `SetTimer` call - including both of Selfie's own - slows down right along with
+global time dilation. There is no "ignore dilation" flag on the basic API; this is just how UWorld's
+timer manager works. If combat gets paused during or immediately after taking a selfie, that ~1.2s hold
+stretches to roughly **40 real seconds** at 0.03 dilation. Long enough that "stuck taking a selfie"
+reads exactly like "the camera is locked and won't let go" if you don't know to wait it out - and if
+nobody happens to unpause in the meantime, it stays that way indefinitely in practice.
+
+**Immediate workaround for Zoe, confirmed correct by reading the code, works right now with no
+rebuild:** press `C` again. `ToggleSelfieMode` checks `bInSelfieMode` first and, if already open,
+clears both pending timers and calls `ExitSelfieMode()` unconditionally - it does not wait on either
+timer to fire, so it is not subject to the time-dilation slowdown at all. This should restore the
+normal camera instantly regardless of combat-pause state. (If `C` seems to do nothing, check
+whether a chat text box or menu currently has keyboard focus - close that first, then press `C`.)
+
+**Root-cause fix, so this cannot happen again for any reason, not just this one:** rather than
+special-casing combat pause specifically, added a real-time (wall-clock, NOT dilated) safety
+ceiling in `Source/DungeonCrawlerDenver/Characters/DCCCharacterBase.h/.cpp`:
+- `SelfieModeEnteredRealTimeSeconds` records `GetWorld()->GetRealTimeSeconds()` (unscaled by
+  TimeDilation, unlike everything `SetTimer`/`Tick`'s own `DeltaSeconds` use) when Selfie Mode opens.
+- `Tick()` force-exits Selfie Mode - clearing both timers and calling `ExitSelfieMode()` directly -
+  if real time since entry exceeds `SelfieMaxRealSeconds` (new `EditDefaultsOnly` property, default
+  5.0s - comfortably above the normal ~1.2s hold, so it never fires in ordinary play, but short
+  enough that if it ever does the camera comes back in seconds, not tens of seconds).
+- Logs a `Warning` when it actually triggers, so a future occurrence is visible in the log rather
+  than silent.
+
+This guarantees Selfie Mode releases the camera within 5 real seconds no matter what stalls its
+normal exit path - combat pause, or anything else that might slow world time in the future -
+without needing to reason about every possible cause up front.
+
+### 2. Room-name HUD tag — built, reusing the existing room-tracking system
+
+Small always-on Canvas tag, top-center, showing the room the local crawler is currently standing
+in (e.g. "Cliff Diver Cantina," "Diving Pool") - so Zoe can tell which rooms she's actually walked
+through versus only designed on paper. Canvas-based per the project's established HUD pattern, no
+UMG.
+
+**Deliberately did not build a new room-tracking system** - `ADCCRoom` (`Rooms/DCCRoom.h/.cpp`)
+already tracks server-side occupancy via `AddOccupant`/`RemoveOccupant`, called from real overlap
+events plus a reconcile timer. That data just never reached the client before now (`Occupants` is
+server-only on purpose, per that file's own comment on why a parallel client-side list would be
+wrong). Wired instead:
+
+- **`ADCCRoom`** gets a new `RoomDisplayName` (`FText`, `EditAnywhere`) - the human label, separate
+  from the existing `RoomId` (`FName`, a stable data key like `"Room07"` that was never meant to be
+  shown to a player). Falls back to `RoomId` when left blank.
+- **`ADCCCharacterBase`** gets `CurrentRoomDisplayName` (`FText`, replicated) and `CurrentRoomId`
+  (`FName`, server-only, not replicated - it exists purely so `RemoveOccupant` can tell "the room
+  I'm leaving" from "the room I'm already back in," for the case where two room volumes briefly
+  overlap at a doorway).
+- **`ADCCRoom::AddOccupant`/`RemoveOccupant`** now mirror the room's id/display name onto whichever
+  crawler entered or left, right next to the existing `BP_OnPlayerEntered` call - no new hook, no
+  new timer, just piggybacking the one that already fires on room entry/exit.
+- **`ADCCHUD::DrawRoomTag`** (`UI/DCCHUD.cpp`) draws nothing when the string is empty (i.e. the
+  crawler isn't inside any authored `ADCCRoom` volume right now) rather than showing a stale or
+  placeholder label. Same dark-backing-rect-plus-text pattern as the existing centre-screen
+  `DrawNotice`, called every frame from `DrawHUD` alongside `DrawVitals`/`DrawNearbyHealthBars` so
+  it stays visible through everything except the full death/downed overlays.
+
+**Still needed, editor-side, once MCP is back — `RoomDisplayName` is blank on every placed
+`ADCCRoom` right now, so the tag will show nothing anywhere until these are authored:**
+
+| RoomId | Suggested display name |
+|---|---|
+| Room01 (Queue) | "The Queue" |
+| Room02 (Grotto) | "The Grotto" |
+| Room03 (Falls) | "The Falls" |
+| Room04 (Kitchens) | "The Kitchens" |
+| Room05 (Bar) | "Cliff Diver Cantina" |
+| Room06 (Pantry) | "The Pantry" |
+| Room07 (Diving Pool) | "The Diving Pool" |
+
+Set via `set_properties` on each placed `ADCCRoom` instance (`RoomDisplayName` is `FText` - pass a
+plain string, same as any other text property this project has already written this way), then
+read back to confirm, per this file's own standing rule.
+
+## Chaos Vehicles plugin, Oathgate location, cliff-lift feature (2026-08-27)
+
+### 1. Chaos Vehicles plugin - enabled in the config, not yet active
+
+Added directly to `DungeonCrawlerDenver.uproject`'s `Plugins` array (same flat `{"Name", "Enabled":
+true}` shape every other entry there uses):
+```json
+{
+    "Name": "ChaosVehiclesPlugin",
+    "Enabled": true
+}
+```
+Confirmed necessary, not cosmetic: read the plugin's own `.uplugin`
+(`Engine/Plugins/Experimental/ChaosVehiclesPlugin/ChaosVehiclesPlugin.uplugin`) and it declares
+`"EnabledByDefault": false`, so without this entry it would not load at all. JSON validated by
+parsing it back with `json.load` - well-formed. **As agreed, did not touch the running editor or
+attempt a restart** - this only takes effect at the next editor startup, same as
+`EditorToolset`/every other toolset this project has enabled before. There's also
+`ChaosModularVehicle`/`ChaosModularVehicleExamples` sitting next to it in `Engine/Plugins/
+Experimental` (newer, more flexible, still experimental) - left that alone and went with the
+plain `ChaosVehiclesPlugin`, the standard/stable path, unless there's a specific reason to want
+the modular one later.
+
+Noticed in passing, not acted on: `RadialSelectorPlugin` (`Plugins/Marketplace/
+RadialSelectorPlugin`) also has no entry in the `.uproject`'s `Plugins` array despite Zoe saying
+it's "still pending" activation - worth checking whether it needs the same kind of explicit entry
+before the next restart, since a project-local Marketplace plugin isn't guaranteed
+`EnabledByDefault: true` either. Did not add one myself since Zoe didn't ask for that in this
+message, only Chaos Vehicles.
+
+### 2. Where the Oathgate is right now: **nowhere - it has never been placed**
+
+Checked two ways, not just the docs:
+- `Docs/DISPATCH.md`'s own history: every mention of the Oathgate (search `Oathgate` in this file)
+  describes it as built C++ (`Rooms/DCCOathgate.h/.cpp`, a paired-teleporter DM testing arena) that
+  is explicitly still queued to place - "**Place a paired `ADCCOathgate`** (new this session)... two
+  instances, each with `PairedGate` set to the other" is listed under "still open, none of it
+  attempted this session (needs Zoe's visual judgment)."
+- **Confirmed directly, not just from the docs**: scanned every placed actor in
+  `Content/__ExternalActors__/ThirdPerson` (the whole level's World Partition actor set) for any
+  reference to the Oathgate class - zero matches, anywhere.
+
+So there is no location to report - the class is written and ready (a working paired-teleporter
+actor with an optional armed encounter, per its own header), but nobody has actually dropped the
+two instances into the level yet. That is squarely an MCP/editor task, not a code one - next MCP
+session should place the pair, matching the queued item 8a further down this file (leave the
+default `EnemyPool` - Debt Eater/Fine Print/Arbiter - on the entrance side, clear it on the exit
+side).
+
+### 3. Bartender cliff-lift feature - built, resolved which bartender, not yet placed
+
+**Checked which NPC Zoe meant, since her description didn't match either existing Bartender.**
+Scanned every placed `ADCCDialogueNPC` in the level (only three exist at all): the real Bartender
+in the Bar interior (behind the counter, per `floor-01-design.md` Room 5), the stray duplicate
+`DCCDialogueNPC_Bartender2` at x9133/y-718 near spawn (already flagged elsewhere in this file as
+unplaced/uncleaned test content), and `BarGuard`. **None of them are anywhere near the cliffs.**
+So "an NPC bartender standing on a platform near the rear of the large cliffs" is not a
+mislabelled reference to either existing one - it is new content that does not exist in the level
+yet, near Room 3 (The Falls)/Room 7 (The Diving Pool), the floor's actual cliffs.
+
+**Built, DebugGame-compile-checked clean, not yet deployed (same close-editor → Development build
+→ reopen cycle every reflection change this session needs):**
+
+- **`Rooms/DCCCliffLift.h/.cpp`** - a new `ADCCCliffLift` actor: a `StaticMeshComponent` platform
+  that rises from wherever it's placed to `RaiseHeight` above that, over `RaiseDurationSeconds`,
+  once `RequestRaise()` is called. Server-authoritative and replicated (a rising platform is a
+  shared, every-player-sees-it object, so this follows the same rule as everything mechanical even
+  though it's cosmetic rather than a dice roll) - every machine derives the same Lerp independently
+  from one replicated server timestamp rather than a transform being replicated every frame. One-
+  shot: calling it again once raised, or while already rising, is a silent no-op. **Not
+  physics-simulated, per the ask** - just `SetActorLocation` each Tick; a standing character rides
+  along for free via Unreal's own built-in moving-platform support (`CharacterMovementComponent`
+  already carries a character standing on a `Movable` actor's collision, no custom carry code
+  needed).
+- **`Dialogue/DCCDialogueNPC_LiftAttendant.h/.cpp`** - a new `ADCCDialogueNPC` subclass. Ordinary
+  approach-triggered dialogue is untouched; a deliberate `E` press is redirected (same shape as
+  `ADCCVendorNPC` redirecting `E` to a shop instead of the next line) to say a flavour line
+  ("Hang on, I'll take you up." / "Already on its way. Hop on." if pressed again) and request the
+  lift via a new `ADCCCharacterBase::Server_RequestCliffLift(ADCCCliffLift*)` RPC - the client's
+  press is a nomination, the server re-checks distance (500 units) before actually calling
+  `RequestRaise()`, same "nominate, don't dictate" pattern as `Server_RequestGenericClimb`. Has one
+  `EditInstanceOnly` property, `LinkedLift`, so the same class works for any future NPC-operates-a-
+  lift pairing, not just this one.
+- **Deliberately did not build a choice/confirmation menu.** Zoe's ask said "keep it simple," and
+  this project has no branching-dialogue-choice system anywhere to hang one off - the existing
+  `ADCCDialogueNPC` model is a single script that advances one line per `E` press, no forks. A
+  press-E-and-it-happens interaction (matching how the vendor's `E` already works) reads as "ask
+  for a lift" without inventing a menu system for one feature. Worth revisiting if Zoe wants an
+  actual yes/no confirm later.
+
+**Still needed, editor-side, once MCP is back - this cannot be tested or even seen until then:**
+1. Place one `ADCCCliffLift` instance near the base of the cliffs (Falls/Diving Pool), and tune
+   `RaiseHeight`/start position against the real geometry - there's no way to pick the right number
+   from code, it has to match wherever the clifftop actually is.
+2. Place one `ADCCDialogueNPC_LiftAttendant` near it, give it a mesh/`SpeakerId`/`DisplayName`
+   (this is the "bartender" - or whatever character Zoe wants voicing it; nothing says it has to
+   reuse the real Bar bartender's identity, and giving it a distinct `SpeakerId` avoids colliding
+   with the real Bar's dialogue script in `DT_DCCDialogue`), and set its `LinkedLift` to the lift
+   above.
+3. PIE test: approach, press `E`, confirm the platform rises and actually carries a standing
+   character to the top, and that a second `E` press mid-rise or after arrival says the
+   already-going line instead of restarting anything.
+
 ## Queued (2026-08-23, Mount toggle - compiled, NOT yet deployed)
 
 Built this session, then the editor came up mid-session (Zoe or another session at the
@@ -429,6 +635,30 @@ Development-Editor-build-verified, editor closed, real link. Not seen in PIE.
    selected and confirm it isn't. Also worth deliberately testing the cancellation case (equip
    something Fire-Vulnerable on the Noodle Stand Cook, who's already Fire-Resistant from their
    Class, and confirm damage comes out unmodified, not double-reduced or doubled).
+
+## Room-purpose audit done - `Docs/room-purpose-audit.md` (2026-08-26)
+
+Zoe's own test: does every Floor 1 room have a clear player purpose (combat/loot/puzzle/story) or a clear
+NPC/in-world-economy purpose (why this room/character makes sense given 5M+ people were suddenly pulled
+into a for-profit dungeon-show, per `story-premise.md`), cross-referenced against the tone bible so "purpose"
+means the game's actual corporate-dystopian voice, not generic dungeon-crawler logic. Audit only - nothing
+fixed, per her explicit ask.
+
+**Result: 5 of 7 rooms pass clean, 2 have a real but cheap-to-close gap.**
+
+- **Room 3 (The Falls)** and **Room 6 (The Pantry)** both have a clear player purpose but no stated
+  in-world reason to exist - each needs about one sentence (tying the climb to the divers' own access
+  route; saying whose "unclaimed property" is actually in the Pantry).
+- **Verified, not just claimed:** the grievance escalation ladder (Grotto → Kitchens → Bar → Diving Pool)
+  actually works as designed - checked directly against `DT_DCCDialogue.json` rather than trusting the
+  design doc's own description of it. The two flagged rooms are also the two rooms missing from that ladder
+  entirely (Room 1 has no ladder line either, but passes anyway - its NPC-lessness is the intended joke,
+  not a gap). Extending the ladder into 3 and 6 would likely close both gaps in one move.
+- Room 7's "the divers are still diving... nobody acknowledges it... the floor's thesis in one shot" line
+  is flagged as the standard every other room is being measured against - worth preserving deliberately
+  while touching anything nearby.
+- Full room-by-room writeup, plus a note that this same lens should be applied to the Nuclear Family/HOA/
+  Last Call/Brunch Rush content once any of it gets a room assignment, is in `Docs/room-purpose-audit.md`.
 
 ## Overnight session, 2026-08-25 - morning handoff
 
@@ -1223,6 +1453,62 @@ right instruction — every one of these has a per-instance answer.
 4. **The three wrong-rig actors are instance-level.** The Blueprints were already
    repointed and verified. Clear the per-instance `SkeletalMeshAsset` override on the
    placed actors, not the Blueprint.
+
+## The Collapse — party-ready gate + cutscene system built (2026-08-27)
+
+Full design/status writeup is `Docs/the-collapse-cutscene.md` — read that first, this
+is the short version. Built on top of the existing `ADCCIntroDirector` bedroom-intro
+state machine rather than a new system; C++ compiled and **deployed** (Development
+Editor target, editor closed, real `Link [x64] UnrealEditor-DungeonCrawlerDenver.dll`,
+verified no numbered hot-reload DLL in `Binaries/Win64/`).
+
+**What changed:**
+- `HandleDoorOverlap` no longer fires the collapse on the first crawler through the
+  door. Each arrival is added to a new replicated `ReadyForCollapse` array; the
+  collapse only starts once `ReadyForCollapse.Num() == GameState->PlayerArray.Num()`
+  (live connected count, not a hardcoded five). Early arrivals see a HUD banner
+  ("Waiting for other players... (n/m ready)", `ADCCHUD::DrawWaitingForPartyBanner`)
+  and are otherwise free to keep playing — no cinematic lock, no freeze.
+- `Collapsing` now actually shows something: a second camera (`CollapseCamera`,
+  pulled-back establishing shot) takes over from the first-person `IntroCamera`, and
+  two new configurable arrays (`SkylineBuildings`, `HeroBuildingChunks`) drive a
+  Tick-based squash-toward-the-ground (skyline) / tumble-and-drop (hero chunks)
+  animation, staggered by distance from the director so it reads as spreading
+  outward. Camera shake, staggered crash-sound playback, and Niagara dust
+  (defaulted to `Dam_city/FX/NS_Smoke`) sell it. Deliberately not Chaos destruction —
+  see the design doc for why, and note the brief asked for Sequencer specifically and
+  this does not use it, for the same "no Sequencer toolset in this MCP setup" reason
+  `DCCIntroDirector.h`'s own header comment already gave for the rest of the intro.
+
+**Genuinely not done — level-side, needs MCP + a real layout decision:**
+1. No `ADCCIntroDirector` is placed in the level at all (confirmed via `find_actors`
+   before touching anything). Placing one, and deciding where `DoorTrigger` actually
+   goes, is unstarted.
+2. No skyline or hero-building actors are placed yet — `Dam_city` is the recommended
+   pack (least sci-fi-flavored of the installed city kits; see design doc), and it
+   ships its own smoke FX already wired as the default.
+3. **Found mid-session, undocumented anywhere else: `PersonalRooms/PersonalRoom_CJ/
+   Kyle/Marcel/Scott/Vaughn`** — five small walled rooms with a west-wall doorway gap
+   each, clustered around x -1900..-3000, y -1700..+2300, each with a placeholder body
+   standing in it. Matches the "Two Kyles, two Scotts... placed 2026-08-16 in the
+   personal rooms" note earlier in this file, so this is real, dated, in-progress work
+   of Zoe's, not a fluke. **This looks like exactly the "explore their room, then a
+   small demo space" setup the brief describes, but it's mid-construction** — no demo
+   space, exit, or "outside" geometry exists yet anywhere near it. Deliberately did
+   NOT guess where to put the exit trigger or the skyline relative to these rooms;
+   that's a real layout call for Zoe, not a technique question, and the gate/cutscene
+   system works with a single `DoorTrigger` wherever it ends up.
+4. **No crash/impact sound exists anywhere in this project** — same category of gap
+   as the missing cast animation and spell VFX already flagged elsewhere. The sound
+   hook (`CollapseCrashSounds`) is wired and silent-safe with nothing assigned; camera
+   shake and dust currently carry the whole moment alone.
+
+**Also worth knowing:** a live PIE session was running when this session started
+(confirmed via `IsPIERunning`); it was stopped via `StopPIE` before any level
+inspection, since edits during PIE only touch the transient play-world and vanish
+when PIE ends — nothing else was done to it. The editor's MCP connection dropped
+partway through (most likely Zoe closing it), which happened to be the exact
+precondition the Development Editor build needed, so the build ran immediately.
 
 ## Working style
 
