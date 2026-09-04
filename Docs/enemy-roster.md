@@ -165,6 +165,95 @@ unfair rather than as tense — that is the one thing to fix before playtesting 
 
 ---
 
+### Supercan — concept written 2026-08-27, queued for Meshy generation
+
+**Not built.** No C++, no AI, no stats — this pass is the design and the model brief
+only, per Zoe's own scoping instruction. Description below is written to be handed
+directly to the Meshy image-first pipeline (the fixed process that solved the
+melee/Head Diver detail-loss problem), same as every other roster entry that's gone
+through it.
+
+Denver's single-stream recycling bin, animate, chipper, and armed. Every civic
+bureaucracy on this floor eventually gets a body — Voldemortgage is the mortgage
+department, the Debt Eaters are collections, the Nuclear Family is the utility that
+poisoned the ground rent-free for forty years. Supercan is Denver Recycles, and he
+has notes about what you just threw away — delivered with a mascot's grin, not a
+collector's sneer.
+
+**Physical description (for model generation) — revised 2026-08-27, visual direction
+changed:**
+
+A municipal wheeled recycling toter, roughly waist-to-chest height on a person,
+scaled and proportioned into a torso — the kind of 96-gallon bin every Denver curb
+has, complete with the two flip-lid doors on top (now reading as a stiff, jutting
+jaw when clenched) and the little diamond recycling decal stamped dead center like
+a chest emblem. Body is clean, glossy white plastic with bold black trim tracing
+the lid seam, the rim, and the wheel wells — sports-mascot color-blocking, not
+weathering. No grime, no rust, no dents: this is a mascot costume, not a curbside
+relic.
+
+No legs — instead the bin's body is mounted dead-center on a pogo stick, its spring
+polished rather than rusted, giving a cheerful little bounce-in-place even at idle.
+Where arms would go, a pair of big, round, oversized white gloves — exactly the
+Mickey-Mouse four-fingered cartoon-glove silhouette, black trim ringing each cuff —
+are the whole story of his hands; no visible arm rig underneath, the gloves simply
+extend from the body the way a mascot costume's do. Where a face would go, the
+underside of the raised lid becomes an expressive slot — a gap of stacked, clean
+cans and bottles behind it catching light like a grin, no eyes, just the dark
+interior of the bin reading as a mouth whenever he "shouts."
+
+His weapon is an aluminum baseball bat, glossy and unscuffed, gripped in one of the
+big white gloves like a cafeteria mascot brandishing a foam novelty prop rather than
+a weapon. A few pieces of loose recyclable debris — a flattened can, a shard of
+green glass, a torn cardboard flap — sit visibly but neatly inside him and spill out
+through the lid gap when he moves hard.
+
+Overall mood: **school cafeteria mascot that just got handed the recycling
+program**, not a haunted object. Bright white-and-black color-blocking, oversized
+cartoon gloves, a bat held like a prop rather than a threat. Comic-friendly on
+sight, comic-menacing only once the bat actually swings — the joke is that
+something built to be huggable is the one hitting you.
+
+**Behavior/moveset concept:**
+
+Core gimmick is the pogo stick as both his movement and his tell. He does not walk —
+he bounces, in a stiff, rhythmic, slightly-too-fast hop that telegraphs everything he
+does by how the spring compresses before it releases:
+
+- **Curbside Pickup** (bounce-slam): a visibly deeper compress than his normal
+  travel-hop, held half a beat longer, then a leap straight up and a hard downward
+  slam on landing — an AoE thud with knockback centered on where he comes down.
+  The long compress is the dodge window; the punishment for not reading it is
+  getting knocked well clear of wherever the fight actually is.
+- **Bat swings** for standard melee when he's bounced into range — a two-hit combo,
+  a horizontal "Foul Ball" and a harder overhead "Home Run Swing" that knocks the
+  target back a full pogo-hop's distance, consistent with a guy whose entire kit is
+  "hits you like you're being put out with the trash." Landing a solid hit rattles
+  more debris loose from inside him, littering the ground around him — cosmetic for
+  now, but a natural hook for a later "he's dropping his own loot mid-fight" beat if
+  that's ever worth building.
+- Between bounces he's briefly grounded and vulnerable — the pogo's rhythm means
+  there's always a next compress to read, so a party that learns his cadence can
+  punish the landing rather than chasing the bounce.
+
+**Stat-block-appropriate role:** an elite melee bruiser, not a swarm minion and not a
+floor boss — closer in weight class to a named brute than to a Debt Eater, and
+distinctive/singular enough (unique model, a bat rather than a shared weapon pool,
+his own bounce-telegraph language) to justify the cursed-equipment guaranteed drop
+the other session is scoping. Good fit anywhere Floor 1 wants one memorable, higher-
+stakes single fight rather than another wave — the Pantry's still-flagged "whose
+unclaimed property is this" gap (`room-purpose-audit.md`) is a natural home if a
+room needs to be picked, since a possessed recycling bin guarding a hoard of
+other people's stuff closes that gap and gives the room a fight it currently
+doesn't have, but nothing about the concept requires that placement specifically.
+
+**Next step:** hand the physical-description block above to the Meshy session for
+image-first generation. No stat block, `DT_DCCEnemies` row, or C++ class yet —
+those follow the model, not before it, matching how the rest of this roster's BUILT
+entries were sequenced.
+
+---
+
 ### Still ideas — the rest of the Denver layer
 
 **Altitude Sickness.** Denver is the Mile High City and every visitor gets wrecked
@@ -190,3 +279,183 @@ the threat is being unable to get anywhere. Pairs well with the Diving Pool aren
 
 **Sir Loin of Beef** and **The Karengeist** from the Raw Ideas list below both fit
 the Cantina directly and would need no reworking to place here.
+
+---
+
+## Breadth pass — general roster (2026-08-27, overnight, no sign-off pending)
+
+Ten concepts, written for spread rather than depth on every one — Zoe's own framing:
+breadth now, she'll pick favorites to refine later. Not floor-locked; some clearly
+suit the Cantina (they're written in-voice) but nothing here assumes Floor 1
+specifically, since later floors need a bench too. Same tone rule as everything
+else on this roster: the joke has to be *specific enough to be checkable*, not
+generic fantasy dressing with a corporate coat of paint.
+
+Each entry closes with a **Sourcing** line, per the established philosophy (same bar
+as the boilerplate-rifle test and Supercan): Meshy is for concepts that are
+genuinely novel, hard to source, or built around a silhouette no stock asset has —
+everything else gets "free-source a body and reskin," because that's faster, free,
+and exactly as good for anything humanoid-shaped wearing a costume.
+
+### Fodder — low-tier, don't overthink these
+
+**Repo Intern.** Twenty-two years old, unpaid, holding a clipboard with a
+repossession order he clearly did not write and does not want to be enforcing.
+Laminate badge that says INTERN in Comic Sans, taped-together headset. Attacks
+apologetically — a weak swing with whatever's nearest, usually the clipboard
+itself. Dies in one or two hits and says so out loud on the way down ("this is
+going in my exit interview"). Swarms in twos and threes; the joke is that there's
+always another one behind him, because the internship program never actually
+ends.
+
+**Sourcing:** free-source a generic young-adult humanoid body, reskin with a
+laminate badge and a clipboard prop.
+
+**Loss Prevention Associate.** Mall-cop energy, ill-fitting polo with a store logo
+that's been blacked out with marker (legal made them stop using the real one),
+plastic baton, walkie-talkie that only ever says static. Slightly tougher than
+Repo Intern — a real melee threat in numbers — and calls for backup on sight,
+which is mechanically just "spawns another Loss Prevention Associate," so a
+fight left alone gets worse, not better.
+
+**Sourcing:** free-source a generic adult humanoid body, reskin with a security
+polo and a baton prop.
+
+**Temp Worker (Untrained).** A person handed a weapon they have never held before
+and told to "just wing it" — a direct joke on the ruleset's own Untrained rule
+(Attack Skills at Disadvantage, no Rank). Mechanically it *should* be played that
+way: worse accuracy than a real combatant, but occasionally gets lucky, which
+should read as funnier than a flat weak stat. Generic office-casual clothes, a
+name tag reading HI MY NAME IS ___ with the blank never filled in, visibly
+unsure grip on whatever it's holding (kitchen knife, stapler, a rolled-up
+performance review).
+
+**Sourcing:** free-source a generic humanoid body, reskin with office-casual
+clothes and a blank name tag.
+
+**Focus Group Ghost.** A translucent, faintly annoyed spectre clutching a tablet
+and a stylus, endlessly re-reading a question it has already asked twice. Attacks
+by asking the party to rate their pain "on a scale of one to five" and marking
+down whatever they say as damage regardless of the answer — the joke being that
+the survey was never actually listening. Low threat alone, unpleasant in a group
+because they interrupt actions to demand a response.
+
+**Sourcing:** free-source a generic ghost/spectre body, reskin translucent with a
+tablet prop.
+
+### Mid-tier
+
+**Middle Manager, Recently Promoted.** A real bruiser — the first fodder-adjacent
+enemy on this list that actually hits hard, because he's been given authority for
+the first time in his life and is not equipping it well. Wields a "WORLD'S OKAYEST
+BOSS" mug like a mace (thrown, then retrieved, never replaced even when it's
+clearly cracked). Signature move, **Micromanage**: stands next to an ally and
+halves that ally's next cooldown *and* their next damage — "helping," mechanically
+a debuff wearing a buff's clothes. Removing him from a fight noticeably speeds it
+up, which is the point.
+
+**Sourcing:** free-source a generic adult humanoid body, reskin with
+business-casual clothes and a mug prop.
+
+**Compliance Drone Swarm.** Small hovering camera-drones stamped with a
+corporate seal, patrolling in twos and threes, individually harmless but backed
+by a genuine mechanical threat: any drone that has line of sight on a party
+member marks them, and a marked target takes bonus damage from every *other*
+source for the duration — so the actual threat is failing to kill the drones
+before committing to a fight, not the drones themselves. Dies in one hit; the
+punishment is for ignoring it, not for it existing.
+
+**Sourcing:** free-source a generic small hover-drone asset, reskin with a
+corporate decal.
+
+**The Onboarding Buddy.** A company-mascot chatbot given a body — bright,
+oversized plastic grin fixed in place, a lanyard reading HI, I'M HERE TO HELP!,
+cheerful synthesized voice that never drops its script even mid-fight ("Great
+question! Let's find out together!"). Its attacks are literally its help
+prompts — a **Quick Tip** jab, and a **Let's Circle Back** grab that yanks a
+target out of position and resets their current action, delivered in exactly the
+same relentlessly upbeat tone as its damage-free lines. The horror is entirely
+tonal: nothing it says ever changes register, whether it's welcoming you or
+hitting you.
+
+**Sourcing:** Meshy. This is a genuinely novel silhouette — a fixed-grin mascot
+chassis with a lanyard, built to read as "helpful" and "wrong" at once — not
+something a stock humanoid-plus-costume reskin gets close to, same bar as
+Supercan.
+
+**The Committee.** Not one body — several focus-group participants who have,
+somewhere along the way, physically fused into a single arguing mass, limbs and
+lanyards and half-finished coffee cups all still individually visible but sharing
+one lurching gait. It attacks by **vote**: every couple of turns it audibly argues
+with itself over what to do next, and the party can see (and influence, if
+something in the room lets them sway an opinion) which option is "winning" before
+it commits, which is a lot of tell for a fight that hits hard once it actually
+decides. Occasionally it deadlocks and skips its turn entirely, "circling back."
+
+**Sourcing:** Meshy. A fused many-bodies-into-one silhouette, all still distinctly
+readable as individual people mid-fusion, is not something any stock asset or
+simple reskin can approximate — this is exactly the kind of concept the pipeline
+exists for.
+
+### Named / mini-boss tier
+
+**The Self-Checkout.** A freestanding self-checkout kiosk, animate, with four
+retractable bagging-arm limbs unfolded from its base and a barcode-scanner "eye"
+that sweeps the room in a slow red arc. Screen-face displays a looping, chipper
+"PLEASE WAIT FOR ASSISTANCE" even while it's actively fighting. Its signature line
+and its signature attack are the same thing: **"Unexpected Item In The Bagging
+Area"** triggers every time it lands a hit, and stacks — at three stacks the kiosk
+locks up, flashes its "CALL AN ATTENDANT" light, and briefly can't act, which is
+the fight's real punish window. Between those spikes it scans the nearest
+target with its laser eye (a thin, precise ranged tick) and swats with whichever
+bagging arm is closest. Distinctive silhouette, distinctive mechanic, sized to
+carry a real (if minor) fight rather than a filler mob.
+
+**Physical description (for model generation):** A chest-high self-checkout
+kiosk unit — flat-panel screen "face," barcode scanner slot as a mouth-adjacent
+detail, card reader and receipt printer visible on its front like buttons on a
+shirt. Four thin, articulated mechanical bagging arms fold out from housings on
+its sides and back, each ending in a simple three-finger gripper. Mounted on a
+low, wheeled base rather than legs — it glides rather than walks. Screen glows a
+flat retail blue-white; the scanner eye on an adjustable stalk above the screen
+pulses red when actively targeting. Body is off-white/beige injection-molded
+plastic, scuffed at the corners, a peeling "THANK YOU FOR SHOPPING WITH US"
+decal along the base. Overall mood: mundane object, uncannily animated, treated
+by its own design as more helpful than it is being.
+
+**Sourcing:** Meshy. A four-armed wheeled kiosk chassis is a genuinely novel
+build with no stock equivalent — same bar as Supercan, and arguably a cleaner
+case for it (there is no "generic self-checkout" asset to even attempt a reskin
+from).
+
+**The Severance Package.** A tottering stack of cardboard moving boxes, taped
+and re-taped, roughly held together in a vaguely humanoid shape by a stretched
+"FRAGILE" ribbon wound around it like a sash. Arms are just more boxes, oddly
+poised. It carries, cradled against itself the way you'd carry a framed photo, a
+single desk photo frame with no picture in it — and occasionally holds it out to
+the party mid-fight, as if introducing itself, before resuming the attack. Its
+gimmick: it doesn't summon adds, it **unpacks** them — mid-fight it tears open
+one of its own boxes and a Repo Intern or a Loss Prevention Associate climbs out,
+genuinely startled to be there, and joins the fight a beat behind. Enough of
+these and the Severance Package itself gets visibly smaller and easier to hit,
+so the party is choosing between focusing the boss down fast or thinning what it
+keeps producing — a real tactical fork, not just an HP race.
+
+**Physical description (for model generation):** A roughly person-sized, unstable
+stack of five or six mismatched cardboard moving boxes, various sizes, all
+heavily taped with visible over-taping at the seams as if resealed more than
+once. Bound together with a wide ribbon reading FRAGILE in faded red block
+letters, wrapped diagonally sash-style. The "head" is the smallest top box, tilted
+at a slight, expressive angle. "Arms" are narrower boxes jutting from the sides at
+shoulder height, held in a static, slightly too-formal pose. One box near chest
+height has its flaps loose and gaping, straining slightly outward as if something
+inside is pushing to get out. Cradled at the base of the "arms," a plain black
+desk photo frame, empty, glass catching the light. Everything is scuffed
+cardboard-brown and packing-tape translucent; nothing about it glows or menaces —
+it just should not be standing, and is.
+
+**Sourcing:** Meshy. A stacked-cardboard-boxes-as-a-body silhouette, specifically
+one built to visibly "unpack" mid-fight, is not something a stock asset covers —
+same tier of distinctiveness as Supercan and the Self-Checkout.
+
+---

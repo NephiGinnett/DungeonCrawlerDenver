@@ -1,0 +1,51 @@
+[
+  {
+    "Name": "Tailings_Quartermaster_01",
+    "LineId": "Tailings_Quartermaster_01",
+    "SpeakerId": "TailingsQuartermaster",
+    "Text": "Odie. I sell what people leave behind, which since the Collapse is most things. No, I will not tell you who left it. That is the entire business model.",
+    "Notes": "Vendor greeting. Establishes the town runs on salvage without saying the word."
+  },
+  {
+    "Name": "Tailings_Quartermaster_02",
+    "LineId": "Tailings_Quartermaster_02",
+    "SpeakerId": "TailingsQuartermaster",
+    "Text": "Prices are what they are. I have exactly one competitor and he is a hole in a mountain that keeps everyone who visits.",
+    "Notes": "Second line. Ties the town to the mine economically - the mine is why Tailings exists."
+  },
+  {
+    "Name": "Tailings_Farmer_01",
+    "LineId": "Tailings_Farmer_01",
+    "SpeakerId": "TailingsFarmer",
+    "Text": "Sable. I farm. Before you ask: no, I do not know why it grows. The Collapse took every roof on the planet and left my field alone, and I have decided not to interrogate that.",
+    "Notes": "Farm quest-giver. The unexplained fertility is deliberately left unexplained - it is the same register as the Surveyor's rock."
+  },
+  {
+    "Name": "Tailings_Farmer_02",
+    "LineId": "Tailings_Farmer_02",
+    "SpeakerId": "TailingsFarmer",
+    "Text": "Four should do it. Take them, eat them, sell them to Odie for a criminal markup - I do not mind. I mind that somebody who is not me has held something that came out of the ground alive.",
+    "Notes": "Quest hand-off for TailingsHarvest. The last clause is the actual point of the quest."
+  },
+  {
+    "Name": "Tailings_Elder_01",
+    "LineId": "Tailings_Elder_01",
+    "SpeakerId": "TailingsElder",
+    "Text": "Marguerite. I have lived at the foot of that mountain for sixty-one years and I have counted the lights on it for the last nine weeks. Two on a slow night. Eleven on the worst one.",
+    "Notes": "Second, independent witness to the drone lights - corroborates the Surveyor from a different town and a different angle. The party hears it twice before they see it once."
+  },
+  {
+    "Name": "Tailings_Elder_02",
+    "LineId": "Tailings_Elder_02",
+    "SpeakerId": "TailingsElder",
+    "Text": "The surveyor down at the cantina thinks it is claim-jumpers. Bless him. Claim-jumpers do not run in a grid, dear, and they do not stop at the same hour every night as though something told them to.",
+    "Notes": "Sharper than the Surveyor and closer to the truth without reaching it. Grid patrols and fixed hours = automated survey. She has seen it; she just has no word for a drone."
+  },
+  {
+    "Name": "Tailings_Elder_03",
+    "LineId": "Tailings_Elder_03",
+    "SpeakerId": "TailingsElder",
+    "Text": "Go and look. That is all I want. Not to be right - I would love to be wrong, at my age being wrong is a holiday. I want somebody to go up there and come back and tell me what colour they are up close.",
+    "Notes": "Quest hand-off for TailingsLights, which shares the MineShaftHead marker with The Withdrawal. She never gets an answer in this quest; that is intentional."
+  }
+]

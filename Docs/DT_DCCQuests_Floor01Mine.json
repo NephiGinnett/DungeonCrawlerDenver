@@ -1,0 +1,86 @@
+[
+  {
+    "Name": "TheWithdrawal",
+    "QuestId": "TheWithdrawal",
+    "Title": "The Withdrawal",
+    "Summary": "The account manager is relocating to the next depth via the Rocky Flats Extraction Shaft. Follow him down, or lose him.",
+    "StartAnnouncement": "Attention crawlers. The Denver account is being closed and transferred to a lower servicing tier. Your account manager is relocating to Floor Two via the Rocky Flats Extraction Shaft and will be unavailable at this address. Please direct all further payments downward.",
+    "CompletionAnnouncement": "You have reached the shaft head. Please note that everything below this point is classified as an active extraction site, and that active extraction sites are not covered by your complimentary insurance.",
+    "Objectives": [
+      {
+        "Description": "Reach the head of the Rocky Flats Extraction Shaft",
+        "Type": "ReachLocation",
+        "TargetId": "MineShaftHead",
+        "RequiredCount": 1,
+        "bHidden": false
+      }
+    ],
+    "ExperienceReward": 300,
+    "FavorReward": 25,
+    "NextQuestId": "ChainOfCustody",
+    "bAutoStart": false
+  },
+  {
+    "Name": "ChainOfCustody",
+    "QuestId": "ChainOfCustody",
+    "Title": "Chain of Custody",
+    "Summary": "The shaft door needs authorisation from two recognised parties. Three parties claim to be the only recognised party. Get any two of them to sign.",
+    "StartAnnouncement": "The Front Range Platinum Reef is subject to an ongoing authority dispute between three claimants. Entry requires two authorisations. We are contractually unable to tell you which two. We are contractually delighted that you asked.",
+    "CompletionAnnouncement": "Two authorisations received and filed. The dispute remains entirely unresolved. This is considered a normal and healthy outcome.",
+    "Objectives": [
+      {
+        "Description": "Obtain two of three mine authorisations",
+        "Type": "Custom",
+        "TargetId": "MineAuthorisation",
+        "RequiredCount": 2,
+        "bHidden": false
+      }
+    ],
+    "ExperienceReward": 400,
+    "FavorReward": 40,
+    "NextQuestId": "FirstDescent",
+    "bAutoStart": false
+  },
+  {
+    "Name": "CoreSample",
+    "QuestId": "CoreSample",
+    "Title": "Core Sample",
+    "Summary": "The surveyor wants a rock. Just a rock, from as deep as you get.",
+    "StartAnnouncement": "",
+    "CompletionAnnouncement": "",
+    "Objectives": [
+      {
+        "Description": "Bring back a sample from the deepest point you reach",
+        "Type": "Collect",
+        "TargetId": "CoreSample",
+        "RequiredCount": 1,
+        "bHidden": false
+      }
+    ],
+    "ExperienceReward": 150,
+    "FavorReward": 0,
+    "NextQuestId": "",
+    "bAutoStart": false
+  },
+  {
+    "Name": "FirstDescent",
+    "QuestId": "FirstDescent",
+    "Title": "First Descent",
+    "Summary": "Get into the reef and find whatever is still running down there.",
+    "StartAnnouncement": "Extraction shaft open. Please observe all posted safety notices. The notices were posted in 1974 and have not been revised, because nothing has gone wrong since.",
+    "CompletionAnnouncement": "Shaft cleared. Whatever was maintaining this section has stopped maintaining it. Viewership is up.",
+    "Objectives": [
+      {
+        "Description": "Clear the shaft head",
+        "Type": "ClearEncounter",
+        "TargetId": "",
+        "RequiredCount": 1,
+        "bHidden": false
+      }
+    ],
+    "ExperienceReward": 500,
+    "FavorReward": 50,
+    "NextQuestId": "",
+    "bAutoStart": false
+  }
+]

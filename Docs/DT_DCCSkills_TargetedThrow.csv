@@ -1,0 +1,2 @@
+Name,SkillId,DisplayName,FlavorText,Archetype,Targeting,CastingAbility,ManaCost,CooldownSeconds,CastTimeSeconds,Range,RangePerRank,Radius,ConeHalfAngleDegrees,DifficultyClass,PowerDie,EffectDuration,EffectTag,bCanAttemptUntrained,bIsPassive,CastEffect,ImpactEffect,CastSocketName,ImpactEffectZOffset
+TargetedThrow,TargetedThrow,Targeted Throw,"Pick something up. Put it through someone. The distance is a matter of practice; the decision is not.",Damage,SingleTarget,Strength,0,4,0,700,140,0,0,0,8,0,,True,False,,,hand_rSocket,60

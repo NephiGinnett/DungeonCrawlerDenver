@@ -1,0 +1,80 @@
+[
+  {
+    "Name": "Bronze",
+    "DisplayName": "Bronze Box",
+    "ItemEntries": [
+      { "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Coins", "Chance": 1.0, "MinGold": 5, "MaxGold": 20, "ScatterRadius": 90.0, "EquipmentItemId": "" },
+      { "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment", "Chance": 0.8, "MinGold": 0, "MaxGold": 0, "ScatterRadius": 90.0, "EquipmentItemId": "ThrownBottle" },
+      { "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment", "Chance": 0.6, "MinGold": 0, "MaxGold": 0, "ScatterRadius": 90.0, "EquipmentItemId": "ServiceTray" }
+    ],
+    "BoonEntries": []
+  },
+  {
+    "Name": "Silver",
+    "DisplayName": "Silver Box",
+    "ItemEntries": [
+      { "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Coins", "Chance": 1.0, "MinGold": 20, "MaxGold": 50, "ScatterRadius": 100.0, "EquipmentItemId": "" },
+      { "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment", "Chance": 0.65, "MinGold": 0, "MaxGold": 0, "ScatterRadius": 100.0, "EquipmentItemId": "HighVisibilitySafetyVest" },
+      { "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment", "Chance": 0.5, "MinGold": 0, "MaxGold": 0, "ScatterRadius": 100.0, "EquipmentItemId": "ComplaintFolderOverstuffed" }
+    ],
+    "BoonEntries": [
+      { "BoonId": "SteadyHands", "Chance": 0.1 }
+    ]
+  },
+  {
+    "Name": "Gold",
+    "DisplayName": "Gold Box",
+    "ItemEntries": [
+      { "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Coins", "Chance": 1.0, "MinGold": 50, "MaxGold": 120, "ScatterRadius": 110.0, "EquipmentItemId": "" },
+      { "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment", "Chance": 0.5, "MinGold": 0, "MaxGold": 0, "ScatterRadius": 110.0, "EquipmentItemId": "ConfettiCrossbow" },
+      { "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment", "Chance": 0.4, "MinGold": 0, "MaxGold": 0, "ScatterRadius": 110.0, "EquipmentItemId": "NailGunPro" }
+    ],
+    "BoonEntries": [
+      { "BoonId": "MinorFortitude", "Chance": 0.25 },
+      { "BoonId": "SilverTongue", "Chance": 0.15 }
+    ]
+  },
+  {
+    "Name": "Platinum",
+    "DisplayName": "Platinum Box",
+    "ItemEntries": [
+      { "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Coins", "Chance": 1.0, "MinGold": 120, "MaxGold": 250, "ScatterRadius": 120.0, "EquipmentItemId": "" },
+      { "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment", "Chance": 0.5, "MinGold": 0, "MaxGold": 0, "ScatterRadius": 120.0, "EquipmentItemId": "FlareGunEmergency" },
+      { "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment", "Chance": 0.3, "MinGold": 0, "MaxGold": 0, "ScatterRadius": 120.0, "EquipmentItemId": "SeveranceCheckUncashed" }
+    ],
+    "BoonEntries": [
+      { "BoonId": "AdrenalineSurge", "Chance": 0.35 },
+      { "BoonId": "IronWill", "Chance": 0.25 },
+      { "BoonId": "ClarityOfPurpose", "Chance": 0.2 }
+    ]
+  },
+  {
+    "Name": "Legendary",
+    "DisplayName": "Legendary Box",
+    "ItemEntries": [
+      { "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Coins", "Chance": 1.0, "MinGold": 250, "MaxGold": 500, "ScatterRadius": 130.0, "EquipmentItemId": "" },
+      { "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment", "Chance": 0.3, "MinGold": 0, "MaxGold": 0, "ScatterRadius": 130.0, "EquipmentItemId": "MinionEyes" },
+      { "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment", "Chance": 0.2, "MinGold": 0, "MaxGold": 0, "ScatterRadius": 130.0, "EquipmentItemId": "WaterBottle" }
+    ],
+    "BoonEntries": [
+      { "BoonId": "IronWill", "Chance": 0.5 },
+      { "BoonId": "AdrenalineSurge", "Chance": 0.4 },
+      { "BoonId": "ClarityOfPurpose", "Chance": 0.4 },
+      { "BoonId": "SponsorsBlessing", "Chance": 0.15 }
+    ]
+  },
+  {
+    "Name": "Celestial",
+    "DisplayName": "Celestial Box",
+    "ItemEntries": [
+      { "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Coins", "Chance": 1.0, "MinGold": 500, "MaxGold": 1000, "ScatterRadius": 140.0, "EquipmentItemId": "" },
+      { "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment", "Chance": 0.3, "MinGold": 0, "MaxGold": 0, "ScatterRadius": 140.0, "EquipmentItemId": "SyndicateBadge" }
+    ],
+    "BoonEntries": [
+      { "BoonId": "SponsorsBlessing", "Chance": 0.6 },
+      { "BoonId": "IronWill", "Chance": 0.3 },
+      { "BoonId": "ClarityOfPurpose", "Chance": 0.3 },
+      { "BoonId": "AdrenalineSurge", "Chance": 0.3 }
+    ]
+  }
+]

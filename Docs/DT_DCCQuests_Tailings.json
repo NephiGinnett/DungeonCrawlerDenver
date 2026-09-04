@@ -1,0 +1,44 @@
+[
+  {
+    "Name": "TailingsHarvest",
+    "QuestId": "TailingsHarvest",
+    "Title": "Something That Grows",
+    "Summary": "Sable's field keeps producing. Nobody can explain why. Bring back what comes out of it.",
+    "StartAnnouncement": "A crawler has accepted agricultural work. We are contractually obliged to broadcast this and are exploring our options.",
+    "CompletionAnnouncement": "Harvest complete. Viewers have been assured that the produce is not radioactive, which is a strange thing to have needed assuring.",
+    "Objectives": [
+      {
+        "Description": "Gather produce from the field",
+        "Type": "Collect",
+        "TargetId": "",
+        "RequiredCount": 4,
+        "bHidden": false
+      }
+    ],
+    "ExperienceReward": 200,
+    "FavorReward": 5,
+    "NextQuestId": "",
+    "bAutoStart": false
+  },
+  {
+    "Name": "TailingsLights",
+    "QuestId": "TailingsLights",
+    "Title": "What Marguerite Saw",
+    "Summary": "The elder has been counting the lights on the mountain for weeks. She wants somebody to go and look.",
+    "StartAnnouncement": "",
+    "CompletionAnnouncement": "",
+    "Objectives": [
+      {
+        "Description": "Reach the head of the Rocky Flats Extraction Shaft",
+        "Type": "ReachLocation",
+        "TargetId": "MineShaftHead",
+        "RequiredCount": 1,
+        "bHidden": false
+      }
+    ],
+    "ExperienceReward": 250,
+    "FavorReward": 10,
+    "NextQuestId": "",
+    "bAutoStart": false
+  }
+]

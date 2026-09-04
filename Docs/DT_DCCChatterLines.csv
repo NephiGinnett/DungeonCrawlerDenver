@@ -1,39 +1,192 @@
-Name,LineId,Bucket,Template,SenderHandle
-Sentiment_Pos_01,Sentiment_Pos_01,Sentiment,"{Name} again?? day one fan right here",xXFloorFortyXx
-Sentiment_Pos_02,Sentiment_Pos_02,Sentiment,"{Name} carrying this whole crawl on their back, no notes",DebtFreeDaydream
-Sentiment_Pos_03,Sentiment_Pos_03,Sentiment,"put {Name} on the main broadcast already",WhoIsWatchingUs
-Sentiment_Pos_04,Sentiment_Pos_04,Sentiment,"{Name} is the reason I still tune in",QuarterlyGremlin
-Sentiment_Neg_01,Sentiment_Neg_01,Sentiment,"{Name} is so boring to watch, do something",BorantShillAcct7
-Sentiment_Neg_02,Sentiment_Neg_02,Sentiment,"why is {Name} even still down there",RatingsAreEverything
-Sentiment_Neg_03,Sentiment_Neg_03,Sentiment,"{Name} is not going to make it to the next floor, calling it now",VultureNumber12
-Equipment_01,Equipment_01,Equipment,"okay whoever gave {Name} that {Item} has taste",PropDeptFan
-Equipment_02,Equipment_02,Equipment,"{Name}'s {Item} is doing a LOT of heavy lifting",GearReviewGuy
-Equipment_03,Equipment_03,Equipment,"is that {Item} sponsored? feels sponsored",DisclosureDemander
-Equipment_04,Equipment_04,Equipment,"{Name} please for the love of god upgrade that {Item}",FashionCritic99
-BossBattle_01,BossBattle_01,BossBattle,"still thinking about {Event}, rewatching it right now",ReplayAddict
-BossBattle_02,BossBattle_02,BossBattle,"{Event} and I have not recovered emotionally",TooInvestedTBH
-BossBattle_03,BossBattle_03,BossBattle,"okay {Event} was actually insane, clip it",ClipItModsClipIt
-BossBattle_04,BossBattle_04,BossBattle,"did NOT expect {Event}, this show is unreal",FirstTimeWatcher
-Appearance_01,Appearance_01,Appearance,"{Name}'s whole look is so good, who's their stylist",AestheticsMatter
-Appearance_02,Appearance_02,Appearance,"{Name} looks tired, someone check on them",WorriedButHelpless
-Appearance_03,Appearance_03,Appearance,"{Name} could use a shower ngl",BluntHonesty22
-Appearance_04,Appearance_04,Appearance,"the confidence {Name} walks with, love that for them",VibesOnlyViewer
-Emote_01,Emote_01,Emote,":BORANT_W: :BORANT_W: :BORANT_W:",EmoteSpammer1
-Emote_02,Emote_02,Emote,":COLLAPSE_SOB: :DEBT_STONKS: :RATIO:",EmoteSpammer2
-Emote_03,Emote_03,Emote,":FLOOR_KEKW: :FLOOR_KEKW: :SPONSOR_HEART:",EmoteSpammer3
-Emote_04,Emote_04,Emote,":SYNDICATE_POG: :GG_CRAWLER:",EmoteSpammer4
-Alien_01,Alien_01,AlienLanguage,"vrek'tha ossuun MIL-402 grexet??",Unregistered_Viewer
-Alien_02,Alien_02,AlienLanguage,"[UNTRANSLATED - Kua-Tin dialect, Bloom-adjacent]",Unregistered_Viewer
-Alien_03,Alien_03,AlienLanguage,"tk'sst tk'sst BORANT-affiliate tk'sst",Unregistered_Viewer
-Alien_04,Alien_04,AlienLanguage,"[translation service unavailable for this region]",Unregistered_Viewer
-Moderated_01,Moderated_01,Moderated,"[comment removed for violating community guidelines]",
-Moderated_02,Moderated_02,Moderated,"[this viewer has been muted from Dungeon Crawler World: Earth]",
-Moderated_03,Moderated_03,Moderated,"[flagged and removed by Borant Trust and Safety]",
-Benign_01,Benign_01,Benign,"first time catching this live, hi everyone",NewToTheFeed
-Benign_02,Benign_02,Benign,"anyone know what floor this is",CasualScroller
-Benign_03,Benign_03,Benign,"lol",jk_lurker
-Benign_04,Benign_04,Benign,"this is better than anything on at home",InterstellarCouchPotato
-Benign_05,Benign_05,Benign,"wait what did I miss",LateToStream
-Benign_06,Benign_06,Benign,"chat is WILD today",ObserverOfChat
-Benign_07,Benign_07,Benign,"can we get a replay of that last bit",MissedItAgain
-Benign_08,Benign_08,Benign,"who else has this on in the background at work",MultitaskingViewer
+Name,LineId,Bucket,Template,SenderHandle,GagId
+Sentiment_Pos_01,Sentiment_Pos_01,Sentiment,"{Name} again?? day one fan right here",xXFloorFortyXx,
+Sentiment_Pos_02,Sentiment_Pos_02,Sentiment,"{Name} carrying this whole crawl on their back, no notes",DebtFreeDaydream,
+Sentiment_Pos_03,Sentiment_Pos_03,Sentiment,"put {Name} on the main broadcast already",WhoIsWatchingUs,
+Sentiment_Pos_04,Sentiment_Pos_04,Sentiment,"{Name} is the reason I still tune in",QuarterlyGremlin,
+Sentiment_Pos_05,Sentiment_Pos_05,Sentiment,"{Name} has never once done the safe thing and I respect it",NoNotesHonestly,
+Sentiment_Pos_06,Sentiment_Pos_06,Sentiment,"I have {Name} on three screens right now",TripleMonitorSetup,
+Sentiment_Pos_07,Sentiment_Pos_07,Sentiment,"{Name} deserves so much better than this floor",AdvocateForCrawlers,
+Sentiment_Neg_01,Sentiment_Neg_01,Sentiment,"{Name} is so boring to watch, do something",BorantShillAcct7,
+Sentiment_Neg_02,Sentiment_Neg_02,Sentiment,"why is {Name} even still down there",RatingsAreEverything,
+Sentiment_Neg_03,Sentiment_Neg_03,Sentiment,"{Name} is not going to make it to the next floor, calling it now",VultureNumber12,
+Sentiment_Neg_04,Sentiment_Neg_04,Sentiment,"I keep getting {Name} recommended and I keep not caring",AlgorithmVictim,
+Sentiment_Neg_05,Sentiment_Neg_05,Sentiment,"{Name} peaked on the first floor and everyone is too polite to say it",HotTakeHaver,
+Equipment_01,Equipment_01,Equipment,"okay whoever gave {Name} that {Item} has taste",PropDeptFan,
+Equipment_02,Equipment_02,Equipment,"{Name}'s {Item} is doing a LOT of heavy lifting",GearReviewGuy,
+Equipment_03,Equipment_03,Equipment,"is that {Item} sponsored? feels sponsored",DisclosureDemander,
+Equipment_04,Equipment_04,Equipment,"{Name} please for the love of god upgrade that {Item}",FashionCritic99,
+Equipment_05,Equipment_05,Equipment,"the {Item} is not the problem. the {Item} has never been the problem",GearReviewGuy,
+Equipment_06,Equipment_06,Equipment,"I looked up the {Item} on the affiliate store and it is NOT worth it",PriceCheckPatrol,
+Equipment_07,Equipment_07,Equipment,"{Name} swinging a {Item} like it owes them money",BluntHonesty22,
+BossBattle_01,BossBattle_01,BossBattle,"still thinking about {Event}, rewatching it right now",ReplayAddict,
+BossBattle_02,BossBattle_02,BossBattle,"{Event} and I have not recovered emotionally",TooInvestedTBH,
+BossBattle_03,BossBattle_03,BossBattle,"okay {Event} was actually insane, clip it",ClipItModsClipIt,
+BossBattle_04,BossBattle_04,BossBattle,"did NOT expect {Event}, this show is unreal",FirstTimeWatcher,
+BossBattle_05,BossBattle_05,BossBattle,"{Event} is going straight into the season recap you cannot convince me otherwise",SeasonRecapEnjoyer,
+BossBattle_06,BossBattle_06,BossBattle,"my whole pod just went quiet at {Event}",WatchPartyOfNine,
+BossBattle_07,BossBattle_07,BossBattle,"rewind rewind rewind {Event}",ClipItModsClipIt,
+Appearance_01,Appearance_01,Appearance,"{Name}'s whole look is so good, who's their stylist",AestheticsMatter,
+Appearance_02,Appearance_02,Appearance,"{Name} looks tired, someone check on them",WorriedButHelpless,
+Appearance_03,Appearance_03,Appearance,"{Name} could use a shower ngl",BluntHonesty22,
+Appearance_04,Appearance_04,Appearance,"the confidence {Name} walks with, love that for them",VibesOnlyViewer,
+Appearance_05,Appearance_05,Appearance,"{Name} has the exact posture of someone who has not slept",WorriedButHelpless,
+Appearance_06,Appearance_06,Appearance,"is {Name} taller than last floor or am I losing it",PerceptionCheckFailed,
+Emote_01,Emote_01,Emote,":BORANT_W: :BORANT_W: :BORANT_W:",EmoteSpammer1,
+Emote_02,Emote_02,Emote,":COLLAPSE_SOB: :DEBT_STONKS: :RATIO:",EmoteSpammer2,
+Emote_03,Emote_03,Emote,":FLOOR_KEKW: :FLOOR_KEKW: :SPONSOR_HEART:",EmoteSpammer3,
+Emote_04,Emote_04,Emote,":SYNDICATE_POG: :GG_CRAWLER:",EmoteSpammer4,
+Emote_05,Emote_05,Emote,":REPO_SMUG: :REPO_SMUG: :REPO_SMUG: :REPO_SMUG:",EmoteSpammer2,
+Emote_06,Emote_06,Emote,":AUDIT_STARE:",EmoteSpammer1,
+Emote_07,Emote_07,Emote,":TIER_UP: :TIER_UP: LETS GOOO",EmoteSpammer4,
+Emote_08,Emote_08,Emote,":FORECLOSED_F: in the chat",EmoteSpammer3,
+Alien_01,Alien_01,AlienLanguage,"vrek'tha ossuun MIL-402 grexet??",Unregistered_Viewer,
+Alien_02,Alien_02,AlienLanguage,"[UNTRANSLATED - Kua-Tin dialect, Bloom-adjacent]",Unregistered_Viewer,
+Alien_03,Alien_03,AlienLanguage,"tk'sst tk'sst BORANT-affiliate tk'sst",Unregistered_Viewer,
+Alien_04,Alien_04,AlienLanguage,"[translation service unavailable for this region]",Unregistered_Viewer,
+Alien_05,Alien_05,AlienLanguage,"ghom ghom ghom {Name} ghom",Unregistered_Viewer,
+Alien_06,Alien_06,AlienLanguage,"[UNTRANSLATED - dialect not licensed for this broadcast tier]",Unregistered_Viewer,
+Alien_07,Alien_07,AlienLanguage,"sszzt-VII ..... sszzt-VII .....",Unregistered_Viewer,
+Moderated_01,Moderated_01,Moderated,"[comment removed for violating community guidelines]",,
+Moderated_02,Moderated_02,Moderated,"[this viewer has been muted from Dungeon Crawler World: Earth]",,
+Moderated_03,Moderated_03,Moderated,"[flagged and removed by Borant Trust and Safety]",,
+Moderated_04,Moderated_04,Moderated,"[comment withheld pending sponsor review]",,
+Moderated_05,Moderated_05,Moderated,"[removed - speculation about production is not permitted]",,
+Moderated_06,Moderated_06,Moderated,"[this account is no longer active]",,
+Benign_01,Benign_01,Benign,"first time catching this live, hi everyone",NewToTheFeed,
+Benign_02,Benign_02,Benign,"anyone know what floor this is",CasualScroller,
+Benign_03,Benign_03,Benign,"lol",jk_lurker,
+Benign_04,Benign_04,Benign,"this is better than anything on at home",InterstellarCouchPotato,
+Benign_05,Benign_05,Benign,"wait what did I miss",LateToStream,
+Benign_06,Benign_06,Benign,"chat is WILD today",ObserverOfChat,
+Benign_07,Benign_07,Benign,"can we get a replay of that last bit",MissedItAgain,
+Benign_08,Benign_08,Benign,"who else has this on in the background at work",MultitaskingViewer,
+Benign_09,Benign_09,Benign,"o7",RespectsPaid,
+Benign_10,Benign_10,Benign,"chat slow down I cannot read",CantKeepUp,
+Benign_11,Benign_11,Benign,"is it just me or is the audio desynced",TechSupportNeeded,
+Benign_12,Benign_12,Benign,"back, what happened",SteppedAwayBriefly,
+Benign_13,Benign_13,Benign,"nah",ContrarianByDefault,
+Benign_14,Benign_14,Benign,"HELLO????",AllCapsAlways,
+Benign_15,Benign_15,Benign,"my partner does not understand why I watch this",ExplainingIsHard,
+Benign_16,Benign_16,Benign,"third shift crew checking in",NightRotation,
+Benign_17,Benign_17,Benign,"the sound design on this floor is genuinely good",AudioNerd,
+Benign_18,Benign_18,Benign,"how long has this crawl been running",ContextSeeker,
+Benign_19,Benign_19,Benign,"I am supposed to be working",MultitaskingViewer,
+Benign_20,Benign_20,Benign,"W floor",ShortAndSweet,
+Benign_21,Benign_21,Benign,"L floor",ContrarianByDefault,
+Benign_22,Benign_22,Benign,"anyone else here from the recap channel",RecapPipeline,
+Benign_23,Benign_23,Benign,"chat what is happening I looked away for one second",MissedItAgain,
+Benign_24,Benign_24,Benign,"this is the most invested I have been all season",SeasonRecapEnjoyer,
+Benign_25,Benign_25,Benign,"mods the stream keeps buffering",TechSupportNeeded,
+Benign_26,Benign_26,Benign,"why is nobody talking about the lighting in here",AestheticsMatter,
+Benign_27,Benign_27,Benign,"I have watched every floor of this and I still do not understand the rules",HonestlyLost,
+Benign_28,Benign_28,Benign,"muted the sponsor segment, tell me when it is over",AdBlockEnjoyer,
+Benign_29,Benign_29,Benign,"good luck down there",WellWisher,
+Benign_30,Benign_30,Benign,"this chat moves so fast during fights",CantKeepUp,
+Benign_31,Benign_31,Benign,"waiting for something to happen",PatienceThinning,
+Benign_32,Benign_32,Benign,"okay that was actually funny",EasilyAmused,
+Benign_33,Benign_33,Benign,"new here. is it always like this",NewToTheFeed,
+Benign_34,Benign_34,Benign,"I refuse to get attached again",BurnedBefore,
+Benign_35,Benign_35,Benign,"the ambience down here is unmatched",AudioNerd,
+Benign_36,Benign_36,Benign,"chat be normal for one minute challenge",ObserverOfChat,
+Gag_Platinum_01,Gag_Platinum_01,RunningGag,"the platinum is UNDER them. it has always been under them",PlatinumTruther,Platinum
+Gag_Platinum_02,Gag_Platinum_02,RunningGag,"{Name} is standing directly on top of it right now and does not know",PlatinumTruther,Platinum
+Gag_Platinum_03,Gag_Platinum_03,RunningGag,"platinum guy is back everyone hide",ObserverOfChat,Platinum
+Gag_Platinum_04,Gag_Platinum_04,RunningGag,"I am not saying it again. dig DOWN",PlatinumTruther,Platinum
+Gag_Platinum_05,Gag_Platinum_05,RunningGag,"can a mod time out the platinum guy please",ClipItModsClipIt,Platinum
+Gag_Platinum_06,Gag_Platinum_06,RunningGag,"okay but what if platinum guy is right",QuietlyConvinced,Platinum
+Gag_Platinum_07,Gag_Platinum_07,RunningGag,"three seasons I have been saying this. three.",PlatinumTruther,Platinum
+Gag_SeenBefore_01,Gag_SeenBefore_01,RunningGag,"this exact thing happened in season 4 and it was better",SeenItAllBefore,SeenBefore
+Gag_SeenBefore_02,Gag_SeenBefore_02,RunningGag,"old crawlers would have cleared this floor in half the time",SeenItAllBefore,SeenBefore
+Gag_SeenBefore_03,Gag_SeenBefore_03,RunningGag,"nobody wants to hear about season 4 grandpa",FirstTimeWatcher,SeenBefore
+Gag_SeenBefore_04,Gag_SeenBefore_04,RunningGag,"season 4 mention. drink",EasilyAmused,SeenBefore
+Gag_SeenBefore_05,Gag_SeenBefore_05,RunningGag,"{Name} is doing a worse version of what Tolliver did in season 4",SeenItAllBefore,SeenBefore
+Gag_SeenBefore_06,Gag_SeenBefore_06,RunningGag,"who is Tolliver. chat who is Tolliver",NewToTheFeed,SeenBefore
+Gag_NotAnEmployee_01,Gag_NotAnEmployee_01,RunningGag,"just want to say Borant has handled this crawl really professionally",DefinitelyNotStaff,NotAnEmployee
+Gag_NotAnEmployee_02,Gag_NotAnEmployee_02,RunningGag,"I do not work for Borant I just think they are doing a good job",DefinitelyNotStaff,NotAnEmployee
+Gag_NotAnEmployee_03,Gag_NotAnEmployee_03,RunningGag,"this account was made four hours ago",DisclosureDemander,NotAnEmployee
+Gag_NotAnEmployee_04,Gag_NotAnEmployee_04,RunningGag,"corporate posting in chat again lmao",ObserverOfChat,NotAnEmployee
+Gag_NotAnEmployee_05,Gag_NotAnEmployee_05,RunningGag,"as a completely ordinary viewer with no affiliation",DefinitelyNotStaff,NotAnEmployee
+Gag_NotAnEmployee_06,Gag_NotAnEmployee_06,RunningGag,"[comment removed for violating community guidelines]",,NotAnEmployee
+Gag_BetPool_01,Gag_BetPool_01,RunningGag,"pool is open. who drops first",BookieOfFloorOne,BetPool
+Gag_BetPool_02,Gag_BetPool_02,RunningGag,"putting everything on {Name}. no reason. vibes",BookieOfFloorOne,BetPool
+Gag_BetPool_03,Gag_BetPool_03,RunningGag,"betting on crawlers is genuinely vile and I am in for two hundred",ConflictedGambler,BetPool
+Gag_BetPool_04,Gag_BetPool_04,RunningGag,"pool is closed. no takers on {Name}",BookieOfFloorOne,BetPool
+Gag_BetPool_05,Gag_BetPool_05,RunningGag,"I lost the pool AGAIN",ConflictedGambler,BetPool
+Gag_BetPool_06,Gag_BetPool_06,RunningGag,"whoever took {Name} at those odds is eating well tonight",BookieOfFloorOne,BetPool
+Gag_TheHat_01,Gag_TheHat_01,RunningGag,"okay but where did {Name} get the hat",HatFocused,TheHat
+Gag_TheHat_02,Gag_TheHat_02,RunningGag,"HAT",HatFocused,TheHat
+Gag_TheHat_03,Gag_TheHat_03,RunningGag,"we are twenty minutes into a life or death crawl and chat is discussing a hat",ObserverOfChat,TheHat
+Gag_TheHat_04,Gag_TheHat_04,RunningGag,"the hat is the best character on this floor",EasilyAmused,TheHat
+Gag_TheHat_05,Gag_TheHat_05,RunningGag,"if the hat dies I riot",HatFocused,TheHat
+Gag_TheHat_06,Gag_TheHat_06,RunningGag,"there is no hat. chat has invented a hat",HonestlyLost,TheHat
+Gag_Translator_01,Gag_Translator_01,RunningGag,"the untranslated one just said something about the deep strata. I think.",AmateurTranslator,Translator
+Gag_Translator_02,Gag_Translator_02,RunningGag,"translating that last one loosely as: run",AmateurTranslator,Translator
+Gag_Translator_03,Gag_Translator_03,RunningGag,"you do not speak Kua-Tin. you have said this yourself.",DisclosureDemander,Translator
+Gag_Translator_04,Gag_Translator_04,RunningGag,"I am ninety percent sure that was a warning and not a greeting",AmateurTranslator,Translator
+Gag_Translator_05,Gag_Translator_05,RunningGag,"translator guy has been wrong every single time and I still read every post",EasilyAmused,Translator
+Gag_Numbers_01,Gag_Numbers_01,RunningGag,"4,102,338 remaining as of this morning",CountKeeper,Numbers
+Gag_Numbers_02,Gag_Numbers_02,RunningGag,"down another eleven thousand since I started typing this",CountKeeper,Numbers
+Gag_Numbers_03,Gag_Numbers_03,RunningGag,"please stop posting the number",WorriedButHelpless,Numbers
+Gag_Numbers_04,Gag_Numbers_04,RunningGag,"the number is the only honest thing on this broadcast",CountKeeper,Numbers
+Gag_Numbers_05,Gag_Numbers_05,RunningGag,"muted count keeper. sorry. could not do it anymore",BurnedBefore,Numbers
+Sentiment_Pos_08,Sentiment_Pos_08,Sentiment,"{Name} learning to fly a car is the character development I did not know I needed",NoNotesHonestly,
+Sentiment_Pos_09,Sentiment_Pos_09,Sentiment,"{Name} out here just vibing while everyone else panics, respect",VibesOnlyViewer,
+Sentiment_Pos_10,Sentiment_Pos_10,Sentiment,"say what you want, {Name} always sticks the landing",QuarterlyGremlin,
+Sentiment_Neg_06,Sentiment_Neg_06,Sentiment,"{Name} really said 'what does this button do' out loud, on air",BluntHonesty22,
+Sentiment_Neg_07,Sentiment_Neg_07,Sentiment,"{Name} has crashed into the same wall four times, I am begging",RatingsAreEverything,
+Sentiment_Neg_08,Sentiment_Neg_08,Sentiment,"okay {Name} has to be doing this on purpose at this point",HotTakeHaver,
+Equipment_08,Equipment_08,Equipment,"{Name}'s {Item} looks great until you remember what it actually does",FashionCritic99,
+Equipment_09,Equipment_09,Equipment,"genuinely asking, does {Name} know the {Item} has a cooldown",PriceCheckPatrol,
+Equipment_10,Equipment_10,Equipment,"the {Item} carried that entire sequence and {Name} knows it",GearReviewGuy,
+Equipment_11,Equipment_11,Equipment,"okay the {Item} is actually kind of fire, retracting my earlier comment",PropDeptFan,
+Equipment_12,Equipment_12,Equipment,"{Name} really out here with the {Item} like it is nothing",BluntHonesty22,
+BossBattle_08,BossBattle_08,BossBattle,"{Event} broke my brain a little bit, in a good way",TooInvestedTBH,
+BossBattle_09,BossBattle_09,BossBattle,"I need everyone to understand how loud I just yelled at {Event}",FirstTimeWatcher,
+BossBattle_10,BossBattle_10,BossBattle,"{Event} and then chat just. stopped. typing.",WatchPartyOfNine,
+BossBattle_11,BossBattle_11,BossBattle,"okay {Event} is going in my personal top five now",ReplayAddict,
+BossBattle_12,BossBattle_12,BossBattle,"{Event} - screenshotted, framed, done",ClipItModsClipIt,
+Appearance_07,Appearance_07,Appearance,"{Name}'s driving stance says main character energy",VibesOnlyViewer,
+Appearance_08,Appearance_08,Appearance,"{Name} looks like they have never been more alive, weird floor for it but okay",WorriedButHelpless,
+Appearance_09,Appearance_09,Appearance,"put {Name} on a poster honestly",AestheticsMatter,
+Appearance_10,Appearance_10,Appearance,"{Name} has main-cast energy today and I do not make the rules",PerceptionCheckFailed,
+Alien_08,Alien_08,AlienLanguage,"vresh-KUA {Name} vresh-tallo",Unregistered_Viewer,
+Alien_09,Alien_09,AlienLanguage,"[dialect flagged for review - this happens every floor]",Unregistered_Viewer,
+Alien_10,Alien_10,AlienLanguage,"bzzt-mora bzzt-mora bzzt-VEHICLE bzzt-mora",Unregistered_Viewer,
+Alien_11,Alien_11,AlienLanguage,"[UNTRANSLATED - regional and getting worse]",Unregistered_Viewer,
+Emote_09,Emote_09,Emote,":CAR_GO_ZOOM: :CAR_GO_ZOOM:",EmoteSpammer4,
+Emote_10,Emote_10,Emote,":RING_W: :CLEAN_PASS:",EmoteSpammer2,
+Emote_11,Emote_11,Emote,":FLOOR_KEKW: :CAR_GO_ZOOM: :FLOOR_KEKW:",EmoteSpammer3,
+Benign_37,Benign_37,Benign,"does the car count as a crawler now",CasualScroller,
+Benign_38,Benign_38,Benign,"did that thing just fly",FirstTimeWatcher,
+Benign_39,Benign_39,Benign,"who let them near a vehicle",BluntHonesty22,
+Benign_40,Benign_40,Benign,"this floor has a car now?? when did that happen",LateToStream,
+Benign_41,Benign_41,Benign,"not the car arc, I did NOT have this on my bingo card",EasilyAmused,
+Benign_42,Benign_42,Benign,"okay the car is actually kind of sick",VibesOnlyViewer,
+Benign_43,Benign_43,Benign,"brb making popcorn",MultitaskingViewer,
+Benign_44,Benign_44,Benign,"the pacing on this episode is unreal",SeasonRecapEnjoyer,
+Benign_45,Benign_45,Benign,"someone explain the flap thing to me",HonestlyLost,
+Benign_46,Benign_46,Benign,"I came here for the lore and stayed for the car crashes",NewToTheFeed,
+Benign_47,Benign_47,Benign,"chat has been normal for almost a full minute, personal record",ObserverOfChat,
+Benign_48,Benign_48,Benign,"this is objectively the best floor and I will not be taking questions",ShortAndSweet,
+Benign_49,Benign_49,Benign,"can we get a scoreboard or something",ContextSeeker,
+Benign_50,Benign_50,Benign,"the number one thing keeping me sane rn is this stream",InterstellarCouchPotato,
+Benign_51,Benign_51,Benign,"sorry just got back, did the car thing happen yet",SteppedAwayBriefly,
+Benign_52,Benign_52,Benign,"genuinely tuning in every day at this point",NightRotation,
+Benign_53,Benign_53,Benign,"no thoughts just vibes",jk_lurker,
+Benign_54,Benign_54,Benign,"someone needs to make this into a highlight reel",ReplayAddict,
+Benign_55,Benign_55,Benign,"the production value on this has gotten so much better",AudioNerd,
+Benign_56,Benign_56,Benign,"I have three tabs open and this is the only one that matters",MultitaskingViewer,
+Benign_57,Benign_57,Benign,"certified feed moment",ShortAndSweet,
+Benign_58,Benign_58,Benign,"okay I actually gasped",EasilyAmused,
+Benign_59,Benign_59,Benign,"not me getting emotionally invested in a rock formation",VibesOnlyViewer,
+Benign_60,Benign_60,Benign,"this comment section is more entertaining than the actual crawl sometimes",ObserverOfChat,
+Gag_RoverGuy_01,Gag_RoverGuy_01,RunningGag,"rover guy would like everyone to know the car has flaps now",RoverGuyOfficial,RoverGuy
+Gag_RoverGuy_02,Gag_RoverGuy_02,RunningGag,"{Name} just drove into the same wall for the ninth time and chat has never been happier",ObserverOfChat,RoverGuy
+Gag_RoverGuy_03,Gag_RoverGuy_03,RunningGag,"unpopular opinion: the car should not be allowed to fly",RoverGuyOfficial,RoverGuy
+Gag_RoverGuy_04,Gag_RoverGuy_04,RunningGag,"car guy. it is car guy again.",EasilyAmused,RoverGuy
+Gag_RoverGuy_05,Gag_RoverGuy_05,RunningGag,"I would just like it noted that nobody asked for a car",ContrarianByDefault,RoverGuy
+Gag_RingChallenge_01,Gag_RingChallenge_01,RunningGag,"{Name} missed the ring by SO much",RingCounter,RingChallenge
+Gag_RingChallenge_02,Gag_RingChallenge_02,RunningGag,"chat counting the rings out loud like it is a sport now",ObserverOfChat,RingChallenge
+Gag_RingChallenge_03,Gag_RingChallenge_03,RunningGag,"ring guy has a spreadsheet. do not ask about the spreadsheet.",RingCounter,RingChallenge
+Gag_RingChallenge_04,Gag_RingChallenge_04,RunningGag,"clean pass through ring three. CLEAN.",EasilyAmused,RingChallenge
+Gag_RingChallenge_05,Gag_RingChallenge_05,RunningGag,"the rings are not even hard chat calm down",ContrarianByDefault,RingChallenge

@@ -1,0 +1,7 @@
+Name,AchievementId,DisplayName,Announcement,Stat,Threshold,ExperienceReward,FavorReward,LootBoxReward,bSecret
+PausedForThought,PausedForThought,Pause For Thought,"The action has been paused. Somewhere, a producer is explaining to a sponsor why the fight stopped.",PausedCombat,1,25,0,Silver,False
+SponsorOfTheWeek,SponsorOfTheWeek,Sponsor Of The Week,"Peak audience approval, officially logged. Try not to let it go to your head. It will not last, and we will enjoy telling you so.",FavorTierMaxed,1,100,0,Legendary,False
+HousePour,HousePour,House Pour,"A drink has been purchased. Nobody asked what was in it. Nobody ever does.",FirstDrinkBought,1,15,0,Bronze,False
+UntrainedGenius,UntrainedGenius,Untrained Genius,"That skill has never been trained, ranked, or rehearsed, and it just cleared a Difficulty fifteen check anyway. We have no explanation and several unpaid interns looking for one.",UntrainedHighDCSuccess,1,50,5,Silver,False
+TheFullTour,TheFullTour,The Full Tour,"Every room on this floor, physically entered, by the same crawler. We would call this thoroughness if we thought it was on purpose.",UniqueRoomVisited,7,75,5,Gold,False
+StillInYourPajamas,StillInYourPajamas,Still In Your Pajamas,"The building fell down around you and you did not think to get dressed. Sponsors find this relatable.",ArrivedBodySlotEmpty,1,10,0,Bronze,False

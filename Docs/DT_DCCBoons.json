@@ -1,0 +1,74 @@
+[
+  {
+    "Name": "SecondWind",
+    "BoonId": "SecondWind",
+    "DisplayName": "Second Wind",
+    "Description": "A sudden, unearned burst of not-dying. Sponsors love this one - it's cheap and it always plays well.",
+    "Effects": [
+      { "InstantHealthChange": 15, "ModifiedAbility": "Strength", "ModifierAmount": 0, "ModifierDurationSeconds": 0.0 }
+    ]
+  },
+  {
+    "Name": "SteadyHands",
+    "BoonId": "SteadyHands",
+    "DisplayName": "Steady Hands",
+    "Description": "For a while, nothing shakes. Deeply suspicious for someone who fell down a hole this morning.",
+    "Effects": [
+      { "InstantHealthChange": 0, "ModifiedAbility": "Dexterity", "ModifierAmount": 1, "ModifierDurationSeconds": 300.0 }
+    ]
+  },
+  {
+    "Name": "MinorFortitude",
+    "BoonId": "MinorFortitude",
+    "DisplayName": "Minor Fortitude",
+    "Description": "A little sturdier than you have any right to be. The audience is told this is 'grit.'",
+    "Effects": [
+      { "InstantHealthChange": 0, "ModifiedAbility": "Constitution", "ModifierAmount": 1, "ModifierDurationSeconds": 300.0 }
+    ]
+  },
+  {
+    "Name": "SilverTongue",
+    "BoonId": "SilverTongue",
+    "DisplayName": "Silver Tongue",
+    "Description": "Everything you say for the next while sounds like it was written by someone who gets paid to write things.",
+    "Effects": [
+      { "InstantHealthChange": 0, "ModifiedAbility": "Charisma", "ModifierAmount": 1, "ModifierDurationSeconds": 300.0 }
+    ]
+  },
+  {
+    "Name": "AdrenalineSurge",
+    "BoonId": "AdrenalineSurge",
+    "DisplayName": "Adrenaline Surge",
+    "Description": "The building already fell on you once today. This is your body deciding that was rehearsal.",
+    "Effects": [
+      { "InstantHealthChange": 0, "ModifiedAbility": "Strength", "ModifierAmount": 2, "ModifierDurationSeconds": 600.0 }
+    ]
+  },
+  {
+    "Name": "IronWill",
+    "BoonId": "IronWill",
+    "DisplayName": "Iron Will",
+    "Description": "A real, load-bearing toughness, on loan. Return policy unclear.",
+    "Effects": [
+      { "InstantHealthChange": 25, "ModifiedAbility": "Constitution", "ModifierAmount": 2, "ModifierDurationSeconds": 600.0 }
+    ]
+  },
+  {
+    "Name": "ClarityOfPurpose",
+    "BoonId": "ClarityOfPurpose",
+    "DisplayName": "Clarity Of Purpose",
+    "Description": "Every decision for a while feels correct in advance. This has never once been true before now.",
+    "Effects": [
+      { "InstantHealthChange": 0, "ModifiedAbility": "Intelligence", "ModifierAmount": 2, "ModifierDurationSeconds": 600.0 }
+    ]
+  },
+  {
+    "Name": "SponsorsBlessing",
+    "BoonId": "SponsorsBlessing",
+    "DisplayName": "Sponsor's Blessing",
+    "Description": "Someone with real money is now, briefly, personally invested in you surviving. Enjoy it - it will not renew itself.",
+    "Effects": [
+      { "InstantHealthChange": 40, "ModifiedAbility": "Constitution", "ModifierAmount": 3, "ModifierDurationSeconds": 3600.0 }
+    ]
+  }
+]

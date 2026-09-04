@@ -1,0 +1,212 @@
+[
+  {
+    "Name": "Guide_Throw_01",
+    "LineId": "Guide_Throw_01",
+    "SpeakerId": "Guildmaster",
+    "Room": "SafeRoom",
+    "Tier": 1,
+    "Text": "You keep swinging at things. Fine, as far as it goes. But look at your hands and then look at the room - the room is full of objects, and objects have mass, and mass is just damage that hasn't been aimed yet.",
+    "Notes": "Game Guide, part 1 of the Targeted Throw explanation. Frames throwing as a real option before it is a skill."
+  },
+  {
+    "Name": "Guide_Throw_02",
+    "LineId": "Guide_Throw_02",
+    "SpeakerId": "Guildmaster",
+    "Room": "SafeRoom",
+    "Tier": 1,
+    "Text": "Targeted Throw. Pick a target, put something through it. Strength decides how hard it lands, and practice decides how far - Rank one puts a rock across a room, Rank ten puts it across a hall. The skill does not care what you throw. Neither, in my experience, does the thing you throw it at.",
+    "Notes": "Game Guide, part 2. Teaches the mechanic plainly: Strength = power, Rank = reach. Matches RangePerRank=140 on the DT row."
+  },
+  {
+    "Name": "Guide_Throw_03",
+    "LineId": "Guide_Throw_03",
+    "SpeakerId": "Guildmaster",
+    "Room": "SafeRoom",
+    "Tier": 1,
+    "Text": "And you will need it. There is a thing down the shaft that does not register being hit. Not armoured - uninterested. You can stand in front of it swinging until your arms give out and it will keep filing. Hit it from across the room with something it did not expect and it remembers it has a body.",
+    "Notes": "Game Guide, part 3 - the Legacy System hint. Describes the behaviour rather than naming the immunity rule."
+  },
+  {
+    "Name": "Guide_Descent_01",
+    "LineId": "Guide_Descent_01",
+    "SpeakerId": "Guildmaster",
+    "Room": "SafeRoom",
+    "Tier": 2,
+    "Text": "The shaft is not a set. I want to be clear about that, because everything else on this floor is. The bar is a set. The pool is a set. The shaft was here before the Collapse, it goes down further than the floor is supposed to, and nobody has given me a straight answer about who is still working it.",
+    "Notes": "Earthcore turn. First signal that the floor's geography stops being production design."
+  },
+
+  {
+    "Name": "Surveyor_Lights_01",
+    "LineId": "Surveyor_Lights_01",
+    "SpeakerId": "Surveyor",
+    "Room": "Bar",
+    "Tier": 1,
+    "Text": "You will think I am old and seeing things. There are lights on that mountain at night. Not campfires - too steady, too blue, and they move in straight lines. Straight lines are people. Nothing in nature walks in a straight line.",
+    "Notes": "NEW 2026-09-01. Sets up the drones before the party ever sees one. The lights are literally the survey drones deep inside the workings."
+  },
+  {
+    "Name": "Surveyor_Lights_02",
+    "LineId": "Surveyor_Lights_02",
+    "SpeakerId": "Surveyor",
+    "Room": "Bar",
+    "Tier": 1,
+    "Text": "Somebody is jumping the claim. That is what it is. Whole world ends and inside a month there is a crew up there running lines in the dark, and not one of them has filed a thing. They are not waiting for permission. They are already surveying it.",
+    "Notes": "The claim-jumping suspicion. Also quietly explains why the corporations show up so fast later - they were never NOT there."
+  },
+  {
+    "Name": "Surveyor_Lights_03",
+    "LineId": "Surveyor_Lights_03",
+    "SpeakerId": "Surveyor",
+    "Room": "Bar",
+    "Tier": 1,
+    "Text": "If you go up there - and I am not telling you to - leave the lights alone. Whatever is holding them is working, not hunting. Things that are working will let you walk right past. It is only when you take a swing at one that it remembers it has orders.",
+    "Notes": "Direct, in-fiction teaching of bPassiveUntilProvoked. The player is told the rule by a character rather than by a tooltip."
+  },
+  {
+    "Name": "Surveyor_Sample_01",
+    "LineId": "Surveyor_Sample_01",
+    "SpeakerId": "Surveyor",
+    "Room": "Bar",
+    "Tier": 1,
+    "Text": "I did subsurface survey work for thirty-one years. I am aware that this is over. I would still like a rock. From the lowest place you get to - does not matter which, just note where you picked it up.",
+    "Notes": "Core Sample, part 1. Small and slightly sad on purpose. Do not expand this quest."
+  },
+  {
+    "Name": "Surveyor_Sample_02",
+    "LineId": "Surveyor_Sample_02",
+    "SpeakerId": "Surveyor",
+    "Room": "Bar",
+    "Tier": 2,
+    "Text": "Thank you. Genuinely. Let me - hold on. Let me put a proper test on it.",
+    "Notes": "Core Sample, part 2. He is about to make a show of testing it."
+  },
+  {
+    "Name": "Surveyor_Sample_03",
+    "LineId": "Surveyor_Sample_03",
+    "SpeakerId": "Surveyor",
+    "Room": "Bar",
+    "Tier": 3,
+    "Text": "Right. Streak test, density, a scratch and a good long look. Very scientific. I am doing all of that so you will believe me when I say I knew what this was the second I picked it up. Platinum-iridium. Alloyed. Not a seam of one next to a seam of the other - alloyed, all through.",
+    "Notes": "REVISED 2026-09-01. The theatre of testing is the joke: he already knew. Replaces the old 'this is from four kilometres down' reveal."
+  },
+  {
+    "Name": "Surveyor_Sample_04",
+    "LineId": "Surveyor_Sample_04",
+    "SpeakerId": "Surveyor",
+    "Room": "Bar",
+    "Tier": 3,
+    "Text": "That does not happen. Not out in the open ground, not like this. You make that in a lab, on purpose, and it is expensive and difficult and there is one sitting in a vault in Paris that used to be how the world agreed what a kilogram was. And you picked this up off a cave floor.",
+    "Notes": "The strangeness stated plainly. The kilogram prototype reference is real-world and correct - a platinum-iridium artefact - which is what makes the oddity land without inventing physics."
+  },
+  {
+    "Name": "Surveyor_Sample_05",
+    "LineId": "Surveyor_Sample_05",
+    "SpeakerId": "Surveyor",
+    "Room": "Bar",
+    "Tier": 3,
+    "Text": "Put it away. I mean it. If the suits get one look at this they will not be arguing about paperwork any more, they will be arguing about who owns you. Tell them you found rock. You did find rock. Nobody has to know which kind.",
+    "Notes": "Core Sample, part 5 - the stakes, and an explicit choice offered before the confrontation outside. Showing the sample later is now a real decision the player was warned about."
+  },
+  {
+    "Name": "Surveyor_Access_01",
+    "LineId": "Surveyor_Access_01",
+    "SpeakerId": "Surveyor",
+    "Room": "Bar",
+    "Tier": 2,
+    "Text": "Nobody is standing at that shaft to stop you yet, which tells you how little anyone expects a crawler to walk up there. If that changes - and it will - I kept my survey credentials. Thirty years expired, never revoked, and that door reads the second thing and not the first. Take them.",
+    "Notes": "REVISED. The bypass now also explains why the shaft head is initially empty, and quietly predicts the corpo arrival."
+  },
+
+  {
+    "Name": "Adjuster_Block_01",
+    "LineId": "Adjuster_Block_01",
+    "SpeakerId": "ClaimsAdjuster",
+    "Room": "MineHead",
+    "Tier": 1,
+    "Text": "Stop there. Pell, Claims, Mile High Recovery Solutions. As of forty minutes ago this shaft is under an active custody dispute and is closed pending resolution. I appreciate that you were inside it forty-five minutes ago. That is precisely the problem we are here about.",
+    "Notes": "NEW 2026-09-01. The corporations arrive AFTER the first descent and barricade the shaft behind the party. The timing is the joke - they turned up the instant something was found."
+  },
+  {
+    "Name": "Adjuster_Demand_01",
+    "LineId": "Adjuster_Demand_01",
+    "SpeakerId": "ClaimsAdjuster",
+    "Room": "MineHead",
+    "Tier": 2,
+    "Text": "You are carrying material off a contested site. Show me what you brought out. Endorse Mile High's filing and this becomes a supervised recovery with you named on it - which is worth considerably more to you than a rock is.",
+    "Notes": "The demand. Showing the sample to a faction grants that faction's Favor - the player was warned by Surveyor_Sample_05 not to."
+  },
+  {
+    "Name": "Foreman_Block_01",
+    "LineId": "Foreman_Block_01",
+    "SpeakerId": "SiteForeman",
+    "Room": "MineHead",
+    "Tier": 1,
+    "Text": "Dunbar, Titan Conglomerate. Ignore the barricade, that is his. I want to ask you something the others will not: how far in did you get, and did anything down there look like it was already being worked?",
+    "Notes": "Dunbar is the one who asks the real question - Titan knows what is down there because Titan stopped digging for a reason."
+  },
+  {
+    "Name": "Foreman_Demand_01",
+    "LineId": "Foreman_Demand_01",
+    "SpeakerId": "SiteForeman",
+    "Room": "MineHead",
+    "Tier": 2,
+    "Text": "Let me see the sample. Not for the filing - I do not care about the filing. Titan pulled off that face in the seventies and the report saying why is above my clearance, and I have spent thirty years wanting to know if it was about the ore. Back us and I will tell you everything I am allowed to.",
+    "Notes": "His demand is curiosity rather than acquisition, which is what makes backing Titan tempting for a party that wants answers over money."
+  },
+  {
+    "Name": "Steward_Block_01",
+    "LineId": "Steward_Block_01",
+    "SpeakerId": "UnionSteward",
+    "Room": "MineHead",
+    "Tier": 1,
+    "Text": "Local 4-C. I am not with the barricade and I would like that on the record. Both of them flew in the moment you came out of that hole, which should tell you they were watching it, which should tell you they had something in there watching for them.",
+    "Notes": "The steward names the drones without having seen one - ties Surveyor_Lights_02's claim-jumping suspicion to the corporations directly."
+  },
+  {
+    "Name": "Steward_Demand_01",
+    "LineId": "Steward_Demand_01",
+    "SpeakerId": "UnionSteward",
+    "Room": "MineHead",
+    "Tier": 2,
+    "Text": "I will not ask to see it. I would like to, and I am not going to. Back 4-C and all I want is the crews' names attached to whatever comes out of there. That is the whole ask. It costs you nothing and it is the only part of this anyone will remember.",
+    "Notes": "The steward is the only claimant who does not demand the sample - the cheapest ask and the only one that costs the player nothing. Deliberate."
+  },
+  {
+    "Name": "Steward_Claim_03",
+    "LineId": "Steward_Claim_03",
+    "SpeakerId": "UnionSteward",
+    "Room": "MineHead",
+    "Tier": 3,
+    "Text": "You only ever needed two of us. Did you notice that? Three claimants, two signatures. Somebody designed that door knowing exactly one of us would always be left out in the cold, and the three of us have been standing here helping them do it.",
+    "Notes": "The reveal on the door's own design - the party never had to settle the dispute, only notice the arithmetic. Fires after the door opens."
+  },
+
+  {
+    "Name": "Alien_Mineral_01",
+    "LineId": "Alien_Mineral_01",
+    "SpeakerId": "SystemAI",
+    "Room": "MineHead",
+    "Tier": 4,
+    "Text": "A note for our viewers joining from the outer arms: yes. That is the material. No, we are not able to discuss why the survey was commissioned, and we would remind everyone that the terms of the Earth acquisition were reviewed and found entirely regular.",
+    "Notes": "POST-RESOLUTION ONLY. The System AI addressing the alien audience rather than the party. First confirmation the acquisition of Earth was ABOUT this - the mining cover story in story-premise.md was the true half all along."
+  },
+  {
+    "Name": "Alien_Mineral_02",
+    "LineId": "Alien_Mineral_02",
+    "SpeakerId": "SystemAI",
+    "Room": "MineHead",
+    "Tier": 4,
+    "Text": "Sponsors have asked us to clarify that the deposit was not the reason for the acquisition. The deposit was one of several reasons for the acquisition. We hope this clears things up and we thank Borant for their continued transparency.",
+    "Notes": "POST-RESOLUTION. A denial that concedes the point - the tone bible's corporate-cheer register doing the work. Do not have the party react; they should not understand what they just heard."
+  },
+  {
+    "Name": "Alien_Mineral_03",
+    "LineId": "Alien_Mineral_03",
+    "SpeakerId": "SystemAI",
+    "Room": "MineHead",
+    "Tier": 4,
+    "Text": "Fifty-one years of surveying before a single claim was filed. Somebody knew exactly what was under this range and waited for the paperwork to catch up. That is not a crime. It is, in fact, the opposite of one - it is diligence.",
+    "Notes": "POST-RESOLUTION, and the sharpest of the three. Ties directly to the 50-year claim rule in story-premise.md: the Syndicate did not discover Earth's minerals after foreclosing, it foreclosed BECAUSE of them."
+  }
+]

@@ -124,6 +124,19 @@ because cursed gear should make you bad at something, not delete the something.
 The one deliberate write to the base layer is `DCCEncounter.cpp` applying a spawn's authored
 stat block. Everything else was migrated.
 
+**Level is capped at 5 (added 2026-09-02).** `UDCCStatsComponent::MaxLevel`, `EditAnywhere` so
+a later floor can raise it. XP is awarded from four places — kills, quest completion,
+achievements and encounter clears — and the curve (`100*L + 50*L*(L-1)`) needs only **1500 XP
+total** to reach level 5, while the quest table alone already offers **6700**. Uncapped, a party
+would leave Floor 1 far past the tutorial band, which matters because
+`Docs/races-and-classes.md` puts race and class selection on the **third** floor: arriving
+over-levelled makes that choice matter less.
+
+At the cap, surplus XP is discarded rather than banked, `ExperiencePoints` is parked at the
+threshold so the HUD bar reads full instead of climbing behind a meaningless number, and the
+bar greys out and reads `MAX (tutorial cap)`. `MaxLevel` gates **XP-driven levelling only** — an
+enemy or boss whose `Level` is authored directly above 5 is unaffected.
+
 Gotcha worth preserving: ability modifiers use `FMath::FloorToInt32((Score - 10) / 2.0f)`,
 not integer division — C++ truncates toward zero, which gives the wrong answer for scores
 below 10 (7 would give -1 instead of -2).
@@ -342,6 +355,20 @@ as `TSubclassOf`.
 Second gotcha: a `UFUNCTION` parameter may not be named `Instigator`. `AActor` already declares
 that property and UHT rejects the shadow. Use `Character`/`Actor` instead.
 
+**This bites for any inherited property name, not just `Instigator`** — hit again 2026-09-02
+with a parameter named `Skills` on a `ADCCEnemyCharacter` subclass, because `ADCCCharacterBase`
+has a `Skills` component. Two separate compilers complain in two different ways and it is worth
+knowing both, because fixing only the first leaves you with a second failed build:
+
+- **UHT** rejects the *`UFUNCTION` parameter* outright: *"cannot be defined ... as it is already
+  defined in scope 'ADCCCharacterBase' (shadowing is not allowed)"*.
+- **MSVC** then rejects any *local variable* with the same name as `error C4458: declaration of
+  'X' hides class member` — warnings-as-errors, so a `if (UDCCSkillComponent* Skills = ...)`
+  inside the same file fails too.
+
+Prefix the name (`CastingSkills`, `CrawlerSkills`) rather than trying to qualify it. Names
+already known to collide on characters: `Instigator`, `Skills`, `Stats`, `Equipment`, `Mesh`.
+
 ### `Source/DungeonCrawlerDenver/Skills/`
 
 The design doc's Skill Archetype System: player-invented skills are **data, not code**, so Zoe
@@ -356,6 +383,34 @@ invents skills at the table.
   roll hurt. Damage/Heal resolve in C++; the fuzzier archetypes fire `BP_OnSkillEffect` so the
   DM authors them in Blueprint. That split is deliberate: deterministic mechanics in C++,
   "anything is possible" in Zoe's hands.
+
+### `Source/DungeonCrawlerDenver/Puzzles/` — added 2026-09-01
+
+`ADCCPuzzleDoor` and its subclasses (`ADCCComplianceDoor`), plus `ADCCPressurePlate` and
+`ADCCBreakerSwitch`. Design spec is `Docs/next-evolution-plan.md`; Floor 1's use of them is
+`Docs/floor-01-design.md` §8 "The Claim".
+
+**The one rule this folder exists to enforce:** *every lock has a key and a crowbar; the
+crowbar always works and always costs more.* `ForceOpen` lives on the base class, not on
+subclasses — a puzzle has to actively set `bAllowForcing = false` to remove it. Nothing here
+may hard-block a five-player table, because four people watching a fifth fail a riddle is how
+a session dies. It is also correct in fiction: the System AI does not care whether you comply,
+only that it is watchable.
+
+**Two damage paths, and why that matters.** `ADCCCharacterBase::ModifyIncomingDamage` is
+consulted **only** on the attack path (`PerformAttack`). Skill damage (`UDCCSkillComponent`)
+and thrown-prop impact damage (`ADCCPickup`) both call `Stats->ApplyDamage` directly and never
+reach it. That asymmetry is load-bearing, not an oversight — it is what lets
+`ADCCEnemyCharacter_LegacySystem` be immune to being *hit* while still dying to anything
+thrown or cast, with no new system to tell those cases apart. Keep the hook on the attack path
+only; moving it into `ApplyDamage` would break that and drag monster-specific rules into
+`Stats/`, which is supposed to stay ruleset-agnostic.
+
+**`FDCCSkillDef::RangePerRank`** (added the same day) is flat-added reach per Rank above the
+first, zero for almost everything. It exists for skills where reach *is* the thing being
+practised — `TargetedThrow` is the case it was added for. Flat rather than multiplicative
+because Rank runs 0–20 and a multiplier gets absurd fast. Read it via
+`UDCCSkillComponent::GetEffectiveRange`, never `Skill.Range` directly.
 
 ### `Source/DungeonCrawlerDenver/Favor/`
 
@@ -426,7 +481,52 @@ flaming hockey jersey. 170cm, correct scale against the mannequin, textures inta
 single looping clip via `AnimationSingleNode` rather than an AnimBlueprint, so it has no
 idle/walk blending and no attack montage. A proper ABP for this skeleton is the next step.
 
+## When the MCP tools are missing but the editor is up — `Tools/mcp_call.py`
+
+**Added 2026-09-01, and it unblocked a whole session.** Claude Code's MCP client connects
+**once, at session start**. A session that begins with the editor closed (which every session
+starting with a build does) gets `ConnectionRefused` and then has **no `unreal-mcp` tools for
+its entire life**, even after the editor comes back and port 8000 starts listening. There is no
+in-session reconnect.
+
+The server is a plain JSON-RPC-over-HTTP endpoint, so it can be driven directly:
+
+```bash
+python Tools/mcp_call.py toolsets
+python Tools/mcp_call.py describe SceneTools
+python Tools/mcp_call.py call SceneTools find_actors '{"name":"","tag":"","collision_channels":[]}'
+python Tools/mcp_call.py batch calls.json     # one handshake, many calls - much faster
+```
+
+Import it as a module (`from mcp_call import McpSession, unwrap`) for anything non-trivial;
+that is how the whole Floor 1 mine was built.
+
+Three things that cost time and are handled inside the script now:
+
+- **Toolset names must be fully qualified** (`editor_toolset.toolsets.scene.SceneTools`).
+  Passing `SceneTools` fails with "Toolset not found", which reads like a missing plugin rather
+  than a naming mistake. `TOOLSET_ALIASES` expands the short names.
+- **Everything dispatches through one `call_tool`** — the server publishes only
+  `list_toolsets` / `describe_toolset` / `call_tool` at top level.
+- **Parameter names differ from the docs' habits**: `find_assets` wants `folder_path`+`name`
+  (not `pattern`), `get_properties` wants `properties` (not `names`), `set_actor_folder` wants
+  `folder_path` (not `folder`). When a call errors, the server **prints the full input schema** —
+  read that rather than guessing.
+
 ## MCP level-editing gotchas
+
+- **Shrinking a struct array with `set_properties` is refused**, with "elements changed
+  alongside the size change; removed elements are ambiguous". Write `[]` first, then write the
+  new array. Hit re-authoring `ADCCEncounter::Waves` from 3 spawns down to 2.
+- **`add_to_scene_from_*`'s `name` sets the LABEL, not the object path.** The actor still gets a
+  `StaticMeshActor_UAID_...` path, so a later `remove_from_scene` by the name you passed fails
+  with "not a valid Actor". Keep the returned `refPath`, or find the actor again by transform.
+- **`DataTableTools.import_file` refuses to overwrite an existing table** (same shape as the
+  `.glb`/`SkeletalMeshTools` gotcha). To update one: `add_rows` for the new row names, then
+  `set_rows` with the full payload.
+- **`set_rows` rejects the whole call if any property is unknown**, naming the offending fields.
+  The authoring JSON in `Docs/` may carry extra fields the runtime struct does not have —
+  `DT_DCCDialogue.json` has `Room`/`Tier`, which the `FDCCDialogueLine` struct does not.
 
 > ### ✅ CORRECTED 2026-08-16: `ObjectTools.set_properties` DOES work.
 >
@@ -505,8 +605,27 @@ idle/walk blending and no attack montage. A proper ABP for this skeleton is the 
   tool-result file with `Tools/decode_tool_image.py`.
 - **`snap_to_ground` snaps to whatever is under the point**, including the Cave_Camp rocks that
   surround Room 01 — it put a test actor at z=551 rather than on the floor. Prefer explicit Z.
-- **Check for existing geometry before placing a room.** `find_actors` with a `bounds` box reports
-  what already overlaps. Room 02 was first built at x≈7800,y=0 and landed inside cave rock; it now
+- **⚠️ `find_actors` with a `bounds` box is NOT a reliable emptiness check — it has now been
+  wrong twice, and both times cost a full rebuild-and-relocate.** It reports actors whose
+  pivot/bounds fall in the box, which silently misses large meshes whose origin sits somewhere
+  else entirely. It cleared a site that turned out to contain 37 city actors (the mine,
+  2026-09-01) and then cleared another containing 5710-unit skyscrapers (Tailings, 2026-09-02).
+  Widening the z range helps but does not fix it.
+
+  **Use `SceneTools.trace_world` instead — it tests real geometry.** Trace straight down from
+  high altitude across a grid; anything that hits well above ground level is an obstruction:
+
+  ```python
+  d = trace_world(start={x,y,z:6000}, end={x,y,z:-500})   # returns DISTANCE, not a hit struct
+  clear = d is None or (6000 - d) < 400                    # only ground-level hits are clear
+  ```
+
+  `trace_world` returns a **float distance along the ray** (or null for no hit), which is easy
+  to mistake for a hit record. It is also what caught a barricade that blocked at knee height
+  but not at head height - so trace at several heights when checking passability, not one.
+
+- **Check for existing geometry before placing a room.** `find_actors` with a `bounds` box gives
+  a rough first look (see the warning above about trusting it). Room 02 was first built at x≈7800,y=0 and landed inside cave rock; it now
   lives at **y≈5000**, which `find_actors` confirmed was empty apart from the sky sphere.
 - **Ice_Station assets are station-scale, not room-scale.** `SM_large_floor_module` is 55×58 **metres**;
   `SM_pipe_group_01` is 20m wide. Measure with `StaticMeshTools.get_bounds` before placing. The
@@ -747,6 +866,16 @@ it through the boss fight. A second copy silently removes that choice. It was *m
   character creation.** Crawlers start as plain humans; Floors 1–2 are Tutorial Floors and
   cap Skill Upgrades at the Rank 5 tier. Also: Game Guides, and why the Bar's bartender
   should become Floor 1's.
+- `Docs/travel.md` — **how a player reaches the mine and the town**: the four travel gates
+  (live) and `ADCCRover` (written, needs a build). Read before adding another Oathgate — the
+  class ships with a 3-entry `EnemyPool` that ambushes anyone using it as transport.
+- `Docs/towns.md` — **settlements and the pattern for building more** (2026-09-02). Tailings
+  exists; read the "pattern for the next town" section before starting another.
+- `Docs/model-assignments.md` — **who has a model and who is wearing someone else's.** Update
+  it in the same pass that adds a character. Check it before sourcing any new art.
+- `Docs/next-evolution-plan.md` — **the current forward plan** (2026-09-01): Viewer Chatter,
+  the four puzzle primitives, enemies-as-verbs, the three quest tiers, and the C++/MCP batch
+  split that keeps them off separate build cycles. Read alongside `story-premise.md`.
 - `Docs/ai-narrator-integration.md` — how the local LLM connects and what it may never do.
 - `Docs/multiplayer-plan.md` — Enhanced Input migration, session model, predicted failures.
 - `Docs/POST_BUILD_TASKS.md` — the live wiring checklist.

@@ -299,5 +299,89 @@
 		"FavorReward": 20,
 		"NextQuestId": "None",
 		"bAutoStart": false
+	},
+	{
+		"Name": "DevGoal_Airborne",
+		"QuestId": "DevGoal_Airborne",
+		"Title": "Pedal to the Metal",
+		"Summary": "Take the rover off the ramp and actually leave the ground. Ratings depend on it.",
+		"StartAnnouncement": "Management would like to remind you that the rover does, in fact, fly. Please demonstrate this before someone asks for a refund.",
+		"CompletionAnnouncement": "Airborne. The audience gasped, statistically speaking.",
+		"Objectives": [
+			{
+				"Description": "Get the rover airborne",
+				"Type": "Custom",
+				"TargetId": "FlightEngaged",
+				"RequiredCount": 1,
+				"bHidden": false
+			}
+		],
+		"ExperienceReward": 150,
+		"FavorReward": 15,
+		"NextQuestId": "DevGoal_Rings",
+		"bAutoStart": true
+	},
+	{
+		"Name": "DevGoal_Rings",
+		"QuestId": "DevGoal_Rings",
+		"Title": "Ring Rust",
+		"Summary": "Fly through three of the practice rings out past the playground ramp.",
+		"StartAnnouncement": "Someone installed hoops out past the ramp. Nobody asked why. Fly through three of them anyway.",
+		"CompletionAnnouncement": "Three rings, no complaints filed. A personal best for this broadcast.",
+		"Objectives": [
+			{
+				"Description": "Fly through 3 practice rings",
+				"Type": "Custom",
+				"TargetId": "FlightRingPassed",
+				"RequiredCount": 3,
+				"bHidden": false
+			}
+		],
+		"ExperienceReward": 200,
+		"FavorReward": 20,
+		"NextQuestId": "DevGoal_Piloting",
+		"bAutoStart": false
+	},
+	{
+		"Name": "DevGoal_Piloting",
+		"QuestId": "DevGoal_Piloting",
+		"Title": "License to Drive",
+		"Summary": "Gain 2 Ranks in Piloting. Actual driving required; sitting in the car does not count.",
+		"StartAnnouncement": "Piloting is a Skill now, which means Management can measure it, which means Management will.",
+		"CompletionAnnouncement": "Two Ranks in Piloting. You may now legally endanger passengers.",
+		"Objectives": [
+			{
+				"Description": "Gain 2 Ranks in Piloting",
+				"Type": "SkillRankGained",
+				"TargetId": "Piloting",
+				"RequiredCount": 2,
+				"bHidden": false
+			}
+		],
+		"ExperienceReward": 250,
+		"FavorReward": 20,
+		"NextQuestId": "DevGoal_Emotes",
+		"bAutoStart": false
+	},
+	{
+		"Name": "DevGoal_Emotes",
+		"QuestId": "DevGoal_Emotes",
+		"Title": "Main Character Energy",
+		"Summary": "Perform for the crowd three times. Dignity is not a requirement.",
+		"StartAnnouncement": "Engagement is down. Do a little dance. We will not elaborate further.",
+		"CompletionAnnouncement": "Three performances logged. Engagement is, against all odds, up.",
+		"Objectives": [
+			{
+				"Description": "Perform 3 emotes",
+				"Type": "Custom",
+				"TargetId": "EmotePerformed",
+				"RequiredCount": 3,
+				"bHidden": false
+			}
+		],
+		"ExperienceReward": 150,
+		"FavorReward": 25,
+		"NextQuestId": "None",
+		"bAutoStart": false
 	}
 ]

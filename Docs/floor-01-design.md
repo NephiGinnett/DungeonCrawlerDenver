@@ -359,6 +359,217 @@ The sign above it reads `EXIT — CLOSED FOR MAINTENANCE` in red, then `EXIT` in
 Walking out fires `ClearFloor` for the quest chain, and **banks any carried loot that deferred
 its value** — see below.
 
+## 8 — The Claim · The Rocky Flats Extraction Shaft
+
+**Added 2026-09-01, at Zoe's ask: give Floor 1 an Earthcore turn, and make the way down a
+mine.** This is the floor's new terminus. Not built yet - this section is the spec.
+
+### Why it exists
+
+Floor 1 has been, correctly, a comedy about debt collection. Everything in it is a set: the
+cantina, the pool, the bar. **The Claim is where the set ends and the actual hole in the
+ground begins**, which is the point of it - per `story-premise.md`, the floors are excavation
+shafts and "descending" is literal. This is the first place the game says so out loud without
+explaining it.
+
+The register shifts accordingly. Upstairs the horror is bureaucratic and verbal. Down the
+shaft it gets quieter, older, and less interested in talking - the first faint step toward the
+Undermind's end of the dial. Nothing down here should crack a joke about paperwork.
+
+### ⚠️ REVISED 2026-09-01 — read this before the sections below
+
+Zoe reworked the sequencing. The corporations are **not** standing at the shaft head when the
+party first arrives, and the Core Sample no longer reveals impossible depth. The order is now:
+
+1. **Only the Surveyor is around.** He talks about **lights on the mountain at night** — steady,
+   blue, moving in straight lines — and is convinced somebody is **jumping the claim**. He also
+   warns, in character, that whatever is holding those lights is *working, not hunting*, and
+   will ignore you unless you take a swing at it.
+2. **The party goes in unopposed.** The lights are **corporate survey drones**, deep inside,
+   circling patrol routes. They are real enemies but `bPassiveUntilProvoked` — they will not
+   approach or attack unless attacked. Killing them is possible, cheap, and a decision.
+3. **The Core Sample is a platinum-iridium alloy.** The Surveyor makes a show of testing it —
+   streak, density, a scratch — then admits the theatre: he knew the moment he picked it up.
+   Alloyed all through, which does not happen in open ground. He tells the party to **hide it**,
+   because if the suits see it they stop arguing about paperwork and start arguing about who
+   owns *you*.
+4. **Coming back out, the corporations are there.** They flew in the instant the party surfaced,
+   which means they were watching the hole, which means the drones were theirs. They put up a
+   **barricade**, bar re-entry, and **demand to see what was brought out**. Showing a faction the
+   sample grants that faction's Favor — a real reward for doing the thing you were just warned
+   against.
+5. **Only after the party picks a side** does the System AI start addressing the *alien* audience
+   about the material — that the acquisition was partly about this deposit, and that fifty-one
+   years of surveying happened before any claim was filed. Per `story-premise.md`, this is the
+   mining half of the cover story turning out to be the true half.
+
+The claim-dispute puzzle (two of three signatures) is unchanged and still gates the door; it
+just happens on the way **back in**, not the way in.
+
+### The premise: everybody already knew about the platinum
+
+The **Front Range Platinum Reef** runs north under the whole range. Platinum group metals,
+known before the Collapse, mapped and then abandoned in the 1970s for reasons the official
+record gives as "cost." The shaft head sits in the old **Rocky Flats** works - which usefully
+puts it next door to the Nuclear Family enemies, who are already Rocky Flats satire and have
+never had a home.
+
+This is what makes the corporate bickering land: nobody is fighting over a rumour. It is a
+confirmed deposit, and three parties have arrived with three incompatible claims.
+
+### The Compliance Door — `ADCCComplianceDoor`
+
+The shaft is gated. Entry needs **two authorisations**; **three parties** each insist they are
+the only one with standing:
+
+| Signatory Id | Who | Claim | The ask |
+|---|---|---|---|
+| `ClaimsAdjuster` | Pell, Mile High Recovery Solutions | Foreclosure — the city defaulted, the reef came with it | Back their filing |
+| `SiteForeman` | Dunbar, Titan Conglomerate | An extraction contract with a municipality that no longer exists | Back Titan |
+| `UnionSteward` | Local 4-C, Amalgamated Subsurface | Labour — the people who cut the shaft are owed | Put the crews' names on whatever comes out |
+
+**The party only ever needs two of three.** They never have to resolve the dispute, only
+notice the arithmetic - and `Steward_Claim_03` says so out loud once the door is open, which
+is the joke landing rather than the joke being explained.
+
+**Three routes in, by design:**
+
+1. **Back two corporations.** The obvious road. Has consequences later; which two should
+   matter beyond this floor.
+2. **The surveyor's bypass** (`Surveyor_Access_01`). Thirty-year-expired credentials that were
+   never formally revoked, and the door checks revocation rather than expiry. For a party that
+   refuses to pick a side. **This is the route the Core Sample line quietly earns.**
+3. **The crowbar.** It is a door. Forcing costs 75 Favor and needs Strength 5, and unites
+   three legal departments in agreement for the first time in weeks.
+
+### The level quest — *The Withdrawal*
+
+**This is the spine, and the thing Floor 1 has been missing.** Voldemortgage does not simply
+wait in the Diving Pool to be killed: once the party has met him, the account is "closed and
+transferred to a lower servicing tier" and **he withdraws down the shaft toward Floor 2.**
+
+That single change does three jobs at once:
+- It gives the boss a reason to exist beyond standing at the end of a corridor.
+- It gives the mine urgency - the door is not a curiosity, it is the thing between the party
+  and someone getting away.
+- It makes descending the floor's climax rather than its epilogue.
+
+Quest chain (`DT_DCCQuests_Floor01Mine.json`): `TheWithdrawal` → `ChainOfCustody` →
+`FirstDescent`, with `CoreSample` hanging off the Bar independently.
+
+### What lives down there
+
+Two enemies, both of which refuse the verb the party has been using all floor
+(`Characters/DCCEnemyCharacter_Mine.h`):
+
+- **Legacy System** — immune to being struck. Weapons and fists do nothing; it is not armoured
+  so much as uninterested. Answer: hit it from range - the new `TargetedThrow` skill, a thrown
+  prop, or any skill at all. The Game Guide teaches this before the party ever meets it.
+- **Reconciliation** — two bodies, one ledger. Damage to one is reversed by the other unless
+  both are struck within ~2.5s. The project's first enemy actually designed for five players
+  rather than merely tolerating them.
+
+### ✅ Blocked out 2026-09-01
+
+Built over MCP and saved. Outliner folders `DCC/Room10_TheClaim` and `DCC/Room11_TheShaft`.
+
+- **Shaft head** (`Room10_TheClaim`) — chamber centred **(16000, 3000)**, ~2000×1600, floor
+  z=0, ceiling z=620. Doorway gaps west (to the corridor) and east (the shaft mouth). Two
+  point lights, navmesh, and a corridor at y3000 running back west toward the Diving Pool.
+- **`ADCCComplianceDoor`** at (16980, 3000), sitting in the east wall gap.
+- **The three claimants**, each with its own mesh so they read apart at a glance: Pell
+  (`SK_DonMinion`), Dunbar (`SK_BuffMinion`), the Steward (`SK_ArmsOut_Shared`). SpeakerIds and
+  `DialogueTable` verified by read-back; Pell offers `ChainOfCustody`.
+- **The Surveyor** in the Bar at (8250, 4980), offering `CoreSample`.
+- **`QuestMarker_MineShaftHead`** at (15200, 3000) for *The Withdrawal*.
+- **The shaft** (`Room11_TheShaft`) — gallery centred (18600, 3000), with `DCCRoom` +
+  `DCCEncounter` **linked** (the Room02 trap: a Combat room whose `Encounter` is None fails
+  silently). Waves: two Break Room Mold, then the Legacy System alone.
+- **A twinned Reconciliation pair** placed directly at (18300, ±400) with `Twin` cross-wired
+  and confirmed both ways.
+
+**Two things caught by looking at it rather than trusting the coordinates**, both fixed: the
+door was rendering with the engine checker material (its C++ default is
+`/Engine/BasicShapes/Cube`, not the project's `LevelPrototyping/SM_Cube`), and the east wall
+was a single solid slab, so the door would have opened onto masonry.
+
+**Why the Reconciliation pair is placed rather than spawned:** `Twin` is `EditInstanceOnly` and
+cannot be authored on something an encounter creates at runtime, so a wave-spawned pair would
+have quietly behaved like ordinary enemies. `ADCCEnemyCharacter_Reconciliation::BeginPlay` now
+auto-pairs to the nearest unpaired sibling, which fixes the spawned case — **written and
+compile-checked, but NOT yet deployed.**
+
+### Relocated 2026-09-01 — and why, because the mistake is worth not repeating
+
+The complex was first built at **(16000, 3000)** and that was **wrong**: it landed inside 37
+existing city actors. The emptiness check that cleared the site only probed `z -800..1500`,
+and the buildings there are tall with high bounding-box centres, so they simply were not
+returned. **Probe `z -4000..12000` when checking whether ground is free.**
+
+Everything moved **+13000 in Y**. The complex now sits at **(16000, 16000)**, on ground verified
+empty across the full height range. The old approach corridor was deleted rather than moved —
+it pointed back at the Diving Pool from the old siting.
+
+**The mine is therefore not yet connected to the rest of Floor 1.** That is a deliberate stopping
+point rather than an oversight: an `ADCCOathgate` pair, a lift, or a long approach are all
+reasonable answers and it is Zoe's call which. It is reachable now only by flying there.
+
+### Dressed with real geometry, not cubes
+
+- **Mountain:** `SoulCave` `SM_EntranceRockCliff2/3/5` at 1.3–1.7 scale wrap the chamber north,
+  south and rear, with `Desert_cave/SM_rock_01` boulders and `SciFi_Cliff/SM_rock_02` scree
+  framing the mouth. The grey shell now reads as a cut into rock rather than a box in a field.
+- **Props:** `Desert_cave` mine carts, cases and rope at the shaft head and deeper in.
+- **Light:** three cold point lights over the approach — the Surveyor's "too steady, too blue".
+
+The interior shell is still `SM_Cube`. Rock outside, blockout inside; a full cave-interior pass
+using `SoulCave`'s pillars and floor planes is the obvious next art job.
+
+### ✅ Placement complete 2026-09-02 — the sequence works end to end
+
+Deployed and placed. Everything below verified by read-back, not assumed.
+
+- **Three `ADCCDialogueNPC_Signatory`** replace the plain dialogue NPCs (a placed C++ class
+  instance cannot be reparented, so they were deleted and re-placed with properties restored).
+  Each has `ComplianceDoor` wired and `SignatoryId` matching its `speakerId`. **Talking to a
+  claimant now actually signs.**
+- **Five `ADCCEnemyCharacter_SurveyDrone`** in the shaft, each on its own four-point circuit,
+  all `bPassiveUntilProvoked = true` with a 1100-unit `ViolenceWatchRadius`. They circle and
+  ignore the party until attacked.
+- **A nine-piece barricade** at the mouth — five `Ice_Station` fence panels plus crates.
+- **Two `ADCCArrivalTrigger`s**: a deep one at (19500, 16000) with no prerequisite, and one at
+  the mouth (15100, 16000) gated on it, carrying all twelve arriving actors (3 claimants +
+  9 barricade pieces). The corporations cannot appear until the party has actually been inside.
+
+**Three placement bugs found by tracing and looking rather than trusting coordinates:**
+
+1. **The mouth boulders sealed the entrance.** `Desert_cave/SM_rock_01` is 2612 units wide in Y;
+   at 0.55 scale that is ±718, so boulders centred at y15300/16700 overlapped the entire
+   y15700–16300 approach. Moved to y14750/17250. **Measure a mesh's Y extent before flanking a
+   doorway with it.**
+2. **The mountain lights were blowing the whole approach out** — 40000 intensity over a 6000
+   radius. Dropped to 4000–9000 over 3500–5000 and tinted cold, which is what the Surveyor's
+   "too steady, too blue" wants anyway.
+3. **`SM_fence` is only 100 units tall**, so the barricade blocked at knee height and a
+   head-height trace passed straight over it. Scaled to 2.4× vertical; now blocks at z=180
+   across the full doorway.
+
+`SceneTools.trace_world` is the right tool for all three — it returns a **distance along the
+ray**, not a hit struct, and tracing at several heights is what exposed the fence problem.
+
+### Still owed
+
+- **A cave-interior art pass.** The shell is still `SM_Cube` inside; `SoulCave`'s pillars and
+  floor planes are the obvious material. Rock outside, blockout inside.
+- **The mine is still not connected to the rest of Floor 1** (see the relocation note above).
+  An `ADCCOathgate` pair, a lift, or a long approach are all reasonable - Zoe's call.
+- **Model swaps** - the Steward and the Surveyor are wearing Kyle's and Marcel's crawler meshes.
+  See `Docs/model-assignments.md`; this is a readability bug, not a cosmetic one.
+- **Lighting is unbuilt** in this area and the NPCs stand in T-pose (no idle animation assigned),
+  same as the other dialogue NPCs on the floor.
+- **Nothing here has been seen in PIE.** The whole chain - drones ignoring you, the sample
+  reveal, the corporations arriving, signatures opening the door - needs one real playtest.
+
 ## Gold, loot and why the Strongbox matters
 
 Three pieces, all added 2026-08-15:
