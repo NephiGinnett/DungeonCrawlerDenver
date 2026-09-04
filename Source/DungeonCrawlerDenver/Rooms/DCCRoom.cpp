@@ -127,6 +127,8 @@ void ADCCRoom::AddOccupant(ADCCCharacterBase* Character)
 	// second room-tracking system - see CurrentRoomDisplayName's own comment.
 	Character->CurrentRoomId = RoomId;
 	Character->CurrentRoomDisplayName = RoomDisplayName.IsEmpty() ? FText::FromName(RoomId) : RoomDisplayName;
+	Character->bInSafeRoom = (RoomType == EDCCRoomType::SafeRoom);
+	Character->RecordRoomVisited(RoomId);
 
 	BP_OnPlayerEntered(Character);
 
@@ -149,6 +151,7 @@ void ADCCRoom::RemoveOccupant(ADCCCharacterBase* Character)
 		{
 			Character->CurrentRoomId = NAME_None;
 			Character->CurrentRoomDisplayName = FText::GetEmpty();
+			Character->bInSafeRoom = false;
 		}
 	}
 }
@@ -216,7 +219,29 @@ void ADCCRoom::TriggerEncounter()
 
 void ADCCRoom::HandleEncounterStateChanged(EDCCEncounterState NewState)
 {
-	if (!HasAuthority() || NewState != EDCCEncounterState::Cleared)
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	// The existing "combat begins" moment in this codebase: an encounter goes
+	// Active the instant its first wave spawns. Piggybacking it the same way
+	// AddOccupant/RemoveOccupant already piggyback the overlap events, rather
+	// than inventing a second, parallel "entered combat" signal - every
+	// crawler standing in the room right now finds out at once.
+	if (NewState == EDCCEncounterState::Active)
+	{
+		for (ADCCCharacterBase* Occupant : Occupants)
+		{
+			if (Occupant)
+			{
+				Occupant->NotifyCombatStarted();
+			}
+		}
+		return;
+	}
+
+	if (NewState != EDCCEncounterState::Cleared)
 	{
 		return;
 	}

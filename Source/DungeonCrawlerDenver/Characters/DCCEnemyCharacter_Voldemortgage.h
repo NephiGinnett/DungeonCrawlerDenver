@@ -47,6 +47,21 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss")
 	TObjectPtr<class UStaticMeshComponent> BalloonMesh;
 
+	/**
+	 * "CHANNELING - BALLOON PAYMENT", floating above the balloon while it
+	 * inflates.
+	 *
+	 * The balloon itself already telegraphs the charge, but only to someone
+	 * who already knows what an inflating sphere over his head means - this
+	 * says it in words, the same way the Falls' climb hints exist so a
+	 * mechanic never depends on the party having been told the rules outside
+	 * the game. A TextRenderComponent for the same reason BalloonMesh is a
+	 * plain mesh and not a Niagara effect: legible at arena distance, no
+	 * asset to author, works the moment it compiles.
+	 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Boss")
+	TObjectPtr<class UTextRenderComponent> ChannelingLabel;
+
 	virtual void Tick(float DeltaSeconds) override;
 
 	ADCCEnemyCharacter_Voldemortgage();

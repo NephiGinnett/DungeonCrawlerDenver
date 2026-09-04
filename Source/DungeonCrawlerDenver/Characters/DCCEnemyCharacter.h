@@ -4,6 +4,9 @@
 #include "Characters/DCCCharacterBase.h"
 #include "DCCEnemyCharacter.generated.h"
 
+class ADCCLootContainer;
+class UDCCBossComponent;
+
 /**
  * A hostile combatant.
  *
@@ -112,8 +115,66 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|AI", meta = (ClampMin = "0.0"))
 	float CastHoldSeconds = 1.5f;
 
+	// -------------------------------------------------------------------------
+	// BOSS CHARGE COMBAT - any character carrying a UDCCBossComponent
+	//
+	// While UDCCBossComponent::IsCharging() is true, the component itself owns
+	// vertical position every frame (see TickBalloon) to lift the boss out of
+	// melee reach. Letting the ordinary chase logic below run at the same time
+	// fought that directly: AIController->MoveToActor kept trying to path the
+	// boss back down onto the navmesh while the balloon held him up, and the
+	// horizontal component of that tug-of-war is what read as the boss
+	// "floating away like he's on the wind" instead of fighting. TickChargeCombat
+	// is the whole fix - a self-contained branch that owns horizontal movement
+	// directly (no AIController, no pathfinding) so there is only ever one
+	// system deciding where a charging boss is, and keeps him doing what a
+	// ranged fighter always does: hold a standoff distance and keep attacking.
+	// -------------------------------------------------------------------------
+
+	/** How fast a charging boss drifts horizontally to correct its standoff distance. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|AI|Boss", meta = (ClampMin = "0.0"))
+	float ChargeHoverSpeed = 220.0f;
+
 	UFUNCTION(BlueprintPure, Category = "DCC|AI")
 	ADCCCharacterBase* GetCurrentTarget() const { return CurrentTarget; }
+
+	// -------------------------------------------------------------------------
+	// BODY COLLECTOR - a one-shot ambient task, not a persistent AI mode
+	//
+	// Spawned by ADCCCharacterBase::CheckForBodyCollector when a corpse has sat
+	// untouched for BodyCollectorDelaySeconds. Walks to the corpse, holds for a
+	// short "checking" beat, then the body is gone. Entirely its own Tick
+	// branch rather than woven into the combat/escort logic below - this actor
+	// never fights, never scans for a leader, never does anything else, so
+	// there is nothing to gain by threading it through the general-purpose path.
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Server only. Arms this character as a body collector. Must be called
+	 * between SpawnActorDeferred and FinishSpawning - see
+	 * ADCCCharacterBase::CheckForBodyCollector - so Tick's first run already
+	 * sees bIsBodyCollector rather than running one frame of ordinary AI first.
+	 */
+	void BeginBodyCollection(ADCCCharacterBase* Corpse);
+
+	/** How close counts as "arrived" at the corpse. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|AI|BodyCollector", meta = (ClampMin = "0.0"))
+	float BodyCollectorArrivalDistance = 150.0f;
+
+	/** Seconds spent standing at the corpse, turning side to side, before it's taken. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|AI|BodyCollector", meta = (ClampMin = "0.0"))
+	float BodyCollectorCheckSeconds = 2.5f;
+
+	/** How far the "checking" turn sweeps, in degrees either side of the collector's heading on arrival. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|AI|BodyCollector", meta = (ClampMin = "0.0"))
+	float BodyCollectorTurnDegrees = 35.0f;
+
+	/**
+	 * Whoever this minion collected, kept after the corpse itself is destroyed.
+	 * Purely informational - the actual loot travels in CarriedLoot below.
+	 */
+	UPROPERTY(BlueprintReadOnly, Category = "DCC|AI|BodyCollector")
+	FText CollectedBodyName;
 
 	// -------------------------------------------------------------------------
 	// PASSIVE / PATROL - a guard, not a mob
@@ -413,6 +474,17 @@ protected:
 	bool TryUseSkill(ADCCCharacterBase* Target);
 
 	/**
+	 * Server only. The whole of this character's turn while its
+	 * UDCCBossComponent is mid-charge - see the BOSS CHARGE COMBAT note above
+	 * for why this exists as a separate branch instead of a few conditionals
+	 * threaded through the normal chase logic. Faces Target, keeps trying
+	 * TryUseSkill/PerformAttack, and nudges horizontal position directly to
+	 * hold roughly EffectiveRange * RangedStandoffFraction - the same
+	 * standoff a grounded ranged fighter already prefers.
+	 */
+	void TickChargeCombat(float DeltaSeconds, ADCCCharacterBase* Target, class AAIController* AIController);
+
+	/**
 	 * Server only, ally-only. If a downed party member is within
 	 * FirstAidSearchRadius, moves to them and starts BeginReviveChannel once
 	 * in range. Returns true when it has claimed this tick for first aid (so
@@ -446,6 +518,10 @@ protected:
 private:
 	UPROPERTY(Transient)
 	TObjectPtr<ADCCCharacterBase> CurrentTarget;
+
+	/** Resolved once in BeginPlay - null for anything that isn't a boss. */
+	UPROPERTY(Transient)
+	TObjectPtr<UDCCBossComponent> CachedBossComponent;
 
 	/** Set while a move order is outstanding, so we do not re-issue it every frame. */
 	bool bIsChasing = false;
@@ -529,4 +605,55 @@ private:
 
 	/** World time before which a leash-dropped ally may not take a new target. */
 	float ReengageAllowedTime = 0.0f;
+
+	// -------------------------------------------------------------------------
+	// BODY COLLECTOR STATE - see BeginBodyCollection / TickBodyCollector
+	// -------------------------------------------------------------------------
+
+	enum class EBodyCollectorState : uint8
+	{
+		MovingToCorpse,
+		Checking,
+		MovingToChest,
+		Done,
+	};
+
+	bool bIsBodyCollector = false;
+
+	/** Weak - the corpse can be destroyed out from under this (looted, expired) while the collector is still walking over. */
+	TWeakObjectPtr<ADCCCharacterBase> AssignedCorpse;
+
+	/** Resolved once, at pickup - the nearest actor tagged BodyCollectorDestinationTag. */
+	TWeakObjectPtr<ADCCLootContainer> DestinationChest;
+
+	/**
+	 * The corpse's own rolled loot, captured just before the corpse is
+	 * destroyed and carried until DestinationChest is reached. This - not
+	 * CollectedBodyName above - is the actual "picked up into the minion's
+	 * inventory" state; a player's gear is delayed, not lost, once this is
+	 * non-empty.
+	 */
+	TArray<FDCCRolledLoot> CarriedLoot;
+
+	EBodyCollectorState BodyCollectorState = EBodyCollectorState::MovingToCorpse;
+
+	/** Heading to sweep around during the Checking beat, captured on arrival rather than assumed. */
+	float BodyCollectorBaseYaw = 0.0f;
+
+	/** World time the Checking beat ends. */
+	float BodyCollectorCheckUntilTime = 0.0f;
+
+	/**
+	 * The whole of Tick while bIsBodyCollector is set. Moves to AssignedCorpse,
+	 * holds for a turning-in-place "checking" beat, captures its loot and
+	 * destroys it, carries that loot to DestinationChest, deposits it there,
+	 * then retires. Bails early - wandering off rather than completing - if
+	 * the corpse is gone or was handled (looted, stowed) out from under it
+	 * before pickup, or if no destination chest is tagged in the level yet;
+	 * either way nothing is deleted that wasn't already accounted for.
+	 */
+	void TickBodyCollector(float DeltaSeconds, class AAIController* AIController);
+
+	/** Nearest ADCCLootContainer tagged BodyCollectorDestinationTag, or null if none exists yet. */
+	ADCCLootContainer* FindBodyCollectorDestination() const;
 };

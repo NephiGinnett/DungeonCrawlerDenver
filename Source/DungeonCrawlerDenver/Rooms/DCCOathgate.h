@@ -103,10 +103,27 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Oathgate")
 	FName QuestObjectiveTag = TEXT("Oathgate");
 
+	/**
+	 * Server only. Called after a player confirms "Enter" on the local
+	 * "Enter the gate?" prompt (see ADCCCharacterBase::Server_ActivateOathgate).
+	 * Re-checks eligibility rather than trusting the confirm outright - the
+	 * usual "client picks, server re-validates" shape - then runs ActivateFor.
+	 */
+	void RequestActivation(ADCCCharacterBase* Requester);
+
 protected:
 	UFUNCTION()
 	void HandleTriggerOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	/**
+	 * Walking back out of the trigger without confirming reads as "turn away" -
+	 * closes whichever client's prompt this was, so it never sits stale on
+	 * their screen after they have already walked off.
+	 */
+	UFUNCTION()
+	void HandleTriggerEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
 	/** Server only. Gathers nearby allies, rolls a fight if this side has one, and teleports everyone. */
 	void ActivateFor(ADCCCharacterBase* Requester);

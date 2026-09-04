@@ -1,29 +1,43 @@
 #include "Characters/DCCEnemyCharacter_Oathgate.h"
 
-#include "Characters/DCCCrawlerAnimSet.h"
 #include "Skills/DCCSkillComponent.h"
 #include "Stats/DCCStatsComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/SkeletalMesh.h"
+#include "Animation/AnimSequence.h"
 #include "UObject/ConstructorHelpers.h"
 
 ADCCEnemyCharacter_FinePrint::ADCCEnemyCharacter_FinePrint()
 {
 	DisplayName = NSLOCTEXT("DCC", "FinePrintName", "Fine Print");
 
-	// Shared-skeleton reskin, scaled down - a swarm should read as small next
-	// to whatever else the gate pulls, the same visual shorthand the Nuclear
-	// Family's Kid uses for "less of a threat, more of them."
+	// Its own model and skeleton now - small and numerous reads correctly on
+	// a genuine slime rather than a scaled-down ally. See this class's own
+	// header comment for why WalkAnimation/RunAnimation replace
+	// DCCCrawlerAnimSet::Apply below.
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FinePrintMesh(
-		TEXT("/Game/DCC/Characters/ArmsOut/SK_ArmsOut_Shared.SK_ArmsOut_Shared"));
+		TEXT("/Game/MonsterForSurvivalGame/Mesh/PBR/Slime_SK.Slime_SK"));
 	if (USkeletalMeshComponent* MeshComponent = GetMesh())
 	{
 		if (FinePrintMesh.Succeeded())
 		{
 			MeshComponent->SetSkeletalMesh(FinePrintMesh.Object);
 		}
+	}
 
-		MeshComponent->SetRelativeScale3D(FVector(0.72f, 0.72f, 0.72f));
+	static ConstructorHelpers::FObjectFinder<UAnimSequence> FinePrintWalkAnim(
+		TEXT("/Game/MonsterForSurvivalGame/Animation/PBR/Slime/Slime_Walk_ANIM.Slime_Walk_ANIM"));
+	static ConstructorHelpers::FObjectFinder<UAnimSequence> FinePrintRunAnim(
+		TEXT("/Game/MonsterForSurvivalGame/Animation/PBR/Slime/Slime_Run_ANIM.Slime_Run_ANIM"));
+
+	if (FinePrintWalkAnim.Succeeded())
+	{
+		WalkAnimation = FinePrintWalkAnim.Object;
+	}
+
+	if (FinePrintRunAnim.Succeeded())
+	{
+		RunAnimation = FinePrintRunAnim.Object;
 	}
 
 	if (Stats)
@@ -43,8 +57,9 @@ ADCCEnemyCharacter_FinePrint::ADCCEnemyCharacter_FinePrint()
 	AttackRange = 170.0f;
 	AggroRadius = 1600.0f;
 
-	// Shared skeleton, so the consolidated animation set applies directly.
-	DCCCrawlerAnimSet::Apply(*this, /*EmoteChanceOnKill=*/0.3f);
+	// No emote-on-kill clip - Slime's pack has no equivalent gesture, an
+	// accepted cosmetic gap the same way DebtEater has no idle/attack/hit
+	// clip. EmoteChanceOnKill stays at its zero default.
 }
 
 ADCCEnemyCharacter_Arbiter::ADCCEnemyCharacter_Arbiter()
@@ -52,16 +67,28 @@ ADCCEnemyCharacter_Arbiter::ADCCEnemyCharacter_Arbiter()
 	DisplayName = NSLOCTEXT("DCC", "ArbiterName", "The Arbiter");
 
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> ArbiterMesh(
-		TEXT("/Game/DCC/Characters/DiceWinged/SK_DiceWinged_Shared.SK_DiceWinged_Shared"));
+		TEXT("/Game/ParagonSerath/Characters/Heroes/Serath/Meshes/Serath.Serath"));
 	if (USkeletalMeshComponent* MeshComponent = GetMesh())
 	{
 		if (ArbiterMesh.Succeeded())
 		{
 			MeshComponent->SetSkeletalMesh(ArbiterMesh.Object);
 		}
+	}
 
-		// Reads as the one worth focusing, standing over the FinePrint swarm.
-		MeshComponent->SetRelativeScale3D(FVector(1.15f, 1.15f, 1.15f));
+	static ConstructorHelpers::FObjectFinder<UAnimSequence> ArbiterWalkAnim(
+		TEXT("/Game/ParagonSerath/Characters/Heroes/Serath/Animations/Jog_Fwd.Jog_Fwd"));
+	static ConstructorHelpers::FObjectFinder<UAnimSequence> ArbiterRunAnim(
+		TEXT("/Game/ParagonSerath/Characters/Heroes/Serath/Animations/Sprint_Fwd.Sprint_Fwd"));
+
+	if (ArbiterWalkAnim.Succeeded())
+	{
+		WalkAnimation = ArbiterWalkAnim.Object;
+	}
+
+	if (ArbiterRunAnim.Succeeded())
+	{
+		RunAnimation = ArbiterRunAnim.Object;
 	}
 
 	if (Stats)
@@ -88,5 +115,5 @@ ADCCEnemyCharacter_Arbiter::ADCCEnemyCharacter_Arbiter()
 		Skills->StartingSkillRank = 2;
 	}
 
-	DCCCrawlerAnimSet::Apply(*this, /*EmoteChanceOnKill=*/0.5f);
+	// No emote-on-kill clip - same accepted gap as FinePrint above.
 }

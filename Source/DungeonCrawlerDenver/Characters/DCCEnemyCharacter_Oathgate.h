@@ -13,9 +13,15 @@
 // counts as agreeing to terms nobody read. What comes out the other side is
 // staffed accordingly: paperwork given legs.
 //
-// Both reskin onto an already-shared crawler mesh via DCCCrawlerAnimSet, the
-// same no-new-art pattern DebtEater/TestBoss/the allies all use - no unique
-// model exists for either, and none is needed for a testing-arena roster.
+// Each now wears its own model (changed 2026-08-30, see DISPATCH.md) - Serath
+// (ParagonSerath, its own skeleton) for the Arbiter, Slime (MonsterForSurvivalGame,
+// its own skeleton) for FinePrint. Both ship complete Walk/Run clips for their
+// own skeleton, so this is a direct WalkAnimation/RunAnimation assignment,
+// same pattern as DebtEater - NOT DCCCrawlerAnimSet::Apply, which is only
+// valid on the shared crawler skeleton family and asserts
+// (SkeletonToCompactPose.IsValidIndex) on anything else. Previously both
+// reskinned onto shared crawler meshes (ArmsOut/DiceWinged) as a no-new-art
+// placeholder for a testing-arena roster.
 // ---------------------------------------------------------------------------
 
 /**

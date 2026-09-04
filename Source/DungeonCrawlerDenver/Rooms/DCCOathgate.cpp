@@ -46,6 +46,7 @@ void ADCCOathgate::BeginPlay()
 	Super::BeginPlay();
 
 	Trigger->OnComponentBeginOverlap.AddDynamic(this, &ADCCOathgate::HandleTriggerOverlap);
+	Trigger->OnComponentEndOverlap.AddDynamic(this, &ADCCOathgate::HandleTriggerEndOverlap);
 }
 
 void ADCCOathgate::HandleTriggerOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
@@ -68,12 +69,47 @@ void ADCCOathgate::HandleTriggerOverlap(UPrimitiveComponent* OverlappedComponent
 		return;
 	}
 
-	// Set before any of the gathering/spawning below runs, not after - two
-	// players overlapping the same frame must both see the debounce, not just
-	// whichever one is processed second.
+	// Set before the prompt goes out, not after - two players overlapping the
+	// same frame must both see the debounce, not just whichever one is
+	// processed second. Governs how soon the PROMPT can reappear now, not the
+	// teleport itself - walking in, deciding, and walking back in again inside
+	// this window just does not re-show it.
 	NextUsableTime = World->GetTimeSeconds() + ReuseDelaySeconds;
 
-	ActivateFor(Crawler);
+	// No longer an instant activation - arms the local "Enter the gate?"
+	// confirm prompt on whichever client this crawler belongs to instead. See
+	// RequestActivation for what used to happen here directly.
+	Crawler->Client_ShowOathgatePrompt(this);
+}
+
+void ADCCOathgate::HandleTriggerEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	ADCCCharacterBase* Crawler = Cast<ADCCCharacterBase>(OtherActor);
+	if (!Crawler)
+	{
+		return;
+	}
+
+	// Gate null closes the prompt - see Client_ShowOathgatePrompt_Implementation.
+	// Harmless to send if they already confirmed one way or the other; the
+	// prompt is closed by then and this just clears an already-null pointer.
+	Crawler->Client_ShowOathgatePrompt(nullptr);
+}
+
+void ADCCOathgate::RequestActivation(ADCCCharacterBase* Requester)
+{
+	if (!Requester || !Requester->IsAlive() || !Requester->IsCrawler())
+	{
+		return;
+	}
+
+	ActivateFor(Requester);
 }
 
 void ADCCOathgate::ActivateFor(ADCCCharacterBase* Requester)

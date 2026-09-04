@@ -177,6 +177,13 @@ void ADCCDialogueNPC::TryPlayerInteract(ADCCCharacterBase* Interactor)
 	{
 		SayNextLine();
 	}
+	else if (!bSpeaking)
+	{
+		// A deliberately non-looping NPC that has genuinely run out of lines -
+		// still worth a press doing SOMETHING visible (the resting nameplate)
+		// rather than E reading as dead. See bLoopWhenExhausted's header comment.
+		ShowIdleText();
+	}
 }
 
 void ADCCDialogueNPC::ShowLine(const FDCCDialogueLine& Line)

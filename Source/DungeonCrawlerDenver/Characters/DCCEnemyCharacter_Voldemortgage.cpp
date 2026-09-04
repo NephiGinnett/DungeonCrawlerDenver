@@ -2,6 +2,7 @@
 
 #include "Characters/DCCEnemyCharacter_DebtEater.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/TextRenderComponent.h"
 #include "Combat/DCCBossComponent.h"
 #include "Skills/DCCSkillComponent.h"
 #include "Stats/DCCStatsComponent.h"
@@ -155,6 +156,19 @@ ADCCEnemyCharacter_Voldemortgage::ADCCEnemyCharacter_Voldemortgage()
 	{
 		BalloonMesh->SetStaticMesh(Sphere.Object);
 	}
+
+	// Sits above the balloon's own base height - TickBalloon-equivalent logic
+	// in Tick() below re-lifts it to clear the balloon as it grows, same as
+	// BalloonMesh's own relative-location update does for itself.
+	ChannelingLabel = CreateDefaultSubobject<UTextRenderComponent>(TEXT("ChannelingLabel"));
+	ChannelingLabel->SetupAttachment(GetRootComponent());
+	ChannelingLabel->SetRelativeLocation(FVector(0.0f, 0.0f, BalloonBaseHeight + 120.0f));
+	ChannelingLabel->SetHorizontalAlignment(EHTA_Center);
+	ChannelingLabel->SetVerticalAlignment(EVRTA_TextBottom);
+	ChannelingLabel->SetWorldSize(48.0f);
+	ChannelingLabel->SetTextRenderColor(FColor(255, 90, 80));
+	ChannelingLabel->SetText(FText::GetEmpty());
+	ChannelingLabel->SetVisibility(false);
 }
 
 void ADCCEnemyCharacter_Voldemortgage::BeginPlay()
@@ -191,6 +205,8 @@ void ADCCEnemyCharacter_Voldemortgage::Tick(float DeltaSeconds)
 
 	BalloonMesh->SetVisibility(bCharging);
 
+	float BalloonTopHeight = BalloonBaseHeight;
+
 	if (bCharging)
 	{
 		const float Scale = FMath::Lerp(
@@ -200,6 +216,25 @@ void ADCCEnemyCharacter_Voldemortgage::Tick(float DeltaSeconds)
 
 		// Rises with its own size so it never clips down through his head as it
 		// grows.
-		BalloonMesh->SetRelativeLocation(FVector(0.0f, 0.0f, BalloonBaseHeight + Scale * 40.0f));
+		BalloonTopHeight = BalloonBaseHeight + Scale * 40.0f;
+		BalloonMesh->SetRelativeLocation(FVector(0.0f, 0.0f, BalloonTopHeight));
+	}
+
+	if (ChannelingLabel)
+	{
+		ChannelingLabel->SetVisibility(bCharging);
+
+		if (bCharging)
+		{
+			// Default sphere radius is 50 units, so half the current scale is
+			// roughly the balloon's own top edge - clearing it the same way
+			// BalloonMesh clears his head above.
+			ChannelingLabel->SetRelativeLocation(
+				FVector(0.0f, 0.0f, BalloonTopHeight + BalloonMesh->GetRelativeScale3D().Z * 50.0f + 30.0f));
+
+			ChannelingLabel->SetText(Boss->CurrentPhase <= 1
+				? NSLOCTEXT("DCC", "VoldemortgageChanneling1", "CHANNELING - BALLOON PAYMENT")
+				: NSLOCTEXT("DCC", "VoldemortgageChanneling2", "CHANNELING - BALLOON PAYMENT (AGAIN)"));
+		}
 	}
 }

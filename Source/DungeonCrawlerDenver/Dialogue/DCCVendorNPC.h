@@ -15,9 +15,15 @@
  *
  * Ambient talk-on-approach is untouched and still works exactly as it does on
  * the base class - a vendor still tells you about quests just by standing
- * near them. E is what changes: on a plain ADCCDialogueNPC it advances the
- * script, but here it opens the shop instead, so the two capabilities never
- * fight over the same button.
+ * near them.
+ *
+ * TryPlayerInteract itself is no longer what a player's E press reaches
+ * (changed 2026-08-30, see DISPATCH.md) - E opens ADCCCharacterBase's own
+ * Talk/Shop/Leave menu, and that menu's Shop row calls OpenVendorMenu
+ * directly rather than through here, precisely so Talk (which calls
+ * SayNextLine directly, not through this virtual) cannot end up here by
+ * accident. This override is kept for whatever else still calls
+ * TryPlayerInteract programmatically - see that function's own comment.
  */
 UCLASS()
 class DUNGEONCRAWLERDENVER_API ADCCVendorNPC : public ADCCDialogueNPC

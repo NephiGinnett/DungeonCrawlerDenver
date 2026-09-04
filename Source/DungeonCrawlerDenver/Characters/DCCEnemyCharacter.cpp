@@ -4,9 +4,11 @@
 #include "Skills/DCCSkillComponent.h"
 #include "Items/DCCPickupVariants.h"
 #include "Items/DCCPickup.h"
+#include "Items/DCCLootContainer.h"
 #include "Equipment/DCCEquipmentComponent.h"
 #include "Components/WidgetComponent.h"
 #include "Combat/DCCGameState.h"
+#include "Combat/DCCBossComponent.h"
 #include "Rooms/DCCEncounter.h"
 #include "UI/DCCEventLogTypes.h"
 #include "AIController.h"
@@ -28,8 +30,12 @@ namespace
 	 */
 	int32 ScoreEquipmentDef(const FDCCEquipmentDef& Def)
 	{
+		// GetItemEffectiveDamageDie, not the raw field - a rarity-tiered item
+		// otherwise scores exactly the same as a mundane one with the same
+		// authored die, and an ally would never recognise a real upgrade.
 		return Def.BonusStrength + Def.BonusIntelligence + Def.BonusConstitution
-			+ Def.BonusDexterity + Def.BonusCharisma + Def.WeaponDamageDie + Def.EvadeBonus;
+			+ Def.BonusDexterity + Def.BonusCharisma
+			+ UDCCEquipmentComponent::GetItemEffectiveDamageDie(Def) + Def.EvadeBonus;
 	}
 }
 
@@ -110,6 +116,10 @@ void ADCCEnemyCharacter::BeginPlay()
 		LegacyHealthBar->SetHiddenInGame(true);
 		LegacyHealthBar->SetComponentTickEnabled(false);
 	}
+
+	// Null for everything except a boss - see the BOSS CHARGE COMBAT note on
+	// the header. Resolved once here rather than searched for every tick.
+	CachedBossComponent = FindComponentByClass<UDCCBossComponent>();
 
 	// Only the server thinks. Clients would otherwise run a second, divergent
 	// copy of this AI against their own view of the world.
@@ -323,10 +333,15 @@ void ADCCEnemyCharacter::TryAutoEquipNearbyGear()
 			continue;
 		}
 
-		// The same entry point a player's own pickup uses - it equips straight
-		// into the slot and consumes itself. See ADCCPickup::OnPickedUp's
-		// comment on EquipmentItemId for why nothing more is needed here.
-		Candidate->OnPickedUp(this);
+		// Equipped directly rather than through Candidate->OnPickedUp - that
+		// entry point now stows gear into Items for a player to equip manually
+		// from the Inventory page instead of auto-equipping (changed
+		// 2026-08-30, see DISPATCH.md). An ally has no such page to act from,
+		// so routing it through there would just mean the gear now silently
+		// sits unequipped in the ally's pack forever, which is a real
+		// regression of this whole feature, not a quieter version of it.
+		Equipment->Equip(CandidateDef.ItemId);
+		Candidate->Destroy();
 
 		ADCCGameState::Log(this, EDCCLogCategory::Encounter, FText::Format(
 			NSLOCTEXT("DCC", "LogAllyGearUp", "{0} picks up {1}."),
@@ -673,12 +688,96 @@ bool ADCCEnemyCharacter::TryUseSkill(ADCCCharacterBase* Target)
 	return true;
 }
 
+void ADCCEnemyCharacter::TickChargeCombat(float DeltaSeconds, ADCCCharacterBase* Target, AAIController* AIController)
+{
+	// However he got a move order queued before the charge started, drop it -
+	// see the header comment on why AIController never drives him while
+	// charging. StopMovement matters even though nothing here calls MoveTo:
+	// without it a chase issued the frame before charging began keeps running
+	// underneath everything below and fights the horizontal nudge at the end
+	// of this function.
+	if (bIsChasing && AIController)
+	{
+		AIController->StopMovement();
+		bIsChasing = false;
+	}
+
+	if (!Target)
+	{
+		return;
+	}
+
+	// Horizontal only. His altitude is intentional and TickBalloon's problem,
+	// not this function's - measuring 3D distance here would read him as
+	// "out of range" the moment he lifts off even standing directly over the
+	// target, which is exactly the bug this function exists to remove.
+	FVector ToTarget2D = Target->GetActorLocation() - GetActorLocation();
+	ToTarget2D.Z = 0.0f;
+	const float Distance2D = ToTarget2D.Size();
+
+	if (Distance2D > KINDA_SMALL_NUMBER)
+	{
+		SetActorRotation(FRotator(0.0f, ToTarget2D.Rotation().Yaw, 0.0f));
+	}
+
+	// Still mid-cast from a moment ago: hold, same as the grounded path.
+	if (GetWorld()->GetTimeSeconds() < CastHoldUntilTime)
+	{
+		return;
+	}
+
+	if (TryUseSkill(Target))
+	{
+		return;
+	}
+
+	const float EffectiveRange = GetEffectiveAttackRange();
+
+	// PerformAttack enforces its own cooldown, so calling it whenever in range
+	// is safe - same pattern the grounded ranged path uses, and for the same
+	// reason: firing happens before any repositioning below, so holding
+	// standoff distance never costs a shot.
+	if (Distance2D <= EffectiveRange)
+	{
+		PerformAttack(Target);
+	}
+
+	// Direct horizontal nudge toward or away from Target to settle on the
+	// same standoff a grounded ranged fighter prefers - no AIController, no
+	// pathfinding, so there is nothing here for TickBalloon's Z control to
+	// fight. Clamped by ChargeHoverSpeed rather than snapping straight to the
+	// target distance, so the correction reads as drifting rather than
+	// teleporting.
+	const float DesiredDistance = EffectiveRange * RangedStandoffFraction;
+	const float DistanceError = Distance2D - DesiredDistance;
+
+	if (FMath::Abs(DistanceError) > 60.0f && Distance2D > KINDA_SMALL_NUMBER)
+	{
+		const FVector Direction2D = ToTarget2D.GetSafeNormal();
+		const float Step = FMath::Clamp(DistanceError, -ChargeHoverSpeed * DeltaSeconds, ChargeHoverSpeed * DeltaSeconds);
+
+		// Swept, not teleported - a wall between him and the target should
+		// still stop him rather than let him drift through it.
+		AddActorWorldOffset(Direction2D * Step, /*bSweep=*/true);
+	}
+}
+
 void ADCCEnemyCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
 	if (!HasAuthority() || !IsAlive())
 	{
+		return;
+	}
+
+	// Runs unconditionally, even through combat pause - the collector is an
+	// ambient/environmental task, not a fight, and a paused fight is not a
+	// paused dungeon. Entirely separate from everything below: this actor
+	// never targets, never escorts, never does anything else.
+	if (bIsBodyCollector)
+	{
+		TickBodyCollector(DeltaSeconds, Cast<AAIController>(GetController()));
 		return;
 	}
 
@@ -823,6 +922,16 @@ void ADCCEnemyCharacter::Tick(float DeltaSeconds)
 			TickPatrol(AIController);
 		}
 
+		return;
+	}
+
+	// A charging boss is airborne and the component already owns his Z every
+	// frame - see TickChargeCombat's own comment, and the BOSS CHARGE COMBAT
+	// note on the header, for why this is a full branch rather than a few
+	// conditionals threaded through what follows.
+	if (CachedBossComponent && CachedBossComponent->IsCharging())
+	{
+		TickChargeCombat(DeltaSeconds, CurrentTarget, AIController);
 		return;
 	}
 
@@ -972,6 +1081,167 @@ void ADCCEnemyCharacter::TickPatrol(AAIController* AIController)
 
 	CurrentPatrolIndex = (CurrentPatrolIndex + 1) % PatrolPoints.Num();
 	AIController->MoveToLocation(PatrolPoints[CurrentPatrolIndex], PatrolPointTolerance);
+}
+
+namespace
+{
+	/** Tag a placed ADCCLootContainer with this to make it a body-collector drop-off point. */
+	const FName BodyCollectorDestinationTag(TEXT("BodyCollectorDestination"));
+}
+
+void ADCCEnemyCharacter::BeginBodyCollection(ADCCCharacterBase* Corpse)
+{
+	bIsBodyCollector = true;
+	AssignedCorpse = Corpse;
+	BodyCollectorState = EBodyCollectorState::MovingToCorpse;
+}
+
+ADCCLootContainer* ADCCEnemyCharacter::FindBodyCollectorDestination() const
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return nullptr;
+	}
+
+	ADCCLootContainer* Best = nullptr;
+	float BestDistanceSquared = TNumericLimits<float>::Max();
+
+	for (TActorIterator<ADCCLootContainer> It(World); It; ++It)
+	{
+		ADCCLootContainer* Candidate = *It;
+		if (!Candidate || !Candidate->ActorHasTag(BodyCollectorDestinationTag))
+		{
+			continue;
+		}
+
+		const float DistanceSquared = FVector::DistSquared(GetActorLocation(), Candidate->GetActorLocation());
+		if (DistanceSquared < BestDistanceSquared)
+		{
+			Best = Candidate;
+			BestDistanceSquared = DistanceSquared;
+		}
+	}
+
+	return Best;
+}
+
+void ADCCEnemyCharacter::TickBodyCollector(float DeltaSeconds, AAIController* AIController)
+{
+	// Only MovingToCorpse/Checking care whether the corpse is still there -
+	// once past pickup, AssignedCorpse is expected to be gone (it was just
+	// destroyed) and checking it again would wrongly abort a delivery already
+	// in progress.
+	if (BodyCollectorState == EBodyCollectorState::MovingToCorpse || BodyCollectorState == EBodyCollectorState::Checking)
+	{
+		ADCCCharacterBase* Corpse = AssignedCorpse.Get();
+
+		// The corpse can vanish out from under an in-progress approach -
+		// looted, stowed, or simply expired on its own timer - between the
+		// moment this collector was dispatched and the moment it arrives.
+		// Rather than an interrupt system, just check again right before the
+		// take: nothing left to collect means wander off and retire.
+		if (!Corpse || !IsValid(Corpse) || Corpse->HasLootBeenHandled())
+		{
+			BodyCollectorState = EBodyCollectorState::Done;
+			SetLifeSpan(1.5f);
+			return;
+		}
+
+		if (BodyCollectorState == EBodyCollectorState::MovingToCorpse)
+		{
+			const float DistanceSquared = FVector::DistSquared(GetActorLocation(), Corpse->GetActorLocation());
+			if (DistanceSquared <= FMath::Square(BodyCollectorArrivalDistance))
+			{
+				if (AIController)
+				{
+					AIController->StopMovement();
+				}
+
+				BodyCollectorState = EBodyCollectorState::Checking;
+				BodyCollectorBaseYaw = GetActorRotation().Yaw;
+				BodyCollectorCheckUntilTime = GetWorld()->GetTimeSeconds() + BodyCollectorCheckSeconds;
+				return;
+			}
+
+			if (AIController && AIController->GetMoveStatus() == EPathFollowingStatus::Idle)
+			{
+				AIController->MoveToActor(Corpse, BodyCollectorArrivalDistance * 0.8f);
+			}
+			return;
+		}
+
+		// Checking: a slow side-to-side turn reads as "looking the body over"
+		// without depending on a dedicated animation - none of the imported
+		// minion rigs actually have a look/idle clip, only Run/Walk plus a
+		// couple of bespoke gestures, and none of those fit here.
+		const float TimeLeft = BodyCollectorCheckUntilTime - GetWorld()->GetTimeSeconds();
+		const float Sweep = FMath::Sin(TimeLeft * 4.0f) * BodyCollectorTurnDegrees;
+		FRotator NewRotation = GetActorRotation();
+		NewRotation.Yaw = BodyCollectorBaseYaw + Sweep;
+		SetActorRotation(NewRotation);
+
+		if (TimeLeft > 0.0f)
+		{
+			return;
+		}
+
+		ADCCLootContainer* Destination = FindBodyCollectorDestination();
+		if (!Destination)
+		{
+			// No collection point tagged anywhere in the level yet - leave the
+			// corpse alone rather than destroying its loot with nowhere to
+			// put it. It falls back to its own normal expiry.
+			BodyCollectorState = EBodyCollectorState::Done;
+			SetLifeSpan(1.5f);
+			return;
+		}
+
+		CollectedBodyName = Corpse->GetLootSourceName();
+		CarriedLoot = Corpse->GetPendingLootItems();
+		Corpse->Destroy();
+
+		DestinationChest = Destination;
+		BodyCollectorState = EBodyCollectorState::MovingToChest;
+		return;
+	}
+
+	if (BodyCollectorState == EBodyCollectorState::MovingToChest)
+	{
+		ADCCLootContainer* Chest = DestinationChest.Get();
+		if (!Chest || !IsValid(Chest))
+		{
+			// The chest itself vanished mid-carry - vanishingly unlikely for a
+			// placed level actor, but the corpse is already gone either way,
+			// so there is nothing safer to do than retire.
+			BodyCollectorState = EBodyCollectorState::Done;
+			SetLifeSpan(1.5f);
+			return;
+		}
+
+		const float DistanceSquared = FVector::DistSquared(GetActorLocation(), Chest->GetActorLocation());
+		if (DistanceSquared <= FMath::Square(BodyCollectorArrivalDistance))
+		{
+			if (AIController)
+			{
+				AIController->StopMovement();
+			}
+
+			Chest->DepositLoot(CarriedLoot);
+			CarriedLoot.Reset();
+
+			BodyCollectorState = EBodyCollectorState::Done;
+			SetLifeSpan(1.0f);
+			return;
+		}
+
+		if (AIController && AIController->GetMoveStatus() == EPathFollowingStatus::Idle)
+		{
+			AIController->MoveToActor(Chest, BodyCollectorArrivalDistance * 0.8f);
+		}
+	}
+
+	// Done: nothing to do, just waiting on SetLifeSpan to retire.
 }
 
 void ADCCEnemyCharacter::HandleNearbyAttack(ADCCCharacterBase* Attacker, ADCCCharacterBase* Target)

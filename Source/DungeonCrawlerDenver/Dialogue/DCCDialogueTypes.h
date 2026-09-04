@@ -60,3 +60,34 @@ struct FDCCDialogueLine : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialogue")
 	FString Notes;
 };
+
+/**
+ * A row in the "E on an NPC" menu - ADCCCharacterBase::NPCInteractionOptions,
+ * drawn by ADCCHUD::DrawNPCInteractionMenu. Deliberately small next to
+ * EDCCInteractionOption (the ally menu): a plain ADCCDialogueNPC has nothing
+ * to do but talk, and a vendor adds exactly one more verb on top of that.
+ *
+ * No separate "ask for rumors" row on purpose - FDCCDialogueLine::bIsHint is
+ * "held back until the party has heard everything else... a reward for
+ * listening", and a menu shortcut straight to the hint would undercut that.
+ * Talk already surfaces it once earned.
+ */
+UENUM(BlueprintType)
+enum class EDCCNPCInteractionOption : uint8
+{
+	/** Says the NPC's next unsaid line - same verb as walking up already triggers, on demand. */
+	Talk,
+
+	/** Vendor only - opens ADCCVendorNPC's existing shop menu. */
+	Shop,
+
+	/** Only shown when this NPC has at least one not-yet-active, not-yet-complete entry in OfferedQuestIds. */
+	Quests,
+
+	/** ADCCDialogueNPC_LiftAttendant only - only shown when LinkedLift is set. */
+	RideLift,
+
+	Leave,
+
+	MAX UMETA(Hidden)
+};

@@ -66,6 +66,23 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Climb")
 	float ClimbBottomZ = 0.0f;
 
+	/**
+	 * Extra distance held off the wall in GetAttachLocationFor, on top of the
+	 * climbing character's own capsule radius. Positive pushes the climber
+	 * further out; negative pulls them closer against the face.
+	 *
+	 * The nearest thing to "adjust where the player is gripping by hand" that
+	 * exists without real per-hand IK, which this project has no rig for -
+	 * every character is single-node animation with no AnimBlueprint (see
+	 * DCCCrowdCrawler.cpp's own comment on why). Building actual hand-to-wall
+	 * IK would need an AnimBlueprint with Two-Bone IK per hand, authored in
+	 * the editor against a specific skeleton - not something a blind C++ pass
+	 * can add. This is a coarse, whole-body stand-in: tune per climb point if
+	 * a specific wall reads as too close/far.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Climb")
+	float SurfaceOffset = 0.0f;
+
 	/** True when the character is close enough to start. */
 	UFUNCTION(BlueprintPure, Category = "Climb")
 	bool IsWithinReach(const ADCCCharacterBase* Character) const;

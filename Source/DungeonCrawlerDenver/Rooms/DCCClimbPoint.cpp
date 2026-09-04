@@ -96,7 +96,7 @@ FVector ADCCClimbPoint::GetAttachLocationFor(const ADCCCharacterBase* Character,
 		Outward = -GetActorForwardVector();
 	}
 
-	return Target + Outward.GetSafeNormal() * CapsuleRadius;
+	return Target + Outward.GetSafeNormal() * FMath::Max(0.0f, CapsuleRadius + SurfaceOffset);
 }
 
 FVector ADCCClimbPoint::GetDismountLocation(const ADCCCharacterBase* Character) const
@@ -131,10 +131,55 @@ FVector ADCCClimbPoint::GetDismountLocation(const ADCCCharacterBase* Character) 
 		}
 	}
 
-	// Over the lip rather than on it: stepping off onto the very edge tends to
-	// drop the character straight back down the face they just climbed.
-	FVector Dismount = GetActorLocation() + AwayFromWall * 120.0f;
-	Dismount.Z = GetTopZ() + HalfHeight + 10.0f;
+	const float TopZ = GetTopZ();
+	const FVector LipXY = GetActorLocation();
+
+	// GetTopZ() is where the WALL stops (authored box, or the last solid probe
+	// hit for a synthesized point) - it was never a promise that the actual
+	// floor above sits at exactly that height. Trusting it blindly is the
+	// "top shelf doesn't match up with the top floor" bug: landing short drops
+	// the climber back down the face, landing long strands them mid-air over
+	// the room. Verifying a few candidate landing spots against a real floor
+	// trace, and only falling back to the old guess if none hit, is what
+	// makes the eventual dismount land on ground that is actually there.
+	if (UWorld* World = GetWorld())
+	{
+		constexpr float ProbeDistances[] = { 120.0f, 200.0f, 280.0f };
+
+		FCollisionQueryParams Params;
+		Params.bTraceComplex = true;
+		if (Character)
+		{
+			Params.AddIgnoredActor(Character);
+		}
+
+		for (float Distance : ProbeDistances)
+		{
+			const FVector CandidateXY = LipXY + AwayFromWall * Distance;
+			const FVector TraceStart(CandidateXY.X, CandidateXY.Y, TopZ + 150.0f);
+			const FVector TraceEnd(CandidateXY.X, CandidateXY.Y, TopZ - 150.0f);
+
+			FHitResult FloorHit;
+			if (World->LineTraceSingleByChannel(FloorHit, TraceStart, TraceEnd, ECC_Visibility, Params))
+			{
+				// Within a story of the climb's own top, not several floors
+				// down through a gap - a trace eventually hitting SOMETHING
+				// is not the same as that something being the landing.
+				if (FMath::Abs(FloorHit.Location.Z - TopZ) <= 200.0f)
+				{
+					FVector Verified = FloorHit.Location;
+					Verified.Z += HalfHeight + 10.0f;
+					return Verified;
+				}
+			}
+		}
+	}
+
+	// Nothing verified - the old estimate, unchanged, so a climb point with no
+	// nearby floor (or no UWorld, in some odd calling context) still resolves
+	// to somewhere rather than nowhere.
+	FVector Dismount = LipXY + AwayFromWall * 120.0f;
+	Dismount.Z = TopZ + HalfHeight + 10.0f;
 
 	return Dismount;
 }

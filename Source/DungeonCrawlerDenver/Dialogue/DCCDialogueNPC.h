@@ -66,13 +66,30 @@ public:
 	/**
 	 * Whether the NPC starts over once it has said everything.
 	 *
-	 * Off by default. A character who repeats their whole script on a loop stops
-	 * reading as a person and starts reading as a kiosk - after the last line they
-	 * fall silent, which is both more human and a signal that there is no more
-	 * here.
+	 * On by default (changed 2026-08-30 - see DISPATCH.md). The line-index state
+	 * this drives is per-actor, not per-player, and dialogue also auto-advances
+	 * ambiently just from a player standing nearby (HandleTalkOverlapBegin/Tick) -
+	 * with five players and no cross-session save data, a finite non-looping
+	 * script gets walked to its end within minutes of play just from people
+	 * wandering past, and then goes permanently silent with zero feedback:
+	 * TryPlayerInteract's "if (HasMoreToSay() || bLoopWhenExhausted)" guard means
+	 * E stops doing anything at all, which reads exactly like a broken E key
+	 * rather than "this NPC has nothing left to say." A one-time story beat that
+	 * really should go quiet for good can still set this false per-instance.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialogue")
-	bool bLoopWhenExhausted = false;
+	bool bLoopWhenExhausted = true;
+
+	/**
+	 * Quests this NPC can hand out - offered through ADCCCharacterBase's own
+	 * Talk/Shop/Quests/Leave menu (EDCCNPCInteractionOption::Quests), not
+	 * through TryPlayerInteract or the ambient script. Deliberately on the
+	 * base class rather than ADCCVendorNPC - a guild mentor handing out floor
+	 * objectives needs this with no shop attached, so gating it behind being
+	 * a vendor would be wrong for that case.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialogue|Quests")
+	TArray<FName> OfferedQuestIds;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Dialogue")
 	TObjectPtr<UCapsuleComponent> Collision;
@@ -112,18 +129,23 @@ public:
 	bool HasMoreToSay() const;
 
 	/**
-	 * Called when a player presses E on this NPC (see
-	 * ADCCCharacterBase::FindDialogueNPCUnderCursor). Advances the script one
-	 * line, same as walking up already does via HandleTalkOverlapBegin - but on
-	 * demand, so a deliberate press works even on an NPC nobody is required to
-	 * stand still in front of, and a line already showing gets skipped ahead
-	 * rather than waited out. Purely local, like the rest of this class - see
-	 * BeginPlay's comment on why nothing here is server-authoritative.
+	 * Advances the script one line, same as walking up already does via
+	 * HandleTalkOverlapBegin - but on demand, and a line already showing gets
+	 * skipped ahead rather than waited out. Purely local, like the rest of
+	 * this class - see BeginPlay's comment on why nothing here is
+	 * server-authoritative.
 	 *
-	 * Virtual, and takes the interactor, so ADCCVendorNPC can redirect E to
-	 * opening a shop on THEM specifically instead of saying a line - the base
-	 * implementation ignores the parameter, since ambient dialogue has nobody
-	 * in particular to address.
+	 * NOT what a player's E press calls any more (changed 2026-08-30, see
+	 * DISPATCH.md) - E now opens ADCCCharacterBase's own Talk/Shop/Leave menu
+	 * (NPCInteractionTarget), whose Talk row calls SayNextLine() directly so
+	 * that virtual dispatch to ADCCVendorNPC's override below cannot make
+	 * "Talk" secretly open the shop instead. This is left as a plain
+	 * BlueprintCallable entry point for anything else that wants to make an
+	 * NPC say its next line programmatically (a trigger, a cutscene beat).
+	 *
+	 * Virtual, and takes the interactor, so ADCCVendorNPC can still override
+	 * it for whatever else calls it - the base implementation ignores the
+	 * parameter, since ambient dialogue has nobody in particular to address.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Dialogue")
 	virtual void TryPlayerInteract(ADCCCharacterBase* Interactor);
