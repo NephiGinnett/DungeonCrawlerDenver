@@ -7,6 +7,7 @@
 #include "UI/DCCEventLogTypes.h"
 #include "Components/StaticMeshComponent.h"
 #include "Equipment/DCCEquipmentComponent.h"
+#include "Items/DCCInventoryComponent.h"
 #include "Net/UnrealNetwork.h"
 
 ADCCPickup::ADCCPickup()
@@ -72,19 +73,26 @@ void ADCCPickup::OnPickedUp(ADCCCharacterBase* Carrier)
 	bIsHeld = true;
 	ApplyHeldState();
 
-	// Gear equips straight into its slot rather than joining the carry/throw
-	// loop - see the field comment on EquipmentItemId - and consumes itself
-	// the moment that happens, so it never falls through to the gold path
-	// below even if someone also gave it a GoldValue for sell-back purposes.
+	// Gear goes straight into the pack rather than joining the carry/throw loop
+	// or auto-equipping itself - changed 2026-08-30 (see DISPATCH.md). It used
+	// to equip on contact with no player choice involved at all, which reads
+	// as "I picked it up and it vanished" the moment the slot already held
+	// something. UDCCEquipmentComponent::EquipItem is now the one place gear
+	// actually equips, called from the Inventory page on request. Consumes
+	// itself the moment it is recorded, so it never falls through to the gold
+	// path below even if someone also gave it a GoldValue for sell-back.
 	if (!EquipmentItemId.IsNone())
 	{
-		if (Carrier->Equipment)
+		if (Carrier->Inventory && Carrier->Inventory->StowPickup(this))
 		{
-			Carrier->Equipment->Equip(EquipmentItemId);
+			return;
 		}
 
+		// Pack full: leave it exactly where it was rather than destroying it
+		// for nothing - same "nothing is ever lost to a failed stow" rule
+		// StowPickup itself already follows.
 		bIsHeld = false;
-		Destroy();
+		ApplyHeldState();
 		return;
 	}
 

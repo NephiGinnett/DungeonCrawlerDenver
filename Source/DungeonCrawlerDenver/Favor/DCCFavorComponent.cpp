@@ -1,5 +1,6 @@
 #include "Favor/DCCFavorComponent.h"
 
+#include "Progression/DCCAchievementComponent.h"
 #include "Engine/World.h"
 #include "Net/UnrealNetwork.h"
 
@@ -133,6 +134,16 @@ void UDCCFavorComponent::RecordChange(int32 Delta, EDCCFavorEvent Reason, const 
 			*GetNameSafe(GetOwner()), static_cast<int32>(OldTier), static_cast<int32>(NewTier), Favor);
 
 		OnTierChanged.Broadcast(this, NewTier, OldTier);
+
+		// "Sponsor Of The Week" - reaching the top tier at least once. This
+		// function only ever runs from AwardFavor's already-authority-gated
+		// path (OnRep_Favor has its own separate client-side tier broadcast
+		// below, which never reaches here), so no further authority check is
+		// needed.
+		if (NewTier == EDCCFavorTier::Headliner)
+		{
+			UDCCAchievementComponent::RecordFor(GetOwner(), EDCCAchievementStat::FavorTierMaxed);
+		}
 	}
 }
 

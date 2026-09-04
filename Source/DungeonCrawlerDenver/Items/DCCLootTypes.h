@@ -6,6 +6,7 @@
 #include "DCCLootTypes.generated.h"
 
 class ADCCPickup;
+class ADCCCharacterBase;
 
 // ---------------------------------------------------------------------------
 // WHAT A CORPSE LEAVES BEHIND
@@ -155,6 +156,23 @@ namespace DCCLoot
 	 * Server-side only - returns null without authority. Applies the rolled gold
 	 * and equipment id onto the spawned actor, since neither is guaranteed to
 	 * match the pickup class's own defaults.
+	 *
+	 * Looter is optional and changes gold specifically, not items. A floor drop
+	 * from a kill has no single claimant - the header comment above explains why
+	 * that is deliberate - but every caller of this function that goes through
+	 * the corpse/chest loot MENU (LootOne, LootAll, and a Stowed Remains record
+	 * being emptied later) already knows exactly who chose to take it. When
+	 * Looter is set and the rolled class is ordinary "pocket change"
+	 * (PickupClass's own bBanksOnPickup - the same flag ADCCPickup::OnPickedUp
+	 * already uses to decide instant-bank vs must-carry), the gold is credited
+	 * straight to that looter instead of also being left on the ground to be
+	 * separately walked over. That second walk-over step is exactly what read as
+	 * "Stow doesn't add to inventory" / "gold pops out onto the ground instead of
+	 * being added" - both were the same root cause: this function never had any
+	 * path that credited gold directly, only ever spawning a coin. See
+	 * DISPATCH.md, "Stow and gold loot" (2026-08-29). A rolled entry that also
+	 * carries an EquipmentItemId still spawns a real pickup for the item half
+	 * even when its gold half was credited directly.
 	 */
-	DUNGEONCRAWLERDENVER_API ADCCPickup* SpawnRolledLoot(UWorld* World, const FDCCRolledLoot& Rolled, const FVector& Origin);
+	DUNGEONCRAWLERDENVER_API ADCCPickup* SpawnRolledLoot(UWorld* World, const FDCCRolledLoot& Rolled, const FVector& Origin, ADCCCharacterBase* Looter = nullptr);
 }

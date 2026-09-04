@@ -71,7 +71,7 @@ void ADCCLootContainer::LootOne(int32 Index, ADCCCharacterBase* Looter)
 		return;
 	}
 
-	DCCLoot::SpawnRolledLoot(GetWorld(), PendingLoot[Index], GetLootOrigin());
+	DCCLoot::SpawnRolledLoot(GetWorld(), PendingLoot[Index], GetLootOrigin(), Looter);
 	PendingLoot.RemoveAt(Index);
 	bHasLoot = !PendingLoot.IsEmpty();
 }
@@ -89,7 +89,7 @@ void ADCCLootContainer::LootAll(ADCCCharacterBase* Looter)
 
 	for (const FDCCRolledLoot& Rolled : PendingLoot)
 	{
-		DCCLoot::SpawnRolledLoot(GetWorld(), Rolled, GetLootOrigin());
+		DCCLoot::SpawnRolledLoot(GetWorld(), Rolled, GetLootOrigin(), Looter);
 	}
 
 	PendingLoot.Reset();
@@ -107,11 +107,28 @@ void ADCCLootContainer::StowInto(ADCCCharacterBase* Looter)
 		Looter->Inventory->StowRemains(GetLootSourceName(), PendingLoot);
 	}
 
-	// A chest has no fade-away timer the way a corpse does - it stays in the
-	// world, just empty, which is the more legible outcome for a piece of
-	// scenery nobody expects to disappear.
 	PendingLoot.Reset();
 	bHasLoot = false;
+
+	// Reversed 2026-08-30, per Zoe: an emptied chest left standing in the
+	// world read as Stow doing nothing at all - there was no visible change
+	// between "stowed" and "never touched". Removed outright rather than
+	// given a corpse-style fade timer: a chest is scenery, not a body with a
+	// "someone's about to collect this" beat to play out, so there is no
+	// reason to delay it once its contents have already left for the
+	// looter's Stowed Remains record.
+	Destroy();
+}
+
+void ADCCLootContainer::DepositLoot(const TArray<FDCCRolledLoot>& Items)
+{
+	if (!HasAuthority() || Items.IsEmpty())
+	{
+		return;
+	}
+
+	PendingLoot.Append(Items);
+	bHasLoot = true;
 }
 
 void ADCCLootContainer::OnRep_HasLoot()

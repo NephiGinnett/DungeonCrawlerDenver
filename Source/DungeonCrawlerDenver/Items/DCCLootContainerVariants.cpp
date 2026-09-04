@@ -55,6 +55,14 @@ ADCCLootContainer_KitchenDrawer::ADCCLootContainer_KitchenDrawer()
 	LootTable.Add(MakeGearDrop(TEXT("TenderiserMallet")));
 	LootTable.Add(MakeGearDrop(TEXT("ChefsKnife")));
 	LootTable.Add(MakeGearDrop(TEXT("CastIronSkillet")));
+	// The Boilerplate Rifle, added 2026-08-29 - Zoe's explicit ask was to confirm
+	// a copy sits in "the loot chest under the kitchen"; a prior session may have
+	// intended to place it here but no C++ or documented live-table evidence of
+	// that was found. Added as a fourth guaranteed drop (constructor default, so
+	// it survives regardless of what any one placed instance's live state was)
+	// rather than trusting an unverifiable claim. Off-theme for a drawer of
+	// kitchen tools on purpose - the joke is that it's there at all.
+	LootTable.Add(MakeGearDrop(TEXT("BoilerplateRifle")));
 	LootTable.Add(MakeGoldDrop(10, 25));
 }
 

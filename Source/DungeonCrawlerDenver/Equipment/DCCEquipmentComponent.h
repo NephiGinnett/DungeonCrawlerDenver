@@ -64,6 +64,9 @@ public:
 	/** Looks up a row. False when the table is missing or the id is unknown. */
 	bool FindItem(FName ItemId, FDCCEquipmentDef& OutItem) const;
 
+	/** First equipped item with bIsCursed && bForcesActionOnCombatStart, if any - see ADCCCharacterBase::NotifyCombatStarted. */
+	bool FindCursedCombatStartEffect(FDCCEquipmentDef& OutItem) const;
+
 	/**
 	 * Total ability bonus across every equipped item. Read by the stats
 	 * component when it rebuilds the Enhanced layer.
@@ -92,9 +95,19 @@ public:
 	 *  merges this with UDCCClassComponent's own list. */
 	void AccumulateDamageResistances(TArray<FDCCResistanceSource>& OutSources) const;
 
-	/** Highest damage die among equipped items, or 0 if nothing overrides it. */
+	/** Highest damage die among equipped items (rarity bonus included), or 0 if nothing overrides it. */
 	UFUNCTION(BlueprintPure, Category = "Equipment")
 	int32 GetWeaponDamageDie() const;
+
+	/**
+	 * A single item's real weapon die - its own WeaponDamageDie plus its
+	 * rarity's bonus, or 0 outright for anything that isn't a weapon at all.
+	 * Exposed (not just used internally by GetWeaponDamageDie) so anything
+	 * comparing one item's damage against another - the ally auto-equip
+	 * "is this an upgrade" heuristic, most notably - judges rarity-tiered
+	 * gear correctly instead of only ever seeing the item's raw authored die.
+	 */
+	static int32 GetItemEffectiveDamageDie(const FDCCEquipmentDef& Item);
 
 	/** Longest attack reach among equipped items, or 0 if none is ranged. */
 	UFUNCTION(BlueprintPure, Category = "Equipment")

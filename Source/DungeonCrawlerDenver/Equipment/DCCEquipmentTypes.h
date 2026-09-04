@@ -5,10 +5,12 @@
 #include "GameplayTagContainer.h"
 #include "Stats/DCCAbilityTypes.h"
 #include "Stats/DCCDamageTypes.h"
+#include "Items/DCCLootBoxTypes.h"
 #include "DCCEquipmentTypes.generated.h"
 
 class UStaticMesh;
 class ADCCPickup;
+class UAnimationAsset;
 
 // ---------------------------------------------------------------------------
 // EQUIPMENT
@@ -114,6 +116,20 @@ struct FDCCEquipmentDef : public FTableRowBase
 	int32 EvadeBonus = 0;
 
 	/**
+	 * The same six-tier ladder loot boxes use (Bronze..Celestial), reused here
+	 * rather than a parallel "item rarity" enum - a box's tier and an item's
+	 * rarity are the same concept looked at from two directions. None (the
+	 * default) means "not a rarity-tiered item" - every hand-authored weapon
+	 * on this table today (the frying pan, the fire axe, the found guns) is
+	 * left at None and keeps exactly the damage its own WeaponDamageDie
+	 * already says, unaffected by this field. Only items explicitly tagged a
+	 * tier - loot-box rewards, going forward - get the bonus below. See
+	 * UDCCEquipmentComponent::GetWeaponDamageDie for where it's added in.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment|Combat")
+	EDCCLootBoxTier Rarity = EDCCLootBoxTier::None;
+
+	/**
 	 * Replaces the wielder's attack reach while held. Zero leaves it alone.
 	 *
 	 * This is the whole of "ranged weapon" as far as the rules are concerned:
@@ -177,6 +193,24 @@ struct FDCCEquipmentDef : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment|Visual")
 	FName AttachSocket = TEXT("hand_rSocket");
 
+	/**
+	 * Per-item nudge applied on top of the socket snap, in the socket's own
+	 * local space - what actually fixes "the hand grips the pan by the plate,
+	 * not the handle." The socket's transform is identical for every item
+	 * that attaches to it, but different meshes were modelled with their
+	 * pivot in different places (a pan's pivot sits near the plate; a knife's
+	 * sits at the blade tip; a sword's is often already at the grip) - one
+	 * socket-wide offset cannot fix all of them at once, so each item needs
+	 * its own. Zero for both fields (the default) reproduces the exact old
+	 * behaviour - snapped flush to the socket, no nudge - so every item that
+	 * hasn't been tuned yet is unaffected by this existing at all.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment|Visual")
+	FVector GripOffsetLocation = FVector::ZeroVector;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment|Visual")
+	FRotator GripOffsetRotation = FRotator::ZeroRotator;
+
 	/** Worth this much if sold. Also what the corpse drops it as. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment", meta = (ClampMin = "0"))
 	int32 GoldValue = 0;
@@ -227,6 +261,50 @@ struct FDCCEquipmentDef : public FTableRowBase
 	/** A liquid-tagged pickup bypasses ContainerMaxItemMassKg entirely when true - the whole point of a bottle. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment|Container", meta = (EditCondition = "bIsContainer"))
 	bool bContainerAcceptsLiquids = false;
+
+	// -- Curse -----------------------------------------------------------------
+	// A curse is a forced side effect the wearer does not get to opt out of -
+	// distinct in kind from the passive Bonus*/Resistance* fields above, which
+	// the wearer barely notices. First use: Supercan's costume. Built as a
+	// reusable shape (any item can flip bIsCursed on) rather than a special
+	// case, since more of these are wanted later.
+
+	/**
+	 * Once equipped, this item cannot be voluntarily unequipped - see
+	 * UDCCEquipmentComponent::Unequip/Equip, both of which refuse to remove a
+	 * cursed item from its slot. There is no removal mechanism anywhere in this
+	 * project yet, so equipping one is currently a one-way commitment for the
+	 * rest of the run. Worth building "ask for it back" or a cleansing service
+	 * before this reaches real players in numbers.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment|Curse")
+	bool bIsCursed = false;
+
+	/** Whether wearing this forces an action the instant the wearer's room's encounter goes Active. Ignored unless bIsCursed. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment|Curse", meta = (EditCondition = "bIsCursed"))
+	bool bForcesActionOnCombatStart = false;
+
+	/**
+	 * Forward launch speed (cm/s, additive to existing velocity - same
+	 * LaunchCharacter convention this project's own hit-stagger already uses)
+	 * for the forced hop. No grid/space unit exists anywhere in this project
+	 * to derive an exact "3 spaces" from, so this is a tuned approximation,
+	 * not a derived value - adjust freely per item.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment|Curse", meta = (EditCondition = "bForcesActionOnCombatStart", ClampMin = "0.0"))
+	float ForcedHopForwardSpeed = 900.0f;
+
+	/** Upward component of the launch, so the hop reads as a bounce rather than a shove. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment|Curse", meta = (EditCondition = "bForcesActionOnCombatStart", ClampMin = "0.0"))
+	float ForcedHopUpwardSpeed = 350.0f;
+
+	/** Optional gesture clip played alongside the hop - the "taunt" half. Soft, same reasoning as Mesh: unauthored curses pay no load cost. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment|Curse", meta = (EditCondition = "bForcesActionOnCombatStart"))
+	TSoftObjectPtr<UAnimationAsset> ForcedActionAnimation;
+
+	/** Flavor line logged to the feed when the curse fires, e.g. "does a forced happy little bounce and a taunt." Falls back to a generic line when blank. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment|Curse", meta = (EditCondition = "bForcesActionOnCombatStart"))
+	FText ForcedActionFlavorText;
 };
 
 /**

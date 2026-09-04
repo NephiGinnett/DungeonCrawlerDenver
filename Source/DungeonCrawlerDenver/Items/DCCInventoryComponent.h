@@ -4,6 +4,7 @@
 #include "Components/ActorComponent.h"
 #include "Items/DCCLootTypes.h"
 #include "Items/DCCConsumableTypes.h"
+#include "Items/DCCLootBoxTypes.h"
 #include "DCCInventoryComponent.generated.h"
 
 class ADCCPickup;
@@ -33,6 +34,16 @@ struct FDCCInventoryItem
 	/** Kept so the HUD can show carried weight without loading every class. */
 	UPROPERTY(BlueprintReadOnly, Category = "Inventory")
 	float MassKilograms = 0.0f;
+
+	/**
+	 * Set only when this record is a piece of gear (a DT_DCCEquipment row id) -
+	 * empty for anything else. Gear no longer equips itself on pickup (changed
+	 * 2026-08-30, see DISPATCH.md) - it lands here like everything else, and
+	 * UDCCInventoryComponent::EquipItem is the one place that actually equips
+	 * it, on request from the Inventory page.
+	 */
+	UPROPERTY(BlueprintReadOnly, Category = "Inventory")
+	FName EquipmentItemId;
 };
 
 /**
@@ -138,6 +149,28 @@ public:
 	bool StowPickup(ADCCPickup* Pickup);
 
 	/**
+	 * Server only. Records an item directly, with no live pickup actor involved.
+	 * StowPickup (above) is really "read a live pickup's data, then call this
+	 * and destroy it" - this is the other caller, DCCLoot::SpawnRolledLoot,
+	 * which already knows a looter is standing right here and would otherwise
+	 * have to spawn a ground pickup for no reason other than to immediately
+	 * read it back off the ground. Same capacity rule as StowPickup.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	bool AddItemRecord(TSubclassOf<ADCCPickup> PickupClass, const FText& DisplayName, float MassKilograms, FName EquipmentItemId);
+
+	/**
+	 * Server only. Equips Items[Index] if it is a piece of gear (EquipmentItemId
+	 * set) and the slot will actually take it - a cursed item already holding
+	 * that slot means UDCCEquipmentComponent::Equip refuses, in which case the
+	 * record is left alone rather than lost. The Tab menu's Inventory page
+	 * calls this on a clicked row, same click-to-act convention as
+	 * StowedRemains/StowedConsumables.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	bool EquipItem(int32 Index);
+
+	/**
 	 * Server only. Respawns the item at a world location and removes the record.
 	 *
 	 * Returns the new actor, or null if the index was invalid or the spawn failed
@@ -196,6 +229,47 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	bool ConsumeStowedConsumable(int32 Index, FDCCConsumableDef& OutDef);
 
+	// -- Loot boxes --------------------------------------------------------
+	// Dungeon Crawler Carl's actual mechanic: achievements pay a sealed box,
+	// not items directly. See Items/DCCLootBoxTypes.h for the full design
+	// note. Counts are fungible per tier - "own 2 Gold boxes" - rather than
+	// per-achievement records, since a box's identity is its tier, not which
+	// achievement paid it.
+
+	/** Defaulted via ConstructorHelpers to /Game/DCC/Items/DT_DCCLootBoxTables, same pattern as every other content table in this project. */
+	UPROPERTY(EditDefaultsOnly, Category = "Inventory|LootBox")
+	TObjectPtr<UDataTable> LootBoxTable;
+
+	/** Defaulted via ConstructorHelpers to /Game/DCC/Items/DT_DCCBoons. */
+	UPROPERTY(EditDefaultsOnly, Category = "Inventory|LootBox")
+	TObjectPtr<UDataTable> BoonTable;
+
+	/** Indexed by EDCCLootBoxTier - LootBoxCounts[(uint8)EDCCLootBoxTier::Gold] is how many Gold boxes are owned. Index None is always 0 and unused. */
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_LootBoxCounts, Category = "Inventory|LootBox")
+	TArray<int32> LootBoxCounts;
+
+	UFUNCTION(BlueprintPure, Category = "Inventory|LootBox")
+	int32 GetLootBoxCount(EDCCLootBoxTier Tier) const;
+
+	/** Server only. Always succeeds - owning a box has no capacity limit, same as StowedRemains. */
+	UFUNCTION(BlueprintCallable, Category = "Inventory|LootBox")
+	void GrantLootBox(EDCCLootBoxTier Tier, int32 Count = 1);
+
+	/**
+	 * Server only. Consumes one box of Tier if owned, rolls its table, and
+	 * spawns the item half near WorldLocation via the same DCCLoot helpers
+	 * every other loot source uses. Returns false (and leaves OutResult
+	 * empty, nothing consumed) if none of that tier are owned or Tier has no
+	 * row in LootBoxTable.
+	 *
+	 * Deliberately does not check what room the caller is standing in - that
+	 * is ADCCCharacterBase::Server_OpenLootBox's job, the same split
+	 * InteractionRange checks already follow: this component owns the box
+	 * and the roll, not where a character is allowed to be when it asks.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Inventory|LootBox")
+	bool TryOpenLootBox(EDCCLootBoxTier Tier, const FVector& WorldLocation, FDCCOpenedLootBoxResult& OutResult);
+
 protected:
 	UFUNCTION()
 	void OnRep_Items();
@@ -205,4 +279,10 @@ protected:
 
 	UFUNCTION()
 	void OnRep_StowedConsumables();
+
+	UFUNCTION()
+	void OnRep_LootBoxCounts();
+
+	/** Shared spawn loop for TryOpenLootBox's item half - kept out of that function so its own logic reads as roll, then spawn, then boons, not interleaved. */
+	void SpawnLootBoxItems(const TArray<FDCCRolledLoot>& RolledItems, const FVector& WorldLocation) const;
 };

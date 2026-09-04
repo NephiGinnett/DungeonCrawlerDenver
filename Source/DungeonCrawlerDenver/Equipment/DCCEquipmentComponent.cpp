@@ -3,6 +3,8 @@
 #include "Characters/DCCCharacterBase.h"
 #include "Items/DCCPickup.h"
 #include "Stats/DCCStatsComponent.h"
+#include "Combat/DCCGameState.h"
+#include "UI/DCCEventLogTypes.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/PointLightComponent.h"
@@ -81,6 +83,21 @@ bool UDCCEquipmentComponent::FindItem(FName ItemId, FDCCEquipmentDef& OutItem) c
 	return false;
 }
 
+bool UDCCEquipmentComponent::FindCursedCombatStartEffect(FDCCEquipmentDef& OutItem) const
+{
+	for (const FDCCEquippedItem& Item : Equipped)
+	{
+		FDCCEquipmentDef Def;
+		if (FindItem(Item.ItemId, Def) && Def.bIsCursed && Def.bForcesActionOnCombatStart)
+		{
+			OutItem = Def;
+			return true;
+		}
+	}
+
+	return false;
+}
+
 FName UDCCEquipmentComponent::GetEquippedId(EDCCEquipmentSlot Slot) const
 {
 	for (const FDCCEquippedItem& Item : Equipped)
@@ -106,6 +123,22 @@ bool UDCCEquipmentComponent::Equip(FName ItemId)
 	if (!FindItem(ItemId, Item))
 	{
 		return false;
+	}
+
+	// A cursed item already in this slot cannot be swapped out either -
+	// otherwise "cannot be unequipped" would just be a speed bump, since
+	// equipping something else into the same slot silently replaces it.
+	for (const FDCCEquippedItem& Existing : Equipped)
+	{
+		if (Existing.Slot == Item.Slot)
+		{
+			FDCCEquipmentDef ExistingDef;
+			if (FindItem(Existing.ItemId, ExistingDef) && ExistingDef.bIsCursed)
+			{
+				return false;
+			}
+			break;
+		}
 	}
 
 	// Whatever the replaced item's container was holding must not simply
@@ -136,6 +169,14 @@ bool UDCCEquipmentComponent::Equip(FName ItemId)
 	NotifyStatsDirty();
 	OnEquipmentChanged.Broadcast(this);
 
+	// Equipping used to be silent - a slot swap with no confirmation reads
+	// exactly like nothing happened, which is what "I picked it up but can't
+	// find it" reports usually turn out to be. One line, same feed everything
+	// else uses.
+	ADCCGameState::Log(Owner, EDCCLogCategory::Experience, FText::Format(
+		NSLOCTEXT("DCC", "LogEquipped", "{0} equips {1}."),
+		FText::FromString(GetNameSafe(Owner)), Item.DisplayName));
+
 	return true;
 }
 
@@ -145,6 +186,22 @@ bool UDCCEquipmentComponent::Unequip(EDCCEquipmentSlot Slot)
 	if (!Owner || !Owner->HasAuthority())
 	{
 		return false;
+	}
+
+	// A cursed item cannot be voluntarily taken off - that is the whole point
+	// of it being cursed. No removal mechanism exists anywhere in this project
+	// yet, so this is currently a one-way door once something cursed is worn.
+	for (const FDCCEquippedItem& Existing : Equipped)
+	{
+		if (Existing.Slot == Slot)
+		{
+			FDCCEquipmentDef Def;
+			if (FindItem(Existing.ItemId, Def) && Def.bIsCursed)
+			{
+				return false;
+			}
+			break;
+		}
 	}
 
 	// Same reasoning as Equip: spill before removing, or a container's contents
@@ -281,6 +338,37 @@ float UDCCEquipmentComponent::GetAttackRangeOverride() const
 	return Best;
 }
 
+namespace
+{
+	/**
+	 * Flat damage-die bonus for a rarity tier - the mechanical half of "better
+	 * gear hits harder." None/Bronze add nothing (an unremarkable find should
+	 * not need this system at all - its own authored WeaponDamageDie already
+	 * does the job). Celestial skips a step at the top so the ceiling tier
+	 * reads as a real jump, not just one more increment.
+	 */
+	int32 GetRarityDamageBonus(EDCCLootBoxTier Rarity)
+	{
+		switch (Rarity)
+		{
+		case EDCCLootBoxTier::Silver:    return 1;
+		case EDCCLootBoxTier::Gold:      return 2;
+		case EDCCLootBoxTier::Platinum:  return 3;
+		case EDCCLootBoxTier::Legendary: return 4;
+		case EDCCLootBoxTier::Celestial: return 6;
+		default:                         return 0;
+		}
+	}
+}
+
+int32 UDCCEquipmentComponent::GetItemEffectiveDamageDie(const FDCCEquipmentDef& Item)
+{
+	// Zero for anything that isn't a weapon at all (WeaponDamageDie 0) -
+	// rarity has nothing to add to a hat, and a rare hat should not
+	// accidentally start dealing damage.
+	return Item.WeaponDamageDie > 0 ? Item.WeaponDamageDie + GetRarityDamageBonus(Item.Rarity) : 0;
+}
+
 int32 UDCCEquipmentComponent::GetWeaponDamageDie() const
 {
 	int32 Best = 0;
@@ -290,7 +378,7 @@ int32 UDCCEquipmentComponent::GetWeaponDamageDie() const
 		FDCCEquipmentDef Item;
 		if (FindItem(Entry.ItemId, Item))
 		{
-			Best = FMath::Max(Best, Item.WeaponDamageDie);
+			Best = FMath::Max(Best, GetItemEffectiveDamageDie(Item));
 		}
 	}
 
@@ -303,13 +391,17 @@ EDCCDamageType UDCCEquipmentComponent::GetWeaponDamageType() const
 	EDCCDamageType BestType = EDCCDamageType::Physical;
 
 	// Tracks the die and its type together, so "best equipped" never reports
-	// one weapon's die with a different weapon's type.
+	// one weapon's die with a different weapon's type. Compared on the
+	// EFFECTIVE die (rarity included), same as GetWeaponDamageDie above, so a
+	// legendary dagger correctly outranks a mundane axe if its bonus pushes
+	// it past the axe's raw number.
 	for (const FDCCEquippedItem& Entry : Equipped)
 	{
 		FDCCEquipmentDef Item;
-		if (FindItem(Entry.ItemId, Item) && Item.WeaponDamageDie > Best)
+		const int32 Effective = FindItem(Entry.ItemId, Item) ? GetItemEffectiveDamageDie(Item) : 0;
+		if (Effective > Best)
 		{
-			Best = Item.WeaponDamageDie;
+			Best = Effective;
 			BestType = Item.WeaponDamageType;
 		}
 	}
@@ -607,6 +699,12 @@ void UDCCEquipmentComponent::RebuildVisuals()
 					MeshComponent->RegisterComponent();
 					MeshComponent->AttachToComponent(CharacterMesh,
 						FAttachmentTransformRules::SnapToTargetNotIncludingScale, Socket);
+
+					// Applied AFTER the snap, in the socket's local space - this is
+					// the per-item grip fix. Zero/zero (every item not yet tuned)
+					// leaves the mesh exactly where SnapToTarget already put it.
+					MeshComponent->SetRelativeLocation(Item.GripOffsetLocation);
+					MeshComponent->SetRelativeRotation(Item.GripOffsetRotation);
 
 					SlotMeshes.Add(Entry.Slot, MeshComponent);
 				}

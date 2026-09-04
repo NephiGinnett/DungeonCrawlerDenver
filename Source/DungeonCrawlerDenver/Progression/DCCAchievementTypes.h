@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataTable.h"
+#include "Items/DCCLootBoxTypes.h"
 #include "DCCAchievementTypes.generated.h"
 
 /**
@@ -52,6 +53,33 @@ enum class EDCCAchievementStat : uint8
 	 * cannot inflate this by clicking through one item at a time).
 	 */
 	ContainersLooted    UMETA(DisplayName = "Containers Looted"),
+
+	/**
+	 * First time this crawler paused combat. A one-off flag rather than a
+	 * running total - Record fires once, at Threshold 1, same shape as every
+	 * counter above, just with a ceiling of one.
+	 */
+	PausedCombat        UMETA(DisplayName = "Paused Combat"),
+
+	/** Reached the top AI Favor tier (Headliner) at least once. */
+	FavorTierMaxed      UMETA(DisplayName = "Favor Tier Maxed"),
+
+	/** First drink bought from a vendor - "House Pour". One-off, same shape as PausedCombat. */
+	FirstDrinkBought    UMETA(DisplayName = "First Drink Bought"),
+
+	/** Succeeded an Untrained skill check (no Rank, disadvantage) against DC 15+. */
+	UntrainedHighDCSuccess UMETA(DisplayName = "Untrained High-DC Success"),
+
+	/**
+	 * Recorded once per DISTINCT room this crawler has ever physically entered
+	 * - "The Full Tour" is just this stat with Threshold set to however many
+	 * rooms a floor has, so the achievement system's own threshold logic does
+	 * the counting rather than any bespoke "visited all N" check in C++.
+	 */
+	UniqueRoomVisited   UMETA(DisplayName = "Unique Room Visited"),
+
+	/** This crawler's first room entry ever happened with the Body equipment slot still empty. */
+	ArrivedBodySlotEmpty UMETA(DisplayName = "Arrived Body Slot Empty"),
 
 	MAX                 UMETA(Hidden)
 };
@@ -104,6 +132,15 @@ struct FDCCAchievementDef : public FTableRowBase
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Achievement")
 	int32 FavorReward = 0;
+
+	/**
+	 * A sealed loot box paid on unlock, on top of (or instead of) XP/Favor.
+	 * None is the default - most achievements still just pay XP/Favor exactly
+	 * as before this existed. Tier should track how hard the achievement is:
+	 * an easy/common one pays Bronze at best, a rare one can pay Celestial.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Achievement")
+	EDCCLootBoxTier LootBoxReward = EDCCLootBoxTier::None;
 
 	/** Hidden achievements are not listed until unlocked. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Achievement")

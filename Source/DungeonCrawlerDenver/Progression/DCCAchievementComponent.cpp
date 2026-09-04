@@ -3,6 +3,7 @@
 #include "Characters/DCCCharacterBase.h"
 #include "Stats/DCCStatsComponent.h"
 #include "Favor/DCCFavorComponent.h"
+#include "Items/DCCInventoryComponent.h"
 #include "Combat/DCCGameState.h"
 #include "Engine/DataTable.h"
 #include "Net/UnrealNetwork.h"
@@ -263,6 +264,14 @@ void UDCCAchievementComponent::Server_ClaimReward_Implementation(FName Achieveme
 				Row->FavorReward,
 				EDCCFavorEvent::DirectorCall,
 				Row->DisplayName);
+		}
+	}
+
+	if (Row->LootBoxReward != EDCCLootBoxTier::None)
+	{
+		if (UDCCInventoryComponent* Inventory = Owner ? Owner->FindComponentByClass<UDCCInventoryComponent>() : nullptr)
+		{
+			Inventory->GrantLootBox(Row->LootBoxReward);
 		}
 	}
 

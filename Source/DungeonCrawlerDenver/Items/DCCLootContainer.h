@@ -59,6 +59,17 @@ public:
 	virtual void LootAll(ADCCCharacterBase* Looter) override;
 	virtual void StowInto(ADCCCharacterBase* Looter) override;
 
+	/**
+	 * Server only. Appends externally-sourced loot into this container's own
+	 * pending contents, alongside whatever RollLoot already put there.
+	 *
+	 * First use: the body collector depositing a collected corpse's loot here
+	 * rather than destroying it. Deliberately additive rather than replacing -
+	 * a "Lost & Found"-style collection chest is meant to accumulate across
+	 * however many bodies get swept up, not just hold the latest one.
+	 */
+	void DepositLoot(const TArray<FDCCRolledLoot>& Items);
+
 protected:
 	/** Server only. Rolls LootTable into PendingLoot. */
 	void RollLoot();
