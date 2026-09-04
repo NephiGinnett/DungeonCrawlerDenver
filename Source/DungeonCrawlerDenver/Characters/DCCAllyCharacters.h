@@ -77,3 +77,30 @@ class DUNGEONCRAWLERDENVER_API ADCCAlly_DiceWinged : public ADCCEnemyCharacter
 public:
 	ADCCAlly_DiceWinged();
 };
+
+/**
+ * Vaughn - the fifth crawler, added 2026-08-29.
+ *
+ * UPDATE 2026-08-31: the Compatible-Skeletons plan this comment originally
+ * described was never actually exercised - `SK_Vaughn` was never imported,
+ * so this constructor's FObjectFinder had been silently resolving to nothing
+ * since the day this class was written. Fixed by re-importing Vaughn's FBX
+ * (already sitting converted at `SourceArt/Vaughn/fbx/SK_Vaughn.fbx`) bound
+ * directly to `SK_DCCCrawler_Skeleton` via `SkeletalMeshTools.import_file`'s
+ * own `skeleton` parameter, as `SK_Vaughn_Shared` - the same direct-rebind
+ * procedure ArmsOut/OfficeAirplane/DiceWinged already use below, not the
+ * Compatible-Skeletons mechanism. Confirmed working: `get_skeleton` reports
+ * `SK_DCCCrawler_Skeleton`, sockets were added
+ * (`hand_rSocket`/`hand_lSocket`/`headSocket`/`spine_03Socket`), and a
+ * viewport capture shows a clean, correctly-proportioned bind - not the
+ * "both thighs on one hip" failure the four-way consolidation caused on
+ * Kyle/Scott. `DCCCrawlerAnimSet::Apply` below now actually reaches him.
+ */
+UCLASS()
+class DUNGEONCRAWLERDENVER_API ADCCAlly_Vaughn : public ADCCEnemyCharacter
+{
+	GENERATED_BODY()
+
+public:
+	ADCCAlly_Vaughn();
+};

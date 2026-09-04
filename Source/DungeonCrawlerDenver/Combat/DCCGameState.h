@@ -195,13 +195,56 @@ public:
 	int32 MaxChatMessages = 100;
 
 	/**
-	 * Server only. Rolls a fresh batch of simulated audience lines into the
-	 * Chatter channel. Called when a player opens the Chatter tab (see
-	 * ADCCCharacterBase::Server_RequestChatterBatch) rather than on a timer -
-	 * "comments coming in" when you check the channel, not a background
-	 * trickle nobody asked for.
+	 * Server only. Rolls simulated audience lines into the Chatter channel.
+	 *
+	 * Called both for the opening burst when a player opens the Chatter tab
+	 * and, with a much smaller Count, for the slow trickle that keeps the
+	 * channel alive while the tab STAYS open (see
+	 * ADCCCharacterBase::Server_RequestChatterBatch).
+	 *
+	 * Still deliberately not on a background timer. Nothing rolls while nobody
+	 * is looking, which is what keeps a channel that appears to run constantly
+	 * costing nothing when it isn't on screen - Zoe's own "simulate constantly
+	 * running, but cheaply" framing.
 	 */
 	void RollChatterBatch(int32 Count = 8);
+
+	/**
+	 * Running jokes currently doing the rounds, most recently started last.
+	 *
+	 * A gag goes active the first time one of its lines is rolled and then has
+	 * a raised chance of recurring until it ages out of this list. Not
+	 * replicated: it is server-side scratch state that only shapes what gets
+	 * pushed into the (already replicated) chat log.
+	 */
+	UPROPERTY(Transient)
+	TArray<FName> ActiveGags;
+
+	/** How many gags can be in circulation at once. Older ones age out first,
+	 *  so bits come and go the way they actually do in a live chat. */
+	UPROPERTY(EditDefaultsOnly, Category = "Chat")
+	int32 MaxActiveGags = 4;
+
+	/** Odds any given comment is a callback to an already-active gag, rather
+	 *  than a fresh roll. High enough to read as "chat has a bit going". */
+	UPROPERTY(EditDefaultsOnly, Category = "Chat")
+	float ActiveGagChance = 0.22f;
+
+	/**
+	 * Server-side floor on how often one player's client may pull chatter.
+	 * The trickle is client-driven (the HUD asks while its tab is open), so
+	 * this is what stops a fast or misbehaving client turning it into a flood
+	 * - same "nominate, don't dictate" posture as the rest of the RPCs.
+	 */
+	UPROPERTY(EditDefaultsOnly, Category = "Chat")
+	float MinChatterIntervalSeconds = 1.5f;
+
+	/** Server time the last chatter roll was allowed through. */
+	UPROPERTY(Transient)
+	float LastChatterRollTime = -1000.0f;
+
+	/** Rate-limited entry point for client requests. Returns false if refused. */
+	bool TryRollChatterBatch(int32 Count);
 
 	/**
 	 * Starter content pool - Docs/DT_DCCChatterLines.csv. Resolved once at

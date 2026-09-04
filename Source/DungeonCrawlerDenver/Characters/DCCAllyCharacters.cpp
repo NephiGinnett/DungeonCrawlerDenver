@@ -62,3 +62,22 @@ ADCCAlly_DiceWinged::ADCCAlly_DiceWinged()
 
 	DCCCrawlerAnimSet::Apply(*this);
 }
+
+ADCCAlly_Vaughn::ADCCAlly_Vaughn()
+{
+	// _Shared, like the other three below - see this class's header comment
+	// on why the original "own skeleton, Compatible-marked" plan was replaced.
+	static ConstructorHelpers::FObjectFinder<USkeletalMesh> MeshAsset(
+		TEXT("/Game/DCC/Characters/Shared/SK_Vaughn_Shared.SK_Vaughn_Shared"));
+	if (USkeletalMeshComponent* MeshComponent = GetMesh())
+	{
+		if (MeshAsset.Succeeded())
+		{
+			MeshComponent->SetSkeletalMesh(MeshAsset.Object);
+		}
+	}
+
+	// Same shared skeleton as ArmsOut/OfficeAirplane/DiceWinged now, so this
+	// reaches him for real - confirmed, not the speculative call it used to be.
+	DCCCrawlerAnimSet::Apply(*this);
+}

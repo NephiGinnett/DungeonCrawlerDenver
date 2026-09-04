@@ -75,9 +75,18 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Ruleset")
 	virtual float GetPlayerToughnessMultiplier() const;
 
-	/** How hard this character is to hit. The DC an incoming attack must beat. */
+	/**
+	 * How hard this character is to hit. The DC an incoming attack must beat.
+	 *
+	 * EvadeBonus is equipment's contribution (a shield's FDCCEquipmentDef row,
+	 * say) - kept as its own parameter rather than folded into AbilityScores
+	 * because it is not a Dexterity change, it is a flat addition on top of
+	 * whatever Dexterity already grants. Callers read it from
+	 * UDCCEquipmentComponent::GetEvadeBonus(), which already summed it; this
+	 * function just has nowhere else to put it before now.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Ruleset")
-	virtual int32 GetDefenceValue(const FDCCAbilityScoreSet& AbilityScores, int32 Level) const;
+	virtual int32 GetDefenceValue(const FDCCAbilityScoreSet& AbilityScores, int32 Level, int32 EvadeBonus = 0) const;
 
 	/**
 	 * Maximum spell resource.
@@ -96,6 +105,12 @@ public:
 	 * Attack and damage live here rather than on the character for the same
 	 * reason every other rule does: when the real DCC ruleset lands, a subclass
 	 * overrides this and no combat code changes.
+	 *
+	 * DefenderEvadeBonus is forwarded straight into GetDefenceValue - see that
+	 * function's own comment. SituationalBonus stays what it always was: the
+	 * ATTACKER's roll, not the defender's - the two are kept as separate
+	 * parameters on purpose so a shield can never be mistaken for a debuff on
+	 * whoever is swinging.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Ruleset")
 	virtual FDCCAttackResult ResolveAttack(
@@ -104,7 +119,8 @@ public:
 		int32 WeaponDamageDie,
 		const FDCCAbilityScoreSet& DefenderScores,
 		int32 DefenderLevel,
-		int32 SituationalBonus = 0) const;
+		int32 SituationalBonus = 0,
+		int32 DefenderEvadeBonus = 0) const;
 
 	// -------------------------------------------------------------------------
 	// SKILL RANKS AND ADVANCEMENT

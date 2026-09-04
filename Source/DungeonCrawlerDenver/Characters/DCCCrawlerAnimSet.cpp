@@ -74,6 +74,12 @@ namespace DCCCrawlerAnimSet
 		if (FistBump.Succeeded()) { Character.FistBumpAnimation = FistBump.Object; }
 		if (HitReact.Succeeded()) { Character.HitReactionAnimation = HitReact.Object; }
 
+		// No literal "get in a car" clip exists in this set - the agree
+		// gesture is the closest read (a quick "let's go" beat) until a real
+		// one lands. Fine for it to double as both this and an emote-pool
+		// entry; they are different contexts.
+		if (EmoteAgreeHW.Succeeded()) { Character.EnterVehicleAnimation = EmoteAgreeHW.Object; }
+
 		Character.EmoteAnimations.Reset();
 		for (const auto* Finder : { &EmoteBoomDance, &EmoteAllNightDance, &EmoteCardioDance,
 			&EmoteAgreeHW, &EmoteAgreeAO, &EmoteSpinJump,

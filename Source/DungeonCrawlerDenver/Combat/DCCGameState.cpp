@@ -6,6 +6,7 @@
 #include "Characters/DCCCharacterBase.h"
 #include "Skills/DCCSkillComponent.h"
 #include "Favor/DCCFavorComponent.h"
+#include "Progression/DCCAchievementComponent.h"
 #include "Equipment/DCCEquipmentComponent.h"
 #include "Equipment/DCCEquipmentTypes.h"
 #include "GameFramework/WorldSettings.h"
@@ -187,6 +188,33 @@ void ADCCGameState::OnRep_ChatMessages()
 	// (e.g. a "new message" ping) has somewhere to go without touching the Feed.
 }
 
+bool ADCCGameState::TryRollChatterBatch(int32 Count)
+{
+	if (!HasAuthority())
+	{
+		return false;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return false;
+	}
+
+	// One shared budget across all players rather than per-player: five
+	// crawlers with the tab open should not produce five times the chatter,
+	// because they are all looking at the same channel.
+	const float Now = World->GetTimeSeconds();
+	if (Now - LastChatterRollTime < MinChatterIntervalSeconds)
+	{
+		return false;
+	}
+
+	LastChatterRollTime = Now;
+	RollChatterBatch(Count);
+	return true;
+}
+
 void ADCCGameState::RollChatterBatch(int32 Count)
 {
 	if (!HasAuthority())
@@ -237,6 +265,46 @@ void ADCCGameState::RollChatterBatch(int32 Count)
 
 	for (int32 Comment = 0; Comment < Count; ++Comment)
 	{
+		// A bit that's already going gets first refusal on every comment.
+		// Doing this BEFORE the bucket roll (rather than as another bucket) is
+		// what makes a gag feel like it's dominating chat for a while, which is
+		// how running jokes actually behave - they crowd out everything else,
+		// then die.
+		if (!ActiveGags.IsEmpty() && FMath::FRand() < ActiveGagChance)
+		{
+			const FName GagId = ActiveGags[FMath::RandRange(0, ActiveGags.Num() - 1)];
+
+			TArray<FDCCChatterLineDef*> GagRows;
+			for (FDCCChatterLineDef* Row : AllRows)
+			{
+				if (Row && Row->GagId == GagId)
+				{
+					GagRows.Add(Row);
+				}
+			}
+
+			if (!GagRows.IsEmpty())
+			{
+				const FDCCChatterLineDef* GagLine = GagRows[FMath::RandRange(0, GagRows.Num() - 1)];
+
+				// Gag lines still get token substitution - several of them name
+				// a crawler on purpose, which is what makes a bit feel aimed at
+				// this party rather than pre-written at them.
+				FString GagName;
+				if (!LivingCrawlers.IsEmpty())
+				{
+					GagName = LivingCrawlers[FMath::RandRange(0, LivingCrawlers.Num() - 1)]->DisplayName.ToString();
+				}
+
+				const FText GagText = DCCChatter::SubstituteTokens(
+					GagLine->Template, GagName, FString(), RecentEventText);
+
+				AddChatMessage(EDCCChatChannel::Chatter, GagLine->SenderHandle, nullptr,
+					FString(), GagText, false);
+				continue;
+			}
+		}
+
 		// Zoe's own percentages: 5% each for Sentiment/Equipment/BossBattle/
 		// Appearance/Emote/AlienLanguage, a small moderation chance, everything
 		// else (the majority) is Benign filler.
@@ -250,6 +318,9 @@ void ADCCGameState::RollChatterBatch(int32 Count)
 		else if (Roll < 0.25f)                  Bucket = EDCCChatterBucket::Emote;
 		else if (Roll < 0.30f)                  Bucket = EDCCChatterBucket::AlienLanguage;
 		else if (Roll < 0.33f)                  Bucket = EDCCChatterBucket::Moderated;
+		// This is how a NEW bit gets started; once one lands, the callback
+		// check at the top of the loop takes over and keeps it circulating.
+		else if (Roll < 0.41f)                  Bucket = EDCCChatterBucket::RunningGag;
 
 		FString Name, Item, Event;
 		bool bBucketHasData = true;
@@ -337,6 +408,28 @@ void ADCCGameState::RollChatterBatch(int32 Count)
 		}
 
 		const FDCCChatterLineDef* Chosen = MatchingRows[FMath::RandRange(0, MatchingRows.Num() - 1)];
+
+		// A gag line rolled the ordinary way puts that gag into circulation.
+		// Oldest out first, so the pool churns instead of accreting every bit
+		// the session has ever produced.
+		if (Bucket == EDCCChatterBucket::RunningGag && !Chosen->GagId.IsNone())
+		{
+			if (!ActiveGags.Contains(Chosen->GagId))
+			{
+				ActiveGags.Add(Chosen->GagId);
+				while (ActiveGags.Num() > FMath::Max(1, MaxActiveGags))
+				{
+					ActiveGags.RemoveAt(0);
+				}
+			}
+		}
+
+		// Gag rows name a crawler for the same reason the callback path does.
+		if (Bucket == EDCCChatterBucket::RunningGag && Name.IsEmpty() && !LivingCrawlers.IsEmpty())
+		{
+			Name = LivingCrawlers[FMath::RandRange(0, LivingCrawlers.Num() - 1)]->DisplayName.ToString();
+		}
+
 		const FText Line = DCCChatter::SubstituteTokens(Chosen->Template, Name, Item, Event);
 
 		AddChatMessage(EDCCChatChannel::Chatter, Chosen->SenderHandle, nullptr, FString(), Line,
@@ -368,6 +461,18 @@ void ADCCGameState::SetCombatPaused(bool bNewPaused)
 	}
 
 	bCombatPaused = bNewPaused;
+
+	// "Pause For Thought" - a one-off per crawler, recorded on the rising
+	// edge only. RecordFor no-ops on anything without an achievement
+	// component, so this is safe to run unconditionally over every character
+	// in the world rather than needing to know who is a real player.
+	if (bCombatPaused)
+	{
+		for (TActorIterator<ADCCCharacterBase> It(GetWorld()); It; ++It)
+		{
+			UDCCAchievementComponent::RecordFor(*It, EDCCAchievementStat::PausedCombat);
+		}
+	}
 
 	// Resolve on the way out of a pause, before anything else observes the
 	// resumed world - otherwise AI gets a frame to act ahead of the queue.

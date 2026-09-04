@@ -97,12 +97,14 @@ int32 UDCCRuleset::GetMaxManaPoints(const FDCCAbilityScoreSet& AbilityScores, in
 	return FMath::Max(0, AbilityScores.GetScore(EDCCAbility::Intelligence));
 }
 
-int32 UDCCRuleset::GetDefenceValue(const FDCCAbilityScoreSet& AbilityScores, int32 Level) const
+int32 UDCCRuleset::GetDefenceValue(const FDCCAbilityScoreSet& AbilityScores, int32 Level, int32 EvadeBonus) const
 {
 	// "Evade" is the published name for this. Dexterity enhances it, but the
 	// exact formula is not in the preview excerpts, so the 10 + Dex shape is
 	// still ours - it just now uses the correct banded modifier underneath.
-	return 10 + GetAbilityModifier(AbilityScores.GetScore(EDCCAbility::Dexterity));
+	// EvadeBonus is equipment on top of that - see this function's own header
+	// comment for why it is a separate parameter rather than folded into Dex.
+	return 10 + GetAbilityModifier(AbilityScores.GetScore(EDCCAbility::Dexterity)) + EvadeBonus;
 }
 
 FDCCAttackResult UDCCRuleset::ResolveAttack(
@@ -111,9 +113,10 @@ FDCCAttackResult UDCCRuleset::ResolveAttack(
 	int32 WeaponDamageDie,
 	const FDCCAbilityScoreSet& DefenderScores,
 	int32 DefenderLevel,
-	int32 SituationalBonus) const
+	int32 SituationalBonus,
+	int32 DefenderEvadeBonus) const
 {
-	const int32 DefenceValue = GetDefenceValue(DefenderScores, DefenderLevel);
+	const int32 DefenceValue = GetDefenceValue(DefenderScores, DefenderLevel, DefenderEvadeBonus);
 
 	FDCCAttackResult Result;
 	Result.Check = ResolveCheck(AttackerScores, AttackAbility, DefenceValue, SituationalBonus);

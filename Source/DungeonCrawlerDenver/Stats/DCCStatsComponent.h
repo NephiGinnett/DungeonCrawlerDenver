@@ -233,6 +233,26 @@ public:
 	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_ExperiencePoints, Category = "Stats")
 	int32 ExperiencePoints = 0;
 
+	/**
+	 * Highest level this character may reach. Levelling stops here and surplus
+	 * XP is discarded rather than banked.
+	 *
+	 * Five by default, per Zoe's call and consistent with
+	 * Docs/races-and-classes.md: Floors 1-2 are Tutorial Floors, race and class
+	 * are not chosen until the third floor, and Skill Upgrades are already
+	 * capped at the Rank 5 tier there. A party arriving at the class choice
+	 * over-levelled would make that choice matter less, which is the opposite
+	 * of the intent.
+	 *
+	 * EditAnywhere rather than a constant so a later floor can simply raise it -
+	 * this is a tutorial-era ceiling, not a permanent property of the game.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats", meta = (ClampMin = "1"))
+	int32 MaxLevel = 5;
+
+	UFUNCTION(BlueprintPure, Category = "Stats")
+	bool IsAtMaxLevel() const { return Level >= MaxLevel; }
+
 	/** XP needed to reach the next level. Derived, replicated so the HUD can draw a bar. */
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Stats")
 	int32 ExperienceToNextLevel = 0;

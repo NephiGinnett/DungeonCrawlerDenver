@@ -704,12 +704,23 @@ void UDCCStatsComponent::AddExperience(int32 Amount)
 		return;
 	}
 
+	// Already capped: XP is not banked toward a level that cannot be reached.
+	// Held at the threshold instead of accumulating, so the HUD bar reads full
+	// and stays there rather than climbing forever behind a number that has
+	// stopped meaning anything.
+	if (IsAtMaxLevel())
+	{
+		ExperiencePoints = FMath::Max(ExperienceToNextLevel, 0);
+		return;
+	}
+
 	ExperiencePoints += Amount;
 	OnExperienceChanged.Broadcast(this, Amount);
 
 	// Loop, because a floor-clear bonus can be worth more than one level and the
-	// remainder has to carry rather than evaporate.
-	while (ExperienceToNextLevel > 0 && ExperiencePoints >= ExperienceToNextLevel)
+	// remainder has to carry rather than evaporate. Stops at MaxLevel - a single
+	// large award cannot vault past the cap.
+	while (!IsAtMaxLevel() && ExperienceToNextLevel > 0 && ExperiencePoints >= ExperienceToNextLevel)
 	{
 		ExperiencePoints -= ExperienceToNextLevel;
 		++Level;
@@ -720,6 +731,13 @@ void UDCCStatsComponent::AddExperience(int32 Amount)
 		RecalculateDerivedStats(/*bRefillToFull=*/true);
 
 		OnLevelUp.Broadcast(this, Level);
+	}
+
+	// Landing exactly on the cap: park the bar full rather than leaving a
+	// half-filled one that will never move again.
+	if (IsAtMaxLevel())
+	{
+		ExperiencePoints = FMath::Max(ExperienceToNextLevel, 0);
 	}
 }
 

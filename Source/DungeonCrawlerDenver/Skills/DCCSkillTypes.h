@@ -150,9 +150,24 @@ struct FDCCSkillDef : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill|Cost", meta = (ClampMin = "0.0"))
 	float CastTimeSeconds = 0.0f;
 
-	/** Max distance to a target. Ignored for Self. */
+	/** Max distance to a target at Rank 1. Ignored for Self. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill|Targeting", meta = (ClampMin = "0.0"))
 	float Range = 600.0f;
+
+	/**
+	 * Extra reach per Rank above the first, in world units.
+	 *
+	 * Zero for almost everything - a fireball does not fly further because you
+	 * have thrown more of them. It exists for the skills where reach IS the
+	 * thing being practised, TargetedThrow being the case it was added for:
+	 * a novice lobs a rock a short way, a veteran puts it across the room.
+	 *
+	 * Deliberately a flat per-Rank addition rather than a multiplier. Rank
+	 * runs 0-20 and multiplying would make high Ranks absurd, whereas adding
+	 * keeps the curve legible to whoever is authoring the row.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill|Targeting", meta = (ClampMin = "0.0"))
+	float RangePerRank = 0.0f;
 
 	/** Cone/AoE size. Ignored for Self and SingleTarget. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skill|Targeting", meta = (ClampMin = "0.0"))

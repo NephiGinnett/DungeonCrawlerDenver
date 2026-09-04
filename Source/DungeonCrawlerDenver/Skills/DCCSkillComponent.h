@@ -65,6 +65,18 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skills")
 	TArray<FName> StartingSkillIds;
 
+	/**
+	 * Character XP awarded when a skill gains a Rank, multiplied by the new
+	 * Rank. Paid only on the rank landing - never for practising.
+	 *
+	 * This is the ONLY place skill progress converts into character XP. Paying
+	 * per use instead would make any repeatable action an idle-able XP faucet;
+	 * paying on advancement means the reward tracks the thing that was actually
+	 * hard, and the 1d20-vs-Rank roll already makes later ranks rare.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skills", meta = (ClampMin = "0"))
+	int32 ExperiencePerSkillRank = 25;
+
 	/** Rank each starting skill is granted at. Enemies can be tuned by raising this alone. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skills", meta = (ClampMin = "0"))
 	int32 StartingSkillRank = 1;
@@ -179,6 +191,17 @@ public:
 	/** Full pre-flight check. Use this to drive HUD state. */
 	UFUNCTION(BlueprintPure, Category = "Skills")
 	EDCCSkillFailure CanActivate(FName SkillId, AActor* Target) const;
+
+	/**
+	 * This character's actual reach with a skill: the authored Range plus
+	 * RangePerRank for every Rank above the first.
+	 *
+	 * Public because the HUD wants it too - a throw whose range grows with
+	 * practice is only satisfying if the player can SEE it grow, so the skill
+	 * menu shows the number this returns rather than the row's raw Range.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Skills")
+	float GetEffectiveRange(const FDCCSkillDef& Skill) const;
 
 	/**
 	 * Ask to use a skill. Safe to call from a client - it routes to the server

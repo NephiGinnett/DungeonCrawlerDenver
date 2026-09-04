@@ -9,6 +9,8 @@
 #include "Net/UnrealNetwork.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Combat/DCCGameState.h"
+#include "Quests/DCCQuestComponent.h"
+#include "Progression/DCCAchievementComponent.h"
 #include "UI/DCCEventLogTypes.h"
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraSystem.h"
@@ -206,6 +208,27 @@ int32 UDCCSkillComponent::RunSkillAdvancement()
 
 			OnSkillAdvanced.Broadcast(this, Known.SkillId, Known.Rank);
 			Multicast_SkillAdvanced(Known.SkillId, Known.Rank);
+
+			// The one funnel every Skill Rank gain passes through, same
+			// reasoning as the XP payment two lines below - a "gain N Ranks
+			// in Piloting" dev-goal quest hooks in here, not at whatever
+			// gameplay code happened to mark the skill.
+			UDCCQuestComponent::NotifyEvent(this, EDCCObjectiveType::SkillRankGained, Known.SkillId, 1);
+
+			// Character XP is paid HERE - on the rank actually landing - and
+			// nowhere else. Getting better at something is the achievement; the
+			// practice that led to it is not, or every repeatable action in the
+			// game turns into an XP faucet you can idle against.
+			//
+			// Scaled by the new Rank so late ranks, which are much harder to
+			// roll, are worth more than the first one.
+			if (AActor* SkillOwner = GetOwner())
+			{
+				if (UDCCStatsComponent* OwnerStats = SkillOwner->FindComponentByClass<UDCCStatsComponent>())
+				{
+					OwnerStats->AddExperience(ExperiencePerSkillRank * Known.Rank);
+				}
+			}
 
 			ADCCGameState::Log(this, EDCCLogCategory::Advancement, FText::Format(
 				NSLOCTEXT("DCC", "LogAdvance", "{0} is now Rank {1} in {2}. Growth is permitted."),
@@ -451,6 +474,22 @@ float UDCCSkillComponent::GetRemainingCooldown(FName SkillId) const
 	return FMath::Max(0.0f, *EndTime - World->GetTimeSeconds());
 }
 
+float UDCCSkillComponent::GetEffectiveRange(const FDCCSkillDef& Skill) const
+{
+	if (Skill.RangePerRank <= 0.0f)
+	{
+		return Skill.Range;
+	}
+
+	// Rank 0 (untrained) and Rank 1 both get the base range - untrained use is
+	// already penalised with Disadvantage, and stacking a shorter throw on top
+	// would punish the same attempt twice.
+	const int32 Rank = GetSkillRank(Skill.SkillId);
+	const int32 RanksAboveFirst = FMath::Max(0, Rank - 1);
+
+	return Skill.Range + Skill.RangePerRank * RanksAboveFirst;
+}
+
 EDCCSkillFailure UDCCSkillComponent::CanActivate(FName SkillId, AActor* Target) const
 {
 	FDCCSkillDef Skill;
@@ -493,7 +532,8 @@ EDCCSkillFailure UDCCSkillComponent::CanActivate(FName SkillId, AActor* Target) 
 			return EDCCSkillFailure::NoTarget;
 		}
 
-		if (FVector::Dist(Character->GetActorLocation(), Target->GetActorLocation()) > Skill.Range)
+		if (FVector::Dist(Character->GetActorLocation(), Target->GetActorLocation())
+			> GetEffectiveRange(Skill))
 		{
 			return EDCCSkillFailure::OutOfRange;
 		}
@@ -601,6 +641,14 @@ FDCCSkillResult UDCCSkillComponent::ActivateSkillInternal(const FDCCSkillDef& Sk
 			Result.bWasUntrained);
 
 		bSucceeded = Result.Check.bSuccess;
+
+		// "Untrained Genius" - Result.bWasUntrained and Skill.DifficultyClass
+		// were already exactly what this needed; no new tracking turned out to
+		// be required here, just reading two values this call site already has.
+		if (Result.bWasUntrained && bSucceeded && Skill.DifficultyClass >= 15)
+		{
+			UDCCAchievementComponent::RecordFor(GetOwner(), EDCCAchievementStat::UntrainedHighDCSuccess);
+		}
 	}
 
 	// Marked on the attempt, pass or fail. Passive skills never mark, and an

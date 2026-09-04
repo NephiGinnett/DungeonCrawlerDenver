@@ -45,6 +45,15 @@ enum class EDCCChatterBucket : uint8
 	/** ~5%: untranslated alien-language gibberish. */
 	AlienLanguage UMETA(DisplayName = "Alien Language"),
 
+	/**
+	 * A running joke. Rows in this bucket carry a GagId; once one is rolled
+	 * the gag goes "active" and gets a much higher chance of recurring for a
+	 * while, then ages out. That recurrence is the whole point - real chat is
+	 * mostly the same four jokes being reheated, and a pool of one-shot lines
+	 * never reads as a crowd no matter how many of them there are.
+	 */
+	RunningGag    UMETA(DisplayName = "Running Gag"),
+
 	/** A small chance any of the above is swapped for a moderation notice
 	 *  instead of real content. */
 	Moderated     UMETA(DisplayName = "Moderated"),
@@ -81,6 +90,17 @@ struct FDCCChatterLineDef : public FTableRowBase
 	 *  (in-universe handles, not real usernames). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chatter")
 	FString SenderHandle;
+
+	/**
+	 * Groups rows into one running joke. Every row sharing a GagId is a
+	 * variation on the same bit, so the gag can recur without repeating the
+	 * exact same words - which is what stops a "running joke" reading as a
+	 * stuck record.
+	 *
+	 * Only meaningful on Bucket == RunningGag; None everywhere else.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Chatter")
+	FName GagId;
 };
 
 namespace DCCChatter
@@ -88,4 +108,19 @@ namespace DCCChatter
 	/** {Name}/{Item}/{Event} substitution. Missing tokens are left untouched. */
 	DUNGEONCRAWLERDENVER_API FText SubstituteTokens(const FText& Template,
 		const FString& Name, const FString& Item, const FString& Event);
+
+	/**
+	 * Looks up the icon for a chat token like ":BORANT_W:" (the `Emote`
+	 * bucket's whole reason to exist - "a string of invented, in-universe
+	 * emote names," per that bucket's own doc comment above). Returns
+	 * nullptr for anything not in the table, which the HUD falls back to
+	 * drawing as plain text for - so an un-mapped or newly-authored token
+	 * degrades gracefully instead of leaving a blank gap.
+	 *
+	 * A small in-code map rather than a DataTable on purpose, for now: these
+	 * are brand names Zoe invents rarely, not chat lines she adds constantly
+	 * the way DT_DCCChatterLines rows are - promote to a DataTable if that
+	 * assumption stops holding and this needs to grow past a couple dozen.
+	 */
+	DUNGEONCRAWLERDENVER_API UTexture2D* FindEmoteIcon(const FString& Token);
 }
