@@ -6,7 +6,9 @@
 #include "Items/DCCLootTypes.h"
 #include "Items/DCCLootSource.h"
 #include "Items/DCCConsumableTypes.h"
+#include "Items/DCCLootBoxTypes.h"
 #include "UI/DCCInteractionTypes.h"
+#include "Dialogue/DCCDialogueTypes.h"
 #include "UI/DCCChatTypes.h"
 #include "Skills/DCCSkillTypes.h"
 #include "Classes/DCCClassTypes.h"
@@ -22,7 +24,11 @@ class UDCCEquipmentComponent;
 class UDCCClassComponent;
 class ADCCCharacterBase;
 class ADCCDialogueNPC;
+class ADCCLootBoxStation;
+class ADCCPortalConsole;
+class ADCCOathgate;
 class ADCCCliffLift;
+class ADCCEnemyCharacter;
 class UUserWidget;
 class UTextRenderComponent;
 class USoundBase;
@@ -148,6 +154,17 @@ public:
 	/** AttackRange, or the longest reach among equipped weapons if any is ranged. */
 	UFUNCTION(BlueprintPure, Category = "DCC|Combat")
 	float GetEffectiveAttackRange() const;
+
+	/**
+	 * WeaponDamageDie, or the best equipped weapon's die (rarity bonus
+	 * included) if any exceeds it. Same "equipment wins when it says
+	 * anything" shape as GetEffectiveAttackRange, and the actual fix for
+	 * "a frying pan should hit harder than a bare fist" - PerformAttack was
+	 * reading the raw WeaponDamageDie member directly and ignoring equipped
+	 * gear entirely until this existed.
+	 */
+	UFUNCTION(BlueprintPure, Category = "DCC|Combat")
+	int32 GetEffectiveWeaponDamageDie() const;
 
 	/**
 	 * Doubles as this action's initiative/cooldown value. The design doc calls
@@ -368,6 +385,55 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DCC|Animation")
 	void PlayEmote();
 
+	/** Plays EnterVehicleAnimation on every machine - called from
+	 *  ADCCRover::EnterRover, which needs this public since it's a
+	 *  cross-class call, not an internal one like Multicast_PlayEmote. */
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlayEnterVehicleAnimation();
+	void Multicast_PlayEnterVehicleAnimation_Implementation();
+
+	// -------------------------------------------------------------------------
+	// EMOTE MENU - player-triggered, not the random kill-celebration above
+	//
+	// EmoteAnimations/PlayEmote already existed for the kill-celebration path
+	// (DCCCrawlerAnimSet::Apply curates a real pool - dances, gestures - for
+	// anything on the shared crawler skeleton) but nothing let a PLAYER choose
+	// and fire one on demand. This reuses that same array and the same
+	// PlayOneShotAnimation/Multicast plumbing, just with an explicit index
+	// instead of a random one, and a lightweight picker to choose it - same
+	// wheel-to-choose/E-to-confirm shape as every other menu in this file.
+	// -------------------------------------------------------------------------
+
+	UFUNCTION(BlueprintPure, Category = "DCC|Animation")
+	bool IsEmoteMenuOpen() const { return bEmoteMenuOpen; }
+
+	UFUNCTION(BlueprintPure, Category = "DCC|Animation")
+	int32 GetEmoteMenuIndex() const { return EmoteMenuIndex; }
+
+	/** Opens/closes the picker. No-ops open if EmoteAnimations is empty - a
+	 *  character with nothing to perform has nothing to browse. */
+	void ToggleEmoteMenu();
+
+	/** Moves the highlight. Wraps. */
+	void CycleEmoteMenu(int32 Delta);
+
+	/** E on the open picker: asks the server to play the highlighted emote,
+	 *  then closes the menu locally (same "client asks, server re-validates"
+	 *  shape as everywhere else - the index is a nomination, not a command). */
+	void ConfirmEmote();
+
+	/** Client asks; server re-checks the index is still valid before honouring
+	 *  it, same reasoning as every other Server_ RPC in this file. */
+	UFUNCTION(Server, Reliable)
+	void Server_RequestEmoteAtIndex(int32 Index);
+	void Server_RequestEmoteAtIndex_Implementation(int32 Index);
+
+	/** Plays EmoteAnimations[Index] on every machine and logs the same Feed
+	 *  line the random kill-celebration path already uses. */
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlayEmoteAtIndex(int32 Index);
+	void Multicast_PlayEmoteAtIndex_Implementation(int32 Index);
+
 	/** Played once per swing. Without this, attacks are invisible. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Animation")
 	TObjectPtr<UAnimationAsset> AttackAnimation;
@@ -375,6 +441,17 @@ public:
 	/** Played while ascending a climb point, time-scaled to the ascent. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Animation")
 	TObjectPtr<UAnimationAsset> ClimbAnimation;
+
+	/**
+	 * Played once, standing beside the rover, before the crawler hides and
+	 * possession hands over to it - the beat that represents getting in,
+	 * per Zoe's ask 2026-09-03 ("a quick animation... then disappear"). No
+	 * literal "get in a car" clip exists in the shared crawler set, so this
+	 * is a placeholder repurposing whatever reads closest - see
+	 * DCCCrawlerAnimSet::Apply for which clip that is right now.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Animation")
+	TObjectPtr<UAnimationAsset> EnterVehicleAnimation;
 
 	/** Played once when casting, so a spell reads as deliberate. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Animation")
@@ -428,6 +505,29 @@ public:
 	FName CurrentRoomId;
 
 	/**
+	 * Mirrored the same way CurrentRoomDisplayName is, the moment this
+	 * character enters or leaves a room - true only while standing in one
+	 * whose RoomType is SafeRoom. The one thing loot boxes gate on
+	 * (Server_OpenLootBox) rather than something a client-side check could
+	 * lie about.
+	 */
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "DCC|Room")
+	bool bInSafeRoom = false;
+
+	UFUNCTION(BlueprintPure, Category = "DCC|Room")
+	bool IsInSafeRoom() const { return bInSafeRoom; }
+
+	/**
+	 * Server only. Called by ADCCRoom::AddOccupant on every room entry.
+	 * No-ops on a room already visited - VisitedRoomIds only ever grows, and
+	 * the Achievements Record call only fires on the entries that actually
+	 * grow it, which is what makes "The Full Tour" a plain threshold
+	 * achievement (Threshold = however many rooms a floor has) rather than a
+	 * bespoke "visited all N" check anywhere in code.
+	 */
+	void RecordRoomVisited(FName RoomId);
+
+	/**
 	 * How close you have to be to offer a fist bump. Generous, because missing a
 	 * social interaction by 20cm is only ever annoying.
 	 */
@@ -464,6 +564,21 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "DCC|Animation")
 	void PlayOneShotAnimation(UAnimationAsset* Animation, float OverrideDurationSeconds = 0.0f);
+
+	/**
+	 * True when this clip was authored for the same skeleton this mesh uses.
+	 *
+	 * The engine's own failure here is an ensure plus a garbage pose, which is
+	 * unreadable at a glance; refusing the clip leaves the character in its last
+	 * good pose and prints which asset is on the wrong rig.
+	 *
+	 * Public rather than protected: callers that need to know WHETHER a clip
+	 * would play - not just have PlayOneShotAnimation silently no-op it - are
+	 * cross-class. ADCCRover::EnterRover is the reason this moved; locking the
+	 * driver for an animation's duration when that animation was never going
+	 * to render at all is its own bug, not a cosmetic one.
+	 */
+	bool CanPlayOnThisSkeleton(const UAnimationAsset* Animation) const;
 
 	/** Convenience wrapper used by the climb point. */
 	UFUNCTION(BlueprintCallable, Category = "DCC|Animation")
@@ -603,11 +718,49 @@ public:
 	// VendorTargetActor and LootTargetActor first costs nothing and means the
 	// wheel never silently does nothing because it was driving the wrong
 	// menu's index.
-	void InteractionScrollUp() { VendorTargetActor ? CycleVendorMenu(-1) : LootTargetActor ? CycleLootMenu(-1) : CycleInteractionOption(-1); }
-	void InteractionScrollDown() { VendorTargetActor ? CycleVendorMenu(1) : LootTargetActor ? CycleLootMenu(1) : CycleInteractionOption(1); }
+	void InteractionScrollUp() { bInSelfieMode ? CycleSelfiePose(-1) : bEmoteMenuOpen ? CycleEmoteMenu(-1) : VendorTargetActor ? CycleVendorMenu(-1) : LootTargetActor ? CycleLootMenu(-1) : OathgateTargetActor ? CycleOathgateMenu(-1) : NPCInteractionTarget ? CycleNPCInteractionMenu(-1) : CycleInteractionOption(-1); }
+	void InteractionScrollDown() { bInSelfieMode ? CycleSelfiePose(1) : bEmoteMenuOpen ? CycleEmoteMenu(1) : VendorTargetActor ? CycleVendorMenu(1) : LootTargetActor ? CycleLootMenu(1) : OathgateTargetActor ? CycleOathgateMenu(1) : NPCInteractionTarget ? CycleNPCInteractionMenu(1) : CycleInteractionOption(1); }
 
 	UFUNCTION(BlueprintCallable, Category = "DCC|Interaction")
 	void CloseInteraction();
+
+	// -------------------------------------------------------------------------
+	// NPC MENU - "E on a non-combat NPC" (ADCCDialogueNPC and its ADCCVendorNPC
+	// subclass), not layered onto InteractionTarget above for the same reason
+	// the loot menu is not: InteractionTarget is typed ADCCCharacterBase*, and
+	// ADCCDialogueNPC is deliberately NOT one (see that class's own header
+	// comment on why). A separate small menu, same wheel-to-choose/E-to-confirm
+	// shape and the same visual panel style as every other menu in this file.
+	// -------------------------------------------------------------------------
+
+	/** The NPC currently showing its Talk/Shop/Leave menu, or null. */
+	UFUNCTION(BlueprintPure, Category = "DCC|Interaction")
+	ADCCDialogueNPC* GetNPCInteractionTarget() const { return NPCInteractionTarget; }
+
+	UFUNCTION(BlueprintPure, Category = "DCC|Interaction")
+	const TArray<EDCCNPCInteractionOption>& GetNPCInteractionOptions() const { return NPCInteractionOptions; }
+
+	UFUNCTION(BlueprintPure, Category = "DCC|Interaction")
+	int32 GetNPCInteractionIndex() const { return NPCInteractionIndex; }
+
+	/** False: the top menu (Talk/Shop/Quests/Leave). True: the offered-quests sub-page. */
+	UFUNCTION(BlueprintPure, Category = "DCC|Interaction")
+	bool IsNPCShowingQuests() const { return bNPCShowingQuests; }
+
+	/**
+	 * NPCInteractionTarget's OfferedQuestIds, filtered down to ones not
+	 * already active or complete for the party - what the Quests sub-page
+	 * actually lists, and what decides whether the Quests row shows at all.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DCC|Interaction")
+	void GetOfferableQuestIds(TArray<FName>& OutIds) const;
+
+	/** Moves the highlight. Wraps. */
+	UFUNCTION(BlueprintCallable, Category = "DCC|Interaction")
+	void CycleNPCInteractionMenu(int32 Delta);
+
+	UFUNCTION(BlueprintCallable, Category = "DCC|Interaction")
+	void CloseNPCInteraction();
 
 	// -------------------------------------------------------------------------
 	// GOING DOWN, AND GETTING BACK UP
@@ -642,6 +795,26 @@ public:
 	UFUNCTION(BlueprintPure, Category = "DCC|Chat")
 	bool CanSendChatMessage() const { return !bHasDied || !bHasSentFinalMessage; }
 
+	// -------------------------------------------------------------------------
+	// AWAITING OTHER CRAWLERS
+	//
+	// Set by walking into an active ADCCExitPortal - the science lab's "end of
+	// the built content" exit. A terminal state like death, not a menu: the
+	// HUD takes the whole screen over (ADCCHUD::DrawAwaitingOtherCrawlersScreen,
+	// checked ahead of even the death screen) rather than layering a banner on
+	// top of normal play, because there genuinely is nowhere further to go
+	// yet - this is the honest way to say so instead of quietly doing nothing.
+	// -------------------------------------------------------------------------
+
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_AwaitingOtherCrawlers, Category = "DCC|Portal")
+	bool bAwaitingOtherCrawlers = false;
+
+	UFUNCTION(BlueprintPure, Category = "DCC|Portal")
+	bool IsAwaitingOtherCrawlers() const { return bAwaitingOtherCrawlers; }
+
+	/** Server only. Called by ADCCExitPortal when a living crawler walks into an active one. */
+	void EnterAwaitingOtherCrawlers();
+
 	/**
 	 * Every source contributing to this character's current score for Ability -
 	 * base score, Equipment, Class - in that order, for the Feed's
@@ -674,12 +847,22 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_SendChatMessage(EDCCChatChannel Channel, const FString& WhisperTargetName, const FText& Text);
 
-	/** Server only. Rolls a fresh Chatter batch - see
-	 *  ADCCGameState::RollChatterBatch for why this is on-demand, not timed.
-	 *  Public for the same reason Server_SendChatMessage is - DCCHUD calls it
-	 *  directly when the Chatter tab opens. */
-	UFUNCTION(Server, Reliable)
-	void Server_RequestChatterBatch();
+	/**
+	 * Server only. Rolls Chatter lines - see ADCCGameState::RollChatterBatch
+	 * for why this is client-driven rather than a background timer.
+	 *
+	 * Called twice by DCCHUD: once with the opening burst when the Chatter tab
+	 * is opened, then repeatedly with a Count of 1-2 while it stays open, which
+	 * is what makes the channel look like it has been running the whole time
+	 * without anything running while nobody is watching.
+	 *
+	 * Unreliable on purpose: this fires every couple of seconds per viewer and
+	 * a dropped one costs a comment nobody knew was coming. The server
+	 * rate-limits regardless (ADCCGameState::TryRollChatterBatch), so a client
+	 * asking too fast gets refused rather than obeyed.
+	 */
+	UFUNCTION(Server, Unreliable)
+	void Server_RequestChatterBatch(int32 Count);
 
 	/**
 	 * Client's request to ride a specific ADCCCliffLift, e.g. via
@@ -790,6 +973,17 @@ public:
 	virtual void LootAll(ADCCCharacterBase* Looter) override;
 	virtual void StowInto(ADCCCharacterBase* Looter) override;
 
+	/**
+	 * Server only. Called once per encounter, on every crawler in the room,
+	 * the instant its fight goes Active - see ADCCRoom::HandleEncounterStateChanged.
+	 * Checks equipped gear for a cursed item that forces an action at combat
+	 * start (Supercan's costume is the first) and, if one is worn, runs it: a
+	 * swept forced hop plus an optional gesture animation and feed line. A
+	 * no-op for everyone not wearing something cursed, which in practice is
+	 * everyone.
+	 */
+	void NotifyCombatStarted();
+
 	// -------------------------------------------------------------------------
 	// THE LOOT MENU
 	//
@@ -857,6 +1051,97 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DCC|Vendor")
 	void CloseVendorMenu();
 
+	// -------------------------------------------------------------------------
+	// OATHGATE - "Enter the gate?" confirm prompt
+	//
+	// Walking into the trigger no longer teleports on contact - it arms this
+	// small local prompt instead, same wheel-to-choose/E-to-confirm shape as
+	// the loot and vendor menus. Server tells this specific client to show it
+	// (Client_ShowOathgatePrompt, fired from ADCCOathgate::HandleTriggerOverlap)
+	// rather than the client opening it unprompted, because eligibility (alive,
+	// crawler, off cooldown) is the server's call, not something to fake open
+	// locally. Confirming "Enter" round-trips through Server_ActivateOathgate,
+	// which re-validates before ADCCOathgate::RequestActivation actually moves
+	// anyone - the usual "client picks, server re-validates" shape.
+	// -------------------------------------------------------------------------
+
+	/** The Oathgate currently showing its confirm prompt on this client, or null. */
+	UFUNCTION(BlueprintPure, Category = "DCC|Oathgate")
+	class ADCCOathgate* GetOathgateTarget() const { return OathgateTargetActor; }
+
+	UFUNCTION(BlueprintPure, Category = "DCC|Oathgate")
+	int32 GetOathgateMenuIndex() const { return OathgateMenuIndex; }
+
+	/** Moves the highlight between Enter/Turn Away. Wraps. */
+	UFUNCTION(BlueprintCallable, Category = "DCC|Oathgate")
+	void CycleOathgateMenu(int32 Delta);
+
+	UFUNCTION(BlueprintCallable, Category = "DCC|Oathgate")
+	void CloseOathgatePrompt();
+
+	/** Confirms whichever row is highlighted - Enter teleports, Turn Away just closes the prompt. */
+	UFUNCTION(BlueprintCallable, Category = "DCC|Oathgate")
+	void HandleOathgateMenuConfirm();
+
+	/** Server -> this client only. Gate null closes the prompt (used when the player walks back out without deciding). */
+	UFUNCTION(Client, Reliable)
+	void Client_ShowOathgatePrompt(class ADCCOathgate* Gate);
+
+	UFUNCTION(Server, Reliable)
+	void Server_ActivateOathgate(class ADCCOathgate* Gate);
+	void Server_ActivateOathgate_Implementation(class ADCCOathgate* Gate);
+
+	/** Same "client nominates, server acts" shape - Console re-validates nothing itself, it just calls Portal->Activate(). */
+	UFUNCTION(Server, Reliable)
+	void Server_ActivatePortalConsole(ADCCPortalConsole* Console);
+	void Server_ActivatePortalConsole_Implementation(ADCCPortalConsole* Console);
+
+	/** Crowbar request on a Puzzles/ door. Server re-checks range, then lets the
+	 *  door itself decide (Favor cost, Strength gate) - see ADCCPuzzleDoor. */
+	UFUNCTION(Server, Reliable)
+	void Server_ForcePuzzleDoor(class ADCCPuzzleDoor* Door);
+	void Server_ForcePuzzleDoor_Implementation(class ADCCPuzzleDoor* Door);
+
+	/** Flip one breaker in a Lights-Out panel. Range-checked server-side. */
+	UFUNCTION(Server, Reliable)
+	void Server_FlipBreakerSwitch(class ADCCBreakerSwitch* Switch);
+	void Server_FlipBreakerSwitch_Implementation(class ADCCBreakerSwitch* Switch);
+
+	/** Hand the carried prop over as collateral. The lock decides whether it
+	 *  qualifies; this only re-checks range. */
+	UFUNCTION(Server, Reliable)
+	void Server_DepositToEscrow(class ADCCEscrowLock* Lock);
+	void Server_DepositToEscrow_Implementation(class ADCCEscrowLock* Lock);
+
+	/** Get into a rover. Server re-checks range, then the rover does the
+	 *  possess - see Vehicles/DCCRover.h. */
+	UFUNCTION(Server, Reliable)
+	void Server_EnterRover(class ADCCRover* Rover);
+	void Server_EnterRover_Implementation(class ADCCRover* Rover);
+
+	/** Get out again. No range check: the driver is inside it by definition. */
+	UFUNCTION(Server, Reliable)
+	void Server_ExitRover(class ADCCRover* Rover);
+	void Server_ExitRover_Implementation(class ADCCRover* Rover);
+
+	/** Turf the ally passengers out. No range check - the driver is inside it. */
+	UFUNCTION(Server, Reliable)
+	void Server_EjectRoverPassengers(class ADCCRover* Rover);
+	void Server_EjectRoverPassengers_Implementation(class ADCCRover* Rover);
+
+	/** Roll the rover's windows up/down. No range check - the driver is inside
+	 *  it by definition. See ADCCRover::ToggleWindows for what this actually
+	 *  does to the mesh (a material fade, not a moving piece of glass). */
+	UFUNCTION(Server, Reliable)
+	void Server_ToggleRoverWindows(class ADCCRover* Rover);
+	void Server_ToggleRoverWindows_Implementation(class ADCCRover* Rover);
+
+	/** Toggle the rover's radio. No range check - the driver is inside it by
+	 *  definition, same reasoning as Server_ToggleRoverWindows. */
+	UFUNCTION(Server, Reliable)
+	void Server_ToggleRoverRadio(class ADCCRover* Rover);
+	void Server_ToggleRoverRadio_Implementation(class ADCCRover* Rover);
+
 	/**
 	 * Empties one Stowed Remains record from this crawler's own pack, at their
 	 * feet - the Tab menu's Inventory page calls this on a clicked row.
@@ -869,6 +1154,15 @@ public:
 	void DCCEmptyStowedRemains(int32 Index);
 
 	/**
+	 * Equips Items[Index] from this crawler's own pack, if it is a piece of
+	 * gear - the Tab menu's Inventory page calls this on a clicked row. Same
+	 * routing reason as DCCEmptyStowedRemains: UDCCInventoryComponent::EquipItem
+	 * refuses outright without authority.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DCC|Loot")
+	void DCCEquipItem(int32 Index);
+
+	/**
 	 * Drinks one stowed consumable from this crawler's own pack - the Tab
 	 * menu's Inventory page calls this on a clicked row. Same routing reason
 	 * as DCCEmptyStowedRemains: UDCCInventoryComponent::ConsumeStowedConsumable
@@ -876,6 +1170,29 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "DCC|Vendor")
 	void DCCConsumeStowedDrink(int32 Index);
+
+	/**
+	 * Opens one owned loot box of Tier from the Inventory page. Routed
+	 * through the server for the same reason DCCConsumeStowedDrink is - the
+	 * safe-room check has to be re-verified there too, not trusted from
+	 * whatever the client's HUD happened to show.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DCC|LootBox")
+	void OpenLootBox(EDCCLootBoxTier Tier);
+
+	/**
+	 * Claims every unclaimed achievement reward, then opens every owned loot
+	 * box across every tier, one at a time, laid out in a line rather than
+	 * piled on one spot - Zoe's own request, so a whole session's backlog of
+	 * rewards reads as a line of loot instead of a heap. Claiming is
+	 * unconditional, matching the existing per-achievement Claim button; the
+	 * box-opening half re-verifies IsInSafeRoom() server-side exactly like
+	 * OpenLootBox does, and simply skips (with a local notice) if that fails
+	 * - a call made outside a Safe Room still banks the XP/Favor, it just
+	 * leaves the boxes sealed for later.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DCC|LootBox")
+	void ClaimAndOpenAllLootBoxes();
 
 	/**
 	 * Party command: stop escorting and stand still, or resume.
@@ -915,6 +1232,37 @@ public:
 	/** Seconds to hold the pose before the shutter fires - long enough to see it coming and smile. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Selfie", meta = (ClampMin = "0.0"))
 	float SelfiePoseSeconds = 0.8f;
+
+	/**
+	 * Poses cyclable with the mouse wheel while posing (2026-08-28) - see
+	 * CycleSelfiePose. Authored per-character/Blueprint, since it has to be
+	 * something that skeleton can actually play; empty means scrolling does
+	 * nothing and the character just holds whatever it was already doing.
+	 * The shared-skeleton animation set (A_DCC_*) is the obvious source once
+	 * someone picks a handful worth offering.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Selfie")
+	TArray<TObjectPtr<UAnimationAsset>> SelfiePoseAnimations;
+
+	/**
+	 * How close a living hostile can be before EnterSelfieMode refuses outright
+	 * (2026-08-28) - see EnterSelfieMode's own comment on why this exists
+	 * alongside, not instead of, SelfieMaxRealSeconds.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Selfie", meta = (ClampMin = "0.0"))
+	float SelfieHostileRefuseRadius = 1500.0f;
+
+	/** Advances/retreats through SelfiePoseAnimations and plays the newly selected
+	 *  one, restarting the pose-hold so the shutter captures it rather than
+	 *  catching the swap mid-transition. Routed here from InteractionScrollUp/Down
+	 *  while posing - see those functions' own dispatch. */
+	UFUNCTION(BlueprintCallable, Category = "DCC|Selfie")
+	void CycleSelfiePose(int32 Delta);
+
+	/** 0-1 progress toward the shutter actually firing - the HUD's viewfinder
+	 *  overlay reads this for a countdown bar. Zero whenever not posing. */
+	UFUNCTION(BlueprintPure, Category = "DCC|Selfie")
+	float GetSelfiePoseProgress() const;
 
 	// -------------------------------------------------------------------------
 	// TEST CHEATS
@@ -1194,6 +1542,26 @@ protected:
 	void OnSecondaryPressed();
 	void OnSecondaryReleased();
 
+	/**
+	 * Local only - a camera FOV nudge, not a gameplay state, so nothing here
+	 * needs to replicate. Gated on a ranged weapon being equipped (see
+	 * OnSecondaryPressed) - right-click has nothing to zoom in on for melee
+	 * or bare hands, so it stays a no-op for them exactly as it always was.
+	 */
+	void BeginAimZoom();
+	void EndAimZoom();
+
+	/** True while right-click is held on a ranged weapon. Local UI/camera state only. */
+	UPROPERTY(Transient)
+	bool bIsAiming = false;
+
+	/** FOV captured the moment aiming began, so EndAimZoom restores exactly what was there rather than a hardcoded default. */
+	float PreAimFOV = 90.0f;
+
+	/** How far in "slight zoom" goes - 1.0 would be no zoom at all. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Combat", meta = (ClampMin = "0.1", ClampMax = "1.0"))
+	float AimZoomFactor = 0.7f;
+
 	void ReleaseClimbIfClimbing() { if (IsClimbing()) { ReleaseClimb(); } }
 
 	void AcceptPrompt() { ConfirmPendingClimb(true); }
@@ -1242,6 +1610,18 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DCC|Combat")
 	void AttemptAttackNearest();
 
+	/**
+	 * Safe to call anywhere, same shape as AttemptAttackNearest - but targets
+	 * whatever the camera is pointed at (out to the equipped weapon's range)
+	 * rather than the nearest hostile in a radius. What a ranged weapon's
+	 * MainHand click calls instead of AttemptAttackNearest - see
+	 * OnPrimaryPressed. Trace happens locally (this client's camera is the
+	 * only accurate one) and the result is sent as a nomination, not a fact -
+	 * Server_RangedAttack re-validates it the same way Server_CastSkill does.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "DCC|Combat")
+	void AttemptRangedAttack();
+
 	/** Any player may pause. Routes to the server; safe to call from a client. */
 	UFUNCTION(BlueprintCallable, Category = "DCC|Combat")
 	void RequestTogglePause();
@@ -1249,6 +1629,14 @@ public:
 	/** Nearest living hostile within attack range, or null. */
 	UFUNCTION(BlueprintPure, Category = "DCC|Combat")
 	ADCCCharacterBase* FindNearestHostileInRange() const;
+
+	/**
+	 * The first living hostile the camera is looking at, out to MaxRange, or
+	 * null. Local only - this is what AttemptRangedAttack traces with; the
+	 * server never calls this itself (see Server_RangedAttack's comment).
+	 */
+	UFUNCTION(BlueprintPure, Category = "DCC|Combat")
+	ADCCCharacterBase* FindHostileUnderCrosshair(float MaxRange) const;
 
 	/**
 	 * Whether this character is on the crawlers' side rather than dungeon-side.
@@ -1300,6 +1688,16 @@ protected:
 	UFUNCTION(Server, Reliable)
 	void Server_CastSkill(FName SkillId, AActor* Target);
 
+	/**
+	 * Same trust shape as Server_CastSkill, for the same reason: "whatever the
+	 * camera is pointed at" cannot be re-derived server-side, so the client's
+	 * FindHostileUnderCrosshair result is carried across as a nomination.
+	 * ResolveOrQueueRangedAttack re-checks alive/hostile/range before it
+	 * becomes an actual PerformAttack call.
+	 */
+	UFUNCTION(Server, Reliable)
+	void Server_RangedAttack(ADCCCharacterBase* NominatedTarget);
+
 	UFUNCTION(Server, Reliable)
 	void Server_TogglePause();
 
@@ -1309,8 +1707,21 @@ protected:
 	UFUNCTION(Server, Reliable)
 	void Server_EmptyStowedRemains(int32 Index);
 
+	// Named EquipInventoryItem rather than EquipItem - Server_EquipItem(FName)
+	// already exists above as the DM's `DCC.EquipItem` cheat, and UFUNCTIONs
+	// cannot be overloaded by parameter type the way plain C++ functions can.
+	UFUNCTION(Server, Reliable)
+	void Server_EquipInventoryItem(int32 Index);
+
 	UFUNCTION(Server, Reliable)
 	void Server_ConsumeStowedDrink(int32 Index);
+
+	UFUNCTION(Server, Reliable)
+	void Server_OpenLootBox(EDCCLootBoxTier Tier);
+
+	UFUNCTION(Server, Reliable)
+	void Server_ClaimAndOpenAllLootBoxes();
+	void Server_ClaimAndOpenAllLootBoxes_Implementation();
 
 	UFUNCTION(Server, Reliable)
 	void Server_BeginClimb(ADCCClimbPoint* Point);
@@ -1342,7 +1753,32 @@ protected:
 	void Server_ToggleMount();
 
 	UFUNCTION()
-	void OnRep_ActiveClimbPoint();
+	void OnRep_ActiveClimbPoint(ADCCClimbPoint* PreviousActiveClimbPoint);
+
+	/**
+	 * Snaps the owning client to a server-computed climb position it would
+	 * otherwise never learn about.
+	 *
+	 * AActor::SetActorLocation on the server is NOT delivered to the pawn's
+	 * own owning (autonomous proxy) client - ReplicatedMovement is
+	 * COND_SimulatedOrPhysics, i.e. everyone EXCEPT the owner. Every other
+	 * player watching a climb sees it fine through ordinary movement
+	 * replication; the climber's own screen does not, and instead sits still
+	 * until the normal movement-error correction eventually yanks it into
+	 * place - which is what read as being "pushed back" at climb start and
+	 * "dropped off the side" at the top. OnRep_ActiveClimbPoint closes the
+	 * start-of-climb gap by recomputing the same attach point locally on
+	 * every machine; this RPC closes the end-of-climb gap, since that
+	 * location is only known once, server-side, at the moment a climb ends -
+	 * either by reaching the top (bLandOnGround = true, switches the client
+	 * to MOVE_Walking) or by an early release / stamina exhaustion mid-climb
+	 * (bLandOnGround = false, switches the client to MOVE_Falling from the
+	 * server's real position rather than the client's own drifted cosmetic
+	 * guess). See DISPATCH.md, "Climbing fixes" (2026-08-28) and the
+	 * mid-climb-release follow-up (2026-08-29).
+	 */
+	UFUNCTION(Client, Reliable)
+	void Client_SyncClimbLocation(FVector NewLocation, bool bLandOnGround);
 
 	UFUNCTION(Server, Reliable)
 	void Server_FistBump(ADCCCharacterBase* Target);
@@ -1370,6 +1806,24 @@ protected:
 	virtual void OnDamageDealt(ADCCCharacterBase* Target, int32 Damage) {}
 
 public:
+	/**
+	 * Last chance to change a blow before it lands, on the character RECEIVING
+	 * it. Server-side; returns the damage actually to be applied.
+	 *
+	 * Sits on the attack path only (ADCCCharacterBase::PerformAttack), NOT
+	 * inside UDCCStatsComponent::ApplyDamage - deliberately, and for the same
+	 * reason UDCCBossComponent's damage multiplier is applied at the same
+	 * spot: Stats/ has to stay ruleset-agnostic and know nothing about
+	 * particular monsters.
+	 *
+	 * The useful consequence is that damage arriving by other routes - a
+	 * thrown crate (ADCCPickup), a radiation aura, a scripted kill - does not
+	 * pass through here at all. That is what lets a subclass be immune to
+	 * being hit while still being destructible by something heavy, which is
+	 * exactly what ADCCEnemyCharacter_LegacySystem is built on.
+	 */
+	virtual int32 ModifyIncomingDamage(int32 Damage, ADCCCharacterBase* Attacker) { return Damage; }
+
 	/**
 	 * Logs the level and records it against achievements.
 	 *
@@ -1423,6 +1877,14 @@ protected:
 
 	/** Server-side: cast now, or park the intent if the world is paused. */
 	void ResolveOrQueueSkill(FName SkillId, AActor* Target);
+
+	/**
+	 * Server-side: re-validates NominatedTarget (alive, hostile, in range -
+	 * never trusted outright) then fires now, or parks the intent if the
+	 * world is paused. A target that fails validation still fires - see
+	 * PerformAttack(nullptr) - same as missing with a melee swing.
+	 */
+	void ResolveOrQueueRangedAttack(ADCCCharacterBase* NominatedTarget);
 
 	UFUNCTION()
 	virtual void HandleDied(UDCCStatsComponent* InStats);
@@ -1509,6 +1971,23 @@ protected:
 	 */
 	ADCCDialogueNPC* FindDialogueNPCUnderCursor() const;
 
+	/**
+	 * Same shape as FindDialogueNPCUnderCursor, one class down - a loot box
+	 * station is not an ADCCCharacterBase either and has an even smaller
+	 * interaction (open, or explain there's nothing to open), so it gets its
+	 * own tiny check rather than folding into the dialogue or loot branches.
+	 */
+	ADCCLootBoxStation* FindLootBoxStationUnderCursor() const;
+
+	/** Same shape again, one class further down - the science lab's portal switch. */
+	class ADCCPortalConsole* FindPortalConsoleUnderCursor() const;
+
+	/** Rebuilds NPCInteractionOptions for whichever NPC NPCInteractionTarget is. */
+	void BuildNPCInteractionOptions();
+
+	/** Confirms the highlighted row of the NPC menu. */
+	void HandleNPCInteractionConfirm();
+
 	/** Confirms the highlighted row of whichever loot menu page is open. */
 	void HandleLootMenuConfirm();
 
@@ -1546,6 +2025,17 @@ protected:
 	UFUNCTION(Server, Reliable)
 	void Server_PurchaseDrink(AActor* VendorActor, FName ConsumableItemId, bool bDrinkNow);
 
+	/**
+	 * Both the NPC and the id are re-checked here - NPC->OfferedQuestIds must
+	 * actually contain QuestId and NPC must be in range - same "client picks,
+	 * server re-validates" shape as the loot/vendor RPCs above. The quest
+	 * component itself lives on GameState (party-wide, not per-character),
+	 * reached through UDCCQuestComponent::Get.
+	 */
+	UFUNCTION(Server, Reliable)
+	void Server_AcceptQuestFromNPC(ADCCDialogueNPC* NPC, FName QuestId);
+	void Server_AcceptQuestFromNPC_Implementation(ADCCDialogueNPC* NPC, FName QuestId);
+
 	/** Translates one consumable's Effects into calls on this character's own Stats. Server only. */
 	void ApplyConsumableEffects(const TArray<FDCCConsumableEffect>& Effects);
 
@@ -1560,6 +2050,18 @@ protected:
 	TArray<FDCCInteractionEntry> InteractionOptions;
 
 	int32 InteractionIndex = 0;
+
+	/** Whichever NPC has its Talk/Shop/Leave menu open on this client. Local - same as InteractionTarget. */
+	UPROPERTY(Transient)
+	TObjectPtr<ADCCDialogueNPC> NPCInteractionTarget;
+
+	UPROPERTY(Transient)
+	TArray<EDCCNPCInteractionOption> NPCInteractionOptions;
+
+	int32 NPCInteractionIndex = 0;
+
+	/** False: top menu. True: the offered-quests submenu owns NPCInteractionIndex instead. */
+	bool bNPCShowingQuests = false;
 
 	/** Local only - inspecting somebody's kit changes nothing about the world. */
 	UPROPERTY(Transient)
@@ -1591,8 +2093,18 @@ protected:
 
 	FName VendorPendingDrinkId;
 
+	/** Whichever Oathgate has its "Enter the gate?" prompt open on this client. Local - set by Client_ShowOathgatePrompt only. */
+	UPROPERTY(Transient)
+	TObjectPtr<class ADCCOathgate> OathgateTargetActor;
+
+	/** Row 0 = Enter, row 1 = Turn Away. */
+	int32 OathgateMenuIndex = 0;
+
 	UFUNCTION()
 	void OnRep_Downed();
+
+	UFUNCTION()
+	void OnRep_AwaitingOtherCrawlers();
 
 	/** Shared teardown for going down and for dying outright. */
 	void ApplyCollapsedBody();
@@ -1609,14 +2121,6 @@ protected:
 	/** Everything the full death teardown does, once revival is off the table. */
 	void FinishDying();
 
-	/**
-	 * True when this clip was authored for the same skeleton this mesh uses.
-	 *
-	 * The engine's own failure here is an ensure plus a garbage pose, which is
-	 * unreadable at a glance; refusing the clip leaves the character in its last
-	 * good pose and prints which asset is on the wrong rig.
-	 */
-	bool CanPlayOnThisSkeleton(const UAnimationAsset* Animation) const;
 
 	/** One warning per character, not one per frame. */
 	mutable bool bWarnedSkeletonMismatch = false;
@@ -1635,14 +2139,50 @@ protected:
 	UPROPERTY(Replicated)
 	bool bHasLoot = false;
 
+	/**
+	 * Server only. Set true the moment LootOne, LootAll, or StowInto is called,
+	 * regardless of whether loot remained afterward - "someone dealt with this
+	 * body" is a different question from "is it empty now", and the body
+	 * collector cares about the former. Never reset - a corpse only dies once.
+	 */
+	bool bLootHandled = false;
+
+	/** Started in FinishDying; fires CheckForBodyCollector once, then is done. */
+	FTimerHandle BodyCollectorTimer;
+
+	/**
+	 * Every RoomId this crawler has ever entered, server-side only - not
+	 * replicated, since only the server needs it (RecordRoomVisited's own
+	 * Achievements call). Never shrinks; a room only needs to be counted once.
+	 */
+	TArray<FName> VisitedRoomIds;
+
+	/**
+	 * Server only, called BodyCollectorDelaySeconds after death. Spawns
+	 * BodyCollectorClass and hands it this corpse, unless something already
+	 * handled it (bLootHandled) or no collector class is configured.
+	 */
+	void CheckForBodyCollector();
+
 	/** World seconds the last reaction played, for the cooldown above. */
 	float LastHitReactionTime = -100.0f;
 
 	FTimerHandle DeathSaveTimer;
 	FTimerHandle ReviveTimer;
+	FTimerHandle LootBoxRevealTimer;
+
+	/** Sealed-box props standing in the reveal line, cleared away the moment
+	 *  LootBoxRevealTimer resolves - see ClaimAndOpenAllLootBoxes. */
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<AActor>> LootBoxRevealProps;
 
 	/** Server-only concepts do not apply here - Selfie Mode is local, so this is not replicated. */
 	bool bInSelfieMode = false;
+
+	/** Local to this client, same reasoning as bInSelfieMode - the menu
+	 *  itself is never anyone else's business, only the RPC it fires. */
+	bool bEmoteMenuOpen = false;
+	int32 EmoteMenuIndex = 0;
 
 	FTimerHandle SelfieShutterTimer;
 	FTimerHandle SelfieExitTimer;
@@ -1672,11 +2212,31 @@ protected:
 	 */
 	double SelfieModeEnteredRealTimeSeconds = -1.0;
 
-	/** See SelfieModeEnteredRealTimeSeconds. Generous margin above the normal
-	 *  ~1.2s pose+flash hold, so this never fires in ordinary play - it only
-	 *  matters when something has stalled the normal exit path. */
+	/**
+	 * See SelfieModeEnteredRealTimeSeconds. Generous margin above the normal
+	 * ~1.2s pose+flash hold, so this never fires in ordinary play - it only
+	 * matters when something has stalled the normal exit path.
+	 *
+	 * Raised from 5.0 to 8.0 (2026-08-28) alongside adding pose cycling and the
+	 * nearby-hostile refusal above: posing is now a real browse-then-commit
+	 * interaction rather than an instant snap, so it earns a little more real
+	 * time - and it's safe to give it that room precisely because the refusal
+	 * check now keeps this whole feature out of active danger in the first
+	 * place, which is the actual risk a longer ceiling would otherwise reopen.
+	 */
 	UPROPERTY(EditDefaultsOnly, Category = "DCC|Selfie", meta = (ClampMin = "1.0"))
-	float SelfieMaxRealSeconds = 5.0f;
+	float SelfieMaxRealSeconds = 8.0f;
+
+	/** Which entry of SelfiePoseAnimations is currently active - see CycleSelfiePose. */
+	int32 CurrentSelfiePoseIndex = 0;
+
+	/**
+	 * Whether any living hostile is within Range of this character - reused by
+	 * EnterSelfieMode's nearby-danger refusal (2026-08-28). Not a general combat
+	 * utility; kept narrow and private to that one use rather than promoted to
+	 * a public API nothing else has asked for yet.
+	 */
+	bool HasNearbyLivingHostile(float Range) const;
 
 	/**
 	 * Whatever other camera components were active before SelfieCamera took
@@ -1687,6 +2247,16 @@ protected:
 	TArray<TWeakObjectPtr<UCameraComponent>> DeactivatedCamerasForSelfie;
 
 	void EnterSelfieMode();
+
+	/**
+	 * Unconditional by design - never add a hostile/range/any-other gate here.
+	 * EnterSelfieMode is where danger gets refused; once in, getting back out
+	 * must always work no matter what. Confirmed 2026-08-29 while chasing a
+	 * "spawned in in selfie mode and can't get out" report: this function
+	 * already had no such gate, so the actual fix was Tick's new proactive
+	 * force-exit (see Tick's own comment) rather than anything here - keep it
+	 * that way.
+	 */
 	void ExitSelfieMode();
 
 	/** The shutter: a quick flash, the actual screenshot request, then a short beat before ExitSelfieMode. */
@@ -1762,6 +2332,66 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "DCC", meta = (ClampMin = "0.0"))
 	float LootedCorpseLifeSpan = 25.0f;
 
+	// -------------------------------------------------------------------------
+	// BODY COLLECTOR
+	//
+	// Dungeon Crawler Carl's floor mobs collect corpses (and repair structures)
+	// overnight - this is the collection half only. A corpse nobody has taken
+	// loot from, stowed, or emptied within BodyCollectorDelaySeconds gets a
+	// minion sent for it: walk over, a short "checking" beat, then it carries
+	// the body's loot to a designated collection chest (any placed
+	// ADCCLootContainer tagged "BodyCollectorDestination" - see
+	// ADCCEnemyCharacter::FindBodyCollectorDestination) and deposits it there
+	// before retiring. Ambient/environmental, not combat-gated - runs during
+	// combat pause too, since a paused fight is not a paused dungeon.
+	//
+	// Applies uniformly to players and enemies, same as the loot system itself
+	// already does. An unlooted PLAYER corpse can be swept up by a collector
+	// ~20s after death even if nobody ever reached it - today that only
+	// otherwise happens once someone actively loots it empty
+	// (LootedCorpseLifeSpan, above) - but unlike this feature's first pass,
+	// nothing is actually lost: the gear is retrievable from the destination
+	// chest, just delayed rather than immediately at hand. Still worth a
+	// player knowing where the collection point is before this reaches real
+	// play, and still worth deciding whether a slow/AFK player should really
+	// have their loadout swept away mid-fight while they're still down.
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Who gets spawned to do the collecting. Left unset by default; if unset,
+	 * CheckForBodyCollector falls back to BP_DCCEnemy - the bare, unthemed
+	 * enemy Blueprint - specifically so a floor mob doing ambient
+	 * corpse-collection never wears a named crawler's or a boss's own face.
+	 * Override per-Blueprint if a real body-collector visual gets authored
+	 * later. If that fallback Blueprint is ever renamed or removed, this
+	 * whole system no-ops safely - see CheckForBodyCollector.
+	 *
+	 * DO NOT resolve that fallback with a constructor-time
+	 * ConstructorHelpers::FClassFinder. An earlier version did exactly that
+	 * and hung the editor on every single launch (2026-08-28 incident, see
+	 * DISPATCH.md): this constructor runs for every ADCCCharacterBase
+	 * subclass's CDO, including ADCCEnemyCharacter's own, and BP_DCCEnemy is
+	 * itself parented to ADCCEnemyCharacter - so building that Blueprint's
+	 * class required ADCCEnemyCharacter's CDO to already exist, which is
+	 * exactly the CDO whose own construction was still on the call stack.
+	 * The fallback is resolved lazily instead, on first actual use, well
+	 * after every CDO in the module exists.
+	 */
+	UPROPERTY(EditDefaultsOnly, Category = "DCC|BodyCollector")
+	TSubclassOf<ADCCEnemyCharacter> BodyCollectorClass;
+
+	/** How long a corpse can sit untouched before a collector is sent for it. */
+	UPROPERTY(EditDefaultsOnly, Category = "DCC|BodyCollector", meta = (ClampMin = "0.0"))
+	float BodyCollectorDelaySeconds = 20.0f;
+
+	/** How far from the corpse the collector spawns, so it visibly arrives rather than appearing on top of the body. */
+	UPROPERTY(EditDefaultsOnly, Category = "DCC|BodyCollector", meta = (ClampMin = "0.0"))
+	float BodyCollectorSpawnRadius = 600.0f;
+
+public:
+	/** Whether any loot-menu action (LootOne, LootAll, or StowInto) has ever been taken on this corpse. */
+	bool HasLootBeenHandled() const { return bLootHandled; }
+
 private:
 	/**
 	 * World time until which a one-shot clip owns the mesh.
@@ -1785,6 +2415,19 @@ private:
 	/** Held climb input, mirrored to the server. */
 	bool bClimbInputUp = false;
 	bool bClimbInputDown = false;
+
+	/**
+	 * Position-only cosmetic mirror of TickStamina's climbing branch, run on
+	 * the owning client (never the server, never a simulated proxy watching
+	 * someone else climb - see the call site in Tick()). No stamina is spent
+	 * and no achievement/quest/log side effects fire here; those remain
+	 * exclusively server-authoritative. This exists purely so the climbing
+	 * player's own screen moves in real time with their own held input
+	 * instead of sitting frozen until a movement-error correction catches it
+	 * up to wherever the server has already gone - see
+	 * Client_SyncClimbLocation's comment for the underlying replication gap.
+	 */
+	void TickClimbMovementCosmetic(float DeltaSeconds);
 
 	/** Centimetres climbed since the last whole metre was recorded. */
 	float ClimbDistanceAccumulator = 0.0f;

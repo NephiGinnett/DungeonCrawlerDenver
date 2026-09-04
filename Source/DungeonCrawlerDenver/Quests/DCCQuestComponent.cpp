@@ -34,6 +34,7 @@ void UDCCQuestComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(UDCCQuestComponent, Quests);
+	DOREPLIFETIME(UDCCQuestComponent, LastCompletedQuestId);
 }
 
 void UDCCQuestComponent::BeginPlay()
@@ -256,6 +257,7 @@ void UDCCQuestComponent::Notify(EDCCObjectiveType Type, FName TargetId, int32 Am
 void UDCCQuestComponent::CompleteQuest(const FDCCQuestDef& Quest, FDCCQuestState& State)
 {
 	State.bComplete = true;
+	LastCompletedQuestId = Quest.QuestId;
 
 	const FText Line = Quest.CompletionAnnouncement.IsEmpty()
 		? FText::Format(NSLOCTEXT("DCC", "QuestDoneGeneric", "Objective complete: {0}"), Quest.Title)

@@ -10,6 +10,7 @@ class ADCCCharacterBase;
 class ADCCIntroDirector;
 class UDCCStatsComponent;
 class UDCCChatInputWidget;
+class UDCCBossComponent;
 enum class EDCCLogCategory : uint8;
 struct FDCCEventLogEntry;
 
@@ -179,8 +180,21 @@ protected:
 	/** Returns the pawn this HUD describes, or null when not possessing one. */
 	ADCCCharacterBase* GetOwningCrawler() const;
 
+	/**
+	 * Returns the rover this HUD's owner is currently driving, or null.
+	 * Needed as its own accessor rather than reusing GetOwningCrawler:
+	 * driving possesses the rover pawn directly (ADCCRover::EnterRover calls
+	 * PC->Possess(this)), so GetPawn() returns an ADCCRover while driving,
+	 * not an ADCCCharacterBase - GetOwningCrawler's cast fails and returns
+	 * null for exactly the case this needs to detect.
+	 */
+	class ADCCRover* GetOwningRover() const;
+
 	/** Full-screen overlay shown once the local crawler is dead for good. */
 	void DrawDeathScreen();
+
+	/** Full black takeover shown once the local crawler has walked into an active ADCCExitPortal. */
+	void DrawAwaitingOtherCrawlersScreen();
 
 	/**
 	 * The recoverable version, shown while downed and bleeding out.
@@ -206,6 +220,70 @@ protected:
 	 * than showing a stale or placeholder label.
 	 */
 	void DrawRoomTag(ADCCCharacterBase* Crawler);
+
+	/**
+	 * Camera-viewfinder framing shown only while ADCCCharacterBase::IsInSelfieMode
+	 * is true (2026-08-28) - corner brackets, a centre reticle, a pose-cycle hint,
+	 * and a progress bar toward the shutter actually firing. Purely cosmetic; the
+	 * mechanics (posing, the shutter, the screenshot) all live on the character,
+	 * this just makes the moment read as "taking a photo" instead of a camera cut
+	 * with no feedback.
+	 */
+	void DrawSelfieViewfinder(ADCCCharacterBase* Crawler);
+
+	/**
+	 * A small three-dot "busy" wave, shown for as long as Crawler->IsCasting()
+	 * is true - a skill cast, a revive channel, a loot box reveal, or getting
+	 * into a rover all root the player the same way and this covers all of
+	 * them for free. Added specifically as a diagnostic (Zoe's ask,
+	 * 2026-09-03): if a one-shot animation was SUPPOSED to be playing during
+	 * the lock and silently isn't (a skeleton mismatch, an unset clip), this
+	 * still shows something is happening and for how long - which is what
+	 * makes "stuck for several seconds, nothing visible" diagnosable instead
+	 * of looking identical to a hang.
+	 */
+	void DrawCastingIndicator(ADCCCharacterBase* Crawler);
+
+	/**
+	 * Big centre-screen "LEVEL BOSS" card, shown once per boss actor the first
+	 * time the local crawler comes within health-bar range of it alive.
+	 *
+	 * Deliberately keyed off UDCCBossComponent rather than anything
+	 * Voldemortgage-specific, so every future boss gets this for free just by
+	 * carrying that component - the same reason the charge/lien mechanics on
+	 * that component are generic. Client-local and purely cosmetic: which
+	 * bosses have already been announced this session lives only in
+	 * AnnouncedBosses below, never replicated, so nothing here can desync a
+	 * fight.
+	 */
+	void DrawBossBanner();
+
+	/**
+	 * Small/medium command reminder while flying the rover (Zoe's ask,
+	 * 2026-09-03: "when you are flying... a list of car related commands").
+	 * Gated on IsFlying(), not merely IsOccupied() - the ground controls are
+	 * the ones a player has usually already found; flight adds the pitch
+	 * drag and the two flight-only keys, which is the part actually worth
+	 * reminding someone of.
+	 */
+	void DrawFlightControlsOverlay();
+
+	/**
+	 * Speed readout + bar, shown any time the local player is driving the
+	 * rover - grounded or flying, same gauge both times (Zoe's ask,
+	 * 2026-09-03: "please speed gauge display while driving, and make the
+	 * flying one similar" - one shared gauge is the literal way to keep
+	 * them similar, rather than building two that could drift apart).
+	 */
+	void DrawSpeedGauge();
+
+	/**
+	 * Checked once per nearby living character in DrawNearbyHealthBars' own
+	 * scan - piggybacked there rather than a second world iteration, since
+	 * that loop already visits everyone in range every frame. Arms the banner
+	 * the first time it finds an unannounced UDCCBossComponent.
+	 */
+	void CheckBossAnnouncement(ADCCCharacterBase* Candidate);
 
 	/**
 	 * "Waiting for other players (n/m ready)" - shown while the local crawler
@@ -303,6 +381,14 @@ protected:
 	void DrawInteractionMenu(ADCCCharacterBase* Crawler);
 
 	/**
+	 * The NPC menu (Talk/Shop/Leave), drawn when the local crawler has one
+	 * open - same panel styling as DrawInteractionMenu, kept as its own
+	 * function for the same reason the two backing option lists are kept
+	 * separate on ADCCCharacterBase (see NPCInteractionTarget's comment).
+	 */
+	void DrawNPCInteractionMenu(ADCCCharacterBase* Crawler);
+
+	/**
 	 * Somebody else's gear, opened from the conversation menu.
 	 *
 	 * Read-only and local. Trading is not built, so this is deliberately a
@@ -329,6 +415,17 @@ protected:
 	 * nothing here to take some-and-leave-some of.
 	 */
 	void DrawVendorMenu(ADCCCharacterBase* Crawler);
+
+	/**
+	 * The Oathgate confirm prompt: "Enter the gate?" with Enter/Turn Away rows.
+	 * Same wheel-to-choose, E-to-confirm shape as the loot and vendor menus,
+	 * just two fixed rows and no itemised sub-page.
+	 */
+	void DrawOathgateMenu(ADCCCharacterBase* Crawler);
+
+	/** The B-key emote picker: wheel to choose a performance from
+	 *  EmoteAnimations, E to actually play it. */
+	void DrawEmoteMenu(ADCCCharacterBase* Crawler);
 
 	/**
 	 * The DM panel: buttons for everything the exec commands do.
@@ -417,6 +514,19 @@ protected:
 	float DrawChannelMessages(float X, float Y, EDCCChatChannel Channel, ADCCCharacterBase* Crawler,
 		int32 LineCount, const FString& TargetFilter = FString());
 
+	/**
+	 * Word-by-word line renderer used by DrawChannelMessages: any word shaped
+	 * like ":TOKEN:" that DCCChatter::FindEmoteIcon recognises draws as a
+	 * real icon instead of the literal bracketed text - what the Chatter
+	 * tab's `Emote` bucket rows (":BORANT_W: :BORANT_W:" and friends) were
+	 * always meant to read as. Unrecognised words, including unmapped
+	 * tokens, still draw as plain text, so nothing silently disappears.
+	 * Wraps to a new line at MaxX the same way WrapText does for plain text,
+	 * just measured per-word instead of per-character since icons and text
+	 * have different widths.
+	 */
+	float DrawChatLineWithEmotes(float X, float Y, float MaxX, const FString& Line, const FLinearColor& Colour);
+
 	/** The "type a message..." row under a channel. Clicking it opens
 	 *  ChatInputWidget in Message mode for that channel. */
 	float DrawChatSendRow(float X, float Y, EDCCChatChannel Channel, ADCCCharacterBase* Crawler,
@@ -455,6 +565,27 @@ private:
 	 *  and only request a batch on the transition. */
 	EDCCMenuTab PreviousDrawnMenuTab = EDCCMenuTab::Character;
 
+	/** Next world-time the open Chatter tab should pull another comment or two.
+	 *  Local to this client's HUD; the server rate-limits what it honours. */
+	float NextChatterTrickleTime = 0.0f;
+
+	/** Base gap between trickle pulls, jittered per pull so the channel doesn't
+	 *  tick like a clock. */
+	UPROPERTY(EditDefaultsOnly, Category = "HUD")
+	float ChatterTrickleIntervalSeconds = 2.5f;
+
+	/** How recent the last Combat/Death/Encounter Feed entry has to be for chat
+	 *  to count as reacting to something happening right now, rather than to
+	 *  the fight that ended two minutes ago. */
+	UPROPERTY(EditDefaultsOnly, Category = "HUD")
+	float ExcitingChatterWindowSeconds = 12.0f;
+
+	/** Trickle interval is multiplied by this while a moment is exciting - well
+	 *  under 1 so chat visibly speeds up instead of just adding a bit more
+	 *  volume at the same pace. */
+	UPROPERTY(EditDefaultsOnly, Category = "HUD")
+	float ExcitingChatterSpeedupFactor = 0.35f;
+
 	EDCCFeedVisibility FeedVisibility = EDCCFeedVisibility::Pinned;
 
 	/** Lazily created C++-only Slate text box - see DCCChatInputWidget.h for
@@ -487,6 +618,37 @@ private:
 
 	/** Draws the transient centre-screen notice, if one is live. */
 	void DrawNotice();
+
+	/** How long the LEVEL BOSS card stays up, including its fade in/out. */
+	UPROPERTY(EditDefaultsOnly, Category = "DCC|UI", meta = (ClampMin = "1.0"))
+	float BossBannerDurationSeconds = 4.5f;
+
+	FText BossBannerName;
+	float BossBannerExpiryTime = 0.0f;
+
+	/** Boss actors already announced this session - client-local, never
+	 *  replicated, so each boss only gets the banner once per HUD lifetime. */
+	UPROPERTY(Transient)
+	TArray<TWeakObjectPtr<AActor>> AnnouncedBosses;
+
+	/**
+	 * A "QUEST COMPLETE" card, same poll-and-compare shape as the boss
+	 * banner above: every frame, compare UDCCQuestComponent's own
+	 * LastCompletedQuestId (replicated) against LastShownQuestCompleteId
+	 * (client-local); a mismatch means a quest finished since the last
+	 * check, so show the card and update the cache. Added 2026-09-03 so
+	 * quest completion is undeniable on screen instead of a Feed line easy
+	 * to miss - see UDCCQuestComponent::LastCompletedQuestId's own comment
+	 * for why this exists.
+	 */
+	void DrawQuestCompleteBanner();
+
+	UPROPERTY(EditDefaultsOnly, Category = "DCC|UI", meta = (ClampMin = "1.0"))
+	float QuestCompleteBannerDurationSeconds = 4.0f;
+
+	FText QuestCompleteTitle;
+	float QuestCompleteBannerExpiryTime = 0.0f;
+	FName LastShownQuestCompleteId;
 
 	/** Whether this entry should draw under the current preset. Takes the whole
 	 *  entry rather than just its Category because MyRolls needs to compare

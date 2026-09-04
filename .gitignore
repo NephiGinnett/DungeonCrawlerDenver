@@ -58,3 +58,7 @@ Platforms/*/Intermediate/
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# Python bytecode from the Tools/ helper scripts
+__pycache__/
+*.pyc

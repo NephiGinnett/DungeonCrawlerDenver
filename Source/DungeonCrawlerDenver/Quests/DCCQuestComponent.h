@@ -42,6 +42,24 @@ public:
 	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_Quests, Category = "Quests")
 	TArray<FDCCQuestState> Quests;
 
+	/**
+	 * The most recent quest to complete. Replicated on its own, separate from
+	 * Quests itself, specifically so ADCCHUD can drive a one-shot "quest
+	 * complete" banner (mirroring DrawBossBanner's poll-and-compare shape) -
+	 * OnQuestCompleted below only fires locally on whichever machine calls
+	 * CompleteQuest (the server), so it alone cannot tell a remote client's
+	 * HUD anything. Only the id replicates; the title is looked up locally
+	 * via FindQuest, since QuestTable is the same static asset on every
+	 * machine and does not need its own copy sent over the wire.
+	 *
+	 * Added 2026-09-03 after Zoe reported a dev-goal quest ("get the rover
+	 * airborne") not completing despite genuinely flying - completion had
+	 * no feedback beyond a Feed log line easy to miss entirely, which made
+	 * "is this actually broken, or did it complete silently" undiagnosable.
+	 */
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Quests")
+	FName LastCompletedQuestId;
+
 	UPROPERTY(BlueprintAssignable, Category = "Quests")
 	FDCCQuestStarted OnQuestStarted;
 

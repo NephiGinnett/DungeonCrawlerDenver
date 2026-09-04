@@ -18,15 +18,22 @@
 #include "Characters/DCCEnemyCharacter_NuclearFamily.h"
 #include "Characters/DCCEnemyCharacter_TestBoss.h"
 #include "Characters/DCCEnemyCharacter_Voldemortgage.h"
+#include "Characters/DCCEnemyCharacter_Wildlife.h"
+#include "Characters/DCCEnemyCharacter_Mine.h"
+#include "Characters/DCCEnemyCharacter_SurveyDrone.h"
+#include "Characters/DCCEnemyCharacter_Corporate.h"
 #include "Characters/DCCEnemyCharacter_DebtEater.h"
 #include "Quests/DCCQuestComponent.h"
 #include "Quests/DCCQuestMarker.h"
 #include "Combat/DCCGameState.h"
+#include "Combat/DCCBossComponent.h"
 #include "Intro/DCCIntroDirector.h"
 #include "UI/DCCEventLogTypes.h"
+#include "UI/DCCChatterTypes.h"
 #include "UI/DCCChatInputWidget.h"
 #include "Blueprint/UserWidget.h"
 #include "Rooms/DCCClimbPoint.h"
+#include "Vehicles/DCCRover.h"
 #include "Engine/Canvas.h"
 #include "Engine/Texture2D.h"
 #include "Engine/Engine.h"
@@ -91,6 +98,11 @@ namespace
 ADCCCharacterBase* ADCCHUD::GetOwningCrawler() const
 {
 	return PlayerOwner ? Cast<ADCCCharacterBase>(PlayerOwner->GetPawn()) : nullptr;
+}
+
+ADCCRover* ADCCHUD::GetOwningRover() const
+{
+	return PlayerOwner ? Cast<ADCCRover>(PlayerOwner->GetPawn()) : nullptr;
 }
 
 void ADCCHUD::ToggleMenu()
@@ -249,6 +261,20 @@ void ADCCHUD::NotifyHitBoxClick(FName BoxName)
 		return;
 	}
 
+	// Gear rows in the plain Items list: equipping one from the pack. Same
+	// server-authoritative "this call just asks" shape as Stow| above - gear
+	// no longer equips itself on pickup (see ADCCPickup::OnPickedUp), this is
+	// the one place it actually happens now.
+	if (AsString.StartsWith(TEXT("Equip|")))
+	{
+		const int32 Index = FCString::Atoi(*AsString.RightChop(6));
+		if (ADCCCharacterBase* Crawler = GetOwningCrawler())
+		{
+			Crawler->DCCEquipItem(Index);
+		}
+		return;
+	}
+
 	// Stowed-drink rows: drinking one from the pack. Same server-authoritative
 	// "this call just asks" shape as Stow| above.
 	if (AsString.StartsWith(TEXT("Drink|")))
@@ -257,6 +283,17 @@ void ADCCHUD::NotifyHitBoxClick(FName BoxName)
 		if (ADCCCharacterBase* Crawler = GetOwningCrawler())
 		{
 			Crawler->DCCConsumeStowedDrink(Index);
+		}
+		return;
+	}
+
+	// The bulk-claim row - see DrawAchievements for what it does and why it
+	// is safe to call unconditionally from here.
+	if (AsString == TEXT("ClaimAllLootBoxes"))
+	{
+		if (ADCCCharacterBase* Crawler = GetOwningCrawler())
+		{
+			Crawler->ClaimAndOpenAllLootBoxes();
 		}
 		return;
 	}
@@ -292,6 +329,16 @@ void ADCCHUD::DrawHUD()
 
 	ADCCCharacterBase* Crawler = GetOwningCrawler();
 
+	// A true takeover, unlike the death screen - nothing plays on underneath
+	// it, because there is nowhere further for this crawler to go right now.
+	// See ADCCCharacterBase's own comment on why this is a terminal state
+	// rather than a banner.
+	if (Crawler && Crawler->IsAwaitingOtherCrawlers())
+	{
+		DrawAwaitingOtherCrawlersScreen();
+		return;
+	}
+
 	// On by default: it is the only way to see what the dice did, and hiding it
 	// behind a menu would defeat the point. Minimized/Hidden (2026-08-23, [K]
 	// to cycle) are an explicit opt-out for exactly that reason - Pinned stays
@@ -314,6 +361,12 @@ void ADCCHUD::DrawHUD()
 	DrawSkillTargetingOverlay(Crawler);
 	DrawRoomTag(Crawler);
 	DrawWaitingForPartyBanner(Crawler);
+	DrawSelfieViewfinder(Crawler);
+	DrawBossBanner();
+	DrawQuestCompleteBanner();
+	DrawFlightControlsOverlay();
+	DrawSpeedGauge();
+	DrawCastingIndicator(Crawler);
 
 	// Being down is not being dead, and the overlay must not say otherwise - a
 	// crawler on the floor with forty seconds left is still in the game, and
@@ -350,8 +403,11 @@ void ADCCHUD::DrawHUD()
 	// and a conversation has to be readable while the world is still visible.
 	DrawHotbar(Crawler);
 	DrawInteractionMenu(Crawler);
+	DrawNPCInteractionMenu(Crawler);
 	DrawLootMenu(Crawler);
 	DrawVendorMenu(Crawler);
+	DrawOathgateMenu(Crawler);
+	DrawEmoteMenu(Crawler);
 	DrawInspectedGear(Crawler);
 	DrawAdminPanel(Crawler);
 	DrawNotice();
@@ -375,13 +431,61 @@ void ADCCHUD::DrawHUD()
 	Y = DrawMenuTabs(X, Y);
 	Y += SectionGap;
 
-	// Chatter is rolled fresh on the transition into the tab, not on a timer -
-	// see ADCCGameState::RollChatterBatch. Compared against the tab drawn last
-	// frame rather than a "have I ever opened this" flag, so leaving and
-	// coming back also refreshes it.
-	if (MenuTab == EDCCMenuTab::Chatter && PreviousDrawnMenuTab != EDCCMenuTab::Chatter && Crawler)
+	// Chatter: an opening burst on the transition INTO the tab, then a slow
+	// trickle for as long as it stays open, then nothing at all once it closes.
+	//
+	// That shape is deliberate and is the cheap way to sell "this channel has
+	// been running the whole time": the burst backfills a plausible history the
+	// instant you look, and the trickle keeps it alive while you watch. Nothing
+	// rolls while the tab is shut, so a channel that appears to run constantly
+	// costs exactly nothing whenever nobody is reading it.
+	//
+	// Compared against the tab drawn last frame rather than a "have I ever
+	// opened this" flag, so leaving and coming back re-bursts.
+	if (Crawler && MenuTab == EDCCMenuTab::Chatter)
 	{
-		Crawler->Server_RequestChatterBatch();
+		const float Now = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
+
+		// Chat should visibly speed up when something is actually happening -
+		// a boss just got hit, someone just died - rather than trickling at
+		// the same flat pace through a fight as through an empty hallway.
+		// Reuses the Feed's own timestamps (same Combat/Death/Encounter
+		// grouping RollChatterBatch and PassesFeedFilter's CombatOnly case
+		// already use) instead of a separate "is something exciting" flag.
+		bool bExcitingMoment = false;
+		if (const ADCCGameState* GameState = GetWorld() ? GetWorld()->GetGameState<ADCCGameState>() : nullptr)
+		{
+			const TArray<FDCCEventLogEntry>& Log = GameState->GetEventLog();
+			for (int32 Index = Log.Num() - 1; Index >= 0; --Index)
+			{
+				const EDCCLogCategory Category = Log[Index].Category;
+				if (Category == EDCCLogCategory::Combat || Category == EDCCLogCategory::Death
+					|| Category == EDCCLogCategory::Encounter)
+				{
+					bExcitingMoment = (Now - Log[Index].TimeSeconds) <= ExcitingChatterWindowSeconds;
+					break;
+				}
+			}
+		}
+
+		const float TrickleInterval = bExcitingMoment
+			? ChatterTrickleIntervalSeconds * ExcitingChatterSpeedupFactor
+			: ChatterTrickleIntervalSeconds;
+
+		if (PreviousDrawnMenuTab != EDCCMenuTab::Chatter)
+		{
+			Crawler->Server_RequestChatterBatch(8);
+			NextChatterTrickleTime = Now + TrickleInterval;
+		}
+		else if (Now >= NextChatterTrickleTime)
+		{
+			// One or two at a time normally, up to four in an exciting moment -
+			// at an uneven cadence either way, since a fixed interval reads as
+			// a metronome and real chat arrives in clumps.
+			Crawler->Server_RequestChatterBatch(FMath::RandRange(1, bExcitingMoment ? 4 : 2));
+			NextChatterTrickleTime = Now + TrickleInterval
+				* FMath::FRandRange(0.6f, 1.6f);
+		}
 	}
 	PreviousDrawnMenuTab = MenuTab;
 
@@ -464,6 +568,97 @@ void ADCCHUD::DrawRoomTag(ADCCCharacterBase* Crawler)
 
 	DrawRect(FLinearColor(0.02f, 0.03f, 0.06f, 0.65f), X - 14.0f, Y - 5.0f, W + 28.0f, H + 10.0f);
 	DrawText(Line, DimColour, X, Y, GEngine->GetMediumFont(), 1.0f);
+}
+
+void ADCCHUD::DrawCastingIndicator(ADCCCharacterBase* Crawler)
+{
+	if (!Canvas || !Crawler || !Crawler->IsCasting())
+	{
+		return;
+	}
+
+	const UWorld* World = GetWorld();
+	const float Time = World ? World->GetTimeSeconds() : 0.0f;
+
+	constexpr int32 DotCount = 3;
+	constexpr float DotSpacing = 22.0f;
+	constexpr float DotRadius = 5.0f;
+	constexpr float BobHeight = 10.0f;
+	constexpr float WaveSpeed = 6.0f; // radians/sec - one dot peaks roughly every 1s.
+
+	const float TotalWidth = (DotCount - 1) * DotSpacing;
+	const float CenterX = Canvas->SizeX * 0.5f;
+	// A little above the vitals bar, not on top of it - this fires alongside
+	// combat/downed states too (skill casts), not just the rover.
+	const float BaseY = Canvas->SizeY - 140.0f;
+
+	for (int32 Index = 0; Index < DotCount; ++Index)
+	{
+		// Phase-shifted per dot so they rise and fall in sequence rather than
+		// bouncing in unison - the actual "ellipsis" read she asked for.
+		const float Phase = Index * (PI / 3.0f);
+		const float Bob = (FMath::Sin(Time * WaveSpeed - Phase) * 0.5f + 0.5f) * BobHeight;
+
+		const float X = CenterX - TotalWidth * 0.5f + Index * DotSpacing;
+		const float Y = BaseY - Bob;
+
+		DrawRect(FLinearColor(1.0f, 0.92f, 0.70f, 0.9f),
+			X - DotRadius, Y - DotRadius, DotRadius * 2.0f, DotRadius * 2.0f);
+	}
+}
+
+void ADCCHUD::DrawSelfieViewfinder(ADCCCharacterBase* Crawler)
+{
+	if (!Canvas || !Crawler || !Crawler->IsInSelfieMode())
+	{
+		return;
+	}
+
+	const float Margin = 48.0f;
+	const float BracketLength = 36.0f;
+	const float Thickness = 3.0f;
+	const FLinearColor FrameColour(1.0f, 1.0f, 1.0f, 0.85f);
+
+	const float Left = Margin;
+	const float Right = Canvas->SizeX - Margin;
+	const float Top = Margin;
+	const float Bottom = Canvas->SizeY - Margin;
+
+	// Four L-shaped corner brackets - the standard camera-viewfinder frame.
+	DrawLine(Left, Top, Left + BracketLength, Top, FrameColour, Thickness);
+	DrawLine(Left, Top, Left, Top + BracketLength, FrameColour, Thickness);
+
+	DrawLine(Right, Top, Right - BracketLength, Top, FrameColour, Thickness);
+	DrawLine(Right, Top, Right, Top + BracketLength, FrameColour, Thickness);
+
+	DrawLine(Left, Bottom, Left + BracketLength, Bottom, FrameColour, Thickness);
+	DrawLine(Left, Bottom, Left, Bottom - BracketLength, FrameColour, Thickness);
+
+	DrawLine(Right, Bottom, Right - BracketLength, Bottom, FrameColour, Thickness);
+	DrawLine(Right, Bottom, Right, Bottom - BracketLength, FrameColour, Thickness);
+
+	// Small centre reticle - purely decorative, sells the "framing a shot" read.
+	const float CentreX = Canvas->SizeX * 0.5f;
+	const float CentreY = Canvas->SizeY * 0.5f;
+	DrawLine(CentreX - 10.0f, CentreY, CentreX + 10.0f, CentreY, FrameColour, 1.5f);
+	DrawLine(CentreX, CentreY - 10.0f, CentreX, CentreY + 10.0f, FrameColour, 1.5f);
+
+	DrawText(TEXT("SELFIE MODE"), FLinearColor(1.0f, 0.35f, 0.35f), Left, Top - 26.0f, GEngine->GetSmallFont(), 1.0f);
+
+	const FString Hint = Crawler->SelfiePoseAnimations.Num() > 0
+		? TEXT("[Scroll] Change pose    [C] Cancel")
+		: TEXT("[C] Cancel");
+
+	float HintW = 0.0f, HintH = 0.0f;
+	GetTextSize(Hint, HintW, HintH, GEngine->GetSmallFont(), 1.0f);
+	DrawText(Hint, DimColour, CentreX - HintW * 0.5f, Bottom + 12.0f, GEngine->GetSmallFont(), 1.0f);
+
+	// Progress toward the shutter actually firing.
+	const float BarW = 200.0f;
+	const float BarX = CentreX - BarW * 0.5f;
+	const float BarY = Bottom - 20.0f;
+	DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.5f), BarX, BarY, BarW, 4.0f);
+	DrawRect(FLinearColor(1.0f, 1.0f, 1.0f, 0.9f), BarX, BarY, BarW * Crawler->GetSelfiePoseProgress(), 4.0f);
 }
 
 ADCCIntroDirector* ADCCHUD::GetIntroDirector()
@@ -714,6 +909,32 @@ void ADCCHUD::DrawAdminPanel(ADCCCharacterBase* Crawler)
 		Y = DrawAdminButton(X, Y, ButtonW, TEXT("Test Boss"), TEXT("spawn:TestBoss"));
 
 		Y += 8.0f;
+		DrawText(TEXT("Wildlife"), HeadingColour, X, Y);
+		Y += LineHeight;
+
+		Y = DrawAdminButton(X, Y, ButtonW, TEXT("The Auditor"), TEXT("spawn:Beholder"));
+		Y = DrawAdminButton(X, Y, ButtonW, TEXT("Thornback"), TEXT("spawn:Thornback"));
+		Y = DrawAdminButton(X, Y, ButtonW, TEXT("Unclaimed Property"), TEXT("spawn:UnclaimedProperty"));
+		Y = DrawAdminButton(X, Y, ButtonW, TEXT("Break Room Mold"), TEXT("spawn:BreakRoomMold"));
+		Y = DrawAdminButton(X, Y, ButtonW, TEXT("Shell Company"), TEXT("spawn:ShellCompany"));
+
+		Y += 8.0f;
+		DrawText(TEXT("The Mine"), HeadingColour, X, Y);
+		Y += LineHeight;
+
+		Y = DrawAdminButton(X, Y, ButtonW, TEXT("Legacy System"), TEXT("spawn:LegacySystem"));
+		Y = DrawAdminButton(X, Y, ButtonW, TEXT("Reconciliation (pair)"), TEXT("spawn:Reconciliation"));
+		Y = DrawAdminButton(X, Y, ButtonW, TEXT("Survey Drone"), TEXT("spawn:SurveyDrone"));
+
+		Y += 8.0f;
+		DrawText(TEXT("Corporate"), HeadingColour, X, Y);
+		Y += LineHeight;
+
+		Y = DrawAdminButton(X, Y, ButtonW, TEXT("Intake Manager"), TEXT("spawn:InternManager"));
+		Y = DrawAdminButton(X, Y, ButtonW, TEXT("The Notary"), TEXT("spawn:Notary"));
+		Y = DrawAdminButton(X, Y, ButtonW, TEXT("Escalation Specialist"), TEXT("spawn:Escalation"));
+
+		Y += 8.0f;
 		DrawText(TEXT("The Nuclear Family"), HeadingColour, X, Y);
 		Y += LineHeight;
 
@@ -826,6 +1047,18 @@ void ADCCHUD::HandleAdminAction(const FString& Action, ADCCCharacterBase* Crawle
 		else if (Which == TEXT("NuclearKid"))    { Resolved = ADCCEnemy_NuclearKid::StaticClass(); }
 		else if (Which == TEXT("Crowd"))         { Resolved = ADCCCrowdCrawler::StaticClass(); }
 		else if (Which == TEXT("HockeyWings"))   { Resolved = ADCCAlly_HockeyWings::StaticClass(); }
+		else if (Which == TEXT("Vaughn"))        { Resolved = ADCCAlly_Vaughn::StaticClass(); }
+		else if (Which == TEXT("Beholder"))      { Resolved = ADCCEnemyCharacter_Beholder::StaticClass(); }
+		else if (Which == TEXT("Thornback"))     { Resolved = ADCCEnemyCharacter_Thornback::StaticClass(); }
+		else if (Which == TEXT("UnclaimedProperty")) { Resolved = ADCCEnemyCharacter_UnclaimedProperty::StaticClass(); }
+		else if (Which == TEXT("BreakRoomMold")) { Resolved = ADCCEnemyCharacter_BreakRoomMold::StaticClass(); }
+		else if (Which == TEXT("ShellCompany"))  { Resolved = ADCCEnemyCharacter_ShellCompany::StaticClass(); }
+		else if (Which == TEXT("LegacySystem"))  { Resolved = ADCCEnemyCharacter_LegacySystem::StaticClass(); }
+		else if (Which == TEXT("Reconciliation")) { Resolved = ADCCEnemyCharacter_Reconciliation::StaticClass(); }
+		else if (Which == TEXT("SurveyDrone"))   { Resolved = ADCCEnemyCharacter_SurveyDrone::StaticClass(); }
+		else if (Which == TEXT("InternManager")) { Resolved = ADCCEnemyCharacter_InternManager::StaticClass(); }
+		else if (Which == TEXT("Notary"))        { Resolved = ADCCEnemyCharacter_Notary::StaticClass(); }
+		else if (Which == TEXT("Escalation"))    { Resolved = ADCCEnemyCharacter_EscalationSpecialist::StaticClass(); }
 
 		// Says so rather than silently doing nothing, which is the failure mode
 		// this whole panel exists to get away from.
@@ -878,6 +1111,16 @@ float ADCCHUD::DrawMenuTabs(float X, float Y)
 {
 	float TabX = X;
 
+	// The panel itself is a fixed 460px wide (see DrawHUD's own backing
+	// DrawRect) - this project grew from four tabs to ten without anyone
+	// re-checking whether a single row still fit, and for a while now it
+	// has not: the row ran well past the panel's own right edge with
+	// nothing to stop it. 420 matches the RowWidth constant used everywhere
+	// else in this panel (DrawAchievements, DrawParty, etc.), so tabs wrap
+	// at the same boundary every other row in this menu already respects.
+	constexpr float MaxRowWidth = 420.0f;
+	const float RowStartX = X;
+
 	for (int32 Index = 0; Index < static_cast<int32>(EDCCMenuTab::MAX); ++Index)
 	{
 		const EDCCMenuTab Tab = static_cast<EDCCMenuTab>(Index);
@@ -891,6 +1134,14 @@ float ADCCHUD::DrawMenuTabs(float X, float Y)
 		GetTextSize(Label, TextW, TextH);
 
 		const float BoxW = TextW + 18.0f;
+
+		// Wrap to a new row rather than letting the tab bar run off the
+		// panel - the whole point of a tab bar is being visible at a glance.
+		if (TabX != RowStartX && (TabX - RowStartX) + BoxW > MaxRowWidth)
+		{
+			TabX = RowStartX;
+			Y += LineHeight + 4.0f;
+		}
 
 		// Registered every frame, like the achievement rows. The name is the tab
 		// index so NotifyHitBoxClick can route it without a second lookup table.
@@ -1289,9 +1540,17 @@ void ADCCHUD::DrawVitals(ADCCCharacterBase* Crawler)
 		Y += BarH + 8.0f;
 	}
 
-	DrawMeter(X, Y, BarW, BarH * 0.6f, Stats->GetExperienceFraction(), FLinearColor(0.85f, 0.70f, 0.25f),
-		FString::Printf(TEXT("LVL %d   %d / %d XP"),
-			Stats->Level, Stats->ExperiencePoints, Stats->ExperienceToNextLevel));
+	// At the tutorial cap the XP numbers stop meaning anything, so say so
+	// rather than showing a full bar that never moves and letting the player
+	// wonder whether progression is broken.
+	const FString ExperienceLabel = Stats->IsAtMaxLevel()
+		? FString::Printf(TEXT("LVL %d   MAX (tutorial cap)"), Stats->Level)
+		: FString::Printf(TEXT("LVL %d   %d / %d XP"),
+			Stats->Level, Stats->ExperiencePoints, Stats->ExperienceToNextLevel);
+
+	DrawMeter(X, Y, BarW, BarH * 0.6f, Stats->GetExperienceFraction(),
+		Stats->IsAtMaxLevel() ? FLinearColor(0.55f, 0.55f, 0.55f) : FLinearColor(0.85f, 0.70f, 0.25f),
+		ExperienceLabel);
 }
 
 void ADCCHUD::DrawSegmentedBar(UDCCStatsComponent* Stats, float CenterX, float TopY,
@@ -1382,6 +1641,11 @@ void ADCCHUD::DrawNearbyHealthBars(ADCCCharacterBase* Crawler)
 			continue;
 		}
 
+		// Same range gate as the health bar itself: close enough to see a
+		// mini bar over someone's head is close enough to count as "the fight
+		// has started" for the purposes of the LEVEL BOSS card.
+		CheckBossAnnouncement(Candidate);
+
 		const float HalfHeight = Candidate->GetCapsuleComponent()
 			? Candidate->GetCapsuleComponent()->GetScaledCapsuleHalfHeight() : 90.0f;
 		const FVector HeadLocation = Candidate->GetActorLocation()
@@ -1404,6 +1668,240 @@ void ADCCHUD::DrawNearbyHealthBars(ADCCCharacterBase* Crawler)
 		DrawSegmentedBar(Candidate->Stats, ScreenPos.X, ScreenPos.Y,
 			MiniBarWidth, MiniBarHeight, Tint, /*bShowRegenGhost=*/false);
 	}
+}
+
+void ADCCHUD::CheckBossAnnouncement(ADCCCharacterBase* Candidate)
+{
+	if (!Candidate || !Candidate->IsAlive())
+	{
+		return;
+	}
+
+	UDCCBossComponent* Boss = Candidate->FindComponentByClass<UDCCBossComponent>();
+	if (!Boss)
+	{
+		return;
+	}
+
+	if (AnnouncedBosses.ContainsByPredicate([Candidate](const TWeakObjectPtr<AActor>& Announced)
+		{
+			return Announced.Get() == Candidate;
+		}))
+	{
+		return;
+	}
+
+	AnnouncedBosses.Add(Candidate);
+
+	const UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	// Falls back to the actor's own name rather than going blank - every boss
+	// placed so far sets DisplayName, but nothing enforces that on whatever
+	// gets built next.
+	BossBannerName = Candidate->DisplayName.IsEmpty()
+		? FText::FromString(Candidate->GetActorNameOrLabel())
+		: Candidate->DisplayName;
+	BossBannerExpiryTime = World->GetTimeSeconds() + BossBannerDurationSeconds;
+}
+
+void ADCCHUD::DrawBossBanner()
+{
+	const UWorld* World = GetWorld();
+	if (!Canvas || !World || BossBannerName.IsEmpty()
+		|| World->GetTimeSeconds() >= BossBannerExpiryTime)
+	{
+		return;
+	}
+
+	const float TimeRemaining = BossBannerExpiryTime - World->GetTimeSeconds();
+	const float Elapsed = BossBannerDurationSeconds - TimeRemaining;
+
+	// Fades at both ends of the window rather than cutting hard, so the card
+	// never simply vanishes mid-read the way a hard timer cutoff would.
+	constexpr float FadeSeconds = 0.6f;
+	const float Alpha = FMath::Min(
+		FMath::Clamp(Elapsed / FadeSeconds, 0.0f, 1.0f),
+		FMath::Clamp(TimeRemaining / FadeSeconds, 0.0f, 1.0f));
+
+	const FString TitleLine = TEXT("LEVEL BOSS");
+	const FString NameLine = BossBannerName.ToString();
+
+	float TitleW = 0.0f, TitleH = 0.0f;
+	GetTextSize(TitleLine, TitleW, TitleH, GEngine->GetLargeFont(), 1.0f);
+	float NameW = 0.0f, NameH = 0.0f;
+	GetTextSize(NameLine, NameW, NameH, GEngine->GetMediumFont(), 1.0f);
+
+	const float CardW = FMath::Max(TitleW, NameW) + 64.0f;
+	const float CardH = TitleH + NameH + 34.0f;
+	const float X = (Canvas->SizeX - CardW) * 0.5f;
+
+	// A quarter of the way down: high enough to read as an announcement
+	// rather than a targeting prompt, low enough to stay clear of the quest
+	// tracker in the top right.
+	const float Y = Canvas->SizeY * 0.16f;
+
+	DrawRect(FLinearColor(0.04f, 0.02f, 0.02f, 0.80f * Alpha), X, Y, CardW, CardH);
+	DrawRect(FLinearColor(0.55f, 0.12f, 0.10f, 0.9f * Alpha), X, Y, CardW, 3.0f);
+	DrawRect(FLinearColor(0.55f, 0.12f, 0.10f, 0.9f * Alpha), X, Y + CardH - 3.0f, CardW, 3.0f);
+
+	DrawText(TitleLine, FLinearColor(0.95f, 0.25f, 0.20f, Alpha),
+		(Canvas->SizeX - TitleW) * 0.5f, Y + 12.0f, GEngine->GetLargeFont(), 1.0f);
+	DrawText(NameLine, FLinearColor(1.0f, 1.0f, 1.0f, Alpha),
+		(Canvas->SizeX - NameW) * 0.5f, Y + TitleH + 20.0f, GEngine->GetMediumFont(), 1.0f);
+}
+
+void ADCCHUD::DrawFlightControlsOverlay()
+{
+	const ADCCRover* Rover = GetOwningRover();
+	if (!Canvas || !Rover || !Rover->IsFlying())
+	{
+		return;
+	}
+
+	static const TCHAR* Rows[] = {
+		TEXT("W / S       Throttle"),
+		TEXT("A / D       Steer"),
+		TEXT("Space       Climb"),
+		TEXT("Left Ctrl   Descend"),
+		TEXT("Hold LMB + drag   Flight angle"),
+		TEXT("R           Windows"),
+		TEXT("T           Radio"),
+		TEXT("E           Exit"),
+	};
+	constexpr int32 RowCount = UE_ARRAY_COUNT(Rows);
+
+	constexpr float PanelW = 300.0f;
+	const float PanelH = (RowCount + 2) * LineHeight + 16.0f;
+
+	// Bottom-right: the quest tracker already owns the top-right (see
+	// DrawBossBanner's own comment on that), and the vitals/Feed cluster
+	// owns the bottom-left.
+	const float X = Canvas->SizeX - PanelW - 32.0f;
+	float Y = Canvas->SizeY - PanelH - 32.0f;
+
+	DrawRect(FLinearColor(0.42f, 0.44f, 0.52f, 0.45f), X - 10.0f, Y - 10.0f, PanelW + 20.0f, PanelH + 20.0f);
+	DrawRect(FLinearColor(0.02f, 0.03f, 0.06f, 0.72f), X - 8.0f, Y - 8.0f, PanelW + 16.0f, PanelH + 16.0f);
+
+	DrawText(TEXT("FLIGHT CONTROLS"), HeadingColour, X, Y);
+	Y += LineHeight + 4.0f;
+
+	for (const TCHAR* Row : Rows)
+	{
+		DrawText(Row, BodyColour, X, Y);
+		Y += LineHeight;
+	}
+
+	// The one live readout worth showing here, rather than a bank of
+	// numbers - whether boost is up is the one flight-relevant thing a
+	// glance at this panel should answer that the world itself can't show.
+	Y += 4.0f;
+	const float BoostFraction = Rover->GetBoostChargeFraction();
+	DrawRect(FLinearColor(0.15f, 0.15f, 0.18f, 0.8f), X, Y, PanelW - 16.0f, 8.0f);
+	DrawRect(BoostFraction >= 1.0f ? FLinearColor(0.3f, 0.85f, 0.4f) : FLinearColor(0.6f, 0.5f, 0.2f),
+		X, Y, (PanelW - 16.0f) * BoostFraction, 8.0f);
+}
+
+void ADCCHUD::DrawSpeedGauge()
+{
+	const ADCCRover* Rover = GetOwningRover();
+	if (!Canvas || !Rover || !Rover->IsOccupied())
+	{
+		return;
+	}
+
+	const float Speed = Rover->GetVelocity().Size();
+	// BoostSpeed is the real ceiling this bar can reach (boosting or flying
+	// both run faster than MaxCruiseSpeed), so the bar has somewhere to go
+	// instead of pegging at "full" the moment boost kicks in.
+	const float Fraction = FMath::Clamp(Speed / FMath::Max(1.0f, Rover->BoostSpeed), 0.0f, 1.0f);
+
+	constexpr float GaugeWidth = 220.0f;
+	constexpr float GaugeHeight = 14.0f;
+	const float X = (Canvas->SizeX - GaugeWidth) * 0.5f;
+	const float Y = Canvas->SizeY - 64.0f;
+
+	// Whole-number units/sec rather than an invented "mph"/"km/h" - this is
+	// an arcade rover with no real-world speed model behind it, and a made
+	// up unit would be a lie dressed as a stat.
+	const FString Label = FString::Printf(TEXT("SPEED  %d"), FMath::RoundToInt(Speed));
+	float LabelW = 0.0f, LabelH = 0.0f;
+	GetTextSize(Label, LabelW, LabelH, GEngine->GetMediumFont(), 1.0f);
+	DrawText(Label, HeadingColour, (Canvas->SizeX - LabelW) * 0.5f, Y - LabelH - 4.0f);
+
+	DrawRect(FLinearColor(0.15f, 0.15f, 0.18f, 0.8f), X, Y, GaugeWidth, GaugeHeight);
+
+	// Boosting/flying reads hot (orange-red) rather than the calm boost-charge
+	// green used elsewhere - a full speed bar and a full boost-charge bar
+	// mean opposite things (going fast vs. ready to go fast) and should not
+	// share a colour language.
+	const FLinearColor FillColour = (Rover->IsBoosting() || Rover->IsFlying())
+		? FLinearColor(0.9f, 0.35f, 0.15f) : FLinearColor(0.3f, 0.65f, 0.85f);
+	DrawRect(FillColour, X, Y, GaugeWidth * Fraction, GaugeHeight);
+}
+
+void ADCCHUD::DrawQuestCompleteBanner()
+{
+	const UWorld* World = GetWorld();
+	const UDCCQuestComponent* QuestComponent = World && World->GetGameState()
+		? World->GetGameState()->FindComponentByClass<UDCCQuestComponent>() : nullptr;
+
+	// New completion since the last check - arm the card. Checked ahead of
+	// the "is one currently showing" logic below so a second quest
+	// completing while the first card is still fading still gets its own
+	// card rather than being swallowed.
+	if (QuestComponent && !QuestComponent->LastCompletedQuestId.IsNone()
+		&& QuestComponent->LastCompletedQuestId != LastShownQuestCompleteId)
+	{
+		LastShownQuestCompleteId = QuestComponent->LastCompletedQuestId;
+
+		FDCCQuestDef Definition;
+		QuestComponent->FindQuest(LastShownQuestCompleteId, Definition);
+		QuestCompleteTitle = Definition.Title.IsEmpty()
+			? FText::FromName(LastShownQuestCompleteId) : Definition.Title;
+		QuestCompleteBannerExpiryTime = World->GetTimeSeconds() + QuestCompleteBannerDurationSeconds;
+	}
+
+	if (!Canvas || !World || QuestCompleteTitle.IsEmpty()
+		|| World->GetTimeSeconds() >= QuestCompleteBannerExpiryTime)
+	{
+		return;
+	}
+
+	const float TimeRemaining = QuestCompleteBannerExpiryTime - World->GetTimeSeconds();
+	const float Elapsed = QuestCompleteBannerDurationSeconds - TimeRemaining;
+	constexpr float FadeSeconds = 0.5f;
+	const float Alpha = FMath::Min(
+		FMath::Clamp(Elapsed / FadeSeconds, 0.0f, 1.0f),
+		FMath::Clamp(TimeRemaining / FadeSeconds, 0.0f, 1.0f));
+
+	const FString TitleLine = TEXT("QUEST COMPLETE");
+	const FString NameLine = QuestCompleteTitle.ToString();
+
+	float TitleW = 0.0f, TitleH = 0.0f;
+	GetTextSize(TitleLine, TitleW, TitleH, GEngine->GetLargeFont(), 1.0f);
+	float NameW = 0.0f, NameH = 0.0f;
+	GetTextSize(NameLine, NameW, NameH, GEngine->GetMediumFont(), 1.0f);
+
+	const float CardW = FMath::Max(TitleW, NameW) + 64.0f;
+	const float CardH = TitleH + NameH + 34.0f;
+	const float X = (Canvas->SizeX - CardW) * 0.5f;
+
+	// A little lower than the boss banner's own 0.16, so the two can never
+	// land on top of each other if a kill and a quest complete together.
+	const float Y = Canvas->SizeY * 0.24f;
+
+	DrawRect(FLinearColor(0.02f, 0.04f, 0.02f, 0.80f * Alpha), X, Y, CardW, CardH);
+	DrawRect(FLinearColor(0.20f, 0.55f, 0.20f, 0.9f * Alpha), X, Y, CardW, 3.0f);
+	DrawRect(FLinearColor(0.20f, 0.55f, 0.20f, 0.9f * Alpha), X, Y + CardH - 3.0f, CardW, 3.0f);
+
+	DrawText(TitleLine, FLinearColor(0.35f, 0.95f, 0.35f, Alpha),
+		(Canvas->SizeX - TitleW) * 0.5f, Y + 12.0f, GEngine->GetLargeFont(), 1.0f);
+	DrawText(NameLine, FLinearColor(1.0f, 1.0f, 1.0f, Alpha),
+		(Canvas->SizeX - NameW) * 0.5f, Y + TitleH + 20.0f, GEngine->GetMediumFont(), 1.0f);
 }
 
 void ADCCHUD::DrawSkillTargetingOverlay(ADCCCharacterBase* Crawler)
@@ -1543,6 +2041,37 @@ float ADCCHUD::DrawAchievements(float X, float Y, ADCCCharacterBase* Crawler)
 		}
 
 		Y += SectionGap;
+	}
+
+	// Bulk claim: one row that does everything Pending Rewards above would
+	// take several clicks to do, plus every sealed box already sitting in
+	// the pack - shown only when there is actually something for it to do,
+	// same "don't draw a row that would do nothing" convention as the rest
+	// of this HUD. Always clickable regardless of location: claiming pays
+	// out anywhere, same as the individual Claim rows above; only the
+	// box-opening half needs a Safe Room, and ClaimAndOpenAllLootBoxes says
+	// so itself via a local notice if that part gets skipped.
+	{
+		int32 OwnedBoxes = 0;
+		if (UDCCInventoryComponent* PlayerInventory = Crawler->Inventory)
+		{
+			for (uint8 TierIndex = 1; TierIndex < (uint8)EDCCLootBoxTier::MAX; ++TierIndex)
+			{
+				OwnedBoxes += PlayerInventory->GetLootBoxCount((EDCCLootBoxTier)TierIndex);
+			}
+		}
+
+		if (!Pending.IsEmpty() || OwnedBoxes > 0)
+		{
+			constexpr float RowWidth = 420.0f;
+			AddHitBox(FVector2D(X, Y), FVector2D(RowWidth, LineHeight),
+				FName("ClaimAllLootBoxes"), /*bConsumesInput=*/true, /*Priority=*/2);
+
+			DrawText(FString::Printf(TEXT("  [CLAIM ALL + OPEN %d SEALED BOX(ES)]"), OwnedBoxes),
+				FLinearColor(1.0f, 0.82f, 0.45f), X, Y);
+			Y += LineHeight;
+			Y += SectionGap;
+		}
 	}
 
 	DrawText(FString::Printf(TEXT("Achievements  (%d)   click one for detail"),
@@ -1854,6 +2383,24 @@ void ADCCHUD::DrawDeathScreen()
 		CentreX - FootW * 0.5f, CentreY + 40.0f, GEngine->GetMediumFont(), 1.0f);
 }
 
+void ADCCHUD::DrawAwaitingOtherCrawlersScreen()
+{
+	// Solid, not dimmed - unlike DrawDeathScreen this is not "the fight
+	// carries on behind you", there is genuinely nothing further to show.
+	DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 1.0f), 0.0f, 0.0f, Canvas->SizeX, Canvas->SizeY);
+
+	const float CentreX = Canvas->SizeX * 0.5f;
+	const float CentreY = Canvas->SizeY * 0.5f;
+
+	const FString Readout = TEXT("AWAITING OTHER CRAWLERS");
+
+	float ReadoutW = 0.0f, ReadoutH = 0.0f;
+	GetTextSize(Readout, ReadoutW, ReadoutH, GEngine->GetLargeFont(), 1.5f);
+
+	DrawText(Readout, FLinearColor(0.85f, 0.85f, 0.90f),
+		CentreX - ReadoutW * 0.5f, CentreY - ReadoutH * 0.5f, GEngine->GetLargeFont(), 1.5f);
+}
+
 void ADCCHUD::DrawInteractionPrompt(ADCCCharacterBase* Crawler)
 {
 	if (!Crawler || !GetWorld())
@@ -1978,6 +2525,13 @@ float ADCCHUD::DrawStats(float X, float Y, ADCCCharacterBase* Crawler)
 		DrawText(FString::Printf(TEXT("  Can lift %.0f kg"),
 			Ruleset->GetCarryMassLimit(Stats->GetEnhanced())), DimColour, X, Y);
 		Y += LineHeight;
+
+		// The number a shield actually moves - surfaced so equipping one reads
+		// as something changing rather than a silent stat nobody can see.
+		const int32 EquipmentEvadeBonus = Crawler->Equipment ? Crawler->Equipment->GetEvadeBonus() : 0;
+		DrawText(FString::Printf(TEXT("  Evade    %d"),
+			Ruleset->GetDefenceValue(Stats->GetEnhanced(), Stats->Level, EquipmentEvadeBonus)), DimColour, X, Y);
+		Y += LineHeight;
 	}
 
 	return Y;
@@ -2066,6 +2620,15 @@ float ADCCHUD::DrawInventory(float X, float Y, ADCCCharacterBase* Crawler)
 		Y += LineHeight;
 	}
 
+	// Previously shown nowhere except the vendor menu, which meant a player's
+	// own gold total was invisible for the entire rest of the game - the
+	// single most basic "what do I have" question this tab exists to answer.
+	if (Crawler->Stats)
+	{
+		DrawText(FString::Printf(TEXT("  Gold: %d"), Crawler->Stats->Gold), BodyColour, X, Y);
+		Y += LineHeight;
+	}
+
 	UDCCInventoryComponent* Inventory = Crawler->FindComponentByClass<UDCCInventoryComponent>();
 	if (!Inventory)
 	{
@@ -2079,8 +2642,27 @@ float ADCCHUD::DrawInventory(float X, float Y, ADCCCharacterBase* Crawler)
 	for (int32 Index = 0; Index < Inventory->Items.Num(); ++Index)
 	{
 		const FDCCInventoryItem& Item = Inventory->Items[Index];
-		DrawText(FString::Printf(TEXT("    %d. %s (%.0f kg)"),
-			Index + 1, *Item.DisplayName.ToString(), Item.MassKilograms), BodyColour, X, Y);
+		const bool bIsGear = !Item.EquipmentItemId.IsNone();
+
+		if (bIsGear)
+		{
+			constexpr float RowWidth = 380.0f;
+			AddHitBox(FVector2D(X, Y), FVector2D(RowWidth, LineHeight),
+				FName(*FString::Printf(TEXT("Equip|%d"), Index)), /*bConsumesInput=*/true, /*Priority=*/1);
+		}
+
+		DrawText(FString::Printf(TEXT("    %d. %s (%.0f kg)%s"),
+			Index + 1, *Item.DisplayName.ToString(), Item.MassKilograms,
+			bIsGear ? TEXT("  [click to equip]") : TEXT("")), BodyColour, X, Y);
+		Y += LineHeight;
+	}
+
+	// An empty bag with no explanation reads as broken rather than empty - see
+	// ShowNotice's own doc comment on why this project treats silence as the
+	// worst possible feedback.
+	if (Inventory->Items.IsEmpty())
+	{
+		DrawText(TEXT("    Nothing stowed yet."), DimColour, X, Y);
 		Y += LineHeight;
 	}
 
@@ -2417,6 +2999,119 @@ void ADCCHUD::DrawInteractionMenu(ADCCCharacterBase* Crawler)
 	DrawText(TEXT("Wheel to choose  ·  E to confirm  ·  Esc to leave"), DimColour, X, Y);
 }
 
+void ADCCHUD::DrawNPCInteractionMenu(ADCCCharacterBase* Crawler)
+{
+	if (!Crawler || !Canvas)
+	{
+		return;
+	}
+
+	ADCCDialogueNPC* Target = Crawler->GetNPCInteractionTarget();
+	if (!Target)
+	{
+		return;
+	}
+
+	const bool bShowingQuests = Crawler->IsNPCShowingQuests();
+	const int32 Selected = Crawler->GetNPCInteractionIndex();
+
+	TArray<FName> OfferableQuests;
+	if (bShowingQuests)
+	{
+		Crawler->GetOfferableQuestIds(OfferableQuests);
+	}
+
+	const TArray<EDCCNPCInteractionOption>& Options = Crawler->GetNPCInteractionOptions();
+	if (!bShowingQuests && Options.IsEmpty())
+	{
+		return;
+	}
+
+	// +1 for the itemised page's trailing "Back" row - same count CycleNPCInteractionMenu uses.
+	const int32 RowCount = bShowingQuests ? FMath::Max(1, OfferableQuests.Num() + 1) : Options.Num();
+
+	constexpr float PanelW = 380.0f;
+	const float X = Canvas->SizeX - PanelW - 40.0f;
+	float Y = Canvas->SizeY * 0.5f - (RowCount * LineHeight) * 0.5f;
+
+	const float PanelH = (RowCount + 3) * LineHeight + 16.0f;
+
+	DrawRect(FLinearColor(0.42f, 0.44f, 0.52f, 0.55f), X - 14.0f, Y - 34.0f, PanelW + 28.0f, PanelH + 12.0f);
+	DrawRect(FLinearColor(0.02f, 0.03f, 0.06f, 0.90f), X - 12.0f, Y - 32.0f, PanelW + 24.0f, PanelH + 8.0f);
+
+	const FString Name = Target->DisplayName.IsEmpty()
+		? Target->GetActorNameOrLabel()
+		: Target->DisplayName.ToString();
+
+	DrawText(Name, HeadingColour, X, Y - 26.0f);
+	Y += 4.0f;
+
+	if (bShowingQuests)
+	{
+		const UDCCQuestComponent* QuestComp = UDCCQuestComponent::Get(Crawler);
+
+		if (OfferableQuests.IsEmpty())
+		{
+			DrawText(TEXT("  (nothing to offer right now)"), DimColour, X, Y);
+			Y += LineHeight;
+		}
+
+		for (int32 Index = 0; Index < OfferableQuests.Num(); ++Index)
+		{
+			const bool bSelected = Index == Selected;
+			if (bSelected)
+			{
+				DrawRect(FLinearColor(0.16f, 0.18f, 0.26f, 0.9f), X - 6.0f, Y - 1.0f, PanelW + 4.0f, LineHeight);
+			}
+
+			FDCCQuestDef Def;
+			const bool bFound = QuestComp && QuestComp->FindQuest(OfferableQuests[Index], Def);
+			const FString Label = bFound ? Def.Title.ToString() : OfferableQuests[Index].ToString();
+
+			DrawText(FString::Printf(TEXT("%s %s"), bSelected ? TEXT(">") : TEXT(" "), *Label),
+				bSelected ? FLinearColor(1.0f, 0.92f, 0.70f) : BodyColour, X, Y);
+			Y += LineHeight;
+		}
+
+		const bool bBackSelected = Selected == OfferableQuests.Num();
+		if (bBackSelected)
+		{
+			DrawRect(FLinearColor(0.16f, 0.18f, 0.26f, 0.9f), X - 6.0f, Y - 1.0f, PanelW + 4.0f, LineHeight);
+		}
+		DrawText(FString::Printf(TEXT("%s Back"), bBackSelected ? TEXT(">") : TEXT(" ")),
+			bBackSelected ? FLinearColor(1.0f, 0.92f, 0.70f) : BodyColour, X, Y);
+		Y += LineHeight;
+	}
+	else
+	{
+		for (int32 Index = 0; Index < Options.Num(); ++Index)
+		{
+			const bool bSelected = Index == Selected;
+			if (bSelected)
+			{
+				DrawRect(FLinearColor(0.16f, 0.18f, 0.26f, 0.9f), X - 6.0f, Y - 1.0f, PanelW + 4.0f, LineHeight);
+			}
+
+			const TCHAR* Label = TEXT("Leave");
+			switch (Options[Index])
+			{
+			case EDCCNPCInteractionOption::Talk: Label = TEXT("Talk"); break;
+			case EDCCNPCInteractionOption::Shop: Label = TEXT("Shop"); break;
+			case EDCCNPCInteractionOption::Quests: Label = TEXT("Quests"); break;
+			case EDCCNPCInteractionOption::RideLift: Label = TEXT("Ride the lift"); break;
+			default: break;
+			}
+
+			DrawText(FString::Printf(TEXT("%s %s"), bSelected ? TEXT(">") : TEXT(" "), Label),
+				bSelected ? FLinearColor(1.0f, 0.92f, 0.70f) : BodyColour, X, Y);
+			Y += LineHeight;
+		}
+	}
+
+	Y += 6.0f;
+	DrawText(TEXT("Wheel to choose  ·  E to confirm  ·  Esc to leave"), DimColour, X, Y);
+}
+
 void ADCCHUD::DrawLootMenu(ADCCCharacterBase* Crawler)
 {
 	if (!Crawler || !Canvas)
@@ -2515,6 +3210,99 @@ void ADCCHUD::DrawLootMenu(ADCCCharacterBase* Crawler)
 
 	Y += 6.0f;
 	DrawText(TEXT("Wheel to choose  ·  E to confirm  ·  Esc to leave"), DimColour, X, Y);
+}
+
+void ADCCHUD::DrawEmoteMenu(ADCCCharacterBase* Crawler)
+{
+	if (!Crawler || !Canvas || !Crawler->IsEmoteMenuOpen())
+	{
+		return;
+	}
+
+	const TArray<TObjectPtr<UAnimationAsset>>& Emotes = Crawler->EmoteAnimations;
+	if (Emotes.IsEmpty())
+	{
+		return;
+	}
+
+	const int32 Selected = Crawler->GetEmoteMenuIndex();
+	const int32 RowCount = Emotes.Num();
+
+	constexpr float PanelW = 340.0f;
+	const float X = (Canvas->SizeX - PanelW) * 0.5f;
+	float Y = Canvas->SizeY * 0.5f - (RowCount * LineHeight) * 0.5f;
+
+	const float PanelH = (RowCount + 3) * LineHeight + 16.0f;
+
+	DrawRect(FLinearColor(0.42f, 0.44f, 0.52f, 0.55f), X - 14.0f, Y - 34.0f, PanelW + 28.0f, PanelH + 12.0f);
+	DrawRect(FLinearColor(0.02f, 0.03f, 0.06f, 0.90f), X - 12.0f, Y - 32.0f, PanelW + 24.0f, PanelH + 8.0f);
+
+	DrawText(TEXT("Play to the crowd"), HeadingColour, X, Y - 26.0f);
+	Y += 4.0f;
+
+	for (int32 Index = 0; Index < RowCount; ++Index)
+	{
+		const bool bSelected = Index == Selected;
+		if (bSelected)
+		{
+			DrawRect(FLinearColor(0.16f, 0.18f, 0.26f, 0.9f), X - 6.0f, Y - 1.0f, PanelW + 4.0f, LineHeight);
+		}
+
+		// EmoteAnimations carries no separate display-name field - the asset's
+		// own name is the only label available, so this is what shows.
+		const FString Label = Emotes[Index] ? Emotes[Index]->GetName() : TEXT("(missing)");
+		DrawText(FString::Printf(TEXT("%s %s"), bSelected ? TEXT(">") : TEXT(" "), *Label),
+			bSelected ? FLinearColor(1.0f, 0.92f, 0.70f) : BodyColour, X, Y);
+		Y += LineHeight;
+	}
+
+	Y += 6.0f;
+	DrawText(TEXT("Wheel to choose  ·  E to perform  ·  Esc / B to leave"), DimColour, X, Y);
+}
+
+void ADCCHUD::DrawOathgateMenu(ADCCCharacterBase* Crawler)
+{
+	if (!Crawler || !Canvas)
+	{
+		return;
+	}
+
+	if (!Crawler->GetOathgateTarget())
+	{
+		return;
+	}
+
+	const int32 Selected = Crawler->GetOathgateMenuIndex();
+	static const TCHAR* Rows[] = { TEXT("Enter the gate"), TEXT("Turn away") };
+	constexpr int32 RowCount = 2;
+
+	constexpr float PanelW = 340.0f;
+	const float X = (Canvas->SizeX - PanelW) * 0.5f;
+	float Y = Canvas->SizeY * 0.5f - (RowCount * LineHeight) * 0.5f;
+
+	const float PanelH = (RowCount + 3) * LineHeight + 16.0f;
+
+	DrawRect(FLinearColor(0.42f, 0.44f, 0.52f, 0.55f), X - 14.0f, Y - 34.0f, PanelW + 28.0f, PanelH + 12.0f);
+	DrawRect(FLinearColor(0.02f, 0.03f, 0.06f, 0.90f), X - 12.0f, Y - 32.0f, PanelW + 24.0f, PanelH + 8.0f);
+
+	DrawText(TEXT("Enter the gate?"), HeadingColour, X, Y - 26.0f);
+	Y += 4.0f;
+
+	for (int32 Index = 0; Index < RowCount; ++Index)
+	{
+		const bool bSelected = Index == Selected;
+		if (bSelected)
+		{
+			DrawRect(FLinearColor(0.16f, 0.18f, 0.26f, 0.9f), X - 6.0f, Y - 1.0f, PanelW + 4.0f, LineHeight);
+		}
+
+		DrawText(FString::Printf(TEXT("%s %s"), bSelected ? TEXT(">") : TEXT(" "), Rows[Index]),
+			bSelected ? FLinearColor(1.0f, 0.92f, 0.70f) : BodyColour, X, Y);
+		Y += LineHeight;
+	}
+
+	Y += 6.0f;
+	DrawText(TEXT("Wheel to choose  ·  E to confirm  ·  Esc / walk away to turn back"), DimColour, X, Y);
 }
 
 void ADCCHUD::DrawVendorMenu(ADCCCharacterBase* Crawler)
@@ -2903,6 +3691,12 @@ float ADCCHUD::DrawFeedTab(float X, float Y)
 float ADCCHUD::DrawChannelMessages(float X, float Y, EDCCChatChannel Channel, ADCCCharacterBase* Crawler,
 	int32 LineCount, const FString& TargetFilter)
 {
+	// Same character-count approximation DrawAchievementDetail uses for its
+	// own 400-wide card (44 chars), scaled to this panel's ~444 usable width
+	// (the 460-wide tab panel, minus its X=32 left margin against a 16-unit
+	// panel edge).
+	constexpr int32 ChatWrapCharacters = 46;
+
 	const ADCCGameState* GameState = GetWorld() ? GetWorld()->GetGameState<ADCCGameState>() : nullptr;
 	if (!GameState)
 	{
@@ -2971,12 +3765,67 @@ float ADCCHUD::DrawChannelMessages(float X, float Y, EDCCChatChannel Channel, AD
 			LastHeaderedSender.Empty();
 		}
 
+		// Word-by-word, not one unbroken DrawText call - the panel is 460
+		// units wide and an unwrapped "Sender: message" ran straight off its
+		// right edge the instant either got long (same problem
+		// DrawAchievementDetail's own WrapText exists to avoid), and this is
+		// also what lets ":BORANT_W:"-style Emote-bucket tokens render as
+		// real icons instead of literal bracketed text.
 		const FString Line = FString::Printf(TEXT("  %s: %s"), *Message.SenderName, *Message.Text.ToString());
-		DrawText(Line, Message.bModerated ? DimColour : BodyColour, X, Y);
-		Y += LineHeight;
+		Y = DrawChatLineWithEmotes(X, Y, X + ChatWrapCharacters * 9.1f, Line,
+			Message.bModerated ? DimColour : BodyColour);
 	}
 
 	return Y;
+}
+
+float ADCCHUD::DrawChatLineWithEmotes(float X, float Y, float MaxX, const FString& Line, const FLinearColor& Colour)
+{
+	constexpr float IconSize = 20.0f;
+	constexpr float WordGap = 6.0f;
+
+	TArray<FString> Words;
+	Line.ParseIntoArray(Words, TEXT(" "), /*CullEmpty=*/true);
+
+	float CursorX = X;
+	for (const FString& Word : Words)
+	{
+		UTexture2D* Icon = DCCChatter::FindEmoteIcon(Word);
+
+		float AdvanceWidth;
+		if (Icon)
+		{
+			AdvanceWidth = IconSize;
+		}
+		else
+		{
+			float TextW = 0.0f, TextH = 0.0f;
+			GetTextSize(Word, TextW, TextH, GEngine->GetMediumFont(), 1.0f);
+			AdvanceWidth = TextW;
+		}
+
+		// Wrap before drawing if this word would overrun the panel - but
+		// never on the very first word of a line, or a single long word
+		// would wrap forever against itself.
+		if (CursorX > X && CursorX + AdvanceWidth > MaxX)
+		{
+			CursorX = X;
+			Y += LineHeight;
+		}
+
+		if (Icon)
+		{
+			DrawTexture(Icon, CursorX, Y, IconSize, IconSize, 0.0f, 0.0f, 1.0f, 1.0f, FLinearColor::White);
+		}
+		else
+		{
+			DrawText(Word, Colour, CursorX, Y);
+		}
+
+		CursorX += AdvanceWidth + WordGap;
+	}
+
+	return Y + LineHeight;
 }
 
 float ADCCHUD::DrawChatSendRow(float X, float Y, EDCCChatChannel Channel, ADCCCharacterBase* Crawler,

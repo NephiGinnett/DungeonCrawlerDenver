@@ -37,6 +37,15 @@ enum class EDCCObjectiveType : uint8
 	Climb           UMETA(DisplayName = "Climb"),
 
 	/**
+	 * Gain N Skill Ranks in TargetId (added 2026-09-03, for "dev goal" quests
+	 * that challenge a specific new feature - "gain 2 levels in driving" was
+	 * the prompt, i.e. TargetId = "Piloting", RequiredCount = 2). Fired from
+	 * UDCCSkillComponent::RunSkillAdvancement at the exact point a rank
+	 * actually lands - the same funnel Character XP already uses there.
+	 */
+	SkillRankGained UMETA(DisplayName = "Skill Rank Gained"),
+
+	/**
 	 * Fired only by Blueprint or console.
 	 *
 	 * The escape hatch that keeps the enum honest: anything the DM wants to

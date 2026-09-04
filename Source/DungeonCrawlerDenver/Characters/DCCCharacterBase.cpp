@@ -14,11 +14,21 @@
 #include "UI/DCCHUD.h"
 #include "Rooms/DCCClimbPoint.h"
 #include "Rooms/DCCCliffLift.h"
+#include "Rooms/DCCOathgate.h"
+#include "Rooms/DCCExitPortal.h"
+#include "Rooms/DCCPortalConsole.h"
+#include "Puzzles/DCCPuzzleDoor.h"
+#include "Puzzles/DCCComplianceDoor.h"
+#include "Puzzles/DCCBreakerSwitch.h"
+#include "Puzzles/DCCEscrowLock.h"
+#include "Vehicles/DCCRover.h"
 #include "Progression/DCCAchievementComponent.h"
 #include "Equipment/DCCEquipmentComponent.h"
 #include "Classes/DCCClassComponent.h"
 #include "Quests/DCCQuestComponent.h"
 #include "Dialogue/DCCDialogueNPC.h"
+#include "Dialogue/DCCDialogueNPC_LiftAttendant.h"
+#include "Items/DCCLootBoxStation.h"
 #include "Dialogue/DCCVendorNPC.h"
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraSystem.h"
@@ -68,6 +78,32 @@ ADCCCharacterBase::ADCCCharacterBase()
 	if (UCapsuleComponent* Capsule = GetCapsuleComponent())
 	{
 		Capsule->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
+
+		// The stock "Pawn" profile's own Visibility:Ignore (see the comment
+		// above - this was already known and documented right here, just
+		// never connected to this) is the actual, whole reason a living
+		// character could never be interacted with. SweepForInteractionCandidate
+		// sweeps on ECC_Visibility, matching the fist-bump and loot sweeps -
+		// and CharacterMesh, the stock skeletal-mesh profile, ALSO ignores
+		// Visibility by the same engine default (checked against
+		// BaseEngine.ini directly: Pawn and CharacterMesh both list only
+		// Visibility, plus Pawn/Vehicle for CharacterMesh, as overrides).
+		// So neither the capsule nor the mesh of a living character has ever
+		// blocked that channel - every "can't interact with allies" report
+		// this project has chased with bIsAlly/CDO theories had nothing to do
+		// with either of those; the sweep was never capable of hitting a
+		// living character's collision at all, full stop. Corpses only ever
+		// worked because ApplyCollapsedBody explicitly flips the ragdolled
+		// mesh's Visibility response to Block (see that function) - nothing
+		// upstream of a corpse's collision, in either direction, was ever
+		// hit-testable. Blocking Visibility on the capsule here is the
+		// minimal fix: it leaves CharacterMesh's own Visibility:Ignore alone
+		// (whatever that was for), leaves Camera:Ignore above alone, and
+		// gives every sweep that already assumed "a living character's
+		// capsule blocks Visibility" - assumed in writing, per the comment
+		// on SweepForInteractionCandidate, and never actually true until this
+		// line - something to actually hit.
+		Capsule->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
 	}
 
 	Stats = CreateDefaultSubobject<UDCCStatsComponent>(TEXT("Stats"));
@@ -105,6 +141,22 @@ ADCCCharacterBase::ADCCCharacterBase()
 	// Off until Selfie Mode actually opens - see ToggleSelfieMode. An always-on
 	// second camera would fight whatever the character Blueprint's own rig is
 	// doing every frame for no reason.
+	//
+	// SetActive(false) alone does NOT stick here: UCameraComponent's own base
+	// constructor (Engine/Private/Camera/CameraComponent.cpp) sets
+	// bAutoActivate = true unconditionally, and that runs BEFORE this
+	// constructor body. Component registration re-activates anything with
+	// bAutoActivate still true regardless of what SetActive was called with
+	// during construction, so without this line SelfieCamera came back on at
+	// spawn - sitting active right alongside the character Blueprint's own
+	// FollowCamera, with nothing to say which one the pawn's camera
+	// resolution should actually use. Since SelfieCamera is attached directly
+	// to the capsule facing back at the character, winning that race read as
+	// spawning already in a "selfie" framing despite bInSelfieMode being
+	// false - not stuck in Selfie Mode, just looking through the wrong
+	// camera. EnterSelfieMode/ExitSelfieMode's own explicit SetActive calls
+	// happen to fix it in passing, which is why toggling C twice "repairs" it.
+	SelfieCamera->bAutoActivate = false;
 	SelfieCamera->SetActive(false);
 }
 
@@ -118,7 +170,9 @@ void ADCCCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	DOREPLIFETIME(ADCCCharacterBase, bIsCasting);
 	DOREPLIFETIME(ADCCCharacterBase, bBefriended);
 	DOREPLIFETIME(ADCCCharacterBase, CurrentRoomDisplayName);
+	DOREPLIFETIME(ADCCCharacterBase, bInSafeRoom);
 	DOREPLIFETIME(ADCCCharacterBase, bIsDowned);
+	DOREPLIFETIME(ADCCCharacterBase, bAwaitingOtherCrawlers);
 	DOREPLIFETIME(ADCCCharacterBase, DeathSaveSuccesses);
 	DOREPLIFETIME(ADCCCharacterBase, DeathSaveFailures);
 	DOREPLIFETIME(ADCCCharacterBase, bHasLoot);
@@ -399,6 +453,26 @@ void ADCCCharacterBase::Server_EmptyStowedRemains_Implementation(int32 Index)
 	}
 }
 
+void ADCCCharacterBase::DCCEquipItem(int32 Index)
+{
+	if (HasAuthority())
+	{
+		Server_EquipInventoryItem_Implementation(Index);
+	}
+	else
+	{
+		Server_EquipInventoryItem(Index);
+	}
+}
+
+void ADCCCharacterBase::Server_EquipInventoryItem_Implementation(int32 Index)
+{
+	if (Inventory)
+	{
+		Inventory->EquipItem(Index);
+	}
+}
+
 void ADCCCharacterBase::OnPrimaryPressed()
 {
 	// The character menu owns the mouse while it is open, so a click meant for an
@@ -478,6 +552,17 @@ void ADCCCharacterBase::OnPrimaryPressed()
 		return;
 	}
 
+	// A ranged weapon fires at whatever the camera is pointed at instead of
+	// auto-targeting the nearest hostile in a radius - see AttemptRangedAttack's
+	// own comment for why that split exists. GetAttackRangeOverride() > 0 is
+	// the same "is this thing ranged" signal GetEffectiveAttackRange already
+	// keys off - every melee row in DT_DCCEquipment leaves it at 0.
+	if (Equipment && Equipment->GetAttackRangeOverride() > 0.0f)
+	{
+		AttemptRangedAttack();
+		return;
+	}
+
 	AttemptAttackNearest();
 }
 
@@ -494,6 +579,14 @@ void ADCCCharacterBase::OnSecondaryPressed()
 	if (IsClimbing())
 	{
 		SetClimbInput(/*bUp=*/bClimbInputUp, /*bDown=*/true);
+		return;
+	}
+
+	// Aiming down a ranged weapon. Melee/bare hands have nothing to zoom in
+	// on, so right-click stays exactly the no-op it always was for them.
+	if (Equipment && Equipment->GetAttackRangeOverride() > 0.0f)
+	{
+		BeginAimZoom();
 	}
 }
 
@@ -502,6 +595,45 @@ void ADCCCharacterBase::OnSecondaryReleased()
 	if (IsClimbing())
 	{
 		SetClimbInput(/*bUp=*/bClimbInputUp, /*bDown=*/false);
+		return;
+	}
+
+	EndAimZoom();
+}
+
+void ADCCCharacterBase::BeginAimZoom()
+{
+	if (bIsAiming)
+	{
+		return;
+	}
+
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	if (!PC || !PC->PlayerCameraManager)
+	{
+		return;
+	}
+
+	bIsAiming = true;
+	PreAimFOV = PC->PlayerCameraManager->GetFOVAngle();
+	PC->PlayerCameraManager->SetFOV(PreAimFOV * AimZoomFactor);
+}
+
+void ADCCCharacterBase::EndAimZoom()
+{
+	if (!bIsAiming)
+	{
+		return;
+	}
+
+	bIsAiming = false;
+
+	if (const APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		if (PC->PlayerCameraManager)
+		{
+			PC->PlayerCameraManager->SetFOV(PreAimFOV);
+		}
 	}
 }
 
@@ -779,17 +911,22 @@ TArray<FDCCModifierSource> ADCCCharacterBase::GetSkillRankBreakdown(FName SkillI
 	return Sources;
 }
 
-void ADCCCharacterBase::Server_RequestChatterBatch_Implementation()
+void ADCCCharacterBase::Server_RequestChatterBatch_Implementation(int32 Count)
 {
 	if (!HasAuthority())
 	{
 		return;
 	}
 
+	// Clamped rather than trusted - the count arrives from a client, and the
+	// rate limit inside TryRollChatterBatch only governs how OFTEN a request
+	// is honoured, not how much one request may ask for.
+	const int32 Requested = FMath::Clamp(Count, 1, 12);
+
 	UWorld* World = GetWorld();
 	if (ADCCGameState* GameState = World ? World->GetGameState<ADCCGameState>() : nullptr)
 	{
-		GameState->RollChatterBatch();
+		GameState->TryRollChatterBatch(Requested);
 	}
 }
 
@@ -1024,7 +1161,7 @@ void ADCCCharacterBase::Server_BeginClimb_Implementation(ADCCClimbPoint* Point)
 	}
 
 	ActiveClimbPoint = Point;
-	OnRep_ActiveClimbPoint();
+	OnRep_ActiveClimbPoint(nullptr);
 
 	// Attempting marks the skill, and here there is no failure state - simply
 	// trying to climb is what trains Climbing.
@@ -1147,14 +1284,31 @@ void ADCCCharacterBase::Server_ReleaseClimb_Implementation()
 		return;
 	}
 
+	ADCCClimbPoint* Previous = ActiveClimbPoint;
 	ActiveClimbPoint = nullptr;
-	OnRep_ActiveClimbPoint();
+	OnRep_ActiveClimbPoint(Previous);
 
 	bClimbInputUp = false;
 	bClimbInputDown = false;
+
+	// Same replication gap as climb-start/climb-top (see Client_SyncClimbLocation's
+	// comment): a mid-climb release - letting go on purpose, or the grip failing
+	// when stamina hits zero - is another raw server-side position that never
+	// reaches the owning client on its own. Without this, that client keeps falling
+	// from wherever its own local TickClimbMovementCosmetic guess had drifted to,
+	// which is normally a few centimetres and invisible, but grows with how long the
+	// climb has been running - exactly why this only reads as "randomly drops" on
+	// long/tall climbs and not short ones. Found 2026-08-29 while investigating a
+	// report that a specific tall climb (with no reachable top before this) still
+	// dropped players despite the 2026-08-28 climbing fix, which only closed the
+	// start-of-climb and reached-the-top gaps, not this one.
+	if (!IsLocallyControlled())
+	{
+		Client_SyncClimbLocation(GetActorLocation(), false);
+	}
 }
 
-void ADCCCharacterBase::OnRep_ActiveClimbPoint()
+void ADCCCharacterBase::OnRep_ActiveClimbPoint(ADCCClimbPoint* PreviousActiveClimbPoint)
 {
 	UCharacterMovementComponent* Movement = GetCharacterMovement();
 	if (!Movement)
@@ -1169,13 +1323,75 @@ void ADCCCharacterBase::OnRep_ActiveClimbPoint()
 		// cliff or the ground.
 		Movement->StopMovementImmediately();
 		Movement->SetMovementMode(MOVE_Flying);
+		Movement->bJustTeleported = true;
+
+		// The server already snapped itself onto the wall in
+		// Server_BeginClimb_Implementation, immediately before this call - this
+		// is what gets every OTHER machine there too, including (critically)
+		// the climbing player's own client, which never receives an ordinary
+		// ReplicatedMovement update for its own pawn. Without it, that client
+		// just kept standing wherever it clicked from until a movement-error
+		// correction eventually yanked it onto the wall - the "pushed back
+		// 10-15 feet" symptom. See Client_SyncClimbLocation's comment for the
+		// full explanation and the matching fix at the other end of a climb.
+		if (!HasAuthority())
+		{
+			SetActorLocation(ActiveClimbPoint->GetAttachLocationFor(this, GetActorLocation().Z));
+		}
 	}
 	else
 	{
 		// Falling, not walking - letting go halfway up a rock face should drop
 		// the climber, and MOVE_Walking at that height would leave them standing
-		// on nothing until something nudged them.
+		// on nothing until something nudged them. A completed climb (top
+		// reached) overrides this to Walking right afterward, server-side
+		// immediately and on the owning client via Client_SyncClimbLocation.
 		Movement->SetMovementMode(MOVE_Falling);
+	}
+}
+
+void ADCCCharacterBase::TickClimbMovementCosmetic(float DeltaSeconds)
+{
+	if (!ActiveClimbPoint || !Stats)
+	{
+		return;
+	}
+
+	UDCCRuleset* Ruleset = Stats->GetRuleset();
+	if (!Ruleset)
+	{
+		return;
+	}
+
+	const bool bMoving = bClimbInputUp != bClimbInputDown;
+	if (!bMoving)
+	{
+		return;
+	}
+
+	const int32 ClimbRank = Skills ? Skills->GetSkillRank(ActiveClimbPoint->ClimbSkillId) : 0;
+	const float Speed = Ruleset->GetClimbSpeed(Stats->GetEnhanced(), ClimbRank);
+	const float Direction = bClimbInputUp ? 1.0f : -1.0f;
+
+	// Deliberately no stamina, achievement, quest or "reached the top" logic
+	// here - all of that is server-authoritative and arrives back through
+	// ActiveClimbPoint/Client_SyncClimbLocation. Clamping to GetTopZ() just
+	// stops this local guess from overshooting past the ledge while it waits
+	// for the real dismount to land.
+	float NewZ = GetActorLocation().Z + (Speed * Direction * DeltaSeconds);
+	NewZ = FMath::Clamp(NewZ, ActiveClimbPoint->GetBottomZ(), ActiveClimbPoint->GetTopZ());
+
+	SetActorLocation(ActiveClimbPoint->GetAttachLocationFor(this, NewZ));
+}
+
+void ADCCCharacterBase::Client_SyncClimbLocation_Implementation(FVector NewLocation, bool bLandOnGround)
+{
+	SetActorLocation(NewLocation);
+
+	if (UCharacterMovementComponent* Movement = GetCharacterMovement())
+	{
+		Movement->SetMovementMode(bLandOnGround ? MOVE_Walking : MOVE_Falling);
+		Movement->bJustTeleported = true;
 	}
 }
 
@@ -1315,7 +1531,23 @@ void ADCCCharacterBase::TickStamina(float DeltaSeconds)
 				if (UCharacterMovementComponent* Movement = GetCharacterMovement())
 				{
 					Movement->SetMovementMode(MOVE_Walking);
+					Movement->bJustTeleported = true;
 				}
+
+				// Dismount is a raw SetActorLocation, same as the climb-start
+				// attach - which, same as there, never reaches the climbing
+				// player's OWN client via ordinary replication. Left alone,
+				// that client would sit near the ledge (wherever
+				// TickClimbMovementCosmetic last put it) until a movement-error
+				// correction eventually dragged it to the real dismount spot -
+				// which is what "top doesn't match the floor" / "drops off the
+				// side" looked like from the climber's own screen. See
+				// Client_SyncClimbLocation's header comment for the full story.
+				if (!IsLocallyControlled())
+				{
+					Client_SyncClimbLocation(Dismount, true);
+				}
+
 				return;
 			}
 		}
@@ -1544,6 +1776,40 @@ ADCCDialogueNPC* ADCCCharacterBase::FindDialogueNPCUnderCursor() const
 	return Speaker;
 }
 
+ADCCLootBoxStation* ADCCCharacterBase::FindLootBoxStationUnderCursor() const
+{
+	AActor* Hit = SweepForInteractionCandidate();
+	ADCCLootBoxStation* Station = Cast<ADCCLootBoxStation>(Hit);
+	if (!Station)
+	{
+		return nullptr;
+	}
+
+	if (FVector::Dist(GetActorLocation(), Station->GetActorLocation()) > InteractionRange)
+	{
+		return nullptr;
+	}
+
+	return Station;
+}
+
+ADCCPortalConsole* ADCCCharacterBase::FindPortalConsoleUnderCursor() const
+{
+	AActor* Hit = SweepForInteractionCandidate();
+	ADCCPortalConsole* Console = Cast<ADCCPortalConsole>(Hit);
+	if (!Console)
+	{
+		return nullptr;
+	}
+
+	if (FVector::Dist(GetActorLocation(), Console->GetActorLocation()) > InteractionRange)
+	{
+		return nullptr;
+	}
+
+	return Console;
+}
+
 void ADCCCharacterBase::BuildInteractionOptions()
 {
 	InteractionOptions.Reset();
@@ -1629,6 +1895,44 @@ void ADCCCharacterBase::HandleInteractPressed()
 {
 	if (bHasDied)
 	{
+		return;
+	}
+
+	// A vendor/loot/conversation target destroyed out from under an open menu
+	// - a corpse swept up by the body collector, a loot container removed, an
+	// ally whose corpse finally expired mid-conversation - leaves these set
+	// but stale. TObjectPtr's bool check only tests for null, not validity,
+	// so left unguarded the branches below would still treat a dangling
+	// pointer as "menu open," silently re-closing a dead menu on this press
+	// instead of reaching whatever is actually under the crosshair right now.
+	// Found 2026-08-29 chasing a "E does nothing" report - clearing here lets
+	// THIS press fall through to the real target below rather than eating it.
+	if (VendorTargetActor && !IsValid(VendorTargetActor))
+	{
+		CloseVendorMenu();
+	}
+	if (LootTargetActor && !IsValid(LootTargetActor))
+	{
+		CloseLootMenu();
+	}
+	if (InteractionTarget && !IsValid(InteractionTarget))
+	{
+		CloseInteraction();
+	}
+	if (OathgateTargetActor && !IsValid(OathgateTargetActor))
+	{
+		CloseOathgatePrompt();
+	}
+	if (NPCInteractionTarget && !IsValid(NPCInteractionTarget))
+	{
+		CloseNPCInteraction();
+	}
+
+	// The emote picker owns E first if it's open - it has no world target to
+	// fall back to, so nothing below it would ever get a chance otherwise.
+	if (bEmoteMenuOpen)
+	{
+		ConfirmEmote();
 		return;
 	}
 
@@ -1720,6 +2024,24 @@ void ADCCCharacterBase::HandleInteractPressed()
 		return;
 	}
 
+	// The Oathgate confirm prompt owns E next, same reason as vendor/loot above -
+	// it is server-armed (Client_ShowOathgatePrompt), not opened by this press,
+	// so it has to be checked before anything below tries to open something else.
+	if (OathgateTargetActor)
+	{
+		HandleOathgateMenuConfirm();
+		return;
+	}
+
+	// The NPC menu (Talk/Shop/Leave) owns E next, same reason as everything
+	// above - it is already open, so this press is a choice within it, not a
+	// new interaction.
+	if (NPCInteractionTarget)
+	{
+		HandleNPCInteractionConfirm();
+		return;
+	}
+
 	// Not talking yet: an ally under the crosshair starts a conversation.
 	if (ADCCCharacterBase* Target = FindInteractionTargetUnderCursor())
 	{
@@ -1754,16 +2076,75 @@ void ADCCCharacterBase::HandleInteractPressed()
 	}
 
 	// Still nobody to talk to as an ally: a non-combat speaker (the bartender
-	// and its kind) under the crosshair gets its own, much smaller
-	// interaction - say the next line - rather than the full ally menu above,
+	// and its kind) under the crosshair opens its own small menu - Talk, and
+	// Shop if this is an ADCCVendorNPC - rather than the full ally menu above,
 	// which ADCCDialogueNPC deliberately cannot open (it is not an
 	// ADCCCharacterBase). No hostile-nearby confirm step, matching loot below -
 	// talking to the bartender mid-fight is odd, not dangerous.
 	if (ADCCDialogueNPC* Speaker = FindDialogueNPCUnderCursor())
 	{
 		PendingTalkTarget = nullptr;
-		Speaker->TryPlayerInteract(this);
+		NPCInteractionTarget = Speaker;
+		NPCInteractionIndex = 0;
+		BuildNPCInteractionOptions();
 		return;
+	}
+
+	// Still nobody to talk to: a loot box station under the crosshair opens
+	// one owned box of its tier (or explains there is nothing to open).
+	// Checked before the corpse/chest branch below for the same reason
+	// dialogue is - it is an even smaller interaction than either.
+	if (ADCCLootBoxStation* Station = FindLootBoxStationUnderCursor())
+	{
+		PendingTalkTarget = nullptr;
+		Station->TryPlayerInteract(this);
+		return;
+	}
+
+	// Still nobody to talk to: the science lab's portal switch, same tiny
+	// "press it" interaction as a loot box station.
+	if (ADCCPortalConsole* Console = FindPortalConsoleUnderCursor())
+	{
+		PendingTalkTarget = nullptr;
+		Console->TryPlayerInteract(this);
+		return;
+	}
+
+	// Puzzles/ interactables, same one-shot "press it" shape. Both resolve
+	// through the shared Visibility sweep, so nothing new is being traced here.
+	{
+		AActor* PuzzleHit = SweepForInteractionCandidate();
+		const bool bInRange = PuzzleHit
+			&& FVector::Dist(GetActorLocation(), PuzzleHit->GetActorLocation()) <= InteractionRange;
+
+		if (bInRange)
+		{
+			if (ADCCBreakerSwitch* Switch = Cast<ADCCBreakerSwitch>(PuzzleHit))
+			{
+				PendingTalkTarget = nullptr;
+				Switch->TryPlayerInteract(this);
+				return;
+			}
+
+			// Checked after the switch because a door is the broader type -
+			// ADCCComplianceDoor is an ADCCPuzzleDoor and must not be caught
+			// by an earlier, narrower branch.
+			if (ADCCPuzzleDoor* Door = Cast<ADCCPuzzleDoor>(PuzzleHit))
+			{
+				PendingTalkTarget = nullptr;
+				Door->TryPlayerInteract(this);
+				return;
+			}
+
+			// A rover is bulkier than anything else here, so the sweep can find
+			// it from further out - hence the doubled range check server-side.
+			if (ADCCRover* Rover = Cast<ADCCRover>(PuzzleHit))
+			{
+				PendingTalkTarget = nullptr;
+				Rover->TryPlayerInteract(this);
+				return;
+			}
+		}
 	}
 
 	// Still nobody to talk to: a corpse or chest under the crosshair opens the
@@ -1940,6 +2321,419 @@ void ADCCCharacterBase::CloseVendorMenu()
 	VendorPendingDrinkId = NAME_None;
 }
 
+void ADCCCharacterBase::CycleOathgateMenu(int32 Delta)
+{
+	if (!OathgateTargetActor)
+	{
+		return;
+	}
+
+	// Two rows: Enter, Turn Away.
+	OathgateMenuIndex = ((OathgateMenuIndex + Delta) % 2 + 2) % 2;
+}
+
+void ADCCCharacterBase::CloseOathgatePrompt()
+{
+	OathgateTargetActor = nullptr;
+	OathgateMenuIndex = 0;
+}
+
+void ADCCCharacterBase::HandleOathgateMenuConfirm()
+{
+	ADCCOathgate* Gate = OathgateTargetActor;
+
+	// Row 0 = Enter, row 1 = Turn Away - only Enter does anything.
+	if (Gate && OathgateMenuIndex == 0)
+	{
+		if (HasAuthority())
+		{
+			Server_ActivateOathgate_Implementation(Gate);
+		}
+		else
+		{
+			Server_ActivateOathgate(Gate);
+		}
+	}
+
+	CloseOathgatePrompt();
+}
+
+void ADCCCharacterBase::Client_ShowOathgatePrompt_Implementation(ADCCOathgate* Gate)
+{
+	// Gate null is how ADCCOathgate::HandleTriggerEndOverlap tells this client
+	// to close the prompt again - walking back out without deciding reads as
+	// "turn away" on its own, same as picking that row explicitly would.
+	if (!Gate)
+	{
+		CloseOathgatePrompt();
+		return;
+	}
+
+	OathgateTargetActor = Gate;
+	OathgateMenuIndex = 0;
+}
+
+void ADCCCharacterBase::Server_ActivateOathgate_Implementation(ADCCOathgate* Gate)
+{
+	// Re-validated here rather than trusted from the client's confirm - the
+	// usual "client picks, server re-validates" shape everything else in this
+	// file follows. ADCCOathgate::RequestActivation does its own eligibility
+	// check too; this is just the character-side half (alive, actually a
+	// crawler, not still on the other side of the map somehow).
+	if (!Gate || !IsAlive() || IsDowned() || !IsCrawler())
+	{
+		return;
+	}
+
+	Gate->RequestActivation(this);
+}
+
+void ADCCCharacterBase::Server_ActivatePortalConsole_Implementation(ADCCPortalConsole* Console)
+{
+	if (!Console || !Console->Portal)
+	{
+		return;
+	}
+
+	if (FVector::Dist(GetActorLocation(), Console->GetActorLocation()) > InteractionRange)
+	{
+		return;
+	}
+
+	Console->Portal->Activate();
+}
+
+void ADCCCharacterBase::Server_ForcePuzzleDoor_Implementation(ADCCPuzzleDoor* Door)
+{
+	if (!Door)
+	{
+		return;
+	}
+
+	if (FVector::Dist(GetActorLocation(), Door->GetActorLocation()) > InteractionRange)
+	{
+		return;
+	}
+
+	// The door owns the rules - Favor cost, Strength gate, whether forcing is
+	// allowed at all. Re-checking any of that here would just be a second
+	// place to keep in sync.
+	Door->ForceOpen(this);
+}
+
+void ADCCCharacterBase::Server_EnterRover_Implementation(ADCCRover* Rover)
+{
+	if (!Rover || Rover->IsOccupied())
+	{
+		return;
+	}
+
+	if (FVector::Dist(GetActorLocation(), Rover->GetActorLocation()) > InteractionRange * 2.0f)
+	{
+		return;
+	}
+
+	Rover->EnterRover(this);
+}
+
+void ADCCCharacterBase::Server_EjectRoverPassengers_Implementation(ADCCRover* Rover)
+{
+	if (Rover)
+	{
+		Rover->EjectPassengers();
+	}
+}
+
+void ADCCCharacterBase::Server_ExitRover_Implementation(ADCCRover* Rover)
+{
+	if (Rover)
+	{
+		Rover->ExitRover();
+	}
+}
+
+void ADCCCharacterBase::Server_ToggleRoverWindows_Implementation(ADCCRover* Rover)
+{
+	if (Rover && Rover->Driver == this)
+	{
+		Rover->ToggleWindows();
+	}
+}
+
+void ADCCCharacterBase::Server_ToggleRoverRadio_Implementation(ADCCRover* Rover)
+{
+	if (Rover && Rover->Driver == this)
+	{
+		Rover->ToggleRadio();
+	}
+}
+
+void ADCCCharacterBase::Server_DepositToEscrow_Implementation(ADCCEscrowLock* Lock)
+{
+	if (!Lock)
+	{
+		return;
+	}
+
+	if (FVector::Dist(GetActorLocation(), Lock->GetActorLocation()) > InteractionRange)
+	{
+		return;
+	}
+
+	// Routed back through the lock's own interaction so the deposit-then-crowbar
+	// ordering lives in exactly one place.
+	Lock->TryPlayerInteract(this);
+}
+
+void ADCCCharacterBase::Server_FlipBreakerSwitch_Implementation(ADCCBreakerSwitch* Switch)
+{
+	if (!Switch)
+	{
+		return;
+	}
+
+	if (FVector::Dist(GetActorLocation(), Switch->GetActorLocation()) > InteractionRange)
+	{
+		return;
+	}
+
+	Switch->Flip();
+}
+
+void ADCCCharacterBase::EnterAwaitingOtherCrawlers()
+{
+	if (!HasAuthority() || bAwaitingOtherCrawlers)
+	{
+		return;
+	}
+
+	bAwaitingOtherCrawlers = true;
+}
+
+void ADCCCharacterBase::OnRep_AwaitingOtherCrawlers()
+{
+	if (!bAwaitingOtherCrawlers)
+	{
+		return;
+	}
+
+	// The black screen owns the view now - nothing underneath it should still
+	// be open, same reasoning as every other terminal-state transition in
+	// this class closing whatever menu happened to be up.
+	CloseInteraction();
+	CloseLootMenu();
+	CloseVendorMenu();
+	CloseOathgatePrompt();
+	CloseNPCInteraction();
+}
+
+void ADCCCharacterBase::BuildNPCInteractionOptions()
+{
+	NPCInteractionOptions.Reset();
+
+	if (!NPCInteractionTarget)
+	{
+		return;
+	}
+
+	NPCInteractionOptions.Add(EDCCNPCInteractionOption::Talk);
+
+	// Only a shopkeeper gets the Shop row - a plain ADCCDialogueNPC has
+	// nothing to sell, and an empty/disabled row would just be confusing.
+	if (Cast<ADCCVendorNPC>(NPCInteractionTarget.Get()))
+	{
+		NPCInteractionOptions.Add(EDCCNPCInteractionOption::Shop);
+	}
+
+	TArray<FName> Offerable;
+	GetOfferableQuestIds(Offerable);
+	if (!Offerable.IsEmpty())
+	{
+		NPCInteractionOptions.Add(EDCCNPCInteractionOption::Quests);
+	}
+
+	if (const ADCCDialogueNPC_LiftAttendant* LiftAttendant = Cast<ADCCDialogueNPC_LiftAttendant>(NPCInteractionTarget.Get()))
+	{
+		if (LiftAttendant->LinkedLift)
+		{
+			NPCInteractionOptions.Add(EDCCNPCInteractionOption::RideLift);
+		}
+	}
+
+	NPCInteractionOptions.Add(EDCCNPCInteractionOption::Leave);
+
+	NPCInteractionIndex = FMath::Clamp(NPCInteractionIndex, 0, NPCInteractionOptions.Num() - 1);
+}
+
+void ADCCCharacterBase::GetOfferableQuestIds(TArray<FName>& OutIds) const
+{
+	OutIds.Reset();
+
+	if (!NPCInteractionTarget)
+	{
+		return;
+	}
+
+	const UDCCQuestComponent* QuestComp = UDCCQuestComponent::Get(this);
+
+	for (const FName QuestId : NPCInteractionTarget->OfferedQuestIds)
+	{
+		// Already active or already finished is not something to offer again -
+		// StartQuest would refuse it anyway (see its own comment on why), this
+		// just keeps it off the list instead of showing a row that does nothing.
+		if (QuestComp && (QuestComp->IsQuestActive(QuestId) || QuestComp->IsQuestComplete(QuestId)))
+		{
+			continue;
+		}
+
+		OutIds.Add(QuestId);
+	}
+}
+
+void ADCCCharacterBase::CycleNPCInteractionMenu(int32 Delta)
+{
+	int32 Count;
+	if (bNPCShowingQuests)
+	{
+		// +1 for the trailing "Back" row, same convention as the loot menu's
+		// itemised page.
+		TArray<FName> Offerable;
+		GetOfferableQuestIds(Offerable);
+		Count = Offerable.Num() + 1;
+	}
+	else
+	{
+		Count = NPCInteractionOptions.Num();
+	}
+
+	if (Count <= 0)
+	{
+		return;
+	}
+
+	NPCInteractionIndex = ((NPCInteractionIndex + Delta) % Count + Count) % Count;
+}
+
+void ADCCCharacterBase::CloseNPCInteraction()
+{
+	NPCInteractionTarget = nullptr;
+	NPCInteractionOptions.Reset();
+	NPCInteractionIndex = 0;
+	bNPCShowingQuests = false;
+}
+
+void ADCCCharacterBase::HandleNPCInteractionConfirm()
+{
+	ADCCDialogueNPC* Speaker = NPCInteractionTarget;
+	if (!Speaker)
+	{
+		CloseNPCInteraction();
+		return;
+	}
+
+	// Walking away closes the menu, same as every other menu in this class.
+	if (FVector::Dist(GetActorLocation(), Speaker->GetActorLocation()) > InteractionRange)
+	{
+		CloseNPCInteraction();
+		return;
+	}
+
+	if (bNPCShowingQuests)
+	{
+		TArray<FName> Offerable;
+		GetOfferableQuestIds(Offerable);
+
+		// The row after the last quest is Back, same layout as the loot menu's
+		// itemised page.
+		if (Offerable.IsValidIndex(NPCInteractionIndex))
+		{
+			const FName QuestId = Offerable[NPCInteractionIndex];
+			if (HasAuthority())
+			{
+				Server_AcceptQuestFromNPC_Implementation(Speaker, QuestId);
+			}
+			else
+			{
+				Server_AcceptQuestFromNPC(Speaker, QuestId);
+			}
+		}
+
+		// Back to the top menu either way - rebuilt, since accepting a quest
+		// changes what GetOfferableQuestIds returns next time it is checked.
+		bNPCShowingQuests = false;
+		NPCInteractionIndex = 0;
+		BuildNPCInteractionOptions();
+		return;
+	}
+
+	if (!NPCInteractionOptions.IsValidIndex(NPCInteractionIndex))
+	{
+		CloseNPCInteraction();
+		return;
+	}
+
+	const EDCCNPCInteractionOption Option = NPCInteractionOptions[NPCInteractionIndex];
+
+	switch (Option)
+	{
+	case EDCCNPCInteractionOption::Talk:
+		// Called directly rather than through Speaker->TryPlayerInteract -
+		// that virtual is what makes E open the Shop menu instead on an
+		// ADCCVendorNPC, which is now its own separate row below rather than
+		// something Talk should also trigger.
+		Speaker->SayNextLine();
+
+		// Stays open, rebuilt - repeated Talk presses step through the
+		// script one line at a time, same as it always has.
+		BuildNPCInteractionOptions();
+		return;
+
+	case EDCCNPCInteractionOption::Shop:
+		if (ADCCVendorNPC* Vendor = Cast<ADCCVendorNPC>(Speaker))
+		{
+			OpenVendorMenu(Vendor);
+		}
+		CloseNPCInteraction();
+		return;
+
+	case EDCCNPCInteractionOption::Quests:
+		bNPCShowingQuests = true;
+		NPCInteractionIndex = 0;
+		return;
+
+	case EDCCNPCInteractionOption::RideLift:
+		if (ADCCDialogueNPC_LiftAttendant* LiftAttendant = Cast<ADCCDialogueNPC_LiftAttendant>(Speaker))
+		{
+			LiftAttendant->RequestLift(this);
+		}
+		CloseNPCInteraction();
+		return;
+
+	case EDCCNPCInteractionOption::Leave:
+	default:
+		CloseNPCInteraction();
+		return;
+	}
+}
+
+void ADCCCharacterBase::Server_AcceptQuestFromNPC_Implementation(ADCCDialogueNPC* NPC, FName QuestId)
+{
+	if (!NPC || !NPC->OfferedQuestIds.Contains(QuestId))
+	{
+		return;
+	}
+
+	if (FVector::Dist(GetActorLocation(), NPC->GetActorLocation()) > InteractionRange)
+	{
+		return;
+	}
+
+	if (UDCCQuestComponent* QuestComp = UDCCQuestComponent::Get(this))
+	{
+		QuestComp->StartQuest(QuestId);
+	}
+}
+
 void ADCCCharacterBase::HandleVendorMenuConfirm()
 {
 	ADCCVendorNPC* Vendor = Cast<ADCCVendorNPC>(VendorTargetActor.Get());
@@ -2109,6 +2903,14 @@ void ADCCCharacterBase::Server_PurchaseDrink_Implementation(AActor* VendorActor,
 		return;
 	}
 
+	// "House Pour" - a real purchase happened, regardless of whether it's drunk
+	// now or stowed for later. Recorded here rather than in each branch below
+	// so both count exactly once, not zero or twice.
+	if (Achievements)
+	{
+		Achievements->Record(EDCCAchievementStat::FirstDrinkBought);
+	}
+
 	if (bDrinkNow)
 	{
 		ApplyConsumableEffects(Def.Effects);
@@ -2157,6 +2959,232 @@ void ADCCCharacterBase::Server_ConsumeStowedDrink_Implementation(int32 Index)
 	ADCCGameState::Log(this, EDCCLogCategory::Announcement, FText::Format(
 		NSLOCTEXT("DCC", "LogDrinkFromPack", "{0} finally gets around to that {1}."),
 		FText::FromString(GetActorNameOrLabel()), Def.DisplayName));
+}
+
+void ADCCCharacterBase::OpenLootBox(EDCCLootBoxTier Tier)
+{
+	if (HasAuthority())
+	{
+		Server_OpenLootBox_Implementation(Tier);
+	}
+	else
+	{
+		Server_OpenLootBox(Tier);
+	}
+}
+
+void ADCCCharacterBase::Server_OpenLootBox_Implementation(EDCCLootBoxTier Tier)
+{
+	// Re-verified here, not trusted from the client's own HUD state - the
+	// exact reason every other server entry point in this project re-checks
+	// its own gate rather than assuming a client only ever asks when allowed.
+	// "Boxes only open in a Safe Room" is a rule about the character's real,
+	// server-known location, so this is the one place it can actually be
+	// enforced.
+	if (!Inventory || !IsAlive() || IsDowned() || !IsInSafeRoom())
+	{
+		return;
+	}
+
+	FDCCOpenedLootBoxResult Result;
+	if (!Inventory->TryOpenLootBox(Tier, GetActorLocation(), Result))
+	{
+		return;
+	}
+
+	// Boons apply the exact same way a drink's Effects do - see this
+	// function's own translation layer just above. A box grants a blessing,
+	// not a bottle, but Stats never needed to know the difference.
+	for (const FDCCBoonDef& Boon : Result.Boons)
+	{
+		ApplyConsumableEffects(Boon.Effects);
+	}
+
+	const FText TierName = StaticEnum<EDCCLootBoxTier>()->GetDisplayNameTextByValue((int64)Tier);
+
+	FText BoonSummary = FText::GetEmpty();
+	if (!Result.Boons.IsEmpty())
+	{
+		TArray<FString> BoonNames;
+		for (const FDCCBoonDef& Boon : Result.Boons)
+		{
+			BoonNames.Add(Boon.DisplayName.ToString());
+		}
+		BoonSummary = FText::Format(
+			NSLOCTEXT("DCC", "LogLootBoxBoonSuffix", " Blessed with: {0}."),
+			FText::FromString(FString::Join(BoonNames, TEXT(", "))));
+	}
+
+	ADCCGameState::Log(this, EDCCLogCategory::Achievement, FText::Format(
+		NSLOCTEXT("DCC", "LogLootBoxOpened", "{0} cracks open a {1} box - {2} item(s) hit the floor.{3}"),
+		GetLootSourceName(), TierName, FText::AsNumber(Result.Items.Num()), BoonSummary));
+}
+
+void ADCCCharacterBase::ClaimAndOpenAllLootBoxes()
+{
+	if (HasAuthority())
+	{
+		Server_ClaimAndOpenAllLootBoxes_Implementation();
+	}
+	else
+	{
+		Server_ClaimAndOpenAllLootBoxes();
+	}
+}
+
+void ADCCCharacterBase::Server_ClaimAndOpenAllLootBoxes_Implementation()
+{
+	if (!IsAlive() || IsDowned())
+	{
+		return;
+	}
+
+	// Claiming pays XP/Favor and is unconditional, matching the existing
+	// per-achievement Claim button exactly - only the box-opening half below
+	// is a Safe Room privilege, so a call made in the field still banks
+	// everything except the boxes themselves.
+	if (Achievements)
+	{
+		TArray<FName> Pending;
+		Achievements->GetPendingRewardIds(Pending);
+		for (FName Id : Pending)
+		{
+			Achievements->RequestClaimReward(Id);
+		}
+	}
+
+	if (!Inventory)
+	{
+		return;
+	}
+
+	if (!IsInSafeRoom())
+	{
+		ShowLocalNotice(NSLOCTEXT("DCC", "LootBoxesAwaitSafeRoom",
+			"Rewards claimed. Sealed boxes can only be opened in a Safe Room."));
+		return;
+	}
+
+	// Counted, not opened yet - TryOpenLootBox rolls and spawns the instant
+	// it is called, and the whole point of this reveal (per Zoe's own
+	// reference - the Avatar State's line of past lives, stretching away
+	// from the one standing still in front of it) is to show every sealed
+	// box at once, in a line, before anything is actually opened.
+	TArray<EDCCLootBoxTier> BoxLineup;
+	for (uint8 TierIndex = 1; TierIndex < (uint8)EDCCLootBoxTier::MAX; ++TierIndex)
+	{
+		const EDCCLootBoxTier Tier = (EDCCLootBoxTier)TierIndex;
+		const int32 Count = Inventory->GetLootBoxCount(Tier);
+		for (int32 Index = 0; Index < Count; ++Index)
+		{
+			BoxLineup.Add(Tier);
+		}
+	}
+
+	if (BoxLineup.IsEmpty())
+	{
+		ShowLocalNotice(NSLOCTEXT("DCC", "NoLootBoxesToOpen", "Nothing sealed to open."));
+		return;
+	}
+
+	// Rooted for the whole reveal, same shared lock BeginReviveChannel uses -
+	// "stuck in place" is the point, not a side effect. Scales with how many
+	// boxes there are to look at, clamped so five boxes is not a blink and
+	// fifty is not a coffee break.
+	const float RevealSeconds = FMath::Clamp(0.6f * BoxLineup.Num(), 2.0f, 8.0f);
+	BeginCastLock(RevealSeconds);
+
+	// Receding directly away from the crawler, not sideways - the reference
+	// image's whole composition is a line running INTO the distance in front
+	// of whoever is standing still for it, not a row beside them.
+	const FVector Forward = GetActorForwardVector();
+	const FVector LineStart = GetActorLocation() + Forward * 200.0f;
+	constexpr float StepDistance = 140.0f;
+
+	for (AActor* OldProp : LootBoxRevealProps)
+	{
+		if (IsValid(OldProp))
+		{
+			OldProp->Destroy();
+		}
+	}
+	LootBoxRevealProps.Reset();
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	for (int32 Index = 0; Index < BoxLineup.Num(); ++Index)
+	{
+		const FVector SpawnLocation = LineStart + Forward * (StepDistance * Index);
+
+		if (ADCCLootBoxStation* Prop = GetWorld()->SpawnActor<ADCCLootBoxStation>(
+			ADCCLootBoxStation::StaticClass(), SpawnLocation, GetActorRotation(), SpawnParams))
+		{
+			// A sealed prop, not a real station - it never registers a real
+			// tier count and TryPlayerInteract is never called on it, so
+			// there is nothing here for a passing ally to accidentally
+			// "open" early. Just the right colour standing in the line.
+			Prop->Tier = BoxLineup[Index];
+			LootBoxRevealProps.Add(Prop);
+		}
+	}
+
+	TWeakObjectPtr<ADCCCharacterBase> WeakSelf(this);
+	const int32 BoxCount = BoxLineup.Num();
+
+	FTimerDelegate Finish;
+	Finish.BindLambda([WeakSelf, BoxLineup = MoveTemp(BoxLineup), LineStart, Forward, BoxCount]()
+	{
+		if (!WeakSelf.IsValid())
+		{
+			return;
+		}
+
+		ADCCCharacterBase* Self = WeakSelf.Get();
+
+		for (AActor* Prop : Self->LootBoxRevealProps)
+		{
+			if (IsValid(Prop))
+			{
+				Prop->Destroy();
+			}
+		}
+		Self->LootBoxRevealProps.Reset();
+
+		if (!Self->Inventory)
+		{
+			return;
+		}
+
+		int32 Opened = 0;
+		for (int32 Index = 0; Index < BoxLineup.Num(); ++Index)
+		{
+			const FVector SpawnLocation = LineStart + Forward * (140.0f * Index);
+
+			FDCCOpenedLootBoxResult Result;
+			if (Self->Inventory->TryOpenLootBox(BoxLineup[Index], SpawnLocation, Result))
+			{
+				for (const FDCCBoonDef& Boon : Result.Boons)
+				{
+					Self->ApplyConsumableEffects(Boon.Effects);
+				}
+				++Opened;
+			}
+		}
+
+		if (Opened > 0)
+		{
+			ADCCGameState::Log(Self, EDCCLogCategory::Achievement, FText::Format(
+				NSLOCTEXT("DCC", "LogLootBoxOpenedAll", "{0} claims everything owed - {1} box(es) cracked open in one go."),
+				Self->GetLootSourceName(), FText::AsNumber(Opened)));
+		}
+	});
+
+	GetWorldTimerManager().SetTimer(LootBoxRevealTimer, Finish, RevealSeconds, false);
+
+	ADCCGameState::Log(this, EDCCLogCategory::Announcement, FText::Format(
+		NSLOCTEXT("DCC", "LogLootBoxRevealStart", "{0} lines up {1} sealed box(es). The line stretches out ahead of them."),
+		GetLootSourceName(), FText::AsNumber(BoxCount)));
 }
 
 void ADCCCharacterBase::Server_LootOne_Implementation(AActor* Source, int32 Index)
@@ -2266,6 +3294,7 @@ void ADCCCharacterBase::CloseInteraction()
 	InspectedCharacter = nullptr;
 	InteractionOptions.Reset();
 	InteractionIndex = 0;
+	bEmoteMenuOpen = false;
 
 	// Esc is bound to this function alone, so it has to close whichever of the
 	// menus is actually open - harmless to call when a menu was already
@@ -2273,6 +3302,8 @@ void ADCCCharacterBase::CloseInteraction()
 	// already.
 	CloseLootMenu();
 	CloseVendorMenu();
+	CloseOathgatePrompt();
+	CloseNPCInteraction();
 }
 
 void ADCCCharacterBase::ResolveSocialCheck(ADCCCharacterBase* Target, bool bIntimidate)
@@ -2799,6 +3830,22 @@ float ADCCCharacterBase::GetEffectiveAttackRange() const
 	return AttackRange;
 }
 
+int32 ADCCCharacterBase::GetEffectiveWeaponDamageDie() const
+{
+	// Equipment wins when it says anything, same rule as GetEffectiveAttackRange -
+	// see that function's own comment.
+	if (Equipment)
+	{
+		const int32 Override = Equipment->GetWeaponDamageDie();
+		if (Override > 0)
+		{
+			return Override;
+		}
+	}
+
+	return WeaponDamageDie;
+}
+
 bool ADCCCharacterBase::IsInAttackRange(const ADCCCharacterBase* Target) const
 {
 	if (!Target)
@@ -2861,9 +3908,14 @@ FDCCAttackResult ADCCCharacterBase::PerformAttack(ADCCCharacterBase* Target, boo
 	Result = Ruleset->ResolveAttack(
 		Stats->GetEnhanced(),
 		AttackAbility,
-		WeaponDamageDie,
+		GetEffectiveWeaponDamageDie(),
 		TargetStats->GetEnhanced(),
-		TargetStats->Level);
+		TargetStats->Level,
+		/*SituationalBonus=*/0,
+		// A shield (or anything else with EvadeBonus) makes the TARGET harder
+		// to hit - this was previously summed by GetEvadeBonus() and never
+		// read anywhere, so equipping one did nothing to combat outcomes.
+		Target->Equipment ? Target->Equipment->GetEvadeBonus() : 0);
 
 	if (Result.bHit)
 	{
@@ -2882,6 +3934,21 @@ FDCCAttackResult ADCCCharacterBase::PerformAttack(ADCCCharacterBase* Target, boo
 		// alongside WeaponDamageDie, since a damage type changes only as
 		// often as gear does and isn't worth a second member field to track.
 		const EDCCDamageType AttackDamageType = Equipment ? Equipment->GetWeaponDamageType() : EDCCDamageType::Physical;
+
+		// The target's own last word on the blow. Anything that wants to be
+		// unhittable-but-not-invulnerable overrides this - see
+		// ADCCCharacterBase::ModifyIncomingDamage.
+		FinalDamage = Target->ModifyIncomingDamage(FinalDamage, this);
+		if (FinalDamage <= 0)
+		{
+			// Still a hit - it connected, it just did nothing. Reporting zero
+			// damage rather than a miss keeps the result honest for anything
+			// reading it (the Feed, achievements, the skill-mark system), and
+			// the stagger is what tells the player the swing landed at all.
+			Result.Damage = 0;
+			Target->ReactToHitFrom(GetActorLocation());
+			return Result;
+		}
 
 		TargetStats->ApplyDamage(FinalDamage, AttackDamageType);
 		Target->PlayCharacterSound(Target->HurtSound);
@@ -3078,6 +4145,10 @@ void ADCCCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	PlayerInputComponent->BindKey(EKeys::K, IE_Pressed, this, &ADCCCharacterBase::CycleFeedVisibility);
 	PlayerInputComponent->BindKey(EKeys::M, IE_Pressed, this, &ADCCCharacterBase::ToggleMount);
 
+	// B for the emote picker - free, and reads fine either as "bust a move" or
+	// as the game's own stand-in for whatever mnemonic sticks.
+	PlayerInputComponent->BindKey(EKeys::B, IE_Pressed, this, &ADCCCharacterBase::ToggleEmoteMenu);
+
 	// F1 for the DM panel. A function key rather than a letter because it is not
 	// a game action - it should not compete with anything a player might press
 	// mid-fight, and it stays out of the way of the movement hand entirely.
@@ -3134,6 +4205,87 @@ void ADCCCharacterBase::Server_AttackNearest_Implementation()
 	// Deliberately re-runs target selection rather than accepting a target from
 	// the client, so a modified client cannot nominate an out-of-range victim.
 	ResolveOrQueueAttack();
+}
+
+void ADCCCharacterBase::AttemptRangedAttack()
+{
+	// Traced locally before the RPC, not after - this client's camera is the
+	// only one that can answer "what am I looking at", same reasoning as
+	// ResolveOrQueueSkill's target parameter.
+	ADCCCharacterBase* NominatedTarget = FindHostileUnderCrosshair(GetEffectiveAttackRange());
+
+	if (HasAuthority())
+	{
+		ResolveOrQueueRangedAttack(NominatedTarget);
+		return;
+	}
+
+	Server_RangedAttack(NominatedTarget);
+}
+
+ADCCCharacterBase* ADCCCharacterBase::FindHostileUnderCrosshair(float MaxRange) const
+{
+	const APlayerController* PC = Cast<APlayerController>(GetController());
+	UWorld* World = GetWorld();
+	if (!PC || !World || MaxRange <= 0.0f)
+	{
+		return nullptr;
+	}
+
+	FVector CameraLocation;
+	FRotator CameraRotation;
+	PC->GetPlayerViewPoint(CameraLocation, CameraRotation);
+
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+
+	// A narrow sweep rather than a bare line trace - forgiving enough that
+	// "roughly on target" still counts, same spirit as the interaction sweep's
+	// generous sphere, just tighter since this is aimed fire, not a fist bump.
+	FHitResult Hit;
+	if (!World->SweepSingleByChannel(
+		Hit, CameraLocation, CameraLocation + CameraRotation.Vector() * MaxRange,
+		FQuat::Identity, ECC_Visibility, FCollisionShape::MakeSphere(24.0f), Params))
+	{
+		return nullptr;
+	}
+
+	ADCCCharacterBase* Target = Cast<ADCCCharacterBase>(Hit.GetActor());
+	if (!Target || !Target->IsAlive() || !IsHostileTo(Target))
+	{
+		return nullptr;
+	}
+
+	return Target;
+}
+
+void ADCCCharacterBase::Server_RangedAttack_Implementation(ADCCCharacterBase* NominatedTarget)
+{
+	ResolveOrQueueRangedAttack(NominatedTarget);
+}
+
+void ADCCCharacterBase::ResolveOrQueueRangedAttack(ADCCCharacterBase* NominatedTarget)
+{
+	// The nomination is a claim, not a fact - re-checked here exactly like
+	// ResolveOrQueueSkill re-checks CanActivate before trusting its own Target
+	// parameter. A target that fails this still reaches PerformAttack below as
+	// nullptr rather than being treated as an error - a shot fired at nothing
+	// is not a refused action, it is a miss, same as swinging into empty air.
+	ADCCCharacterBase* Target =
+		(NominatedTarget && NominatedTarget->IsAlive() && IsHostileTo(NominatedTarget) && IsInAttackRange(NominatedTarget))
+		? NominatedTarget : nullptr;
+
+	const UWorld* World = GetWorld();
+	if (ADCCGameState* GameState = World ? World->GetGameState<ADCCGameState>() : nullptr)
+	{
+		if (GameState->IsCombatPaused())
+		{
+			GameState->QueueAction(this, NAME_None, Target);
+			return;
+		}
+	}
+
+	PerformAttack(Target);
 }
 
 void ADCCCharacterBase::ResolveOrQueueAttack()
@@ -3384,6 +4536,81 @@ void ADCCCharacterBase::PlayEmote()
 	PlayOneShotAnimation(EmoteAnimations[Index]);
 }
 
+void ADCCCharacterBase::ToggleEmoteMenu()
+{
+	if (bEmoteMenuOpen)
+	{
+		bEmoteMenuOpen = false;
+		return;
+	}
+
+	if (EmoteAnimations.IsEmpty())
+	{
+		ShowLocalNotice(NSLOCTEXT("DCC", "NoEmotes", "Nothing to perform yet."));
+		return;
+	}
+
+	bEmoteMenuOpen = true;
+	EmoteMenuIndex = 0;
+}
+
+void ADCCCharacterBase::CycleEmoteMenu(int32 Delta)
+{
+	if (EmoteAnimations.IsEmpty())
+	{
+		return;
+	}
+
+	const int32 Count = EmoteAnimations.Num();
+	EmoteMenuIndex = ((EmoteMenuIndex + Delta) % Count + Count) % Count;
+}
+
+void ADCCCharacterBase::ConfirmEmote()
+{
+	if (!EmoteAnimations.IsValidIndex(EmoteMenuIndex))
+	{
+		bEmoteMenuOpen = false;
+		return;
+	}
+
+	Server_RequestEmoteAtIndex(EmoteMenuIndex);
+	bEmoteMenuOpen = false;
+}
+
+void ADCCCharacterBase::Server_RequestEmoteAtIndex_Implementation(int32 Index)
+{
+	if (bHasDied || !EmoteAnimations.IsValidIndex(Index))
+	{
+		return;
+	}
+
+	Multicast_PlayEmoteAtIndex(Index);
+}
+
+void ADCCCharacterBase::Multicast_PlayEmoteAtIndex_Implementation(int32 Index)
+{
+	if (!EmoteAnimations.IsValidIndex(Index))
+	{
+		return;
+	}
+
+	PlayOneShotAnimation(EmoteAnimations[Index]);
+
+	// "Custom" per DCCQuestTypes.h's own convention - a dev-goal quest
+	// ("perform for the crowd a few times") is exactly the kind of thing
+	// that escape hatch exists for. Every machine runs this Multicast, but
+	// NotifyEvent's own quest lookup no-ops without authority, so nothing
+	// double-counts.
+	UDCCQuestComponent::NotifyEvent(this, EDCCObjectiveType::Custom, TEXT("EmotePerformed"), 1);
+
+	// Same Feed line the random kill-celebration path already uses - a
+	// player choosing to dance for the audience is exactly as showrunner-
+	// coded as one landing by accident.
+	ADCCGameState::Log(this, EDCCLogCategory::Combat, FText::Format(
+		NSLOCTEXT("DCC", "LogEmote", "{0} plays to the cameras. Chat approves."),
+		FText::FromString(GetName())));
+}
+
 UAnimationAsset* ADCCCharacterBase::SelectLocomotionAnimation() const
 {
 	// Climbing overrides everything below it. It is picked from the replicated
@@ -3476,6 +4703,26 @@ void ADCCCharacterBase::Tick(float DeltaSeconds)
 		ExitSelfieMode();
 	}
 
+	// EnterSelfieMode already refuses to START a pose near a hostile, but that
+	// only ever covered the moment of pressing C - it does nothing about a
+	// hostile that closes in (or spawns) WHILE already posing, or a character
+	// that somehow ends up in Selfie Mode with one already nearby. Zoe's own
+	// report (2026-08-29): "spawned in in selfie mode and can't get out" with
+	// enemies nearby - this is the other of the two hardening options this
+	// project's own 2026-08-28 entry flagged and never built: proactively
+	// throw the camera back rather than only bounding how long a stuck one
+	// can last. ExitSelfieMode itself has no hostile gate and never has -
+	// exiting is and must stay unconditional - this just calls it proactively
+	// instead of waiting for the player to notice and press C.
+	if (bInSelfieMode && HasNearbyLivingHostile(SelfieHostileRefuseRadius))
+	{
+		ShowLocalNotice(NSLOCTEXT("DCC", "SelfieInterrupted", "Something's coming - selfie cut short."));
+
+		GetWorldTimerManager().ClearTimer(SelfieShutterTimer);
+		GetWorldTimerManager().ClearTimer(SelfieExitTimer);
+		ExitSelfieMode();
+	}
+
 	// Runs on every machine: locomotion is cosmetic and each client should pick
 	// its clip from the movement it can already see, rather than replicating a
 	// state that velocity already implies.
@@ -3491,6 +4738,14 @@ void ADCCCharacterBase::Tick(float DeltaSeconds)
 		{
 			Stats->TickRegeneration(DeltaSeconds);
 		}
+	}
+	else if (IsClimbing() && IsLocallyControlled())
+	{
+		// Cosmetic-only mirror of TickStamina's climbing math, for the one
+		// machine that is neither the server nor a simulated proxy: the
+		// climbing player's own client. See TickClimbMovementCosmetic's
+		// comment for why this is necessary at all.
+		TickClimbMovementCosmetic(DeltaSeconds);
 	}
 
 	// The nameplate is billboarded here rather than through a rotating component,
@@ -3520,6 +4775,11 @@ void ADCCCharacterBase::Tick(float DeltaSeconds)
 void ADCCCharacterBase::PlayClimbAnimation(float DurationSeconds)
 {
 	PlayOneShotAnimation(ClimbAnimation, DurationSeconds);
+}
+
+void ADCCCharacterBase::Multicast_PlayEnterVehicleAnimation_Implementation()
+{
+	PlayOneShotAnimation(EnterVehicleAnimation);
 }
 
 void ADCCCharacterBase::Multicast_PlayEmote_Implementation()
@@ -3849,6 +5109,11 @@ void ADCCCharacterBase::FinishDying()
 		{
 			SetLifeSpan(CorpseLifeSpan);
 		}
+
+		if (BodyCollectorClass)
+		{
+			GetWorldTimerManager().SetTimer(BodyCollectorTimer, this, &ADCCCharacterBase::CheckForBodyCollector, BodyCollectorDelaySeconds, false);
+		}
 	}
 
 	BP_OnDied();
@@ -4013,7 +5278,9 @@ void ADCCCharacterBase::LootOne(int32 Index, ADCCCharacterBase* Looter)
 		return;
 	}
 
-	DCCLoot::SpawnRolledLoot(GetWorld(), PendingLoot[Index], GetLootOrigin());
+	bLootHandled = true;
+
+	DCCLoot::SpawnRolledLoot(GetWorld(), PendingLoot[Index], GetLootOrigin(), Looter);
 	PendingLoot.RemoveAt(Index);
 	bHasLoot = !PendingLoot.IsEmpty();
 
@@ -4031,6 +5298,8 @@ void ADCCCharacterBase::LootAll(ADCCCharacterBase* Looter)
 		return;
 	}
 
+	bLootHandled = true;
+
 	// Cleared first: two players confirming "Loot All" on the same frame would
 	// otherwise both pass the check above and spawn everything twice.
 	bHasLoot = false;
@@ -4038,7 +5307,7 @@ void ADCCCharacterBase::LootAll(ADCCCharacterBase* Looter)
 	const FVector Origin = GetLootOrigin();
 	for (const FDCCRolledLoot& Rolled : PendingLoot)
 	{
-		DCCLoot::SpawnRolledLoot(GetWorld(), Rolled, Origin);
+		DCCLoot::SpawnRolledLoot(GetWorld(), Rolled, Origin, Looter);
 	}
 
 	PendingLoot.Reset();
@@ -4059,6 +5328,8 @@ void ADCCCharacterBase::StowInto(ADCCCharacterBase* Looter)
 		return;
 	}
 
+	bLootHandled = true;
+
 	if (Looter && Looter->Inventory)
 	{
 		Looter->Inventory->StowRemains(GetLootSourceName(), PendingLoot);
@@ -4067,9 +5338,139 @@ void ADCCCharacterBase::StowInto(ADCCCharacterBase* Looter)
 	PendingLoot.Reset();
 	bHasLoot = false;
 
-	if (LootedCorpseLifeSpan > 0.0f)
+	// Stow retires the source outright, same as ADCCLootContainer::StowInto -
+	// the whole point of "Stow" over "Loot All" is that the body/chest is gone
+	// afterward, not left standing empty for LootedCorpseLifeSpan to catch up
+	// to later. LootAll/LootOne still use the timed fade, since those leave the
+	// choice of when to stop looting to the player.
+	Destroy();
+}
+
+namespace
+{
+	// Resolved lazily, on first use, rather than as a constructor-time
+	// ConstructorHelpers::FClassFinder default. That original version hung
+	// the editor on every launch (see DISPATCH.md, 2026-08-28 incident):
+	// ADCCCharacterBase's constructor runs for every character CDO,
+	// including ADCCEnemyCharacter's own, and BP_DCCEnemy is itself a
+	// Blueprint parented to ADCCEnemyCharacter - so loading it from inside
+	// that hierarchy's own constructor made CDO construction depend on
+	// itself. Resolving here, well after all CDOs exist, breaks the cycle.
+	// Do not move this back into the constructor.
+	TSubclassOf<ADCCEnemyCharacter> ResolveDefaultBodyCollectorClass()
 	{
-		SetLifeSpan(LootedCorpseLifeSpan);
+		static const TSubclassOf<ADCCEnemyCharacter> DefaultClass = []() -> TSubclassOf<ADCCEnemyCharacter>
+		{
+			const FSoftClassPath Path(TEXT("/Game/DCC/Characters/BP_DCCEnemy.BP_DCCEnemy_C"));
+			return Path.TryLoadClass<ADCCEnemyCharacter>();
+		}();
+		return DefaultClass;
+	}
+}
+
+void ADCCCharacterBase::CheckForBodyCollector()
+{
+	if (!HasAuthority() || bLootHandled || !bHasDied)
+	{
+		return;
+	}
+
+	// BodyCollectorClass is authorable per-Blueprint (EditDefaultsOnly); an
+	// unset one falls back to the bare BP_DCCEnemy, resolved lazily - see
+	// ResolveDefaultBodyCollectorClass above for why this can't happen in
+	// the constructor.
+	const TSubclassOf<ADCCEnemyCharacter> CollectorClass = BodyCollectorClass ? TSubclassOf<ADCCEnemyCharacter>(BodyCollectorClass) : ResolveDefaultBodyCollectorClass();
+	if (!CollectorClass)
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	FVector2D RandomDirection = FVector2D(FMath::FRandRange(-1.0f, 1.0f), FMath::FRandRange(-1.0f, 1.0f)).GetSafeNormal();
+	if (RandomDirection.IsNearlyZero())
+	{
+		RandomDirection = FVector2D(1.0f, 0.0f);
+	}
+
+	const FVector SpawnLocation = GetActorLocation() + FVector(RandomDirection * BodyCollectorSpawnRadius, 0.0f);
+	const FTransform SpawnTransform(FRotator::ZeroRotator, SpawnLocation);
+
+	// Deferred, not SpawnActor - a plain SpawnActor runs BeginPlay before this
+	// function returns, which is the exact "DungeonGenerator spawned rooms
+	// with a plain SpawnActor and RoomType wasn't set yet" trap this project
+	// has already been bitten by once. BeginBodyCollection has to land before
+	// Tick's first run sees bIsBodyCollector.
+	ADCCEnemyCharacter* Collector = World->SpawnActorDeferred<ADCCEnemyCharacter>(CollectorClass, SpawnTransform);
+	if (Collector)
+	{
+		Collector->BeginBodyCollection(this);
+		Collector->FinishSpawning(SpawnTransform);
+	}
+}
+
+void ADCCCharacterBase::NotifyCombatStarted()
+{
+	if (!HasAuthority() || !Equipment)
+	{
+		return;
+	}
+
+	FDCCEquipmentDef CursedItem;
+	if (!Equipment->FindCursedCombatStartEffect(CursedItem))
+	{
+		return;
+	}
+
+	// LaunchCharacter, not a teleport - matches this project's own existing
+	// hit-stagger convention (see OnAnyAttackAttempted's ImpactSource shove)
+	// and, because it is resolved through the normal movement component
+	// simulation rather than an instant relocation, it cannot clip a
+	// character through solid geometry the way a raw SetActorLocation could.
+	// It CAN still carry someone off a ledge or into an open hazard (the
+	// Diving Pool, a trap trigger) since nothing about a launch stops at a
+	// trigger volume the way it stops at a wall - flagged, not solved, here.
+	LaunchCharacter(
+		GetActorForwardVector() * CursedItem.ForcedHopForwardSpeed + FVector(0.0f, 0.0f, CursedItem.ForcedHopUpwardSpeed),
+		false, false);
+
+	if (UAnimationAsset* TauntAnimation = CursedItem.ForcedActionAnimation.LoadSynchronous())
+	{
+		PlayOneShotAnimation(TauntAnimation);
+	}
+
+	ADCCGameState::Log(this, EDCCLogCategory::Announcement, !CursedItem.ForcedActionFlavorText.IsEmpty()
+		? FText::Format(NSLOCTEXT("DCC", "LogCursedCombatStart", "{0} {1}"), GetLootSourceName(), CursedItem.ForcedActionFlavorText)
+		: FText::Format(NSLOCTEXT("DCC", "LogCursedCombatStartDefault", "{0}'s cursed gear forces them into motion."), GetLootSourceName()));
+}
+
+void ADCCCharacterBase::RecordRoomVisited(FName RoomId)
+{
+	if (!HasAuthority() || RoomId.IsNone() || VisitedRoomIds.Contains(RoomId))
+	{
+		return;
+	}
+
+	// "Still In Your Pajamas" - this crawler's very first room entry, full
+	// stop, checked before adding RoomId below. In this floor's own layout
+	// the first room anyone ever enters is the Queue, so this reads as "reached
+	// the Queue" without hardcoding that RoomId specifically - it would still
+	// fire correctly if the starting room ever changed.
+	if (VisitedRoomIds.IsEmpty() && Equipment && Achievements
+		&& Equipment->GetEquippedId(EDCCEquipmentSlot::Body).IsNone())
+	{
+		Achievements->Record(EDCCAchievementStat::ArrivedBodySlotEmpty);
+	}
+
+	VisitedRoomIds.Add(RoomId);
+
+	if (Achievements)
+	{
+		Achievements->Record(EDCCAchievementStat::UniqueRoomVisited);
 	}
 }
 
@@ -4096,6 +5497,17 @@ void ADCCCharacterBase::EnterSelfieMode()
 	APlayerController* PC = Cast<APlayerController>(GetController());
 	if (!PC || !SelfieCamera || bInSelfieMode || !IsAlive() || IsDowned())
 	{
+		return;
+	}
+
+	// Added after Zoe got caught posing mid-fight (2026-08-28). The real-time
+	// ceiling below bounds how LONG a stuck camera can last, but does nothing
+	// about the far more common case of choosing to pose while something is
+	// actively trying to kill you. Refusing outright here is simpler and safer
+	// than trying to auto-cancel mid-pose the moment a fight starts.
+	if (HasNearbyLivingHostile(SelfieHostileRefuseRadius))
+	{
+		ShowLocalNotice(NSLOCTEXT("DCC", "SelfieTooDangerous", "Too dangerous to stop and pose right now."));
 		return;
 	}
 
@@ -4166,6 +5578,7 @@ void ADCCCharacterBase::ExitSelfieMode()
 
 	bInSelfieMode = false;
 	SelfieModeEnteredRealTimeSeconds = -1.0;
+	CurrentSelfiePoseIndex = 0;
 
 	if (SelfieCamera)
 	{
@@ -4185,4 +5598,63 @@ void ADCCCharacterBase::ExitSelfieMode()
 	{
 		PC->SetViewTargetWithBlend(this, 0.3f);
 	}
+}
+
+void ADCCCharacterBase::CycleSelfiePose(int32 Delta)
+{
+	if (!bInSelfieMode || SelfiePoseAnimations.Num() == 0)
+	{
+		return;
+	}
+
+	const int32 Count = SelfiePoseAnimations.Num();
+	CurrentSelfiePoseIndex = ((CurrentSelfiePoseIndex + Delta) % Count + Count) % Count;
+
+	if (UAnimationAsset* Pose = SelfiePoseAnimations[CurrentSelfiePoseIndex])
+	{
+		PlayOneShotAnimation(Pose);
+	}
+
+	// Picking a pose restarts the hold, so the shutter captures the pose just
+	// chosen rather than firing mid-swap because the clock was already most of
+	// the way through whatever pose came before.
+	GetWorldTimerManager().SetTimer(
+		SelfieShutterTimer, this, &ADCCCharacterBase::TakeSelfieScreenshot, SelfiePoseSeconds, false);
+}
+
+float ADCCCharacterBase::GetSelfiePoseProgress() const
+{
+	if (!bInSelfieMode || SelfiePoseSeconds <= 0.0f)
+	{
+		return 0.0f;
+	}
+
+	return FMath::Clamp(GetWorldTimerManager().GetTimerElapsed(SelfieShutterTimer) / SelfiePoseSeconds, 0.0f, 1.0f);
+}
+
+bool ADCCCharacterBase::HasNearbyLivingHostile(float Range) const
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return false;
+	}
+
+	const float RangeSquared = FMath::Square(Range);
+
+	for (TActorIterator<ADCCCharacterBase> It(World); It; ++It)
+	{
+		const ADCCCharacterBase* Candidate = *It;
+		if (!Candidate || Candidate == this || !Candidate->IsAlive() || !IsHostileTo(Candidate))
+		{
+			continue;
+		}
+
+		if (FVector::DistSquared(GetActorLocation(), Candidate->GetActorLocation()) <= RangeSquared)
+		{
+			return true;
+		}
+	}
+
+	return false;
 }
