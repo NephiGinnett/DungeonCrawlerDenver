@@ -4,6 +4,7 @@
 #include "GameFramework/HUD.h"
 #include "UI/DCCChatTypes.h"
 #include "Stats/DCCAbilityTypes.h"
+#include "Rooms/DCCGauntletEncounter.h"
 #include "DCCHUD.generated.h"
 
 class ADCCCharacterBase;
@@ -245,6 +246,18 @@ protected:
 	void DrawCastingIndicator(ADCCCharacterBase* Crawler);
 
 	/**
+	 * A small gapped-cross reticle at screen centre, shown whenever a ranged
+	 * weapon is equipped (Zoe, 2026-09-04: "make a small crosshair appear...
+	 * where if anywhere the bullet lands"). Re-fires the exact same trace
+	 * FindHostileUnderCrosshair uses to actually resolve a shot, so "is the
+	 * reticle lit up" always agrees with "would this shot land" - screen
+	 * centre is where that trace's hit point projects to by construction,
+	 * since the trace runs along the camera's own forward vector, so no
+	 * world-to-screen projection is needed at all.
+	 */
+	void DrawRangedCrosshair(ADCCCharacterBase* Crawler);
+
+	/**
 	 * Big centre-screen "LEVEL BOSS" card, shown once per boss actor the first
 	 * time the local crawler comes within health-bar range of it alive.
 	 *
@@ -259,14 +272,15 @@ protected:
 	void DrawBossBanner();
 
 	/**
-	 * Small/medium command reminder while flying the rover (Zoe's ask,
-	 * 2026-09-03: "when you are flying... a list of car related commands").
-	 * Gated on IsFlying(), not merely IsOccupied() - the ground controls are
-	 * the ones a player has usually already found; flight adds the pitch
-	 * drag and the two flight-only keys, which is the part actually worth
-	 * reminding someone of.
+	 * Small/medium command reminder for the whole rover, driving or flying.
+	 * Originally flight-only (Zoe, 2026-09-03: "when you are flying... a
+	 * list of car related commands"), widened to IsOccupied() - Zoe,
+	 * 2026-09-04: "I also think that you should have the visible commands
+	 * (boost on space bar etc.)." Same row list either way; Climb/Descend
+	 * simply do nothing while grounded rather than needing to be hidden.
+	 * The title line still says FLIGHT CONTROLS while actually airborne.
 	 */
-	void DrawFlightControlsOverlay();
+	void DrawRoverControlsOverlay();
 
 	/**
 	 * Speed readout + bar, shown any time the local player is driving the
@@ -649,6 +663,24 @@ private:
 	FText QuestCompleteTitle;
 	float QuestCompleteBannerExpiryTime = 0.0f;
 	FName LastShownQuestCompleteId;
+
+	/**
+	 * "GAUNTLET n / N" while a gauntlet is Active, plus a fading "GAUNTLET
+	 * CLEARED" card (same fade shape as DrawQuestCompleteBanner) on the
+	 * Dormant/Active -> Victory transition. CachedGauntlet is refreshed by
+	 * a cheap periodic actor search rather than every frame, the same
+	 * reasoning as DrawQuestCompleteBanner's GameState component lookup:
+	 * there is normally exactly one ADCCGauntletEncounter in the level, so
+	 * finding it once every couple of seconds is enough.
+	 */
+	void DrawGauntletProgress();
+
+	UPROPERTY(Transient)
+	TWeakObjectPtr<ADCCGauntletEncounter> CachedGauntlet;
+
+	float GauntletCacheRefreshTime = 0.0f;
+	EDCCGauntletState LastObservedGauntletState = EDCCGauntletState::Dormant;
+	float GauntletVictoryBannerExpiryTime = 0.0f;
 
 	/** Whether this entry should draw under the current preset. Takes the whole
 	 *  entry rather than just its Category because MyRolls needs to compare

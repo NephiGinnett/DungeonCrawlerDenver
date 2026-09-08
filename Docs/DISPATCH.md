@@ -5411,3 +5411,455 @@ Blueprint, no C++ changed, no editor build/restart needed for this fix specifica
 **Not verified in PIE, same as everything else tonight** - the mechanism is confirmed (dead asset
 reference, live skeleton mismatch, exact code found and removed), but nobody has watched a
 character actually die since. Worth being the very first thing tested next session.
+
+---
+
+## 2026-09-03 (continued) - Local git backup, the 100-man gauntlet, and a rover steering fix
+
+**Git backup.** Zoe said "back up!" mid-session, read as an ask to get the multi-day pile of
+uncommitted work into git locally (never pushed). Committed in six logical groups - vehicle/
+flight/HUD/quest fixes, town/mine enemies+dialogue+puzzles+travel gates, loot boxes, skills/
+boons/chatter, design docs, and the art pipeline - deliberately leaving `Content/` (per this
+file's own standing rule, that's Zoe's to review), the 260MB `Plugins/Marketplace/
+RadialSelectorPlugin` (a marketplace binary, not source-controlled work), and a handful of stray
+droppings (`dev/null/...`, a marketplace icon pack's README/PNG sitting at the project root) out.
+
+**The "100 man melee" gauntlet.** New `Rooms/DCCGauntletEncounter` - deliberately NOT an
+`ADCCEncounter` subclass, since Waves/EDCCWaveTrigger has no notion of "keep exactly N alive,
+replacing each as it falls, until a running total is reached." A trickle-spawner instead: draws
+from `EnemyPool` at random, keeps `MaxConcurrentEnemies` (default 3) alive at once, counts kills
+toward `TargetKillCount` (default 100), pays flat gold (not XP - see the class's own comment on
+why feeding 100 into `GetExperienceForEncounterClear`'s per-enemy scaling would blow past the
+whole 1500-XP level-5 tutorial cap in one fight) and an achievement record on Victory. HUD gets a
+"GAUNTLET n / N" gauge and a fade-in/out "GAUNTLET CLEARED" card, same shape as the quest-complete
+banner. Admin panel gets `gauntletstart`/`gauntletreset`, routed through a new
+`Server_AdminGauntlet` RPC to the nearest gauntlet, for testing without standing in its trigger.
+
+Placed and verified live: `Gauntlet_100Man` at x14500,y5000,z2400 (traced clear with
+`trace_world` across a 600x600 footprint east of the Diving Pool arena, ground z≈2380), EnemyPool
+= Intern + DebtEater, six spawn points in a ~300-unit ring, confirmed by property read-back and
+saved via `save_assets` on the level (`SceneTools.save_actor` hit the usual World Partition
+"Asset does not exist" wall - same documented gotcha as every other placed actor this project).
+
+**Rover: reverse and turn-in-place.** Zoe: "make sure players can reverse" + "turning left or
+right let's you turn slowly even if you aren't moving forward." Read the whole input path - S is
+bound to `ThrottleReversePressed` (`ThrottleInput -= 1`), `Movement->MaxSpeed` is a magnitude cap
+with no directional bias, `AddMovementInput(Forward, Drive)` with negative Drive is symmetric in
+`UFloatingPawnMovement` - found no code bug blocking reverse. Steering was a real, confirmed bug
+though: `SteerScale = Speed / (MaxCruiseSpeed*0.30)` is exactly 0 at a dead stop, so A/D did
+nothing while parked. Added `MinSteerScale` (0.3) as a floor under that same scale, not a
+replacement - full-speed turning still ramps up on top of it. Reverse is unconfirmed in PIE, same
+as everything else tonight; asked Zoe to report exactly what she sees if S still doesn't work.
+
+**Two Development Editor builds this stretch**, both with the editor confirmed closed first
+(`tasklist` check) and both confirmed real relinks (no numbered `patch_*`/hot-reload DLL) -
+one for the gauntlet class + HUD/admin wiring, a second folded in the steering fix rather than
+costing Zoe a third close/reopen. Editor relaunched via command line after the second; all 24
+toolsets confirmed registered before any placement work.
+
+---
+
+## 2026-09-04 - Rover input-leak, boost-while-flying, ring-once, ramp-conform; two placed rovers were sunk
+
+Four more rover/ring reports from Zoe in one message: struggling driving in general, boost
+should work while flying, occasional uncontrollable backward-drive/spin "until they get out",
+rings should fire once and disappear, the spawn-area car "still" glitching, and ramps should
+match the car's pitch to their angle.
+
+**Root-caused the spin/reverse bug, not just patched around it.** `ThrottleInput`/`SteerInput`
+were accumulated from paired `IE_Pressed`/`IE_Released` BindKey callbacks (`+= 1` / `-= 1`).
+Walking up to the rover holding W, then pressing E to get in, means the Rover's fresh
+`InputComponent` never sees a Pressed edge for a key that was already down - but releasing it
+later still fires Released, leaving the accumulator stuck at +/-1 forever with nothing to zero
+it except exiting. Replaced the whole Pressed/Released pair for W/A/S/D with a direct per-tick
+poll of `PlayerController::IsInputKeyDown`, gated on `IsLocallyControlled()` - a stuck
+accumulator is now structurally impossible, since every tick re-derives the true value instead
+of accumulating deltas. Removed the now-dead `ThrottleForwardPressed` etc. handlers entirely
+rather than leaving them as inert dead code.
+
+**Boost while flying was blocked on purpose, contradicting the code's own comment.**
+`BoostPressed`'s `if (bFlying) { return; }` guard was explicitly noted as making Space
+climb-only in the air - directly contradicting the function's own opening comment ("boost again
+at the top of the arc is how a player will reach for it anyway"). Removed the guard (Climb still
+fires unconditionally via the separate `ClimbPressed` binding, so nothing is lost), and fixed
+`UpdateGroundAndAir`'s flying branch, which unconditionally reset `Movement->MaxSpeed =
+FlightSpeed` every tick regardless of `bBoosting` - the ground branch's boost speed was being
+silently discarded the instant `bFlying` was true. Now `bBoosting ? BoostSpeed : FlightSpeed`.
+
+**Flight rings could be farmed - fired every pass, not just the first.** `NotifyActorBeginOverlap`
+awarded the piloting bonus and fired the quest notify on every overlap, checking
+`bHasEverBeenPassed` only to decide whether to flip it, never to gate the reward itself. Added an
+early return at the top when already passed, and `OnRep_HasEverBeenPassed` now hides the mesh
+and drops both components to `NoCollision` the moment it flips true - "disappear after being
+triggered," and a second overlap is now structurally impossible once collision is off, not just
+discouraged by a flag check.
+
+**Ramps were getting a fixed climb pitch instead of matching their real angle.** Found via
+reading, not guessing: `UpdateGroundAndAir`'s `bClimbingStep = (EffectiveTarget - Origin.Z) >
+12.0f` was meant to catch discrete steps/kerbs, but at real driving speed (4200 cm/s cruise ≈ 70
+units/tick) any ordinary ramp's per-tick rise clears 12 units just as easily as a genuine ledge -
+so `AlignToSurface` used the fixed `StepClimbPitchDegrees` for the entire climb of *every* ramp,
+never the slope-matched `SurfaceRot.Pitch` from `LastGroundNormal`. Fixed by classifying the rise
+instead of just measuring it: a contact-time bump (`PendingStepUpZ`) is always a step; a
+probe-based rise is a step only if the *implied* slope over `ForwardProbeDistance` -
+`atan2(rise, ForwardProbeDistance)`, independent of current speed - exceeds `MaxClimbAngleDegrees`.
+An ordinary ramp now falls through to AlignToSurface's real slope-matching branch.
+
+**The "spawn car still glitching" report had a genuine, verifiable cause, found live via MCP
+while blocked on the C++ deploy**: both placed `ADCCRover` instances (`-1420,-2790` and
+`67000,12200`) sat exactly **230 units below** `ground_z + RideHeight` - identical offset on
+both, so a systematic placement/config drift (almost certainly both saved against an older, lower
+`RideHeight` before it was raised to 140), not incidental per-car damage. A car sunk 230 units
+into the ground would fight `SnapToGround`'s own collision-depenetration every tick - a strong
+match for "uncontrollable glitching." Corrected both via `ActorTools.set_actor_transform`
+(gotcha re-hit: the parameter is `xform`, not `transform` - the error message names the schema),
+confirmed by read-back, saved via `save_assets` on the level.
+
+**Freaks.mp3 still wasn't playing because it was never imported** - `AssetTools.find_assets` on
+`/Game/DCC/Audio` came back empty, confirming the file only ever existed as a raw file in
+`SourceArt/`, never as a `/Game/DCC/Audio/Freaks` content asset, so the constructor's
+`ConstructorHelpers::FObjectFinder` never had anything to find. No import tool exists in this
+project's registered MCP toolsets for audio (checked all 18) - this one genuinely needs Zoe's own
+drag-and-drop into the Content Browser. Self-heals on the next restart once she does, per the
+usual `ConstructorHelpers` pattern - no further action needed from this side after that.
+
+Compile-checked (DebugGame, editor open) before Zoe closed it, so the eventual deploy build was
+fast (~50s) and known-clean going in. One more confirmed-clean Development Editor build and
+relaunch; all 24 toolsets back before reporting done.
+
+---
+
+## 2026-09-04 (continued) - Boost moved to LMB, flap-drag removed, and driverless traffic
+
+**Removed the click-and-drag flight pitch entirely.** Zoe: "I don't think it's working
+great... make left click boost... it's getting mixed up with the climb button." The whole
+flap-lever system (`FlightPitchInput`/`FlightPitchAngleDegrees`/`MaxFlightPitchDegrees`/
+`FlightPitchAlignSpeed`/`FlightPitchLiftRate`/`FlightPitchDragSensitivity`, plus the LMB+MouseY
+binding) is gone - flying pitch is now just level, climb rate is pure `VerticalInput *
+FlightClimbRate`. Boost moved off Space entirely onto a dedicated LMB binding, so it can never
+again fight the continuous climb key the way it did after yesterday's boost-while-flying fix.
+Space keeps flight-engage (still edge-detected, now inline in the Tick() poll via
+`bWasSpaceDownLastTick` rather than a BindKey callback) and climb - both folded into the same
+input poll that already fixed the stuck-throttle bug, since Climb/Descend had the identical
+paired-accumulator vulnerability and nothing had hit it yet by luck alone.
+
+**New: driverless "autopilot" traffic.** Zoe built a long road in a separate playground area
+(x≈67000, a straight run along Y ending at a platform edge with a glowing arch - screenshots
+confirmed this via `EditorAppToolset.CaptureViewport` + `Tools/decode_tool_image.py`) and placed
+several static-mesh car props on it, asking for them to drive forward, launch off the end, and
+stop. A plain `StaticMeshActor` has no movement logic at all, so this needed `ADCCRover` itself
+extended: `bAutoPilotActive`/`AutoPilotSteerInput`/`bAutoPilotBoostOnLaunch`, driven from the same
+Tick() poll (full throttle, periodic boost) whenever there's no Driver, gated on `HasAuthority()`
+since there is no local controller to key off for an unpossessed pawn. Turns itself off the
+instant `bAirborne` flips true (both places `UpdateGroundAndAir` can set it, including the
+`!bFoundGround` early-return - the actual "drove off the edge into nothing" case) - the launch
+itself is just existing momentum plus gravity, identical to a player driving off the same ramp.
+Also cleared `bAutoPilotActive` in `EnterRover`: without that, a player boarding a still-active
+autopilot car would have the server fighting their own input on the branch that only yields to
+`IsLocallyControlled()`, which the server itself never is for a remote driver.
+
+Found her placed cars were plain decoration (`SM_car_B2`, Synthwave_city pack) rather than
+`ADCCRover` instances, so nothing would have moved regardless of the C++. Replaced all four with
+real `ADCCRover` actors at the same transforms, `Body`'s mesh/scale set to match
+(`SM_car_B2` at the same ~1.845 scale, actor itself left at scale 1 so Collision/physics stay at
+their tuned size), oriented to face the ramp - inferred from her own already-placed rover at the
+same X, which was already yaw≈90 facing +Y, cross-checked against ground height rising toward +Y
+along the same line, then confirmed correct by screenshot before doing the rest. Deleted the
+original static props, saved. `bAutoPilotActive` itself couldn't be set until this session's
+Development Editor build/relaunch - the property didn't exist in the previously-running editor's
+reflection data - so that was the very last MCP call once the editor came back.
+
+---
+
+## 2026-09-05 - A self-inflicted animation outage, Zoe's own model, and the gauntlet made real
+
+**The post-process AnimBlueprint broke ALL player animation, and it was my own bug.** Zoe:
+"I got a warning that my idle animation was unavailable and I couldn't walk or run. I just stayed
+in a rigid pose as I moved." Root cause, found in the log rather than guessed:
+`ABP_IdleNod_Mannequin - The skeleton asset for this animation Blueprint is missing, so it cannot
+be compiled!` **`BlueprintTools.create` has no way to specify a target skeleton**, so the
+head-nod AnimBlueprint created through it the previous session was born with `TargetSkeleton`
+unset. It compiled once (the call returned success and the log showed no error, which is what I
+checked at the time), then failed on a later recompile - and because a post-process AnimBP owns
+the FINAL rendered pose, a broken one takes the whole character down with it, not just the bone
+it targets. Verifying the graph wiring was not the same as verifying the asset was valid, and
+that gap is the whole lesson.
+
+- **Immediate fix:** cleared `PostProcessAnimBlueprint` on `SKM_Quinn_Simple` to restore movement.
+- **Real fix - the workaround for the tool gap:** `AssetTools.duplicate` an AnimBlueprint that is
+  ALREADY correctly skeleton-bound (`ABP_Unarmed`), then `BlueprintTools.set_parent` to reparent
+  the copy to `UDCCIdleAnimInstance`. Duplication carries `TargetSkeleton` across; reparenting
+  does not disturb it. Then delete the inherited locomotion graph and rebuild the nod chain.
+  **This is the only known way to create a valid AnimBlueprint through this MCP toolset.**
+- Verified the fix by compiling it TWICE (the original's failure mode was specifically a later
+  recompile), and confirmed `head` genuinely exists on the mannequin skeleton via
+  `SkeletalMeshTools.get_bone_names` rather than trusting UE naming convention.
+
+**Zoe's own Meshy model is imported** as `/Game/DCC/Characters/Zoe/SK_Zoe`, bound to
+`SK_DCCCrawler_Skeleton` - so it can play all 24 shared clips with no retargeting. Raw export
+moved out of `Content/` (where it had been dropped) into `SourceArt/Zoe/`, converted with
+`Tools/glb_to_fbx.py` (bake_anim 0 - her own Walking/Running actions are in the .glb but are not
+needed, the shared set covers it). Verified: skeleton binding, 163k verts, one material with real
+texture data (the MESH thumbnail renders white - the MATERIAL thumbnail is the one that tells the
+truth, exactly as this file already warned), physics asset, and all five sockets copied from
+`SK_HockeyWings` (`hand_r`/`hand_l`/`head`/`spine_03`/`eye`). Socket transforms are HockeyWings'
+own nudged values, which is a better starting point than identity but is not a fit for a
+differently-proportioned body - expect a visual pass.
+
+**The route to making it the player's model needs no new AnimBlueprint at all.**
+`ADCCCharacterBase::UpdateLocomotionAnimation` already picks Idle/Walk/Run from animation SLOTS by
+speed - but only when `GetAnimationMode() == AnimationSingleNode`, i.e. only when no AnimBP is
+assigned. The player currently runs `ABP_Unarmed` (mannequin-bound), which is why that path never
+fires for them. Swapping the mesh to `SK_Zoe`, clearing `AnimClass`, and filling the slots with
+the `DCCCrawlerAnimSet` clips gives real locomotion on the crawler skeleton without touching the
+AnimBP creation problem above. Trade-off recorded honestly: slot switching, not blending.
+
+**Gauntlet enemies stood still because there was no navmesh out there.**
+`ADCCEnemyCharacter`'s chase is `AIController->MoveToActor`, which needs a `NavMeshBoundsVolume` -
+and the gauntlet sits at x14500,y5000, a remote spot no existing volume covered. Added
+`NavMesh_Gauntlet` (scale 15/15/10) over the play area. This is the same failure this file already
+predicted for generated dungeon cells; it is worth treating "enemies placed somewhere new" as
+implying "check for navmesh" every time.
+
+**New: `ADCCGauntletWeaponStash`** - one ground weapon at the gauntlet that upgrades every
+`KillsPerTier` (5) kills through an ordered `WeaponTierItemIds` list
+(letter opener -> hedge trimmers -> sword -> SMG -> hunting rifle -> riot shotgun), clamping at the
+last tier rather than running out. Reuses `ADCCPickup_Equipment` and existing `DT_DCCEquipment`
+rows rather than inventing items, and spawns via `SpawnActorDeferred` because that class resolves
+its mesh from `EquipmentItemId` in BeginPlay. Driven by a new `OnKillCountChanged` delegate on
+`ADCCGauntletEncounter`, broadcast from `OnRep_KillCount` so it fires on server and clients alike.
+
+**Also this session, from Zoe's overnight list:** cruise/boost/flight speeds raised to
+5600/11000/8000; `BoostTrailScale` (4x, applied on activation so it stays a live knob); the speed
+dial enlarged and given more ticks to stay readable at the new speeds; occupants now ride VISIBLY
+inside the car at editable `DriverSeatOffset`/`PassengerSeatOffsets` instead of being hidden; and
+`DriverEntrySide`, captured before the attach moves the driver, so you get out on the side you got
+in. No sitting animation exists on any skeleton here, so occupants stand - the offsets are tuned
+to put the head under the roofline and are `EditAnywhere` for exactly that reason.
+
+**The rover's ring/flare/boost work and the gauntlet stash were deployed in one Development
+Editor build with the editor closed** (clean relink, no numbered DLL), which is also when the
+editor was closed for the night at Zoe's request - saved first, PIE confirmed not running.
+
+**Zoe's model is now the player, completed same session.** `BP_ThirdPersonCharacter`'s mesh set to
+`SK_Zoe`, `AnimClass` cleared to None (which is what actually switches the mesh into
+`AnimationSingleNode` and hands locomotion to `UpdateLocomotionAnimation`), and the Idle/Walk/Run/
+Attack/Cast/Climb/FistBump/HitReaction slots filled with the `DCCCrawlerAnimSet` clips. Mesh
+component transform needed no change - the player and the crawler-skeleton allies already share
+the same -89 Z / -90 yaw mount. Verified by spawning a temporary instance in the level and
+screenshotting it (correct scale against the capsule, upright, textured), then removing it.
+
+Two bonuses that fell out of the swap: `EmoteAnimations` and `EnterVehicleAnimation` on the player
+were ALREADY pointing at shared-crawler clips, so they had been silently no-oping through
+`CanPlayOnThisSkeleton` the whole time on the mannequin - both work now. **What is lost:** the
+head-nod post-process is bound to the mannequin skeleton, so it no longer applies to the player.
+Giving the crawler skeleton its own nod needs an AnimBlueprint bound to `SK_DCCCrawler_Skeleton`,
+and there is no existing one to duplicate - which is the same tool gap described above, still open.
+
+### ⚠️ Force-killing the editor blocks the NEXT startup on a modal dialog
+
+Cost ~25 minutes this session and matters enormously for unattended work. `taskkill /F` leaves
+`Saved/Autosaves/PackageRestoreData.json` behind; on the next launch UE shows a modal
+"restore auto-saved packages?" prompt **early in startup, before the map loads**. The symptoms are
+deceptive: the MCP server has already started, so **port 8000 is LISTENING and accepts connections
+- it just never answers**, because the prompt has blocked the game thread that services them. The
+log simply stops mid-startup. `netstat` showing 8000 listening is therefore NOT evidence the editor
+is usable.
+
+Fix, when nobody is awake to click it: kill the editor, **rename** (do not delete)
+`Saved/Autosaves/PackageRestoreData.json` aside, relaunch. The autosave `.uasset` files are
+untouched by this and the rename is reversible. Safe specifically because everything had been
+explicitly saved before the kill - restoring those autosaves would have been the riskier action,
+since they are older copies of assets already correctly on disk. Left as
+`PackageRestoreData.json.bak-claude`; delete it whenever.
+
+---
+
+## 2026-09-05 (later) — The circuit, driverless racers, and a bookie
+
+Zoe: *"can you make a race track for us? and have the NPCs drive cars around the track? maybe
+just add a bookie NPC that lets you repeat the race."* Built, deployed (Development Editor build
+with the editor closed, clean relink, no numbered DLLs) and laid out in the level.
+
+### The three new pieces
+
+**`ADCCRover` route autopilot.** The existing autopilot was straight-line traffic — full throttle,
+fixed steer, and *switch yourself off the instant you leave the ground*, which is what made the
+ramp cars "shoot off and stop". A racer needs the opposite of that last part, so a new
+`AutoPilotWaypoints` array changes three behaviours at once:
+
+- Steering becomes proportional to the yaw error toward the current waypoint, clamped to ±1 and
+  divided by 45° so a corner is *committed to* rather than drifted through. It reuses the same
+  `AddActorWorldRotation` path a player's D/A key produces — nothing teleports.
+- **Both** airborne shutoff sites in `UpdateGroundAndAir` are now gated on `AutoPilotWaypoints.Num() == 0`.
+  This is the load-bearing line of the whole feature: without it a racer parks itself at the first
+  kerb it clips.
+- The traffic boost (`bAutoPilotBoostOnLaunch`) is suppressed on a route, because a permanently
+  boosting field erases `AutoPilotSpeedScale`, which is the only thing that gives the race an outcome.
+
+`StartAutoPilotRoute` deliberately aims at the nearest waypoint *that is not already inside the
+acceptance radius* — a car on the start line is by construction sitting on waypoint 0, and
+nearest-outright would have it tick straight past the first corner and bank a phantom lap.
+`FinishEnteringRover` now calls `StopAutoPilot()` rather than clearing the flag, so hijacking a
+racer mid-race drops its route instead of leaving one armed for the next start to resume.
+
+**`ADCCRaceTrack`** (`Vehicles/DCCRaceTrack.h/.cpp`). Waypoints are raw `FVector`s, not placed
+marker actors: the whole ring authors in one `set_properties` call, where twelve marker actors
+would be twelve spawns, twelve outliner rows and twelve chances for one to get nudged out of the
+loop. `StartRace` tears down any existing field first and never refuses — repeating is the point,
+so it must never need a reset first. Grid facing is derived from waypoint 0 → 1, not from the
+actor's own rotation, so re-authoring the ring cannot leave the grid pointing at a wall.
+Lap counting is **polled**, not delegated: `ADCCRaceTrack` reads each rover's `AutoPilotLapsCompleted`
+on its own 0.25s tick, and `ADCCDialogueNPC_RaceBookie` polls the track's `State` the same way.
+
+**`ADCCDialogueNPC_RaceBookie`** (`Dialogue/`). Same shape as `ADCCDialogueNPC_LiftAttendant` and
+for the same reason — a public non-virtual `PlaceBetAndStartRace` that the NPC menu calls directly,
+so the Talk row keeps meaning "say the next line" instead of quietly taking someone's money. New
+`EDCCNPCInteractionOption::RaceBet` row, shown only when `LinkedTrack` is set, dispatched through a
+new `Server_RequestRaceBet` RPC that re-checks range server-side (the wager is real gold).
+**The bookie picks the car, not the punter** — one menu row instead of a nested list, and a player
+who chose for themselves would simply learn which grid slot is fastest and take it every time,
+which is not a bet, it is a withdrawal. `SpeedScaleJitter` re-rolls the field's pace each start for
+the same reason.
+
+### Where the track is, and why there
+
+**Circuit centre `(9000, -11500)`, tarmac `x 2500..15500, y -15000..-8000`, surface z = -200.**
+Outliner folder `DCC/RaceTrack`.
+
+The level has no terrain to race on — a `trace_world` sweep out to ±20000 found scattered
+hand-placed geometry over mostly void, with the one large flat plane (z = -200, roughly
+`x 3000..13000, y -4000..+4000`) occupied down the middle by buildings 3400–3800 units tall.
+Threading a circuit between them at 1000-unit probe resolution was not something worth trusting, so
+the track is **its own surface**: one 13000×7000 tarmac slab in verified-void space immediately
+south of the plane, a 6000×1800 infield block to race around, and a four-piece perimeter wall.
+Racing line is an ellipse `a=4700, b=2150` about the centre — 12 waypoints, straights ~2500 wide,
+ends ~3400.
+
+**The pit road cost a rebuild and the reason is worth keeping.** The first access road ran south at
+x=9000 and traced back at z ≈ +13 to +31 instead of -200 — pre-existing geometry sitting ~230 units
+*proud of* the new road, i.e. a step no rover could climb. Probing at 400-unit spacing found
+`x 6300..7700` genuinely empty from y=-4500 all the way to y=-7500, so the road and the north
+wall's gap both moved there. Its surface is 10 units above the plane it meets, under the rover's
+12-unit step threshold, so the junction reads as a seam and not a kerb.
+
+**Verify layout changes by tracing the racing line, not by trusting the placement call.** Every
+waypoint and the whole pit road were re-traced after placing and read exactly -200 / -190.
+
+### MCP gotchas added this session
+
+- **`SM_Cube`'s pivot is its MIN corner, not its centre** (`get_bounds` → min 0,0,0 / max 100,100,100).
+  A centred box needs `location = centre - size/2` on every axis. Everything placed here goes
+  through one `box(name, centre, size)` helper for exactly that reason.
+- **`StaticMeshTools.get_bounds` takes `mesh`, not `static_mesh`**; `AssetTools.save_assets` takes
+  `asset_paths`, not `assets`. As ever, the server prints the full schema on error — read it.
+- **`SceneTools.find_actors` with `bounds` matches by BOUNDS INTERSECTION, not by pivot.** A tight
+  80-unit box around a known pivot returned the sky sphere, the world ground plane, the navmesh and
+  the tarmac — and *not* the actor whose pivot was at the box's centre. It is not a way to find a
+  specific actor you already know the position of. `get_actors_in_folder` is, if the folder
+  assignment took.
+- **Iterating every actor in this World Partition level over MCP is minutes of round trips** and
+  will blow a 5-minute command timeout. Scope to a folder or a bounds box.
+
+### Still open
+
+- The head-nod AnimBlueprint for `SK_DCCCrawler_Skeleton` still needs Zoe's ~30-second manual step
+  (create an Animation Blueprint in `/Game/DCC/Characters/Anim/`, Parent Class `DCCIdleAnimInstance`,
+  Target Skeleton `SK_DCCCrawler_Skeleton`, named `ABP_IdleNod_Crawler`). Every automatic route is
+  confirmed dead: nothing crawler-bound exists to duplicate, `TargetSkeleton` is not writable
+  through `ObjectTools` (it resolves to the CDO), and there is no set-skeleton tool.
+- Nothing since the six-commit backup has been committed.
+
+### 🚨 CORRECTION, same session: `save_assets` on the level does NOT persist new World Partition actors
+
+This cost the entire first build of the race track — 16 placed actors, gone after a force-kill,
+and the race "not working" in PIE was simply the track actor no longer existing.
+
+CLAUDE.md says *"`SceneTools.save_actor` fails on World Partition actors ... Save the level instead:
+`save_assets(["/Game/ThirdPerson/Lvl_ThirdPerson"])`."* **The second half of that is wrong for
+actors that were created during the session.** `save_assets` on the map returns `true` and writes
+nothing for them.
+
+Proven with a one-cube experiment rather than inferred:
+
+```
+add_to_scene_from_asset(SM_Cube)      -> StaticMeshActor_UAID_...
+save_actor(that actor)                -> "Asset does not exist:
+                                          /Game/__ExternalActors__/ThirdPerson/Lvl_ThirdPerson/6/K2/IPH9CC71FYL8RZR6CFRXL3"
+save_assets(["/Game/ThirdPerson/Lvl_ThirdPerson"])  -> true
+find Content/__ExternalActors__ -mmin -3            -> (nothing)
+```
+
+`save_actor` fails because the external-actor package does not exist on disk yet, and the level
+save does not create it. Passing that leaked package path straight to `save_assets` is refused for
+the same reason (*"Asset does not exist"*). **There is no MCP route to persist a newly created
+World Partition actor.**
+
+**What to do instead:** ask Zoe for **Ctrl+Shift+S (Save All)** in the editor. That is the whole
+fix, it takes a second, and it is exactly the "prefer a quick manual step" tradeoff CLAUDE.md
+already prescribes.
+
+**How to tell whether a session's placements are actually safe** — do not trust a `true` from
+`save_assets`, check the filesystem:
+
+```bash
+find Content/__ExternalActors__ -name "*.uasset" -mmin -10 | head
+```
+
+Nothing listed means nothing is on disk, no matter what the tool returned. DataTable and other
+ordinary asset saves are unaffected — `DT_DCCDialogue` and `DT_DCCConsumables` both persisted
+across the same force-kill that lost every actor.
+
+**Corollary: never force-kill the editor after placing actors without confirming that check first.**
+The autosave-restore hazard documented above is about the *next* startup; this one silently
+destroys the work outright.
+
+### Also built this session: the vending machine guy (Zoe asked, 2026-09-05)
+
+`NY_Subway`'s vending machines had been sitting unplaced since the pack landed — logged as a
+set-dressing task and never done. Placed now at the circuit's pit lane as concessions, because the
+vendor and consumable systems already existed and this needed **no C++ at all**:
+
+- Six new `DT_DCCConsumables` rows: `VendingWater`, `VendingCola`, `VendingChips`, `VendingCandy`,
+  `VendingEnergy`, `VendingProteinBar`. Deliberately cheap (4–25 gold) and mild — small heals plus
+  a short ability nudge — so concessions never compete with the bartender's actual stock.
+- `SM_RSG_Subway_Vending_Machine_Snacks` and `_Water` as props against the pit lane's east rail.
+- An `ADCCVendorNPC` ("Concessions", `SpeakerId = SnackVendor`) beside them with those six rows in
+  `SellableConsumableIds`, plus four dialogue lines including a hint. **The machines are scenery;
+  the NPC is the shop** — E on him opens the existing Talk/Shop/Leave menu.
+
+### The named-crawler roster (2026-09-05, Zoe: "generating names and stories for our 20-50 real crawler NPCs")
+
+`Docs/crawler-roster.md` + `Docs/DT_DCCCrawlers.csv`, both generated from
+`Tools/gen_crawler_roster.py`. **Edit the generator, never the outputs** — the prose and the table
+come from one list precisely so they cannot drift, and the counts in the prose are derived rather
+than typed (a hardcoded "thirty-two" was wrong within a minute of first generation).
+
+**The design tension, and how it was resolved rather than ignored.** `population-design.md` budgets
+Tier 1 at **~12 authored characters for the whole game** and warns that a procedural name on a
+random stat block is nobody. Zoe asked for 20–50. Those only conflict if "named" and "built" are
+the same thing, and they are not — that table had welded them together. So:
+
+- **8 Rivals** — the only ones that ever become a real `ADCCCharacterBase`, and even then two or
+  three at a time. This is the Denver half of the ~12 budget, intact.
+- **9 Encounter** — `ADCCDialogueNPC` + mesh + a few lines. One thing to give, then done. No C++.
+- **8 Rumour** — never rendered. Names in bar gossip and System announcements. **Free**, and they
+  carry most of the world. Promotable later without rewriting anything.
+- **8 Deceased** — graffiti, achievement names, leaderboard rows. These are also the answer to the
+  attrition problem: `UDCCPopulationSubsystem` reports hundreds of thousands of deaths as a number,
+  and a number is wallpaper. One name attached to it is not.
+
+Cross-linked both ways — `population-design.md` §Tier 1 now points here, and its "promote one
+rival" item is satisfied: **The Appraiser has a person now** (Dolores "Dee" Okonkwo-Reyes, estate
+liquidator).
+
+**Writing constraints actually applied**, not just cited: everyone's *old job is their whole build*
+(tone bible rule 5), which matters because art is the constraint on this project and code is not —
+a tow operator, an OSHA inspector and a sommelier are three completely distinct characters needing
+zero new meshes. The System never mocks a real death beat (rule 4); where an entry is funny, the
+joke lands on the format. The volunteer/survivor distinction from `story-premise.md` is stated
+plainly exactly once, with no joke attached, in Omar Bellinger-Khan's entry.
+
+**Deliberately not done:** the `FDCCCrawlerDef` row struct. It is a reflection change and therefore
+a full close/build/reopen cycle, and the roster is useful as prose and dialogue lines first. The
+CSV is written and waiting; the table should earn itself by being used.

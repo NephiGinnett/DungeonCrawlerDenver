@@ -28,6 +28,7 @@
 #include "Quests/DCCQuestComponent.h"
 #include "Dialogue/DCCDialogueNPC.h"
 #include "Dialogue/DCCDialogueNPC_LiftAttendant.h"
+#include "Dialogue/DCCDialogueNPC_RaceBookie.h"
 #include "Items/DCCLootBoxStation.h"
 #include "Dialogue/DCCVendorNPC.h"
 #include "NiagaraFunctionLibrary.h"
@@ -2560,6 +2561,16 @@ void ADCCCharacterBase::BuildNPCInteractionOptions()
 		}
 	}
 
+	if (const ADCCDialogueNPC_RaceBookie* Bookie = Cast<ADCCDialogueNPC_RaceBookie>(NPCInteractionTarget.Get()))
+	{
+		// Same "only when it would actually do something" gate as RideLift
+		// above - a bookie with no circuit wired up has nothing to sell.
+		if (Bookie->LinkedTrack)
+		{
+			NPCInteractionOptions.Add(EDCCNPCInteractionOption::RaceBet);
+		}
+	}
+
 	NPCInteractionOptions.Add(EDCCNPCInteractionOption::Leave);
 
 	NPCInteractionIndex = FMath::Clamp(NPCInteractionIndex, 0, NPCInteractionOptions.Num() - 1);
@@ -2709,11 +2720,45 @@ void ADCCCharacterBase::HandleNPCInteractionConfirm()
 		CloseNPCInteraction();
 		return;
 
+	case EDCCNPCInteractionOption::RaceBet:
+		if (ADCCDialogueNPC_RaceBookie* Bookie = Cast<ADCCDialogueNPC_RaceBookie>(Speaker))
+		{
+			// Server-side money and spawning, so this has to route through the
+			// server on a client. Same nominate-don't-dictate shape as
+			// Server_AcceptQuestFromNPC just below - the client names the NPC,
+			// the server re-checks range and does the work.
+			if (HasAuthority())
+			{
+				Server_RequestRaceBet_Implementation(Bookie);
+			}
+			else
+			{
+				Server_RequestRaceBet(Bookie);
+			}
+		}
+		CloseNPCInteraction();
+		return;
+
 	case EDCCNPCInteractionOption::Leave:
 	default:
 		CloseNPCInteraction();
 		return;
 	}
+}
+
+void ADCCCharacterBase::Server_RequestRaceBet_Implementation(ADCCDialogueNPC_RaceBookie* Bookie)
+{
+	if (!Bookie)
+	{
+		return;
+	}
+
+	if (FVector::Dist(GetActorLocation(), Bookie->GetActorLocation()) > InteractionRange)
+	{
+		return;
+	}
+
+	Bookie->PlaceBetAndStartRace(this);
 }
 
 void ADCCCharacterBase::Server_AcceptQuestFromNPC_Implementation(ADCCDialogueNPC* NPC, FName QuestId)
@@ -3678,6 +3723,25 @@ void ADCCCharacterBase::Server_AdminClearHostiles_Implementation()
 		NSLOCTEXT("DCC", "AdminCleared",
 			"{0} contestants have been released from their contracts."),
 		FText::AsNumber(Cleared)));
+}
+
+void ADCCCharacterBase::Server_AdminGauntlet_Implementation(bool bReset)
+{
+	ADCCGauntletEncounter* Gauntlet = ADCCGauntletEncounter::FindNearest(this, GetActorLocation());
+	if (!Gauntlet)
+	{
+		ShowLocalNotice(NSLOCTEXT("DCC", "AdmNoGauntlet", "No gauntlet placed in this level."));
+		return;
+	}
+
+	if (bReset)
+	{
+		Gauntlet->ResetGauntlet();
+	}
+	else
+	{
+		Gauntlet->StartGauntlet();
+	}
 }
 
 void ADCCCharacterBase::Server_AdminSetInvulnerable_Implementation(bool bInvulnerable)

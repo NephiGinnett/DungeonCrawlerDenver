@@ -24,6 +24,7 @@ class UDCCEquipmentComponent;
 class UDCCClassComponent;
 class ADCCCharacterBase;
 class ADCCDialogueNPC;
+class ADCCDialogueNPC_RaceBookie;
 class ADCCLootBoxStation;
 class ADCCPortalConsole;
 class ADCCOathgate;
@@ -1308,6 +1309,15 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_AdminClearHostiles();
 
+	/**
+	 * Server. Starts or resets whichever ADCCGauntletEncounter is nearest to
+	 * the caller - lets a DM force a gauntlet from the admin panel without
+	 * physically standing in its start volume, the same convenience
+	 * Server_AdminSpawn gives placed encounters.
+	 */
+	UFUNCTION(Server, Reliable)
+	void Server_AdminGauntlet(bool bReset);
+
 	/** Server. Toggles damage immunity on the caller. */
 	UFUNCTION(Server, Reliable)
 	void Server_AdminSetInvulnerable(bool bInvulnerable);
@@ -2035,6 +2045,15 @@ protected:
 	UFUNCTION(Server, Reliable)
 	void Server_AcceptQuestFromNPC(ADCCDialogueNPC* NPC, FName QuestId);
 	void Server_AcceptQuestFromNPC_Implementation(ADCCDialogueNPC* NPC, FName QuestId);
+
+	/**
+	 * Pays the bookie's stake and sends the field away. Range re-checked
+	 * server-side exactly like the quest RPC above - the wager is real gold,
+	 * so a client asking from across the map must not be taken at its word.
+	 */
+	UFUNCTION(Server, Reliable)
+	void Server_RequestRaceBet(ADCCDialogueNPC_RaceBookie* Bookie);
+	void Server_RequestRaceBet_Implementation(ADCCDialogueNPC_RaceBookie* Bookie);
 
 	/** Translates one consumable's Effects into calls on this character's own Stats. Server only. */
 	void ApplyConsumableEffects(const TArray<FDCCConsumableEffect>& Effects);

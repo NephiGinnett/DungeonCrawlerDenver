@@ -7,6 +7,8 @@
 class UStaticMeshComponent;
 class UBoxComponent;
 class UNiagaraComponent;
+class UNiagaraSystem;
+class USoundBase;
 class ADCCRover;
 
 /**
@@ -17,14 +19,14 @@ class ADCCRover;
  * Deliberately no collision on the ring mesh itself - a slightly-missed pass
  * should never crash or bounce the player mid-lesson. The only thing that
  * matters is PassThroughVolume, a thin box sized to the ring's own opening,
- * which is what actually detects a clean pass. Repeatable on purpose: this
- * is a practice course, not a one-shot achievement, so there is no "already
- * collected" gate on the notice itself - fly back through as many times as
- * it takes to get a feel for the controls.
+ * which is what actually detects a clean pass.
  *
- * bHasEverBeenPassed exists ONLY to drive the "next objective" glow below,
- * not to block anything - a ring you have already cleared stays fully
- * flyable, it just stops being the one that's lit up.
+ * ONE-SHOT as of 2026-09-04 (Zoe: "make sure that the target rings can only
+ * be triggered once, and disappear after being triggered") - bHasEverBeenPassed
+ * now gates the pass reward itself, not just the "next objective" glow below,
+ * and OnRep_HasEverBeenPassed hides the mesh and drops both components to
+ * NoCollision the moment it flips true. See NotifyActorBeginOverlap's own
+ * comment for the mechanism.
  */
 UCLASS(Blueprintable)
 class DUNGEONCRAWLERDENVER_API ADCCFlightRing : public AActor
@@ -74,6 +76,32 @@ public:
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FlightRing")
 	float PilotingBonusSeconds = 2.0f;
+
+	/**
+	 * One-shot burst spawned at the ring on a clean pass, separate from
+	 * ObjectiveGlow - that component is the persistent "this is the next
+	 * one" indicator and stays looping/attached; this is fire-and-forget
+	 * flavour for the moment of passing itself. Zoe, 2026-09-04: "going
+	 * through the rings play a small sound and flare to indicate you made
+	 * it." Defaults to the same portal-energy system the ring already uses
+	 * elsewhere, since this project's VFX library has little else glowing.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FlightRing")
+	TObjectPtr<UNiagaraSystem> PassFlareEffect;
+
+	/** Played at the ring on a clean pass. Unset by default - no suitable
+	 *  chime/success SFX exists anywhere in the project yet to default to;
+	 *  assign one once Zoe has a sound she likes. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FlightRing")
+	TObjectPtr<USoundBase> PassSound;
+
+	/**
+	 * Grants the driver a full boost on a clean pass, on top of
+	 * PilotingBonusSeconds - see ADCCRover::GrantBoost for why this ignores
+	 * the normal boost cooldown rather than merely starting it early.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FlightRing")
+	bool bBoostOnPass = true;
 
 	/** Server-authoritative (see NotifyActorBeginOverlap on why it is gated
 	 *  to HasAuthority rather than trusting every machine's own overlap).

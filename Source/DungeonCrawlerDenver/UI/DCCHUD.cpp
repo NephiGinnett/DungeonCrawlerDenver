@@ -364,9 +364,11 @@ void ADCCHUD::DrawHUD()
 	DrawSelfieViewfinder(Crawler);
 	DrawBossBanner();
 	DrawQuestCompleteBanner();
-	DrawFlightControlsOverlay();
+	DrawGauntletProgress();
+	DrawRoverControlsOverlay();
 	DrawSpeedGauge();
 	DrawCastingIndicator(Crawler);
+	DrawRangedCrosshair(Crawler);
 
 	// Being down is not being dead, and the overlay must not say otherwise - a
 	// crawler on the floor with forty seconds left is still in the game, and
@@ -605,6 +607,37 @@ void ADCCHUD::DrawCastingIndicator(ADCCCharacterBase* Crawler)
 		DrawRect(FLinearColor(1.0f, 0.92f, 0.70f, 0.9f),
 			X - DotRadius, Y - DotRadius, DotRadius * 2.0f, DotRadius * 2.0f);
 	}
+}
+
+void ADCCHUD::DrawRangedCrosshair(ADCCCharacterBase* Crawler)
+{
+	if (!Canvas || !Crawler || !Crawler->Equipment || Crawler->Equipment->GetAttackRangeOverride() <= 0.0f)
+	{
+		return;
+	}
+
+	// Same trace AttemptRangedAttack itself fires with (via
+	// FindHostileUnderCrosshair), so "is the reticle lit up" always agrees
+	// with "would this shot actually land" - a crosshair that lies about
+	// the reticle is worse than no crosshair at all.
+	const bool bOnTarget = Crawler->FindHostileUnderCrosshair(Crawler->GetEffectiveAttackRange()) != nullptr;
+
+	const float CenterX = Canvas->SizeX * 0.5f;
+	const float CenterY = Canvas->SizeY * 0.5f;
+
+	const FLinearColor Colour = bOnTarget
+		? FLinearColor(1.0f, 0.2f, 0.15f) : FLinearColor(1.0f, 1.0f, 1.0f, 0.8f);
+	constexpr float GapRadius = 6.0f;
+	constexpr float ArmLength = 8.0f;
+	constexpr float Thickness = 2.0f;
+
+	// Four short arms with a gap at the centre, rather than a solid plus -
+	// reads as a reticle instead of a blob, and the gap keeps it from
+	// obscuring exactly the point it exists to mark.
+	DrawLine(CenterX - GapRadius - ArmLength, CenterY, CenterX - GapRadius, CenterY, Colour, Thickness);
+	DrawLine(CenterX + GapRadius, CenterY, CenterX + GapRadius + ArmLength, CenterY, Colour, Thickness);
+	DrawLine(CenterX, CenterY - GapRadius - ArmLength, CenterX, CenterY - GapRadius, Colour, Thickness);
+	DrawLine(CenterX, CenterY + GapRadius, CenterX, CenterY + GapRadius + ArmLength, Colour, Thickness);
 }
 
 void ADCCHUD::DrawSelfieViewfinder(ADCCCharacterBase* Crawler)
@@ -1008,6 +1041,19 @@ void ADCCHUD::HandleAdminAction(const FString& Action, ADCCCharacterBase* Crawle
 	if (Action == TEXT("clear"))
 	{
 		Crawler->Server_AdminClearHostiles();
+		return;
+	}
+
+	if (Action == TEXT("gauntletstart") || Action == TEXT("gauntletreset"))
+	{
+		// Nearest to the admin, not "the only one" - lets a second gauntlet
+		// exist later (a harder one, say) without this action becoming
+		// ambiguous. Runs through the same Server_ RPC pattern as every
+		// other admin action here rather than calling StartGauntlet/
+		// ResetGauntlet directly, since HandleAdminAction executes on
+		// whichever client pressed the button and gauntlets are server-
+		// authoritative like every other encounter.
+		Crawler->Server_AdminGauntlet(Action == TEXT("gauntletreset"));
 		return;
 	}
 
@@ -1754,10 +1800,10 @@ void ADCCHUD::DrawBossBanner()
 		(Canvas->SizeX - NameW) * 0.5f, Y + TitleH + 20.0f, GEngine->GetMediumFont(), 1.0f);
 }
 
-void ADCCHUD::DrawFlightControlsOverlay()
+void ADCCHUD::DrawRoverControlsOverlay()
 {
 	const ADCCRover* Rover = GetOwningRover();
-	if (!Canvas || !Rover || !Rover->IsFlying())
+	if (!Canvas || !Rover || !Rover->IsOccupied())
 	{
 		return;
 	}
@@ -1767,7 +1813,7 @@ void ADCCHUD::DrawFlightControlsOverlay()
 		TEXT("A / D       Steer"),
 		TEXT("Space       Climb"),
 		TEXT("Left Ctrl   Descend"),
-		TEXT("Hold LMB + drag   Flight angle"),
+		TEXT("Left Click  Boost"),
 		TEXT("R           Windows"),
 		TEXT("T           Radio"),
 		TEXT("E           Exit"),
@@ -1786,7 +1832,7 @@ void ADCCHUD::DrawFlightControlsOverlay()
 	DrawRect(FLinearColor(0.42f, 0.44f, 0.52f, 0.45f), X - 10.0f, Y - 10.0f, PanelW + 20.0f, PanelH + 20.0f);
 	DrawRect(FLinearColor(0.02f, 0.03f, 0.06f, 0.72f), X - 8.0f, Y - 8.0f, PanelW + 16.0f, PanelH + 16.0f);
 
-	DrawText(TEXT("FLIGHT CONTROLS"), HeadingColour, X, Y);
+	DrawText(Rover->IsFlying() ? TEXT("FLIGHT CONTROLS") : TEXT("ROVER CONTROLS"), HeadingColour, X, Y);
 	Y += LineHeight + 4.0f;
 
 	for (const TCHAR* Row : Rows)
@@ -1814,33 +1860,68 @@ void ADCCHUD::DrawSpeedGauge()
 	}
 
 	const float Speed = Rover->GetVelocity().Size();
-	// BoostSpeed is the real ceiling this bar can reach (boosting or flying
-	// both run faster than MaxCruiseSpeed), so the bar has somewhere to go
-	// instead of pegging at "full" the moment boost kicks in.
+	// BoostSpeed is the real ceiling this gauge can reach (boosting or
+	// flying both run faster than MaxCruiseSpeed), so it has somewhere to
+	// go instead of pegging at "full" the moment boost kicks in.
 	const float Fraction = FMath::Clamp(Speed / FMath::Max(1.0f, Rover->BoostSpeed), 0.0f, 1.0f);
 
-	constexpr float GaugeWidth = 220.0f;
-	constexpr float GaugeHeight = 14.0f;
-	const float X = (Canvas->SizeX - GaugeWidth) * 0.5f;
-	const float Y = Canvas->SizeY - 64.0f;
+	// A radial tick dial rather than a flat bar - Zoe, 2026-09-04: "A
+	// stylized / colorized curve meter like the kingdom hearts health /
+	// mana bar or some racing games have." Canvas has no native arc
+	// primitive to draw a true curved fill, so this approximates one with
+	// DrawLine ticks fanned out from a pivot below the screen, colour-graded
+	// cool-to-hot the way a KH gauge shifts tone as it fills toward urgent.
+	// Enlarged 2026-09-05 alongside the speed raise - the same dial reading a
+	// bigger number needs more tick resolution to still show a difference
+	// between "fast" and "boosting", and a bigger arc to be readable at a
+	// glance while actually driving that fast.
+	constexpr int32 TickCount = 36;
+	constexpr float ArcStartDegrees = -164.0f;
+	constexpr float ArcEndDegrees = -16.0f;
+	constexpr float InnerRadius = 88.0f;
+	constexpr float OuterRadius = 132.0f;
+	constexpr float TickThickness = 6.0f;
+
+	const float PivotX = Canvas->SizeX * 0.5f;
+	const float PivotY = Canvas->SizeY - 54.0f;
+
+	const int32 LitCount = FMath::RoundToInt(Fraction * TickCount);
+
+	// Boosting/flying reads hot (lit ticks reach further, a small surge)
+	// rather than the calm boost-charge green used elsewhere - a full speed
+	// gauge and a full boost-charge gauge mean opposite things (going fast
+	// vs. ready to go fast) and should not share a colour language.
+	const bool bSurging = Rover->IsBoosting() || Rover->IsFlying();
+
+	for (int32 Index = 0; Index < TickCount; ++Index)
+	{
+		const float T = TickCount > 1 ? static_cast<float>(Index) / (TickCount - 1) : 0.0f;
+		const float AngleRad = FMath::DegreesToRadians(FMath::Lerp(ArcStartDegrees, ArcEndDegrees, T));
+		const float CosA = FMath::Cos(AngleRad);
+		const float SinA = FMath::Sin(AngleRad);
+		const bool bLit = Index < LitCount;
+
+		// Cool blue -> amber -> hot red across the dial's own length, same
+		// colour language as a KH gauge shifting from calm to urgent - here,
+		// from idle to redline.
+		FLinearColor Colour = T < 0.5f
+			? FLinearColor::LerpUsingHSV(FLinearColor(0.25f, 0.55f, 1.0f), FLinearColor(1.0f, 0.82f, 0.15f), T * 2.0f)
+			: FLinearColor::LerpUsingHSV(FLinearColor(1.0f, 0.82f, 0.15f), FLinearColor(1.0f, 0.2f, 0.15f), (T - 0.5f) * 2.0f);
+		Colour.A = bLit ? 1.0f : 0.16f;
+
+		const float Outer = (bLit && bSurging) ? OuterRadius + 12.0f : OuterRadius;
+		DrawLine(PivotX + CosA * InnerRadius, PivotY + SinA * InnerRadius,
+			PivotX + CosA * Outer, PivotY + SinA * Outer, Colour, TickThickness);
+	}
 
 	// Whole-number units/sec rather than an invented "mph"/"km/h" - this is
 	// an arcade rover with no real-world speed model behind it, and a made
 	// up unit would be a lie dressed as a stat.
-	const FString Label = FString::Printf(TEXT("SPEED  %d"), FMath::RoundToInt(Speed));
+	const FString Label = FString::Printf(TEXT("%d"), FMath::RoundToInt(Speed));
 	float LabelW = 0.0f, LabelH = 0.0f;
-	GetTextSize(Label, LabelW, LabelH, GEngine->GetMediumFont(), 1.0f);
-	DrawText(Label, HeadingColour, (Canvas->SizeX - LabelW) * 0.5f, Y - LabelH - 4.0f);
-
-	DrawRect(FLinearColor(0.15f, 0.15f, 0.18f, 0.8f), X, Y, GaugeWidth, GaugeHeight);
-
-	// Boosting/flying reads hot (orange-red) rather than the calm boost-charge
-	// green used elsewhere - a full speed bar and a full boost-charge bar
-	// mean opposite things (going fast vs. ready to go fast) and should not
-	// share a colour language.
-	const FLinearColor FillColour = (Rover->IsBoosting() || Rover->IsFlying())
-		? FLinearColor(0.9f, 0.35f, 0.15f) : FLinearColor(0.3f, 0.65f, 0.85f);
-	DrawRect(FillColour, X, Y, GaugeWidth * Fraction, GaugeHeight);
+	GetTextSize(Label, LabelW, LabelH, GEngine->GetLargeFont(), 1.0f);
+	DrawText(Label, HeadingColour, PivotX - LabelW * 0.5f, PivotY - InnerRadius - LabelH - 2.0f,
+		GEngine->GetLargeFont(), 1.0f);
 }
 
 void ADCCHUD::DrawQuestCompleteBanner()
@@ -1899,6 +1980,102 @@ void ADCCHUD::DrawQuestCompleteBanner()
 	DrawRect(FLinearColor(0.20f, 0.55f, 0.20f, 0.9f * Alpha), X, Y + CardH - 3.0f, CardW, 3.0f);
 
 	DrawText(TitleLine, FLinearColor(0.35f, 0.95f, 0.35f, Alpha),
+		(Canvas->SizeX - TitleW) * 0.5f, Y + 12.0f, GEngine->GetLargeFont(), 1.0f);
+	DrawText(NameLine, FLinearColor(1.0f, 1.0f, 1.0f, Alpha),
+		(Canvas->SizeX - NameW) * 0.5f, Y + TitleH + 20.0f, GEngine->GetMediumFont(), 1.0f);
+}
+
+void ADCCHUD::DrawGauntletProgress()
+{
+	UWorld* World = GetWorld();
+	if (!Canvas || !World)
+	{
+		return;
+	}
+
+	const float Now = World->GetTimeSeconds();
+
+	// Refreshed every couple of seconds via a world search rather than every
+	// frame - there is normally exactly one gauntlet in the level, so this is
+	// the same cost/benefit call DrawQuestCompleteBanner makes for its own
+	// GameState component lookup, just with an actor iterator instead.
+	if (!CachedGauntlet.IsValid() && Now >= GauntletCacheRefreshTime)
+	{
+		GauntletCacheRefreshTime = Now + 2.0f;
+		for (TActorIterator<ADCCGauntletEncounter> It(World); It; ++It)
+		{
+			CachedGauntlet = *It;
+			break;
+		}
+	}
+
+	ADCCGauntletEncounter* Gauntlet = CachedGauntlet.Get();
+	if (!Gauntlet)
+	{
+		return;
+	}
+
+	const EDCCGauntletState CurrentState = Gauntlet->GetState();
+
+	if (CurrentState == EDCCGauntletState::Active)
+	{
+		const FString Line = FString::Printf(TEXT("GAUNTLET  %d / %d"),
+			Gauntlet->GetKillCount(), Gauntlet->TargetKillCount);
+
+		float LineW = 0.0f, LineH = 0.0f;
+		GetTextSize(Line, LineW, LineH, GEngine->GetMediumFont(), 1.0f);
+
+		const float X = (Canvas->SizeX - LineW) * 0.5f;
+		const float Y = 36.0f;
+
+		DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.55f), X - 14.0f, Y - 6.0f, LineW + 28.0f, LineH + 12.0f);
+		DrawText(Line, FLinearColor(0.95f, 0.75f, 0.15f, 1.0f), X, Y, GEngine->GetMediumFont(), 1.0f);
+	}
+
+	// Same poll-and-compare-a-replicated-value shape as
+	// DrawQuestCompleteBanner, just diffing the state enum itself instead of
+	// a dedicated id - a gauntlet only ever makes this transition once
+	// between resets, so there is nothing else worth keying off.
+	if (CurrentState == EDCCGauntletState::Victory && LastObservedGauntletState != EDCCGauntletState::Victory)
+	{
+		GauntletVictoryBannerExpiryTime = Now + 5.0f;
+	}
+	LastObservedGauntletState = CurrentState;
+
+	if (Now >= GauntletVictoryBannerExpiryTime)
+	{
+		return;
+	}
+
+	constexpr float BannerDurationSeconds = 5.0f;
+	const float TimeRemaining = GauntletVictoryBannerExpiryTime - Now;
+	const float Elapsed = BannerDurationSeconds - TimeRemaining;
+	constexpr float FadeSeconds = 0.6f;
+	const float Alpha = FMath::Min(
+		FMath::Clamp(Elapsed / FadeSeconds, 0.0f, 1.0f),
+		FMath::Clamp(TimeRemaining / FadeSeconds, 0.0f, 1.0f));
+
+	const FString TitleLine = TEXT("GAUNTLET CLEARED");
+	const FString NameLine = FString::Printf(TEXT("%d down"), Gauntlet->TargetKillCount);
+
+	float TitleW = 0.0f, TitleH = 0.0f;
+	GetTextSize(TitleLine, TitleW, TitleH, GEngine->GetLargeFont(), 1.0f);
+	float NameW = 0.0f, NameH = 0.0f;
+	GetTextSize(NameLine, NameW, NameH, GEngine->GetMediumFont(), 1.0f);
+
+	const float CardW = FMath::Max(TitleW, NameW) + 64.0f;
+	const float CardH = TitleH + NameH + 34.0f;
+	const float X = (Canvas->SizeX - CardW) * 0.5f;
+
+	// A third of the way down: clear of the boss banner (0.16) and the quest
+	// banner (0.24) so all three can never overlap if they ever coincide.
+	const float Y = Canvas->SizeY * 0.32f;
+
+	DrawRect(FLinearColor(0.05f, 0.04f, 0.0f, 0.80f * Alpha), X, Y, CardW, CardH);
+	DrawRect(FLinearColor(0.75f, 0.55f, 0.10f, 0.9f * Alpha), X, Y, CardW, 3.0f);
+	DrawRect(FLinearColor(0.75f, 0.55f, 0.10f, 0.9f * Alpha), X, Y + CardH - 3.0f, CardW, 3.0f);
+
+	DrawText(TitleLine, FLinearColor(1.0f, 0.85f, 0.25f, Alpha),
 		(Canvas->SizeX - TitleW) * 0.5f, Y + 12.0f, GEngine->GetLargeFont(), 1.0f);
 	DrawText(NameLine, FLinearColor(1.0f, 1.0f, 1.0f, Alpha),
 		(Canvas->SizeX - NameW) * 0.5f, Y + TitleH + 20.0f, GEngine->GetMediumFont(), 1.0f);
@@ -3099,6 +3276,7 @@ void ADCCHUD::DrawNPCInteractionMenu(ADCCCharacterBase* Crawler)
 			case EDCCNPCInteractionOption::Shop: Label = TEXT("Shop"); break;
 			case EDCCNPCInteractionOption::Quests: Label = TEXT("Quests"); break;
 			case EDCCNPCInteractionOption::RideLift: Label = TEXT("Ride the lift"); break;
+			case EDCCNPCInteractionOption::RaceBet: Label = TEXT("Bet and start the race"); break;
 			default: break;
 			}
 

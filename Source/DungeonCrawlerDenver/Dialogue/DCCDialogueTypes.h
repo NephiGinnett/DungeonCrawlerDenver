@@ -87,6 +87,14 @@ enum class EDCCNPCInteractionOption : uint8
 	/** ADCCDialogueNPC_LiftAttendant only - only shown when LinkedLift is set. */
 	RideLift,
 
+	/**
+	 * ADCCDialogueNPC_RaceBookie only - only shown when LinkedTrack is set.
+	 * Takes the wager AND starts the race in one press: they are the same
+	 * action at the table ("put me on and send them away"), and splitting them
+	 * would let someone start a race they had not paid for.
+	 */
+	RaceBet,
+
 	Leave,
 
 	MAX UMETA(Hidden)

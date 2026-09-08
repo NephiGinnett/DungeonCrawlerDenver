@@ -30,6 +30,16 @@ almost none of the drama, because the drama was always the number going down.
 
 ### Tier 1 — The Named
 
+> **📋 The roster now exists: `Docs/crawler-roster.md` (33 authored crawlers).**
+>
+> It keeps this section's rules and splits one idea this table had welded together:
+> **being named is not the same as being built.** Only 8 of the 33 are candidates for a
+> full `ADCCCharacterBase`, which keeps the ~12 budget below intact; the other 25 are
+> dialogue lines, System announcements, graffiti and leaderboard rows, and cost nothing.
+> That is also how the source material behaves — the show reads names out constantly and
+> a party meets a handful. Edit `Tools/gen_crawler_roster.py`, never the .md or the .csv;
+> both are generated from it.
+
 Author these. Do not generate them.
 
 A procedural name with a random stat block is somebody nobody can care about. What
@@ -131,4 +141,6 @@ the game into wallpaper. Rarely, and always attached to something that just happ
 3. **Tier 2 crowd actor**, once the Bar (Room 5) exists as geometry.
 4. **Promote one rival to a real character** — The Appraiser is the natural first,
    because "follows parties at a polite distance and takes what they leave behind"
-   is already a mechanic.
+   is already a mechanic. ✅ **She now has a person:** Dolores "Dee" Okonkwo-Reyes,
+   estate liquidator, thirty years of pricing what was left after somebody died — see
+   `Docs/crawler-roster.md`.

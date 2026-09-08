@@ -70,6 +70,19 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover")
 	float TurnRateDegreesPerSecond = 95.0f;
 
+	/**
+	 * Floor on steering responsiveness, as a fraction of TurnRateDegreesPerSecond.
+	 * Zoe, 2026-09-03: "turning left or right let's you turn slowly even if
+	 * you aren't moving forward." Before this, SteerScale in Tick was purely
+	 * Speed / (MaxCruiseSpeed * 0.30) - at a dead stop that is exactly 0, so
+	 * A/D did nothing at all while parked. This is a hard floor under that
+	 * same scale rather than a replacement for it, so steering still ramps
+	 * up to full authority as the car picks up speed - only the bottom end
+	 * changes.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float MinSteerScale = 0.3f;
+
 	/** How far above the traced ground the actor origin sits.
 	 *  MUST exceed the Collision box half-height (90) or the body parks
 	 *  underground - at the original 60 the car sat 30 units into the floor.
@@ -84,7 +97,7 @@ public:
 
 	/** Cruise speed reached by holding the throttle, cm/s. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|Speed")
-	float MaxCruiseSpeed = 4200.0f;
+	float MaxCruiseSpeed = 5600.0f;
 
 	/** How long full throttle takes to wind up from a standstill to cruise.
 	 *  A ramp rather than instant top speed - the point of the request was
@@ -97,7 +110,7 @@ public:
 
 	/** Speed while boosting. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|Boost")
-	float BoostSpeed = 7000.0f;
+	float BoostSpeed = 11000.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|Boost")
 	float BoostDurationSeconds = 2.0f;
@@ -111,6 +124,18 @@ public:
 	/** 0..1, for a HUD readout. 1 means ready. */
 	UFUNCTION(BlueprintPure, Category = "Rover|Boost")
 	float GetBoostChargeFraction() const;
+
+	/**
+	 * Starts a full boost regardless of cooldown - a reward call (flight
+	 * rings currently), not a player action, so it should never read as
+	 * "sorry, still on cooldown" the way BoostPressed correctly does for a
+	 * button press. Also clears BoostCooldownRemaining outright rather than
+	 * just starting the boost on top of it, or the very next player-pressed
+	 * boost attempt afterward would still be refused by a cooldown the
+	 * player never actually spent.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Rover|Boost")
+	void GrantBoost();
 
 	// ---------------------------------------------------------------------
 	// DRIFT
@@ -154,6 +179,29 @@ public:
 	 *  the surface itself already asks for. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|Feel")
 	float MaxSpeedTiltDegrees = 6.0f;
+
+	/**
+	 * Suspension - a critically-damped spring on Body's local Z, kicked by
+	 * landing impact speed and otherwise just relaxing back to 0. Zoe,
+	 * 2026-09-04: "the vehicle needs a little bit of give still" - landing
+	 * used to snap straight to rest with no cushioning at all. Additive
+	 * with HoverBobAmplitude above, not a replacement for it - the bob is a
+	 * constant idle motion, this is a reaction to an actual event.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|Feel|Suspension")
+	float SuspensionStiffness = 140.0f;
+
+	/** Higher = settles faster/less bouncy. Kept well above the "critically damped" line (2*sqrt(Stiffness)) so this reads as a compress-and-settle, not a wobble. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|Feel|Suspension")
+	float SuspensionDamping = 26.0f;
+
+	/** Units of initial compression per unit/s of landing speed. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|Feel|Suspension")
+	float SuspensionLandingKickScale = 0.02f;
+
+	/** Hard clamp so a very hard landing compresses noticeably without ever visibly burying the body in the ground. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|Feel|Suspension")
+	float MaxSuspensionCompression = 40.0f;
 
 	// ---------------------------------------------------------------------
 	// SLOPES AND AIR
@@ -220,7 +268,7 @@ public:
 	float FlightUnlockFallDistance = 450.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|Flight")
-	float FlightSpeed = 5200.0f;
+	float FlightSpeed = 8000.0f;
 
 	/** Vertical rate from the climb/descend keys while flying. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|Flight")
@@ -238,37 +286,84 @@ public:
 	bool CanEngageFlight() const;
 
 	// ---------------------------------------------------------------------
-	// FLIGHT ANGLE - "flaps"
+	// AUTOPILOT - driverless traffic
 	//
-	// Hold left mouse button and drag up/down to set the nose pitch, like a
-	// flap lever rather than a joystick: it holds wherever you left it when
-	// you release the button, and only moves again when you click-drag it.
-	// The angle is not just cosmetic - it drives climb/dive directly (sin of
-	// the angle times FlightPitchLiftRate), on top of whatever Space/Ctrl are
-	// doing, so a player can fly a smooth arc with the mouse instead of only
-	// having the two blunt climb/descend keys.
+	// Zoe, 2026-09-04: "I placed several cars on the road. Can you animate
+	// them to just travel forwards towards the end of the ramp and then
+	// shoot off and stop running after that? I'd like to incentivize the
+	// player to drive either with them or crash into them." No Driver is
+	// ever involved - see the bAutoPilotActive branch in Tick() (drives it)
+	// and UpdateGroundAndAir (switches it off the instant it leaves the
+	// ground, which is what "shoot off... and stop" means mechanically: the
+	// launch itself is just existing momentum plus gravity, same as a
+	// player driving off the same ramp).
 	// ---------------------------------------------------------------------
 
-	/** Degrees the nose pitches at full drag deflection. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|Flight|Angle")
-	float MaxFlightPitchDegrees = 35.0f;
+	/** Starts driving itself forward the moment it exists. Turns itself off on launch - see UpdateGroundAndAir. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|AutoPilot")
+	bool bAutoPilotActive = false;
 
-	/** Vertical speed contributed at full pitch deflection, cm/s - what turns
-	 *  the visual tilt into an actual climb or dive. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|Flight|Angle")
-	float FlightPitchLiftRate = 1800.0f;
+	/** Steering while on autopilot. 0 keeps it dead straight down the road. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|AutoPilot")
+	float AutoPilotSteerInput = 0.0f;
 
-	/** -1..1 change per pixel of mouse drag while the button is held. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|Flight|Angle")
-	float FlightPitchDragSensitivity = 0.01f;
+	/** Boosts whenever one is off cooldown while autopiloting, so it is at or near full speed well before the ramp, not just at the last moment. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|AutoPilot")
+	bool bAutoPilotBoostOnLaunch = true;
 
-	/** How fast the visual nose eases toward the dragged setting. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|Flight|Angle")
-	float FlightPitchAlignSpeed = 4.0f;
+	// ---------------------------------------------------------------------
+	// AUTOPILOT ROUTES - racing
+	//
+	// Zoe, 2026-09-05: "can you make a race track for us? and have the NPCs
+	// drive cars around the track?"
+	//
+	// A non-empty AutoPilotWaypoints turns the straight-line traffic autopilot
+	// above into a route follower. The one behaviour that MUST change with it
+	// is the launch shutoff in UpdateGroundAndAir: traffic exists to shoot off
+	// a ramp and stop, but a racer that switched itself off the first time a
+	// wheel left the tarmac would die at the first bump in the track. So both
+	// shutoff sites are gated on having no route.
+	// ---------------------------------------------------------------------
 
-	/** -1..1. For a HUD readout - a flap gauge, an artificial horizon tick. */
-	UFUNCTION(BlueprintPure, Category = "Rover|Flight|Angle")
-	float GetFlightPitchInput() const { return FlightPitchInput; }
+	/** World-space points to drive through in order. Empty = the old straight-line traffic behaviour. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|AutoPilot")
+	TArray<FVector> AutoPilotWaypoints;
+
+	/**
+	 * How close (in the XY plane only) counts as having reached a waypoint.
+	 * Z is deliberately ignored - a track that climbs would otherwise leave a
+	 * racer circling a point it can never be level with.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|AutoPilot")
+	float AutoPilotAcceptanceRadius = 750.0f;
+
+	/** Wrap to waypoint 0 after the last one (a lap) instead of stopping there. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|AutoPilot")
+	bool bAutoPilotLoop = true;
+
+	/**
+	 * Multiplies this racer's top speed. ADCCRaceTrack hands each entrant a
+	 * slightly different value so the field spreads out instead of running as
+	 * one indistinguishable block - there is nothing to bet on in a dead heat.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|AutoPilot")
+	float AutoPilotSpeedScale = 1.0f;
+
+	/** Which waypoint it is currently driving at. Replicated so a client HUD could read the field's order. */
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Rover|AutoPilot")
+	int32 AutoPilotWaypointIndex = 0;
+
+	/** Laps finished since the route started. ADCCRaceTrack polls this rather than needing a delegate. */
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Rover|AutoPilot")
+	int32 AutoPilotLapsCompleted = 0;
+
+	/** Server-side. Arms the route and starts driving it from the nearest sensible point. */
+	UFUNCTION(BlueprintCallable, Category = "Rover|AutoPilot")
+	void StartAutoPilotRoute(const TArray<FVector>& Route, bool bLoop);
+
+	/** Server-side. Stops autopiloting and clears any route. */
+	UFUNCTION(BlueprintCallable, Category = "Rover|AutoPilot")
+	void StopAutoPilot();
 
 	// ---------------------------------------------------------------------
 	// PASSENGERS
@@ -302,6 +397,48 @@ public:
 	/** Thruster trail, on while boosting or flying. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Rover|FX")
 	TObjectPtr<class UNiagaraComponent> BoostTrail;
+
+	/**
+	 * Uniform scale applied to BoostTrail while it is running. Zoe,
+	 * 2026-09-05: "bigger particle effects when boosting while driving and
+	 * flying." Applied in UpdateTrail rather than baked into the constructor
+	 * so this stays a live tuning knob - editing it in the Details panel
+	 * takes effect on the next boost instead of needing a rebuild.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|FX", meta = (ClampMin = "0.1"))
+	float BoostTrailScale = 4.0f;
+
+	// ---------------------------------------------------------------------
+	// SEATING
+	//
+	// Occupants used to be hidden outright (SetActorHiddenInGame) the moment
+	// they got in. Zoe, 2026-09-05: "make sure that you can see the character
+	// models 'inside' the car as it moves" - so they stay visible and get
+	// parked at these offsets instead, relative to Collision (the root box,
+	// whose origin sits 90 units above the car mesh's own).
+	//
+	// There is no sitting animation on any skeleton in this project, so an
+	// occupant stands in place. These defaults put a standing crawler's head
+	// just under the roofline with the feet below the floor pan - which reads
+	// correctly from outside through the windows, and is why the offsets are
+	// EditAnywhere: a taller or shorter model will want its own nudge.
+	// ---------------------------------------------------------------------
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|Seating")
+	FVector DriverSeatOffset = FVector(40.0f, -55.0f, -30.0f);
+
+	/** One per passenger, in boarding order. A passenger past the end of this list reuses the last entry. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|Seating")
+	TArray<FVector> PassengerSeatOffsets = {
+		FVector(40.0f, 55.0f, -30.0f),
+		FVector(-70.0f, -55.0f, -30.0f),
+		FVector(-70.0f, 55.0f, -30.0f),
+		FVector(-150.0f, 0.0f, -30.0f)
+	};
+
+	/** How far to the side an occupant is placed when they get out. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|Seating")
+	float ExitSideDistance = 320.0f;
 
 	// ---------------------------------------------------------------------
 	// COLLISION
@@ -482,14 +619,6 @@ protected:
 	/** Server only. Marks Piloting and awards XP for time spent actually driving. */
 	void TickPilotingProgress(float DeltaSeconds);
 
-	void ThrottleForwardPressed();
-	void ThrottleForwardReleased();
-	void ThrottleReversePressed();
-	void ThrottleReverseReleased();
-	void SteerLeftPressed();
-	void SteerLeftReleased();
-	void SteerRightPressed();
-	void SteerRightReleased();
 	void InputExit();
 
 	void EjectPressed();
@@ -523,27 +652,6 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Rover|Radio")
 	TObjectPtr<class UAudioComponent> RadioAudio;
 
-	void ClimbPressed();
-	void ClimbReleased();
-	void DescendPressed();
-	void DescendReleased();
-
-	void FlightPitchDragPressed();
-	void FlightPitchDragReleased();
-	void FlightPitchDrag(float Value);
-
-	bool bFlightPitchDragHeld = false;
-
-	/** -1..1. Set by dragging while bFlightPitchDragHeld; holds its value on
-	 *  release, same reasoning as a physical flap lever - see the header
-	 *  comment on this section. Reset to 0 in EndFlight. */
-	float FlightPitchInput = 0.0f;
-
-	/** Eased toward FlightPitchInput * MaxFlightPitchDegrees every Tick while
-	 *  flying, so the nose tilts smoothly instead of snapping. Read by both
-	 *  SnapToGround (the actual climb/dive) and AlignToSurface (the visual). */
-	float FlightPitchAngleDegrees = 0.0f;
-
 	/** Server+local. Turns flight on; assumes CanEngageFlight() already passed. */
 	void EngageFlight();
 	void EndFlight();
@@ -567,6 +675,11 @@ protected:
 	float SteerInput = 0.0f;
 	float VerticalInput = 0.0f;
 
+	/** Last tick's Space state, so the per-tick poll can still detect a fresh
+	 *  press for CanEngageFlight() (a one-shot action) alongside the level
+	 *  VerticalInput it also drives - see the poll block at the top of Tick(). */
+	bool bWasSpaceDownLastTick = false;
+
 	bool bAirborne = false;
 	bool bClimbingStep = false;
 
@@ -582,6 +695,22 @@ protected:
 	/** Highest Z reached since leaving the ground, and how far below it we are. */
 	float ApexZ = 0.0f;
 	float FallenDistance = 0.0f;
+
+	/** Suspension spring state - see SuspensionStiffness's own comment. */
+	float SuspensionOffset = 0.0f;
+	float SuspensionVelocity = 0.0f;
+
+	/**
+	 * +1 if the driver walked up to the rover's right, -1 if its left, as
+	 * measured at the moment they actually got in. Zoe, 2026-09-05: "make
+	 * sure when you exit the car, you leave on the same side you got in in."
+	 * Server-only - ExitRover is the only reader and only ever runs with
+	 * authority, so this needs no replication.
+	 */
+	float DriverEntrySide = 1.0f;
+
+	/** Parks an occupant at a seat offset, visible, on every machine. */
+	void SeatOccupant(ADCCCharacterBase* Occupant, const FVector& SeatOffset);
 
 	/** Surface normal of whatever was last under the rover. */
 	FVector LastGroundNormal = FVector::UpVector;

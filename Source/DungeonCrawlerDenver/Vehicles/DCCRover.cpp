@@ -145,6 +145,8 @@ void ADCCRover::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetim
 	DOREPLIFETIME(ADCCRover, Passengers);
 	DOREPLIFETIME(ADCCRover, bWindowsDown);
 	DOREPLIFETIME(ADCCRover, bRadioOn);
+	DOREPLIFETIME(ADCCRover, AutoPilotWaypointIndex);
+	DOREPLIFETIME(ADCCRover, AutoPilotLapsCompleted);
 }
 
 void ADCCRover::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -163,28 +165,28 @@ void ADCCRover::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 	// would look drivable and do nothing. Binding keys directly keeps the rover
 	// independent of both input systems, which is also what makes it work the
 	// moment it is possessed without an IMC being pushed for it.
-	PlayerInputComponent->BindKey(EKeys::W, IE_Pressed,  this, &ADCCRover::ThrottleForwardPressed);
-	PlayerInputComponent->BindKey(EKeys::W, IE_Released, this, &ADCCRover::ThrottleForwardReleased);
-	PlayerInputComponent->BindKey(EKeys::S, IE_Pressed,  this, &ADCCRover::ThrottleReversePressed);
-	PlayerInputComponent->BindKey(EKeys::S, IE_Released, this, &ADCCRover::ThrottleReverseReleased);
-	PlayerInputComponent->BindKey(EKeys::A, IE_Pressed,  this, &ADCCRover::SteerLeftPressed);
-	PlayerInputComponent->BindKey(EKeys::A, IE_Released, this, &ADCCRover::SteerLeftReleased);
-	PlayerInputComponent->BindKey(EKeys::D, IE_Pressed,  this, &ADCCRover::SteerRightPressed);
-	PlayerInputComponent->BindKey(EKeys::D, IE_Released, this, &ADCCRover::SteerRightReleased);
+	// W/A/S/D/Space/Left Ctrl are NOT bound as Pressed/Released pairs here -
+	// see the comment on the ThrottleInput/SteerInput/VerticalInput poll in
+	// Tick() for why that shape was the actual bug behind "the car starts
+	// moving backward uncontrollably or constantly spins until they get out."
 	PlayerInputComponent->BindKey(EKeys::LeftShift, IE_Pressed,  this, &ADCCRover::DriftPressed);
 	PlayerInputComponent->BindKey(EKeys::LeftShift, IE_Released, this, &ADCCRover::DriftReleased);
-	PlayerInputComponent->BindKey(EKeys::SpaceBar,  IE_Pressed,  this, &ADCCRover::BoostPressed);
-	PlayerInputComponent->BindKey(EKeys::SpaceBar,  IE_Pressed,  this, &ADCCRover::ClimbPressed);
-	PlayerInputComponent->BindKey(EKeys::SpaceBar,  IE_Released, this, &ADCCRover::ClimbReleased);
-	PlayerInputComponent->BindKey(EKeys::LeftControl, IE_Pressed,  this, &ADCCRover::DescendPressed);
-	PlayerInputComponent->BindKey(EKeys::LeftControl, IE_Released, this, &ADCCRover::DescendReleased);
+	// Boost lives on left click now, not Space - Zoe, 2026-09-04: Space was
+	// doing double duty as both the continuous climb key and (after the
+	// 2026-09-04 flying-boost fix) a boost trigger, which read as "getting
+	// mixed up with the climb button." One press, one job: LMB is boost,
+	// full stop, on the ground or in the air. Space keeps flight-engage
+	// (a one-shot edge, still detected in Tick()) and climb (continuous).
+	PlayerInputComponent->BindKey(EKeys::LeftMouseButton, IE_Pressed,  this, &ADCCRover::BoostPressed);
 	PlayerInputComponent->BindKey(EKeys::X, IE_Pressed,  this, &ADCCRover::EjectPressed);
 	PlayerInputComponent->BindKey(EKeys::E, IE_Pressed,  this, &ADCCRover::InputExit);
 	PlayerInputComponent->BindKey(EKeys::R, IE_Pressed,  this, &ADCCRover::WindowTogglePressed);
 	PlayerInputComponent->BindKey(EKeys::T, IE_Pressed,  this, &ADCCRover::RadioTogglePressed);
-	PlayerInputComponent->BindKey(EKeys::LeftMouseButton, IE_Pressed,  this, &ADCCRover::FlightPitchDragPressed);
-	PlayerInputComponent->BindKey(EKeys::LeftMouseButton, IE_Released, this, &ADCCRover::FlightPitchDragReleased);
-	PlayerInputComponent->BindAxisKey(EKeys::MouseY, this, &ADCCRover::FlightPitchDrag);
+	// The click-and-drag flap lever (LMB + MouseY) is gone - Zoe, 2026-09-04:
+	// "let's remove the click and drag aspect of flying, I don't think it's
+	// working great." Flying pitch is now just a fixed level attitude; climb
+	// rate comes purely from Space/Ctrl (VerticalInput), no elevator lift on
+	// top of it. LMB is free for boost as a result.
 
 	// Mouse X swings the chase camera rather than steering, so a driver can
 	// look into a corner without changing where the car is pointed.
@@ -196,22 +198,11 @@ void ADCCRover::DriftReleased() { bDrifting = false; }
 
 void ADCCRover::BoostPressed()
 {
-	// Space does two jobs, chosen by context: on the ground it boosts, and in
-	// the air - once the rover has fallen far enough to have committed to the
-	// jump - the same key engages flight. One button, because "boost again at
-	// the top of the arc" is how a player will reach for it anyway.
-	if (CanEngageFlight())
-	{
-		EngageFlight();
-		return;
-	}
-
-	if (bFlying)
-	{
-		// Already flying: Space is the climb key, handled as an axis below.
-		return;
-	}
-
+	// A dedicated trigger now - see the LMB binding comment in
+	// SetupPlayerInputComponent for why this is no longer sharing Space with
+	// climb/flight-engage. CanEngageFlight()/EngageFlight() moved to the
+	// Space edge-detection in Tick(), since that's a one-shot action
+	// unrelated to boosting.
 	if (bBoosting || BoostCooldownRemaining > 0.0f || CrashRecoveryRemaining > 0.0f)
 	{
 		return;
@@ -220,28 +211,19 @@ void ADCCRover::BoostPressed()
 	BoostSecondsRemaining = BoostDurationSeconds;
 }
 
-// Space climbs and Left Ctrl descends while flying. Additive for the same
-// reason the throttle keys are: holding both cancels cleanly.
-void ADCCRover::ClimbPressed()    { VerticalInput += 1.0f; }
-void ADCCRover::ClimbReleased()   { VerticalInput -= 1.0f; }
-void ADCCRover::DescendPressed()  { VerticalInput -= 1.0f; }
-void ADCCRover::DescendReleased() { VerticalInput += 1.0f; }
-
-void ADCCRover::FlightPitchDragPressed()  { bFlightPitchDragHeld = true; }
-void ADCCRover::FlightPitchDragReleased() { bFlightPitchDragHeld = false; }
-
-void ADCCRover::FlightPitchDrag(float Value)
+void ADCCRover::GrantBoost()
 {
-	// A flap lever, not a joystick: dragging changes the setting, releasing
-	// the button leaves it exactly where it was rather than springing back
-	// to level. Sign is a first guess, not a verified one - there is no
-	// input-injection tool in this project's MCP toolset to confirm MouseY's
-	// polarity by actually flying it, so flip this if a real flight shows
-	// dragging up dives instead of climbs.
-	if (bFlightPitchDragHeld && !FMath::IsNearlyZero(Value))
+	if (CrashRecoveryRemaining > 0.0f)
 	{
-		FlightPitchInput = FMath::Clamp(FlightPitchInput + Value * FlightPitchDragSensitivity, -1.0f, 1.0f);
+		// Still reeling from a crash - a reward boost that shoved the
+		// player straight into the wall they just hit would read as a
+		// punishment, not a reward.
+		return;
 	}
+
+	bBoosting = true;
+	BoostSecondsRemaining = BoostDurationSeconds;
+	BoostCooldownRemaining = 0.0f;
 }
 
 void ADCCRover::CameraLook(float Value)
@@ -261,17 +243,6 @@ float ADCCRover::GetBoostChargeFraction() const
 		? 1.0f - FMath::Clamp(BoostCooldownRemaining / BoostCooldownSeconds, 0.0f, 1.0f)
 		: 1.0f;
 }
-
-// Additive rather than assigning, so holding W and S together cancels and
-// releasing one key does not wipe the other's contribution.
-void ADCCRover::ThrottleForwardPressed()  { ThrottleInput += 1.0f; }
-void ADCCRover::ThrottleForwardReleased() { ThrottleInput -= 1.0f; }
-void ADCCRover::ThrottleReversePressed()  { ThrottleInput -= 1.0f; }
-void ADCCRover::ThrottleReverseReleased() { ThrottleInput += 1.0f; }
-void ADCCRover::SteerLeftPressed()        { SteerInput -= 1.0f; }
-void ADCCRover::SteerLeftReleased()       { SteerInput += 1.0f; }
-void ADCCRover::SteerRightPressed()       { SteerInput += 1.0f; }
-void ADCCRover::SteerRightReleased()      { SteerInput -= 1.0f; }
 
 void ADCCRover::InputExit()
 {
@@ -416,7 +387,119 @@ void ADCCRover::Tick(float DeltaSeconds)
 		CrashRecoveryRemaining = FMath::Max(0.0f, CrashRecoveryRemaining - DeltaSeconds);
 	}
 
-	const bool bControllable = Driver != nullptr && CrashRecoveryRemaining <= 0.0f;
+	const bool bControllable = (Driver != nullptr || bAutoPilotActive) && CrashRecoveryRemaining <= 0.0f;
+
+	// Throttle/steer are read directly from live key state every tick,
+	// rather than accumulated from Pressed/Released deltas the way they
+	// used to be. The old +=/-= pairs broke whenever W/A/S/D was already
+	// held at the moment of possession - walking up to the car holding W,
+	// then pressing E to get in. A key already down when this pawn's
+	// InputComponent is created never fires its Pressed edge (no state
+	// transition to detect), but releasing it later still fires Released,
+	// which left ThrottleInput or SteerInput stuck at +/-1 with nothing to
+	// bring it back to 0 short of exiting. Zoe, 2026-09-03: "the car will
+	// suddenly start moving backward uncontrollably or constantly spin
+	// until they get out" - this is that bug. Polling ground truth every
+	// tick makes a stuck accumulator structurally impossible.
+	// VerticalInput (Space/Ctrl) rides along on the same poll, for the same
+	// reason - it used to be a ClimbPressed/DescendPressed +=/-= pair with
+	// the identical stuck-accumulator vulnerability. Space's flight-engage
+	// is a genuine one-shot action though (CanEngageFlight() should only be
+	// tried once per press, not every tick it's held), so that still needs
+	// an edge - tracked here via bWasSpaceDownLastTick rather than a BindKey
+	// Pressed callback, so it shares the same never-misses-a-transition
+	// guarantee as the rest of this poll instead of reintroducing the bug
+	// this whole block exists to avoid.
+	if (bControllable && IsLocallyControlled())
+	{
+		if (const APlayerController* PC = Cast<APlayerController>(GetController()))
+		{
+			ThrottleInput = (PC->IsInputKeyDown(EKeys::W) ? 1.0f : 0.0f)
+				- (PC->IsInputKeyDown(EKeys::S) ? 1.0f : 0.0f);
+			SteerInput = (PC->IsInputKeyDown(EKeys::D) ? 1.0f : 0.0f)
+				- (PC->IsInputKeyDown(EKeys::A) ? 1.0f : 0.0f);
+
+			const bool bSpaceDown = PC->IsInputKeyDown(EKeys::SpaceBar);
+			VerticalInput = (bSpaceDown ? 1.0f : 0.0f)
+				- (PC->IsInputKeyDown(EKeys::LeftControl) ? 1.0f : 0.0f);
+
+			if (bSpaceDown && !bWasSpaceDownLastTick && CanEngageFlight())
+			{
+				EngageFlight();
+			}
+			bWasSpaceDownLastTick = bSpaceDown;
+		}
+	}
+	else if (bAutoPilotActive && HasAuthority())
+	{
+		// No Driver to poll input from - these are decoration/traffic cars
+		// (Zoe, 2026-09-04: "I placed several cars on the road... animate
+		// them to just travel forwards"). Server-driven like every other
+		// autonomous actor in this project, rather than IsLocallyControlled
+		// (there is no controller possessing this pawn at all to be local
+		// on). Straight line at AutoPilotSteerInput, full throttle, and a
+		// boost the instant one is off cooldown - "shoot off the end of the
+		// ramp" wants it already at max speed well before it gets there, not
+		// just at the last moment.
+		ThrottleInput = 1.0f;
+		SteerInput = AutoPilotSteerInput;
+
+		// A route overrides the fixed steer value entirely - see
+		// AutoPilotWaypoints' comment. Steering is proportional to the yaw
+		// error toward the current waypoint and clamped to [-1,1], so it
+		// reuses the exact same steering path a player's D/A produces rather
+		// than teleporting the car around corners: a racer that cut a corner
+		// by rotating in place would not read as driving.
+		if (AutoPilotWaypoints.Num() > 0)
+		{
+			AutoPilotWaypointIndex = FMath::Clamp(AutoPilotWaypointIndex, 0, AutoPilotWaypoints.Num() - 1);
+			const FVector Target = AutoPilotWaypoints[AutoPilotWaypointIndex];
+			const FVector ToTarget = FVector(Target.X - GetActorLocation().X, Target.Y - GetActorLocation().Y, 0.0f);
+
+			if (ToTarget.SizeSquared() > FMath::Square(AutoPilotAcceptanceRadius))
+			{
+				const float DesiredYaw = ToTarget.Rotation().Yaw;
+				const float YawError = FMath::FindDeltaAngleDegrees(GetActorRotation().Yaw, DesiredYaw);
+				// /45 rather than /180: full lock by 45 degrees off means it
+				// commits to a corner instead of drifting lazily toward it.
+				SteerInput = FMath::Clamp(YawError / 45.0f, -1.0f, 1.0f);
+			}
+			else
+			{
+				// Reached. Advance, and count a lap on the wrap.
+				const int32 NextIndex = AutoPilotWaypointIndex + 1;
+				if (NextIndex >= AutoPilotWaypoints.Num())
+				{
+					++AutoPilotLapsCompleted;
+					if (bAutoPilotLoop)
+					{
+						AutoPilotWaypointIndex = 0;
+					}
+					else
+					{
+						// End of a one-shot route. Coast to a stop rather than
+						// braking - same "existing momentum finishes the move"
+						// idea as the ramp-launch shutoff.
+						StopAutoPilot();
+					}
+				}
+				else
+				{
+					AutoPilotWaypointIndex = NextIndex;
+				}
+			}
+		}
+
+		// Racers do not spam boost. bAutoPilotBoostOnLaunch is the traffic
+		// behaviour (be at top speed by the time the ramp arrives); on a route
+		// a permanent boost would erase AutoPilotSpeedScale, which is the only
+		// thing separating the entrants from each other.
+		if (bAutoPilotBoostOnLaunch && AutoPilotWaypoints.Num() == 0
+			&& !bBoosting && BoostCooldownRemaining <= 0.0f)
+		{
+			BoostPressed();
+		}
+	}
 
 	if (bControllable)
 	{
@@ -438,14 +521,21 @@ void ADCCRover::Tick(float DeltaSeconds)
 		{
 			// Boost overrides the ramp outright - that is what makes it read as
 			// a shove rather than a slightly steeper acceleration curve.
-			Movement->MaxSpeed = bBoosting
+			// AutoPilotSpeedScale is 1 for everything a player drives, so this
+			// is a no-op outside a race - see its own comment.
+			const float SpeedScale = (bAutoPilotActive && AutoPilotWaypoints.Num() > 0)
+				? FMath::Clamp(AutoPilotSpeedScale, 0.1f, 2.0f) : 1.0f;
+			Movement->MaxSpeed = SpeedScale * (bBoosting
 				? BoostSpeed
-				: FMath::Max(600.0f, MaxCruiseSpeed * FMath::Max(SpeedRamp, 0.15f));
+				: FMath::Max(600.0f, MaxCruiseSpeed * FMath::Max(SpeedRamp, 0.15f)));
 		}
 
 		// --- steering ------------------------------------------------------
 		const float Speed = GetVelocity().Size();
-		const float SteerScale = FMath::Clamp(Speed / FMath::Max(1.0f, MaxCruiseSpeed * 0.30f), 0.0f, 1.0f);
+		// MinSteerScale floors this rather than letting it reach 0 at a dead
+		// stop - see the property's own comment for why.
+		const float SteerScale = FMath::Clamp(
+			FMath::Max(MinSteerScale, Speed / FMath::Max(1.0f, MaxCruiseSpeed * 0.30f)), 0.0f, 1.0f);
 		const float TurnRate = TurnRateDegreesPerSecond * (bDrifting ? DriftTurnMultiplier : 1.0f);
 
 		if (!FMath::IsNearlyZero(SteerInput))
@@ -507,6 +597,20 @@ void ADCCRover::Tick(float DeltaSeconds)
 	// Fades out with speed rather than being constant - it should read as
 	// "floating at rest", not as suspension wobble while actually driving,
 	// which would fight the speed-tilt pitch above for attention.
+	// --- suspension spring --------------------------------------------------
+	// Kicked by SuspensionVelocity -= ... on landing (see UpdateGroundAndAir's
+	// landed branch); otherwise just a standard critically-damped-ish spring
+	// relaxing back toward 0. Deliberately NOT faded by speed the way the
+	// hover bob above is - a landing impact happens exactly while moving, so
+	// fading it out at speed would hide the one moment it exists to be felt.
+	// "The vehicle needs a little bit of give still" (Zoe, 2026-09-04).
+	{
+		const float SpringForce = -SuspensionStiffness * SuspensionOffset - SuspensionDamping * SuspensionVelocity;
+		SuspensionVelocity += SpringForce * DeltaSeconds;
+		SuspensionOffset = FMath::Clamp(SuspensionOffset + SuspensionVelocity * DeltaSeconds,
+			-MaxSuspensionCompression, MaxSuspensionCompression);
+	}
+
 	if (Body)
 	{
 		const UWorld* World = GetWorld();
@@ -515,14 +619,18 @@ void ADCCRover::Tick(float DeltaSeconds)
 		const float Bob = World
 			? FMath::Sin(World->GetTimeSeconds() * (2.0f * PI / BobPeriod)) * HoverBobAmplitude * (1.0f - SpeedFraction)
 			: 0.0f;
-		Body->SetRelativeLocation(FVector(0.0f, 0.0f, -90.0f + Bob));
+		Body->SetRelativeLocation(FVector(0.0f, 0.0f, -90.0f + Bob + SuspensionOffset));
 	}
 
 	// Flight has its own throttle - the ground ramp does not apply, and the
 	// movement component's cap has to be raised or flying is capped at cruise.
+	// bBoosting takes priority over the flat FlightSpeed cap, or a boost
+	// triggered mid-air (see BoostPressed) would do nothing - this used to
+	// unconditionally overwrite whatever the ground branch above had just
+	// set, discarding boost outright the instant bFlying was true.
 	if (bFlying && Movement)
 	{
-		Movement->MaxSpeed = FlightSpeed;
+		Movement->MaxSpeed = bBoosting ? BoostSpeed : FlightSpeed;
 		if (!FMath::IsNearlyZero(ThrottleInput))
 		{
 			AddMovementInput(GetActorForwardVector(), ThrottleInput);
@@ -734,6 +842,7 @@ void ADCCRover::UpdateGroundAndAir(float DeltaSeconds)
 	}
 
 	const FVector Origin = GetActorLocation();
+	const bool bWasAirborneBeforeThisTick = bAirborne;
 
 	FHitResult Hit;
 	FCollisionQueryParams Params(SCENE_QUERY_STAT(RoverGround), false, this);
@@ -760,17 +869,10 @@ void ADCCRover::UpdateGroundAndAir(float DeltaSeconds)
 			}
 		}
 
-		// Ease the visual/mechanical nose angle toward wherever the flap lever
-		// is set, rather than snapping - a sudden pitch flip reads as a glitch.
-		const float TargetPitch = FlightPitchInput * MaxFlightPitchDegrees;
-		FlightPitchAngleDegrees = FMath::FInterpTo(FlightPitchAngleDegrees, TargetPitch, DeltaSeconds, FlightPitchAlignSpeed);
-
-		// sin() so a shallow drag barely changes altitude and full deflection
-		// really matters, same shape as a real elevator. Additive with
-		// Space/Ctrl rather than replacing them - the flap is the fine
-		// control, the keys are still there for a snap override.
-		const float PitchClimb = FMath::Sin(FMath::DegreesToRadians(FlightPitchAngleDegrees)) * FlightPitchLiftRate;
-		VerticalVelocity = VerticalInput * FlightClimbRate + PitchClimb;
+		// Climb rate is purely Space/Ctrl now - the mouse-drag flap lever that
+		// used to add an elevator-style lift on top of this is gone (Zoe,
+		// 2026-09-04: "let's remove the click and drag aspect of flying").
+		VerticalVelocity = VerticalInput * FlightClimbRate;
 		SetActorLocation(Origin + FVector(0.0f, 0.0f, VerticalVelocity * DeltaSeconds), true);
 
 		// Touching down ends it, so flight resolves by landing rather than by
@@ -788,8 +890,25 @@ void ADCCRover::UpdateGroundAndAir(float DeltaSeconds)
 	if (!bFoundGround)
 	{
 		// Nothing beneath at all - fall, and keep tracking the drop so flight
-		// can still be earned over a chasm.
+		// can still be earned over a chasm. This is also the ramp-launch
+		// case for an autopilot car - see the bAutoPilotActive check just
+		// below.
 		bAirborne = true;
+		// AutoPilotWaypoints.Num() == 0 is what separates traffic from a
+		// racer here - see that property's comment. A racer must keep its
+		// route across every bump, kerb and crest on the track.
+		if (bAutoPilotActive && AutoPilotWaypoints.Num() == 0 && !bWasAirborneBeforeThisTick)
+		{
+			// "Shoot off the end of the ramp... and then stop running after
+			// that" (Zoe, 2026-09-04) - autopilot's job was getting the car
+			// up to speed and pointed straight; the instant it leaves the
+			// ground it already has everything it needs (existing
+			// horizontal velocity plus gravity) to finish the jump on its
+			// own. Stopping here rather than on landing means it never
+			// tries to keep accelerating forward mid-air, where there is no
+			// traction for that to mean anything.
+			bAutoPilotActive = false;
+		}
 		VerticalVelocity -= Gravity * DeltaSeconds;
 		ApexZ = FMath::Max(ApexZ, Origin.Z);
 		FallenDistance = FMath::Max(0.0f, ApexZ - Origin.Z);
@@ -807,12 +926,27 @@ void ADCCRover::UpdateGroundAndAir(float DeltaSeconds)
 	{
 		// --- airborne ------------------------------------------------------
 		bAirborne = true;
+		if (bAutoPilotActive && AutoPilotWaypoints.Num() == 0 && !bWasAirborneBeforeThisTick)
+		{
+			// Same launch-detection as the !bFoundGround branch above - see
+			// its comment. Reached when the ground trace still hits
+			// something (a lower landing pad within trace range, say) but
+			// the gap is already too big to be "still driving."
+			bAutoPilotActive = false;
+		}
 		VerticalVelocity -= Gravity * DeltaSeconds;
 
 		float NewZ = Origin.Z + VerticalVelocity * DeltaSeconds;
 		if (NewZ <= TargetZ)
 		{
-			// Landed.
+			// Landed. Kicks the suspension spring (see the Tick() block that
+			// relaxes SuspensionOffset back to 0) BEFORE VerticalVelocity is
+			// zeroed, so a harder landing compresses harder - "the vehicle
+			// needs a little bit of give still" (Zoe, 2026-09-04). Snapping
+			// straight to rest read as too rigid; this is what actually
+			// gives a landing weight.
+			SuspensionVelocity -= FMath::Abs(VerticalVelocity) * SuspensionLandingKickScale;
+
 			NewZ = TargetZ;
 			VerticalVelocity = 0.0f;
 			bAirborne = false;
@@ -841,14 +975,17 @@ void ADCCRover::UpdateGroundAndAir(float DeltaSeconds)
 		// against a doorstep.
 		float EffectiveTarget = TargetZ;
 		const float AheadZ = ProbeGroundAhead();
+		bool bTargetFromProbe = false;
 		if (AheadZ > TargetZ && (AheadZ - TargetZ) <= MaxStepHeight)
 		{
 			EffectiveTarget = AheadZ + RideHeight;
+			bTargetFromProbe = true;
 		}
 
 		// A contact-time step request (NotifyHit) always wins, since that is a
 		// surface actually in the way right now.
-		if (PendingStepUpZ > EffectiveTarget)
+		const bool bTargetFromContact = PendingStepUpZ > EffectiveTarget;
+		if (bTargetFromContact)
 		{
 			EffectiveTarget = PendingStepUpZ;
 		}
@@ -867,7 +1004,47 @@ void ADCCRover::UpdateGroundAndAir(float DeltaSeconds)
 			// asked for it to crawl over things.
 			const float MaxRise = StepClimbSpeed * DeltaSeconds;
 			NewZ = FMath::Min(EffectiveTarget, Origin.Z + FMath::Max(MaxRise, 0.0f));
-			bClimbingStep = (EffectiveTarget - Origin.Z) > 12.0f;
+
+			// Distinguish a genuine step/ledge from an ordinary ramp, so
+			// AlignToSurface can match the ramp's real angle (its grounded
+			// branch, keyed off LastGroundNormal) instead of forcing the
+			// fixed StepClimbPitchDegrees the whole way up it. Zoe,
+			// 2026-09-03: "when you go on the ramp, the car should conform
+			// to the ramp's angle." The old test was a flat "rise > 12 units
+			// this tick", which any ordinary ramp clears just as easily as a
+			// real step at real driving speed - 4200 cm/s cruise alone covers
+			// ~70 units a tick, so even a shallow ramp's rise blew past 12.
+			// AheadZ was sampled a fixed ForwardProbeDistance ahead, so the
+			// slope it implies (atan2(rise, that distance)) is a geometric
+			// fact about what's ahead, independent of current speed or
+			// DeltaSeconds - a real step reads far steeper than
+			// MaxClimbAngleDegrees at that distance even at a crawl; an
+			// ordinary ramp does not, at any speed.
+			//
+			// A contact-time bump (bTargetFromContact) still needs its OWN
+			// size filter, not an unconditional true - a tiled floor's seams
+			// register as real contacts (NotifyHit genuinely fires, however
+			// small the lip), and forcing every one of them into the full
+			// StepClimbPitchDegrees pose is what made the car "constantly
+			// tilt back as if hitting something" the whole way down Zoe's
+			// new road (2026-09-04). The pre-ramp-fix code applied this same
+			// 12-unit-rise floor to every case uniformly; this restores it
+			// for contact specifically, so a seam too small to be worth
+			// noticing stays smooth while a real curb still gets the pose.
+			if (bTargetFromContact)
+			{
+				bClimbingStep = (EffectiveTarget - Origin.Z) > 12.0f;
+			}
+			else if (bTargetFromProbe)
+			{
+				const float ImpliedSlopeDegrees = FMath::RadiansToDegrees(FMath::Atan2(
+					AheadZ - TargetZ, FMath::Max(1.0f, ForwardProbeDistance)));
+				bClimbingStep = ImpliedSlopeDegrees > MaxClimbAngleDegrees;
+			}
+			else
+			{
+				bClimbingStep = false;
+			}
 		}
 		else
 		{
@@ -919,11 +1096,12 @@ void ADCCRover::AlignToSurface(float DeltaSeconds)
 	FRotator Desired = GetActorRotation();
 	if (bFlying)
 	{
-		// The eased flap angle IS the visual nose pitch here, not a separate
-		// cosmetic tilt - what you see is exactly what SnapToGround is using
-		// to climb or dive. No roll while flying; the flap lever only asked
-		// for pitch.
-		Desired.Pitch = FlightPitchAngleDegrees;
+		// Level flight - no elevator-style pitch since the flap lever that
+		// used to drive this is gone (see UpdateGroundAndAir's bFlying
+		// branch). Climb/dive is still very much a thing, just felt through
+		// altitude change and the hover bob/speed-tilt below rather than a
+		// nose animation.
+		Desired.Pitch = 0.0f;
 		Desired.Roll = 0.0f;
 	}
 	else if (bClimbingStep)
@@ -1004,11 +1182,6 @@ void ADCCRover::EndFlight()
 	VerticalVelocity = 0.0f;
 	ApexZ = GetActorLocation().Z;
 	FallenDistance = 0.0f;
-
-	// Flaps retract on landing - the next flight starts level rather than
-	// carrying over whatever angle the last one ended on.
-	FlightPitchInput = 0.0f;
-	FlightPitchAngleDegrees = 0.0f;
 }
 
 void ADCCRover::BoardNearbyAllies()
@@ -1052,9 +1225,13 @@ void ADCCRover::BoardNearbyAllies()
 
 		Passengers.Add(Candidate);
 		Candidate->SetActorEnableCollision(false);
-		Candidate->SetActorHiddenInGame(true);
 		Candidate->AttachToComponent(Collision,
 			FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+		// Seated and visible rather than hidden - ApplyPassengerState below
+		// re-runs this on every machine once the attachment replicates.
+		SeatOccupant(Candidate, PassengerSeatOffsets.IsEmpty()
+			? FVector::ZeroVector
+			: PassengerSeatOffsets[FMath::Min(Passengers.Num() - 1, PassengerSeatOffsets.Num() - 1)]);
 	}
 
 	ApplyPassengerState();
@@ -1091,16 +1268,49 @@ void ADCCRover::EjectPassengers()
 	Passengers.Reset();
 }
 
+void ADCCRover::SeatOccupant(ADCCCharacterBase* Occupant, const FVector& SeatOffset)
+{
+	if (!Occupant)
+	{
+		return;
+	}
+
+	// Occupants are visible in the car now rather than hidden inside it (Zoe,
+	// 2026-09-05) - see the SEATING block in the header for why the offsets
+	// look the way they do.
+	Occupant->SetActorHiddenInGame(false);
+
+	// Only positioned once the attachment has actually reached this machine.
+	// Setting a relative location on an unattached actor would move them in
+	// WORLD space instead, teleporting them to the map origin on any client
+	// whose attachment replication has not landed yet.
+	if (Occupant->GetAttachParentActor() == this)
+	{
+		Occupant->SetActorRelativeLocation(SeatOffset);
+		Occupant->SetActorRelativeRotation(FRotator::ZeroRotator);
+	}
+}
+
 void ADCCRover::ApplyPassengerState()
 {
-	// Runs on every machine - a remote client has to see them disappear into the
-	// car too, not just the server.
-	for (ADCCCharacterBase* Passenger : Passengers)
+	// Runs on every machine - a remote client has to see them riding along
+	// too, not just the server.
+	for (int32 Index = 0; Index < Passengers.Num(); ++Index)
 	{
-		if (Passenger)
+		ADCCCharacterBase* Passenger = Passengers[Index];
+		if (!Passenger)
 		{
-			Passenger->SetActorHiddenInGame(true);
+			continue;
 		}
+
+		// Past the end of the authored list, everyone shares the last seat -
+		// better than dropping them at the car's origin, and MaxPassengers
+		// keeps that from stacking more than a few deep anyway.
+		const FVector Seat = PassengerSeatOffsets.IsEmpty()
+			? FVector::ZeroVector
+			: PassengerSeatOffsets[FMath::Min(Index, PassengerSeatOffsets.Num() - 1)];
+
+		SeatOccupant(Passenger, Seat);
 	}
 }
 
@@ -1126,8 +1336,17 @@ void ADCCRover::UpdateTrail()
 	const bool bWanted = (bBoosting || bFlying) && Driver != nullptr;
 	if (bWanted != BoostTrail->IsActive())
 	{
-		if (bWanted) { BoostTrail->Activate(true); }
-		else         { BoostTrail->Deactivate(); }
+		if (bWanted)
+		{
+			// Scaled here rather than in the constructor so BoostTrailScale
+			// stays a live Details-panel knob - see its own comment.
+			BoostTrail->SetRelativeScale3D(FVector(FMath::Max(0.1f, BoostTrailScale)));
+			BoostTrail->Activate(true);
+		}
+		else
+		{
+			BoostTrail->Deactivate();
+		}
 	}
 
 	// NS_Flying_car was authored for a different vehicle's own Blueprint,
@@ -1226,11 +1445,29 @@ void ADCCRover::FinishEnteringRover(ADCCCharacterBase* NewDriver)
 
 	Driver = NewDriver;
 
-	// The crawler rides along attached and hidden rather than being destroyed
-	// or teleported away, so everything hanging off them - inventory, stats,
-	// quest state, the carried Strongbox - simply continues to exist.
+	// A car mid-autopilot-launch is still fair game to hop into - turn the
+	// autopilot off the moment someone actually does, or the server would
+	// keep driving it straight via the bAutoPilotActive branch in Tick()
+	// (which only yields to a Driver's own input on whichever machine is
+	// IsLocallyControlled() for them - the server itself is not that
+	// machine for a remote driver) fighting the new driver's real input.
+	// StopAutoPilot rather than the bare flag, so hijacking a racer mid-race
+	// also drops its route - otherwise re-arming autopilot later (a repeat
+	// race) would resume it from wherever the player abandoned it.
+	StopAutoPilot();
+
+	// Which side they walked up on, measured BEFORE the attach moves them -
+	// afterwards their location is the car's own and the answer would always
+	// be the same. Zoe, 2026-09-05: "make sure when you exit the car, you
+	// leave on the same side you got in in."
+	const FVector ToDriver = Driver->GetActorLocation() - GetActorLocation();
+	DriverEntrySide = FVector::DotProduct(ToDriver, GetActorRightVector()) >= 0.0f ? 1.0f : -1.0f;
+
+	// The crawler rides along attached rather than being destroyed or
+	// teleported away, so everything hanging off them - inventory, stats,
+	// quest state, the carried Strongbox - simply continues to exist. Still
+	// visible, just seated: see ApplyDriverState/SeatOccupant.
 	Driver->SetActorEnableCollision(false);
-	Driver->SetActorHiddenInGame(true);
 	Driver->AttachToComponent(Collision, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 
 	PC->Possess(this);
@@ -1258,8 +1495,12 @@ void ADCCRover::ExitRover()
 	Leaving->SetActorEnableCollision(true);
 
 	// Put them down beside the rover rather than inside it, or they spawn
-	// intersecting the body and get shoved somewhere unpredictable.
-	const FVector DropAt = GetActorLocation() + GetActorRightVector() * 320.0f
+	// intersecting the body and get shoved somewhere unpredictable. Which
+	// side is whichever one they got in from (DriverEntrySide), not always
+	// the right - walking around the car to get in and then being spat out
+	// the far side reads as the car teleporting you.
+	const FVector DropAt = GetActorLocation()
+		+ GetActorRightVector() * ExitSideDistance * DriverEntrySide
 		+ FVector(0.0f, 0.0f, 40.0f);
 	Leaving->SetActorLocation(DropAt, false, nullptr, ETeleportType::TeleportPhysics);
 
@@ -1284,12 +1525,9 @@ void ADCCRover::OnRep_Driver()
 
 void ADCCRover::ApplyDriverState()
 {
-	// Runs on every machine: a remote client has to see the driver vanish into
+	// Runs on every machine: a remote client has to see the driver sitting in
 	// the rover too, not just the server.
-	if (Driver)
-	{
-		Driver->SetActorHiddenInGame(true);
-	}
+	SeatOccupant(Driver, DriverSeatOffset);
 }
 
 void ADCCRover::TryPlayerInteract(ADCCCharacterBase* Interactor)
@@ -1314,4 +1552,63 @@ void ADCCRover::TryPlayerInteract(ADCCCharacterBase* Interactor)
 	{
 		Interactor->Server_EnterRover(this);
 	}
+}
+
+// ---------------------------------------------------------------------------
+// AUTOPILOT ROUTES
+// ---------------------------------------------------------------------------
+
+void ADCCRover::StartAutoPilotRoute(const TArray<FVector>& Route, bool bLoop)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	AutoPilotWaypoints = Route;
+	bAutoPilotLoop = bLoop;
+	AutoPilotLapsCompleted = 0;
+
+	if (AutoPilotWaypoints.Num() == 0)
+	{
+		StopAutoPilot();
+		return;
+	}
+
+	// Start at whichever waypoint is furthest AHEAD rather than the closest
+	// one outright. A car sitting on the start line is within acceptance
+	// range of waypoint 0 by construction, so aiming at the nearest point
+	// would have it tick straight past the first corner and count a phantom
+	// lap. Nearest-not-already-reached is the honest answer.
+	int32 Best = 0;
+	float BestDistSq = TNumericLimits<float>::Max();
+	const FVector Here = GetActorLocation();
+	for (int32 i = 0; i < AutoPilotWaypoints.Num(); ++i)
+	{
+		const FVector Delta = FVector(AutoPilotWaypoints[i].X - Here.X,
+			AutoPilotWaypoints[i].Y - Here.Y, 0.0f);
+		const float DistSq = Delta.SizeSquared();
+		if (DistSq > FMath::Square(AutoPilotAcceptanceRadius) && DistSq < BestDistSq)
+		{
+			BestDistSq = DistSq;
+			Best = i;
+		}
+	}
+	AutoPilotWaypointIndex = Best;
+
+	// Racers do not use the traffic boost - see the Tick() branch that reads
+	// this alongside AutoPilotWaypoints.Num().
+	bAutoPilotBoostOnLaunch = false;
+	bAutoPilotActive = true;
+}
+
+void ADCCRover::StopAutoPilot()
+{
+	bAutoPilotActive = false;
+	AutoPilotWaypoints.Reset();
+	AutoPilotWaypointIndex = 0;
+	AutoPilotSteerInput = 0.0f;
+	// Deliberately NOT clearing AutoPilotLapsCompleted: ADCCRaceTrack reads it
+	// after the finish to decide the placings, and a race is only over once
+	// somebody crossed the line. StartAutoPilotRoute zeroes it for the next run.
 }
