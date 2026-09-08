@@ -5770,17 +5770,17 @@ waypoint and the whole pit road were re-traced after placing and read exactly -2
   through `ObjectTools` (it resolves to the CDO), and there is no set-skeleton tool.
 - Nothing since the six-commit backup has been committed.
 
-### 🚨 CORRECTION, same session: `save_assets` on the level does NOT persist new World Partition actors
+### 🚨 CORRECTION, and then a broader correction: `save_assets` on the level does NOT persist ANY World Partition actor change made via MCP — creation or edit
 
 This cost the entire first build of the race track — 16 placed actors, gone after a force-kill,
 and the race "not working" in PIE was simply the track actor no longer existing.
 
 CLAUDE.md says *"`SceneTools.save_actor` fails on World Partition actors ... Save the level instead:
-`save_assets(["/Game/ThirdPerson/Lvl_ThirdPerson"])`."* **The second half of that is wrong for
-actors that were created during the session.** `save_assets` on the map returns `true` and writes
-nothing for them.
+`save_assets(["/Game/ThirdPerson/Lvl_ThirdPerson"])`."* **The second half of that is wrong**, and
+wrong in a bigger way than first understood. The original note here said the gap was actors
+*created* during the session; that was too narrow.
 
-Proven with a one-cube experiment rather than inferred:
+Proven with a one-cube experiment first:
 
 ```
 add_to_scene_from_asset(SM_Cube)      -> StaticMeshActor_UAID_...
@@ -5790,16 +5790,29 @@ save_assets(["/Game/ThirdPerson/Lvl_ThirdPerson"])  -> true
 find Content/__ExternalActors__ -mmin -3            -> (nothing)
 ```
 
-`save_actor` fails because the external-actor package does not exist on disk yet, and the level
-save does not create it. Passing that leaked package path straight to `save_assets` is refused for
-the same reason (*"Asset does not exist"*). **There is no MCP route to persist a newly created
-World Partition actor.**
+**Then proven again on a plain property EDIT to a `DCCEncounter` that has existed on disk since
+2026-08-19** (fixing the Kitchens spawn-inside-a-generator bug, 2026-09-07) — `set_properties`
+changed `Enemies[0].RelativeLocation` and `Enemies[2].RelativeLocation`, read back correctly from
+the live editor, then:
+
+```
+save_assets(["/Game/ThirdPerson/Lvl_ThirdPerson"])       -> true
+find Content/__ExternalActors__ -name "*.uasset" -mmin -5 -> (nothing)
+save_actor(that same encounter)                            -> "Asset does not exist:
+                                          /Game/__ExternalActors__/ThirdPerson/Lvl_ThirdPerson/6/0S/IHERSY5RYBPUCITFVLVLC7"
+Content/ThirdPerson/Lvl_ThirdPerson.umap mtime             -> 2026-08-13 17:00 (untouched)
+```
+
+So this is not "new actors don't get an external-actor package yet." **No MCP-driven change to a
+World Partition actor — new or pre-existing — reaches disk through any combination of
+`save_actor`/`save_assets` found so far.** Every actor edit made through this MCP session lives
+only in the running editor's memory until a human saves it.
 
 **What to do instead:** ask Zoe for **Ctrl+Shift+S (Save All)** in the editor. That is the whole
 fix, it takes a second, and it is exactly the "prefer a quick manual step" tradeoff CLAUDE.md
 already prescribes.
 
-**How to tell whether a session's placements are actually safe** — do not trust a `true` from
+**How to tell whether a session's placements/edits are actually safe** — do not trust a `true` from
 `save_assets`, check the filesystem:
 
 ```bash
@@ -5808,11 +5821,13 @@ find Content/__ExternalActors__ -name "*.uasset" -mmin -10 | head
 
 Nothing listed means nothing is on disk, no matter what the tool returned. DataTable and other
 ordinary asset saves are unaffected — `DT_DCCDialogue` and `DT_DCCConsumables` both persisted
-across the same force-kill that lost every actor.
+across the same force-kill that lost every actor, and again when the Kitchens fix's DataTable-free
+property edit did not.
 
-**Corollary: never force-kill the editor after placing actors without confirming that check first.**
-The autosave-restore hazard documented above is about the *next* startup; this one silently
-destroys the work outright.
+**Corollary: never force-kill the editor after placing OR editing actors without confirming that
+check first.** The autosave-restore hazard documented above is about the *next* startup; this one
+silently destroys the work outright. **Any MCP session that touches level actors should end with
+an explicit reminder to Zoe to save — a clean handoff, not a hopeful one.**
 
 ### Also built this session: the vending machine guy (Zoe asked, 2026-09-05)
 
@@ -5863,3 +5878,41 @@ plainly exactly once, with no joke attached, in Omar Bellinger-Khan's entry.
 **Deliberately not done:** the `FDCCCrawlerDef` row struct. It is a reflection change and therefore
 a full close/build/reopen cycle, and the roster is useful as prose and dialogue lines first. The
 CSV is written and waiting; the table should earn itself by being used.
+
+### Kitchens spawn-inside-a-machine bug, found and fixed (2026-09-07)
+
+Zoe: *"I believe that in the kitchens, there is still an enemy spawning inside a big circular
+machine."* Root-caused and fixed, not guessed at.
+
+**The Kitchens is `RoomId = "Room02"`, not "Room04"** — floor-01-design.md's own prose numbers it
+4th in the room list but its later "room-to-room connection" section already calls it Room02, and
+that is what is actually authored (`DCCRoom` at world (7800,5000,200), Type=Combat, bounds roughly
+x6850-8750, y4050-5950). Worth remembering next time "Kitchens" needs finding — `RoomId` is the
+reliable handle, the prose numbering is not.
+
+**Root cause:** `ADCCEncounter::SpawnWave` spawns with
+`ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn`, which nudges a spawned enemy
+out of overlapping geometry within a small search radius — but it is bounded, and falls back to
+spawning at the exact authored point if it can't find clearance. One of the Kitchens encounter's
+three hand-placed spawns (the plain `BP_DCCEnemy`, relative (600,0,100)) sat at world (8400,5000,100),
+dead centre of `/Game/Ice_Station/Meshes/interior/SM_generator` — confirmed a genuine circle, not
+just "boxy," by reading the mesh's own local bounds: X and Y half-extents both exactly 388.18. A
+second spawn (`BP_DCCEnemy_HockeyWings`) was also embedded, in a cluster of `SM_citern` (a tank) and
+`SM_computer_01`. The third (`BP_DCCEnemy_OfficeAirplane`) was already clear.
+
+**Fix:** moved both bad `RelativeLocation`s to spots inside the room verified clear by two
+different checks — first a literal "is the point inside this mesh's actor bounds" test (the same
+method that found the bug), then a 60-unit capsule-radius clearance sweep, both re-run after the
+edit to confirm. New world spawns: (7050,4200,100) and (8300,5700,100), both clear.
+
+**Process note, since this diagnosis needed real geometry work rather than a values-only read:**
+`find_actors` with a `bounds` box only reports actors whose BOUNDS intersect the box — it does not
+distinguish "this actor's pivot is inside that mesh" from "this actor's bounds merely overlap this
+search radius," and two actors returned here (`DCCEnemyCharacter_TestBoss`, `DCCDialogueNPC`) had
+bounding boxes spanning nearly the whole room, which would have produced false "overlap" results
+under a naive check. The reliable test ended up being: fetch each candidate static mesh's own
+`get_actor_bounds`, filter out anything bigger than the room itself or thinner than 60 units
+(floors/walls/skydomes), then check literal point-in-box containment.
+
+**Not saved to disk yet** — see the correction above this entry. Zoe needs to press Ctrl+Shift+S
+before this survives a restart.
