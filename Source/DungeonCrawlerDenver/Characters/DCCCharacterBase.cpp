@@ -4518,6 +4518,42 @@ bool ADCCCharacterBase::CanPlayOnThisSkeleton(const UAnimationAsset* Animation) 
 		return true;
 	}
 
+	// A character can stand on ITS OWN skeleton (e.g. `SK_ArmsOut_Fixed_Skeleton`,
+	// bone-fitted to that body's real proportions - see DISPATCH.md's rig-fit
+	// entries) and still play the shared `DCCCrawlerAnimSet` clips authored
+	// against `SK_DCCCrawler_Skeleton`, PROVIDED the two skeletons have been
+	// marked Compatible with each other (Skeleton asset's `CompatibleSkeletons`
+	// array - writable straight through `ObjectTools.set_properties`, no
+	// Skeleton Editor click-through required).
+	//
+	// Checked directly against the raw `CompatibleSkeletons` array rather than
+	// `USkeleton::IsCompatibleForEditor` - that helper is `WITH_EDITORONLY_DATA`-
+	// gated (confirmed by reading Skeleton.cpp) and would silently stop compiling
+	// the moment this project builds a real dedicated server target. The array
+	// itself carries no such guard, so this works identically in the editor, in
+	// PIE, and in a future server build. Checked both directions since either
+	// skeleton might be the one authored with the entry.
+	if (MeshSkeleton && AnimSkeleton)
+	{
+		const FSoftObjectPath AnimSkeletonPath(AnimSkeleton);
+		const FSoftObjectPath MeshSkeletonPath(MeshSkeleton);
+
+		for (const TSoftObjectPtr<USkeleton>& Compatible : MeshSkeleton->GetCompatibleSkeletons())
+		{
+			if (Compatible.ToSoftObjectPath() == AnimSkeletonPath)
+			{
+				return true;
+			}
+		}
+		for (const TSoftObjectPtr<USkeleton>& Compatible : AnimSkeleton->GetCompatibleSkeletons())
+		{
+			if (Compatible.ToSoftObjectPath() == MeshSkeletonPath)
+			{
+				return true;
+			}
+		}
+	}
+
 	// This is the `SkeletonToCompactPose.IsValidIndex` ensure, caught one frame
 	// before the engine hits it. Playing a clip authored for one skeleton on a
 	// mesh built from another does not fail cleanly - it produces a garbage pose,

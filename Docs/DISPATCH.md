@@ -5971,3 +5971,63 @@ a viewport capture was attempted (once badly framed, once inside geometry), and 
 attempt wasn't worth it against how solid the rest of the verification already was: the exact
 tick-based code path for the pose, a direct before/after material thumbnail for the texture, and
 file-mtime proof for the save. Worth a look next time the editor's open regardless.
+
+### Rig-fit saga, actual conclusion: the missing piece was one line of C++, not more Blender work (2026-09-13)
+
+Zoe, from a live screenshot of allies in combat: *"many of the characters still have misshapen
+skeletons. It seems like the spine might be too far back? or the hips too high? hard to tell."*
+That's Scott (OfficeAirplane) and CJ (HockeyWings) visible in the shot — CJ is unaffected (his
+skeleton IS the shared one), so the actual complaint is Scott/Kyle/Marcel, exactly the
+2026-08-25/08-28 rig-fit bug this file already has two long entries about.
+
+**What was already done, found by checking rather than re-doing:** every editor-side step the
+2026-08-28 entry left queued for "whoever has a live MCP session" turned out to already be
+complete - `SK_ArmsOut_Fixed`, `SK_DiceWinged_Fixed`, `SK_OfficeAirplane_Fixed` all exist with
+their own corrected skeletons, all five sockets already added to each, and each `_Fixed_Skeleton`
+already lists `SK_DCCCrawler_Skeleton` in its `CompatibleSkeletons` array. Someone got all the way
+through steps 1-3 of that plan in a part of this session that predates this file's visible tail.
+**Only step 4 (repoint the Blueprints) was left undone** - and it turns out that's not an
+oversight, it's exactly where the plan was actually blocked.
+
+**The real bug: `ADCCCharacterBase::CanPlayOnThisSkeleton` never checked `CompatibleSkeletons` at
+all.** It's a raw `MeshSkeleton == AnimSkeleton` pointer compare, full stop. Marking a skeleton
+"Compatible" in the Skeleton Editor (or via `set_properties`, same thing) does nothing to this
+project's own gate - it's not an engine-wide behavior, it's an opt-in array the calling code has
+to actually consult. This is the same class of finding as the "AnimClass doesn't flip
+AnimationMode" bug from four days ago: a real UE feature that looks like it should Just Work,
+silently doing nothing because this codebase's own check never asked it the right question. Had
+anyone repointed a Blueprint to a `_Fixed` mesh before this fix, the character would have swapped
+from "misshapen but animated" straight to "correctly shaped but T-posed" - the exact SK_Zoe bug,
+for a different underlying reason, on three more characters at once.
+
+**Fixed in `CanPlayOnThisSkeleton`:** after the exact-match check, walk both skeletons'
+`GetCompatibleSkeletons()` arrays looking for the other one, in both directions (either asset
+might be the one carrying the entry). Deliberately NOT using `USkeleton::IsCompatibleForEditor` -
+read `Skeleton.cpp` directly and confirmed that helper is compiled inside
+`#if WITH_EDITORONLY_DATA`, which would silently stop working the day this project ships a real
+dedicated server. The raw `CompatibleSkeletons` `UPROPERTY` itself carries no such guard, so the
+loop-based check works identically in editor, PIE, and a future server build.
+
+**This is a function-body-only edit** - no new `UFUNCTION`/`UPROPERTY`/`UCLASS`, so per this file's
+own table it should be Live-Coding-safe. DebugGame compile-check passed clean (`Result: Succeeded`,
+~34 minutes wall-clock - the machine was under real memory pressure, `45.83/46.99 GB committed`,
+almost certainly from running the editor and this compile at once; not a sign anything was wrong).
+**Live Coding itself was NOT enabled for the running session** (`CompileLiveCoding` returned "Live
+Coding is not enabled for this session. Enable it in Editor Preferences."), so this still needs
+the standard close/Development-build/reopen cycle - just like a reflection change would, even
+though this one technically isn't one.
+
+**Deliberately NOT repointing the three ally Blueprints yet.** Doing that before the C++ ships
+would swap the live bug (misshapen) for a worse one (T-posed) the next time anyone presses Play,
+and Zoe was mid-PIE-session when this was found - not a regression worth handing her while she's
+actively testing. Queued for the moment the editor's closed for this build:
+
+1. Close editor, Development Editor build (picks up the `CanPlayOnThisSkeleton` fix).
+2. Reopen, then repoint `SkeletalMeshAsset` on `BP_DCCEnemy_OfficeAirplane`, `BP_DCCEnemy_ArmsOut`,
+   `BP_DCCEnemy_DiceWinged`'s `CharacterMesh0` from the `_Shared` meshes to `_Fixed`. Pure
+   `set_properties` calls, all prep already done - should be minutes of work, not another
+   Blender session.
+3. PIE-test all three standing and moving before calling it done - this bug has already burned
+   time on "looks fixed, wasn't" once (the original `_Shared` proportions themselves; see the
+   08-25 entry) and once on "should work, silently didn't" (this entry) - a real look before
+   declaring victory a third time.
