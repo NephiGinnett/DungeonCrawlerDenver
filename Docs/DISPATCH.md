@@ -5916,3 +5916,58 @@ under a naive check. The reliable test ended up being: fetch each candidate stat
 
 **Not saved to disk yet** — see the correction above this entry. Zoe needs to press Ctrl+Shift+S
 before this survives a restart.
+
+### Zoe's player model was T-posed and gray — two separate bugs, both fixed (2026-09-13)
+
+Zoe: *"it seems that the player is using Zoe's model, but the model is just stuck T-posing and
+doesn't have any texture and is just gray."* Both root-caused against the live editor (a different
+process than the one this file's earlier entries were written against — restarted at some point,
+found via `Get-Process` StartTime since `tasklist` alone doesn't give it).
+
+**Bug 1 — T-pose: clearing `AnimClass` does not flip `AnimationMode`.** The 2026-09-05 entry above
+claimed setting `AnimClass = None` on the player's mesh component "is what actually switches the
+mesh into `AnimationSingleNode`." **That was wrong, and unverified at the time.** `AnimationMode`
+and `AnimClass` are independent `UPROPERTY`s; the UI only keeps them in sync inside the Details
+panel's widget customization, which a raw `ObjectTools.set_properties` reflection write never runs.
+Read back live: `AnimClass = "None"`, `AnimationMode = "AnimationBlueprint"` — still the value left
+over from when the player ran `ABP_Unarmed`. `ADCCCharacterBase::UpdateLocomotionAnimation`'s
+whole gate is `MeshComponent->GetAnimationMode() != EAnimationMode::AnimationSingleNode`, checked
+fresh every tick with no one-time latch — so the Idle/Walk/Run slots (confirmed still correctly
+filled with real `DCCCrawlerAnimSet` clips this whole time) were never once read. Fix: explicitly
+set `AnimationMode = "AnimationSingleNode"` on `CharacterMesh0`. Because the gate re-runs every
+tick, this doesn't need a PIE restart to take effect once saved.
+
+**Bug 2 — gray: the texture was never imported, at all.** `/Game/DCC/Characters/Zoe/` held exactly
+two assets, `SK_Zoe` and `Material_1` — no texture. The 2026-08-31-ish import note above claimed
+"one material with real texture data," verified via the material's own thumbnail — that check
+either was run against a different asset or was simply wrong; recapturing `Material_1`'s thumbnail
+today showed a flat grey sphere, no cache involved. The real texture was sitting the whole time in
+`SourceArt/Zoe/Zoe.fbm/texture_0` — a genuine 8192×8192 RGBA PNG, just never brought into
+`Content/`. Both of the material's `MaterialExpressionTextureSample` nodes had `Texture = None`;
+one's RGB was wired to `MP_BaseColor` (the diffuse slot), the other to `MP_EmissiveColor` with
+nothing to feed it.
+
+- `TextureTools.import_file` refuses a source path with no extension — `texture_0` has none, even
+  though `file` correctly IDs it as PNG. Copy it to a temp path with `.png` appended first.
+- Imported as `T_Zoe_Diffuse`, wired into the `BaseColor` node's `Texture` property.
+- The `Emissive` node stayed `None` — there never was a second texture, so feeding it the diffuse
+  map too would have made the whole character self-lit at full brightness. Disconnected
+  `MP_EmissiveColor` instead via `MaterialTools.disconnect_from_output`, leaving Emissive at its
+  correct default (black). `MaterialTools.recompile` failed once with *"Missing input texture"*
+  before this disconnect, succeeded clean after.
+- New toolsets used for the first time this project: `TextureTools` (`import_file`) and
+  `MaterialTools` (`get_expressions`, `get_property_input`, `disconnect_from_output`, `recompile`)
+  — both were sitting in the 24-toolset list the whole time, just never needed before.
+
+**Both fixes are real, on-disk saves** — confirmed by file mtime, not by trusting the return value
+(the standing rule from the World Partition save bug above). This is a genuinely different asset
+class: `BP_ThirdPersonCharacter`, `Material_1`, and the new `T_Zoe_Diffuse` are ordinary `/Game/`
+assets, not World Partition level actors, and `AssetTools.save_assets` reliably writes those — the
+earlier corruption was specific to level actors. Verified: `Material_1.uasset` and
+`BP_ThirdPersonCharacter.uasset` both now carry today's timestamp and changed size.
+
+**Not independently screenshotted in-game** — the live PIE pawn spawned somewhere dark both times
+a viewport capture was attempted (once badly framed, once inside geometry), and chasing a third
+attempt wasn't worth it against how solid the rest of the verification already was: the exact
+tick-based code path for the pose, a direct before/after material thumbnail for the texture, and
+file-mtime proof for the save. Worth a look next time the editor's open regardless.
