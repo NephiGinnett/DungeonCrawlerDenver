@@ -6031,3 +6031,41 @@ actively testing. Queued for the moment the editor's closed for this build:
    time on "looks fixed, wasn't" once (the original `_Shared` proportions themselves; see the
    08-25 entry) and once on "should work, silently didn't" (this entry) - a real look before
    declaring victory a third time.
+
+### Rig-fit saga, closed out — repointed, PIE-verified with real screenshots, not yet saved (2026-09-13, same day)
+
+Zoe closed the editor as asked. Built the `CanPlayOnThisSkeleton` fix for real (Development Editor,
+~3 min - the earlier 34-minute DebugGame compile was genuinely just memory pressure from running
+alongside the editor, not a sign of trouble), confirmed a clean relink (no numbered hot-reload
+DLL), reopened.
+
+**Repointing the three ally Blueprints' CDOs was not enough on its own** - exactly the
+"Blueprint defaults do not reach already-placed instances" gotcha this file already knows about
+(2026-08-22). All three placed `BP_DCCEnemy_{OfficeAirplane,ArmsOut,DiceWinged}` instances near
+spawn had their own per-instance `SkeletalMeshAsset` override from whenever they were placed, so
+the CDO change alone changed nothing for anyone already in the level. Set `SkeletalMeshAsset`
+directly on each placed instance too (`CharacterMesh0` on the exact UAID-suffixed actor, not the
+CDO) - confirmed by reading it back on a fresh PIE spawn of each.
+
+**Actually looked at it this time, from three separate angles across two PIE runs** (not just
+trusted the property write) - Marcel, Scott/Kyle and CJ all captured mid-combat (damage numbers
+on screen, `ALLY` nameplates visible) with normal-looking proportions: heads sized right, elbows
+bending where elbows bend, legs the right length relative to the torso. No trace of the original
+report's dislocated-looking stretched arm. Two earlier camera-framing attempts missed the
+character entirely (AI allies path around between the position read and the capture) or produced
+an oddly-inverted shot - worth remembering for next time: fetch the transform and capture back to
+back, don't batch multiple captures off transforms read together, and prefer an overhead-ish
+angle from a bit further back so a few dozen units of drift still keeps the subject in frame.
+
+**Not saved to disk yet.** The three Blueprint CDO edits ARE saved (`AssetTools.save_assets`
+worked, confirmed by file mtime - these are ordinary `/Game/` assets). **The per-instance mesh
+overrides on the actual placed level actors are not** - checked `Content/__ExternalActors__` for
+anything touched in the last 20 minutes and found nothing, the exact same World Partition
+level-actor save gap documented earlier this month. Whatever's visibly fixed right now is
+editor-memory only until Zoe's next Ctrl+Shift+S.
+
+**Known not covered by this pass, worth a look later:** the Oathgate's `FinePrint`/`Arbiter`
+reuse `SK_ArmsOut_Shared`/`SK_DiceWinged_Shared` directly (per the 08-25 entry) and were not
+touched - same underlying mesh, same fix would apply, just not this session's scope. Also worth
+checking World Partition cells that weren't streamed in during this pass for any OTHER placed
+instances of these three ally classes beyond the one of each found near spawn.
