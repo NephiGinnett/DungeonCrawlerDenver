@@ -1,0 +1,543 @@
+<!doctype html>
+<title>Mile High Punch List</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Source+Sans+3:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #F1F0EA;
+    --surface: #FFFFFF;
+    --surface-sunk: #E9E7DF;
+    --ink: #201F1A;
+    --ink-dim: #5D5A4F;
+    --line: #DAD6C9;
+    --accent: #A9762A;
+    --accent-ink: #FFFFFF;
+    --accent-wash: #F4E9D3;
+    --done: #3C7A52;
+    --done-wash: #E3EFE5;
+    --risk: #AC4429;
+    --risk-wash: #F6E3DD;
+    --blocked: #45579C;
+    --blocked-wash: #E4E7F3;
+    --pending: #756F5E;
+    --pending-wash: #EBE8DF;
+    --shadow: rgba(32, 28, 16, 0.08);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15171A;
+      --surface: #1C1F22;
+      --surface-sunk: #23262A;
+      --ink: #E9E6DC;
+      --ink-dim: #9C978A;
+      --line: #33363A;
+      --accent: #D6A344;
+      --accent-ink: #17130A;
+      --accent-wash: #2E2712;
+      --done: #5FAE7C;
+      --done-wash: #1C2A20;
+      --risk: #E27A5E;
+      --risk-wash: #2E2018;
+      --blocked: #8CA0E8;
+      --blocked-wash: #1F2333;
+      --pending: #A6A092;
+      --pending-wash: #23221C;
+      --shadow: rgba(0, 0, 0, 0.35);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #15171A;
+    --surface: #1C1F22;
+    --surface-sunk: #23262A;
+    --ink: #E9E6DC;
+    --ink-dim: #9C978A;
+    --line: #33363A;
+    --accent: #D6A344;
+    --accent-ink: #17130A;
+    --accent-wash: #2E2712;
+    --done: #5FAE7C;
+    --done-wash: #1C2A20;
+    --risk: #E27A5E;
+    --risk-wash: #2E2018;
+    --blocked: #8CA0E8;
+    --blocked-wash: #1F2333;
+    --pending: #A6A092;
+    --pending-wash: #23221C;
+    --shadow: rgba(0, 0, 0, 0.35);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Source Sans 3", system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.55;
+  }
+
+  main {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  h1, h2 {
+    font-family: "Archivo", system-ui, sans-serif;
+    text-wrap: balance;
+    letter-spacing: -0.01em;
+  }
+
+  code, .mono {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+  }
+
+  /* ---------- Header ---------- */
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 16px;
+    padding-bottom: 20px;
+    border-bottom: 3px solid var(--ink);
+    margin-bottom: 28px;
+  }
+
+  .masthead h1 {
+    font-size: 28px;
+    font-weight: 800;
+    margin: 0 0 4px;
+  }
+
+  .masthead p {
+    margin: 0;
+    color: var(--ink-dim);
+    font-size: 14.5px;
+  }
+
+  .stamp {
+    text-align: right;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12px;
+    color: var(--ink-dim);
+    line-height: 1.6;
+    white-space: nowrap;
+  }
+
+  .stamp b { color: var(--ink); font-weight: 500; }
+
+  /* ---------- Banner (save-first) ---------- */
+
+  .banner {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    background: var(--risk-wash);
+    border: 1px solid var(--risk);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 22px;
+  }
+
+  .banner .glyph {
+    font-family: "IBM Plex Mono", monospace;
+    font-weight: 500;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    color: var(--accent-ink);
+    background: var(--risk);
+    border-radius: 6px;
+    padding: 3px 7px;
+    flex: none;
+    margin-top: 2px;
+  }
+
+  .banner strong { display: block; margin-bottom: 3px; }
+  .banner p { margin: 0; color: var(--ink); font-size: 14.5px; }
+  .banner p + p { margin-top: 6px; }
+
+  /* ---------- Answer callout ---------- */
+
+  .callout {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    background: var(--done-wash);
+    border: 1px solid var(--done);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 34px;
+  }
+
+  .callout .glyph {
+    font-family: "IBM Plex Mono", monospace;
+    font-weight: 500;
+    font-size: 12px;
+    color: var(--accent-ink);
+    background: var(--done);
+    border-radius: 6px;
+    padding: 3px 7px;
+    flex: none;
+    margin-top: 2px;
+  }
+
+  .callout strong { display: block; margin-bottom: 3px; }
+  .callout p { margin: 0; font-size: 14.5px; }
+
+  /* ---------- Sections ---------- */
+
+  section { margin-bottom: 34px; }
+
+  .section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .section-head h2 {
+    font-size: 17px;
+    font-weight: 700;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .section-head .note {
+    font-size: 13px;
+    color: var(--ink-dim);
+    text-align: right;
+  }
+
+  .count {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12.5px;
+    color: var(--ink-dim);
+    font-variant-numeric: tabular-nums;
+    flex: none;
+  }
+
+  .ticket {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px var(--shadow);
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 26px 1fr auto;
+    gap: 12px;
+    align-items: start;
+    padding: 13px 16px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .row:last-child { border-bottom: none; }
+
+  .row input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin: 2px 0 0;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+
+  .row .body { min-width: 0; }
+
+  .row .title {
+    font-weight: 600;
+    font-size: 15px;
+    margin: 0 0 3px;
+  }
+
+  .row.checked .title,
+  .row.checked .detail {
+    color: var(--ink-dim);
+    text-decoration: line-through;
+    text-decoration-color: var(--line);
+  }
+
+  .row .detail {
+    margin: 0;
+    font-size: 13.5px;
+    color: var(--ink-dim);
+  }
+
+  .row .detail code {
+    font-size: 12.5px;
+    background: var(--surface-sunk);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+
+  .chip {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 999px;
+    white-space: nowrap;
+    margin-top: 1px;
+  }
+
+  .chip.risk   { background: var(--risk-wash);   color: var(--risk); }
+  .chip.blocked{ background: var(--blocked-wash);color: var(--blocked); }
+  .chip.done   { background: var(--done-wash);   color: var(--done); }
+  .chip.pending{ background: var(--pending-wash);color: var(--pending); }
+
+  /* ---------- Recommended (non-checkbox) list ---------- */
+
+  .menu {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px var(--shadow);
+  }
+
+  .menu-row {
+    display: grid;
+    grid-template-columns: 30px 1fr;
+    gap: 12px;
+    padding: 13px 16px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .menu-row:last-child { border-bottom: none; }
+
+  .menu-row .rank {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 13px;
+    color: var(--accent);
+    font-weight: 500;
+    padding-top: 1px;
+  }
+
+  .menu-row .title { font-weight: 600; font-size: 15px; margin: 0 0 3px; }
+  .menu-row .detail { margin: 0; font-size: 13.5px; color: var(--ink-dim); }
+  .menu-row .detail code {
+    font-size: 12.5px;
+    background: var(--surface-sunk);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+
+  footer {
+    margin-top: 40px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+    font-size: 12.5px;
+    color: var(--ink-dim);
+  }
+
+  footer code {
+    background: var(--surface-sunk);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+</style>
+
+<main>
+
+  <header>
+    <div class="masthead">
+      <h1>Mile High Punch List</h1>
+      <p>DungeonCrawlerDenver — what's ready, what's blocked, what's next</p>
+    </div>
+    <div class="stamp">
+      Session <b>2026-09-11</b><br>
+      Prepared for <b>Zoe</b><br>
+      Editor open since <b>Sep 7, 9:09 PM</b>
+    </div>
+  </header>
+
+  <div class="banner">
+    <span class="glyph">!!</span>
+    <div>
+      <strong>Do this before you close the editor tonight: Ctrl+Shift+S.</strong>
+      <p>Two fixes from the last session only exist in the editor's memory — they've survived
+      because the editor has stayed open continuously since Sept&nbsp;7, but nothing has written
+      them to disk. A crash or a force-close loses both. This is a real MCP limitation
+      (<code>save_assets</code> reports success and writes nothing for a World Partition actor
+      edit) — see <code>Docs/DISPATCH.md</code> if you want the proof.</p>
+    </div>
+  </div>
+
+  <div class="callout">
+    <span class="glyph">OK</span>
+    <div>
+      <strong>Is the player using your model yet? Yes — confirmed live, and confirmed saved.</strong>
+      <p>The player's mesh component (<code>CharacterMesh0</code> on <code>BP_ThirdPersonCharacter</code>)
+      is set to <code>SK_Zoe</code> with <code>AnimClass</code> cleared, so locomotion runs off the
+      shared crawler animation slots. This one's durable: the Blueprint file's own disk timestamp
+      predates the editor session I just checked it in, so it's a real save from a previous
+      night, not something riding on the editor staying open.</p>
+    </div>
+  </div>
+
+  <section>
+    <div class="section-head">
+      <h2>Test tonight</h2>
+      <span class="note">save first, then work top to bottom</span>
+    </div>
+    <div class="ticket" id="tonight"></div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Needs a step from you</h2>
+      <span class="note">can't be done through the editor's MCP tools</span>
+    </div>
+    <div class="ticket" id="manual"></div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Older backlog worth checking</h2>
+      <span class="note">built earlier, still unverified in play</span>
+    </div>
+    <div class="ticket" id="backlog"></div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Recommended next builds</h2>
+      <span class="note">my picks, ranked — no urgency</span>
+    </div>
+    <div class="menu" id="next"></div>
+  </section>
+
+  <footer>
+    Checkboxes save to this browser only (<code>localStorage</code>) — they won't follow you to
+    another device, and they don't touch the project. Full detail on everything here lives in
+    <code>Docs/DISPATCH.md</code>.
+  </footer>
+
+</main>
+
+<script>
+  const TONIGHT = [
+    { id: "kitchens-fix", chip: "risk", chipLabel: "needs save",
+      title: "Kitchens generator spawn fix",
+      detail: "Room <code>Room02</code>. Two enemy spawn points were embedded in <code>SM_generator</code> (the round machine) and a citern/computer cluster — both relocated and re-verified clear. Walk the encounter and confirm nobody pops out of solid geometry." },
+    { id: "race-track", chip: "risk", chipLabel: "needs save",
+      title: "Mile High Motor Speedway",
+      detail: "South of the main plain, reached via the pit lane at roughly <code>x7000</code>. Four driverless racers should already be lapping when you arrive. This has never actually been watched run — Simulate-in-editor can't see it, and both PIE attempts hit the save bug first. If a car cuts a corner or piles into the wall, tell me roughly where — <code>[DCC Race]</code> log lines print each car's lap/position every 2s." },
+    { id: "bookie", chip: "risk", chipLabel: "needs save",
+      title: "Skeets, Turf Accountant",
+      detail: "Stands by the pit lane. E → “Bet and start the race.” 50 gold in, 3× payout if his pick wins. He should never refuse to run it again." },
+    { id: "vending", chip: "risk", chipLabel: "needs save",
+      title: "Concessions / vending machines",
+      detail: "Snack vendor beside the two subway machines on the pit lane. Six items, 4–25 gold, small heals plus short buffs." },
+    { id: "gauntlet", chip: "pending", chipLabel: "untested",
+      title: "100-man gauntlet — enemies advancing",
+      detail: "Enemies should now walk in to attack rather than stand still, and the weapon stash should upgrade every 5 kills through the six-tier ladder (letter opener → riot shotgun)." },
+    { id: "rover-batch", chip: "pending", chipLabel: "untested",
+      title: "Rover / flight / HUD batch",
+      detail: "Reverse + turn-in-place steering, boost while flying, one-shot flight rings, the redrawn radial speed gauge, the hitscan crosshair, and seating — party members should be visible inside a moving car and you should exit on whichever side you got in." },
+  ];
+
+  const MANUAL = [
+    { id: "headnod-abp", chip: "blocked", chipLabel: "~30 sec",
+      title: "Create the head-nod AnimBlueprint",
+      detail: "In <code>/Game/DCC/Characters/Anim/</code>: new Animation Blueprint, Parent Class <code>DCCIdleAnimInstance</code>, Target Skeleton <code>SK_DCCCrawler_Skeleton</code>, name it <code>ABP_IdleNod_Crawler</code>. Nobody has done this yet — I checked. The moment it exists I wire the graph, compile, and put it on every crawler-skeleton character." },
+    { id: "weapon-packs", chip: "blocked", chipLabel: "optional",
+      title: "Download a weapon pack (Fab or itch.io, account-gated)",
+      detail: "Only needed if you want real meshes on <code>ConfettiCrossbow</code> / <code>NailGunPro</code> / <code>FlareGunEmergency</code> instead of placeholders. Either the <em>Free Fantasy Weapon Sample Pack</em> (Fab) or <em>ASIS Free Gun Weapons Pack</em> (itch.io) covers it." },
+  ];
+
+  const BACKLOG = [
+    { id: "ally-talk", chip: "pending", chipLabel: "1 PIE run",
+      title: "Ally interaction (“can't interact with allies”)",
+      detail: "A <code>[DCC Talk]</code> log filter already tells you exactly which of the four gates refuses each E-press. One run with that filter on answers a question four sessions of reading code haven't." },
+    { id: "voldemortgage", chip: "pending", chipLabel: "needs real fight",
+      title: "Voldemortgage's full phase chain",
+      detail: "Late Notice, Balloon Payment, and the Lien have never fired — the only PIE run so far had no allies actually attacking him." },
+    { id: "achievement-claim", chip: "pending", chipLabel: "never run",
+      title: "Achievement claim-reward flow",
+      detail: "Built, and the HUD already calls it — just never exercised end to end in play." },
+    { id: "kitchen-chest", chip: "pending", chipLabel: "location unconfirmed",
+      title: "Kitchen Drawer chest + Boilerplate Rifle",
+      detail: "Wired in C++, but placement was never confirmed live. Worth a look near <code>Room02</code> while you're already in the Kitchens for the spawn fix." },
+  ];
+
+  const NEXT = [
+    { title: "Place the crowd spawner in the Bar",
+      detail: "<code>ADCCCrowdSpawner</code> has been code-complete since Room05 got walls. Zero C++ — and the new 33-name roster finally gives it people to be about." },
+    { title: "Seed the roster into bar dialogue",
+      detail: "The Rumour and Deceased names from <code>Docs/crawler-roster.md</code> cost nothing to add to <code>DT_DCCDialogue</code> as gossip, and they're most of what makes the roster feel real." },
+    { title: "Assign skill hotbar icons",
+      detail: "The <code>Icon</code> field and its draw path are already deployed and live — this is a pure content pass in <code>DT_DCCSkills</code> against the <code>RPGClassIcons</code> pack you already have." },
+    { title: "Place the four curated loot chests, and the Nuclear Family",
+      detail: "Both code-complete, both spawnable, neither has ever actually been put in a room." },
+    { title: "Promote Dolores Okonkwo-Reyes (“The Appraiser”)",
+      detail: "The first of the roster's eight Rivals to become a real <code>ADCCCharacterBase</code> — <code>population-design.md</code> already flagged her as the natural first pick." },
+  ];
+
+  function key(id) { return "dcc-punchlist:" + id; }
+  function isChecked(id) {
+    try { return localStorage.getItem(key(id)) === "1"; } catch (e) { return false; }
+  }
+  function setChecked(id, val) {
+    try { localStorage.setItem(key(id), val ? "1" : "0"); } catch (e) {}
+  }
+
+  function renderTicket(containerId, items) {
+    const el = document.getElementById(containerId);
+    el.innerHTML = items.map(it => {
+      const checked = isChecked(it.id);
+      return `<div class="row${checked ? " checked" : ""}" data-id="${it.id}">
+        <input type="checkbox" ${checked ? "checked" : ""} aria-label="${it.title}">
+        <div class="body">
+          <p class="title">${it.title}</p>
+          <p class="detail">${it.detail}</p>
+        </div>
+        <span class="chip ${it.chip}">${it.chipLabel}</span>
+      </div>`;
+    }).join("");
+
+    el.querySelectorAll(".row").forEach(row => {
+      const id = row.dataset.id;
+      const box = row.querySelector("input");
+      box.addEventListener("change", () => {
+        setChecked(id, box.checked);
+        row.classList.toggle("checked", box.checked);
+        updateCount(containerId, items);
+      });
+    });
+    updateCount(containerId, items);
+  }
+
+  function updateCount(containerId, items) {
+    const done = items.filter(it => isChecked(it.id)).length;
+    const head = document.getElementById(containerId).closest("section").querySelector(".note");
+    if (containerId === "tonight") {
+      head.textContent = done + " / " + items.length + " checked";
+    }
+  }
+
+  function renderMenu(containerId, items) {
+    const el = document.getElementById(containerId);
+    el.innerHTML = items.map((it, i) => `
+      <div class="menu-row">
+        <span class="rank">${String(i + 1).padStart(2, "0")}</span>
+        <div>
+          <p class="title">${it.title}</p>
+          <p class="detail">${it.detail}</p>
+        </div>
+      </div>`).join("");
+  }
+
+  renderTicket("tonight", TONIGHT);
+  renderTicket("manual", MANUAL);
+  renderTicket("backlog", BACKLOG);
+  renderMenu("next", NEXT);
+</script>

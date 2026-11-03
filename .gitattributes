@@ -18,3 +18,8 @@
 *.ini    text
 *.md     text
 *.uproject text eol=lf
+
+# Large binaries that previously slipped past LFS
+*.zip    filter=lfs diff=lfs merge=lfs -text
+*.blend  filter=lfs diff=lfs merge=lfs -text
+**/*.fbm/** filter=lfs diff=lfs merge=lfs -text

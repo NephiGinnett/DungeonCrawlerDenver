@@ -62,3 +62,7 @@ desktop.ini
 # Python bytecode from the Tools/ helper scripts
 __pycache__/
 *.pyc
+
+# Marketplace/Fab code plugins: same reasoning as Content packs above -
+# licensed to Zoe's Epic account, re-download from Fab on a fresh clone.
+/Plugins/Marketplace/
