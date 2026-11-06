@@ -1,0 +1,21 @@
+{
+  "name": "dcc-crawler-companion",
+  "version": "0.1.0",
+  "description": "Dungeon Crawler Denver: character sheet and desktop companion for each crawler",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "studio": "electron . --studio",
+    "dist": "electron-builder --config electron-builder.config.js",
+    "table": "node server/table-server.js"
+  },
+  "dependencies": {
+    "three": "0.169.0"
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
+    "ws": "^8.18.0"
+  }
+}

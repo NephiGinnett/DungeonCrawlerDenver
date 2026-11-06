@@ -639,6 +639,38 @@ written in the books' spirit; deliberately no reuse of the books' actual floors 
 Read it before writing any player-facing text so announcements, loot and rooms sound like one
 showrunner.
 
+## ⭐ Start here: `Docs/ROADMAP.md` (added 2026-11-05)
+
+The roadmap and progress tracker. It covers the three products (the game, the Crawler Companion, the
+future live Table), what's owed in the editor, and a dated progress log. **Update its log at the end of
+every session.** The "Current state" sections below are older history.
+
+### `Source/DungeonCrawlerDenver/Onboarding/` (2026-11-05)
+
+Covers the first ten minutes: wake up with no HUD, pick up your personal item, the System's announcement,
+the sky arrow, a solo random-encounter trial, then the safe room issues the HUD.
+- `UDCCOnboardingComponent` (on every `ADCCCharacterBase`) holds `CrawlerId`, the per-crawler stage, the
+  HUD unlock bitmask, and a client-side queue of System windows.
+- **Gating only switches on when an `ADCCOnboardingSettings` actor is in the level.** Without one,
+  everything is unlocked and every old level behaves as before.
+- System window text, encounter rows and voice lines all come from `Tools/gen_onboarding_content.py`.
+  Edit the wording there, not in the JSON.
+- `ADCCCharacterBase::DisplayName` is now **Replicated**. That lets a server-side rename (rolled encounter
+  names) reach clients.
+- Crawler identity: join with `?Crawler=CJ`, or get the first roster name that has a PlayerStart whose
+  **Player Start Tag** matches.
+
+### Stretched crawlers: `DCC.FixCrawlerRetargeting`
+Meshy clips key translation on every bone, so shared clips force the source body's bone lengths onto every
+crawler. Run the console command once, then save `SK_DCCCrawler_Skeleton`. Also: **the bone transforms in
+Meshy `.glb` files are the first animation frame, not the bind pose.** Read the rest pose from the skin's
+inverse-bind matrices. Details are in ROADMAP §7.
+
+### `Companion/` - Electron + three.js character sheet and desktop buddy
+A fresh codebase, not a fork of The Familiar (`Downloads\TheFamiliar`), whose renderer is a single 345 KB
+file tied to its own systems. Patterns were borrowed (Kokoro voices, the transparent buddy window). See
+`Companion/README.md`.
+
 ## Current state / next up
 
 **Superseded by the reconciliation pass below (2026-08-22/23) for anything the two disagree on.**

@@ -1,4 +1,5 @@
 #include "UI/DCCHUD.h"
+#include "Onboarding/DCCOnboardingComponent.h"
 
 #include "Characters/DCCCharacterBase.h"
 #include "Stats/DCCStatsComponent.h"
@@ -107,6 +108,12 @@ ADCCRover* ADCCHUD::GetOwningRover() const
 
 void ADCCHUD::ToggleMenu()
 {
+	if (!bShowMenu && !IsHudFeatureUnlocked(EDCCHudFeature::MenuCharacter))
+	{
+		ShowNotice(NSLOCTEXT("DCC", "MenuNotIssued", "You have no interface. You are, as far as anyone can tell, just a person."));
+		return;
+	}
+
 	bShowMenu = !bShowMenu;
 
 	// Closing clears the expanded card. Reopening to whatever was last clicked
@@ -316,7 +323,35 @@ void ADCCHUD::NotifyHitBoxClick(FName BoxName)
 	SelectedAchievementId = (SelectedAchievementId == BoxName) ? NAME_None : BoxName;
 }
 
+namespace
+{
+	/** DT_DCCSystemWindows row explaining a menu page on its first visit. */
+	FName TutorialRowForTab(EDCCMenuTab Tab)
+	{
+		switch (Tab)
+		{
+		case EDCCMenuTab::Character:    return TEXT("Tab_Character");
+		case EDCCMenuTab::Skills:       return TEXT("Tab_Skills");
+		case EDCCMenuTab::Inventory:    return TEXT("Tab_Inventory");
+		case EDCCMenuTab::Party:        return TEXT("Tab_Party");
+		case EDCCMenuTab::Achievements: return TEXT("Tab_Achievements");
+		case EDCCMenuTab::Chatter:      return TEXT("Tab_Chatter");
+		default:                        return NAME_None;
+		}
+	}
+}
+
 void ADCCHUD::DrawHUD()
+{
+	DrawHUDContents();
+
+	if (Canvas)
+	{
+		DrawSystemWindow(GetOwningCrawler());
+	}
+}
+
+void ADCCHUD::DrawHUDContents()
 {
 	Super::DrawHUD();
 
@@ -343,7 +378,11 @@ void ADCCHUD::DrawHUD()
 	// behind a menu would defeat the point. Minimized/Hidden (2026-08-23, [K]
 	// to cycle) are an explicit opt-out for exactly that reason - Pinned stays
 	// the default and DrawFeed itself is unchanged.
-	if (FeedVisibility == EDCCFeedVisibility::Pinned)
+	if (!IsHudFeatureUnlocked(EDCCHudFeature::EventFeed))
+	{
+		// Not issued yet - nothing at all, not even the minimized stub.
+	}
+	else if (FeedVisibility == EDCCFeedVisibility::Pinned)
 	{
 		DrawFeed(24.0f, Canvas->SizeY - (FeedLineCount + 1) * LineHeight - 24.0f);
 	}
@@ -356,8 +395,11 @@ void ADCCHUD::DrawHUD()
 	// Drawn before the death check, so the bars are still on screen underneath the
 	// GAME OVER overlay showing exactly zero. Watching it sit empty is the point -
 	// a bar that vanishes at the moment it matters teaches the player nothing.
-	DrawVitals(Crawler);
-	DrawNearbyHealthBars(Crawler);
+	if (IsHudFeatureUnlocked(EDCCHudFeature::Vitals))
+	{
+		DrawVitals(Crawler);
+		DrawNearbyHealthBars(Crawler);
+	}
 	DrawSkillTargetingOverlay(Crawler);
 	DrawRoomTag(Crawler);
 	DrawWaitingForPartyBanner(Crawler);
@@ -397,13 +439,22 @@ void ADCCHUD::DrawHUD()
 		}
 	}
 
-	DrawQuestTracker();
+	if (IsHudFeatureUnlocked(EDCCHudFeature::QuestTracker))
+	{
+		DrawQuestTracker();
+	}
 	DrawInteractionPrompt(Crawler);
-	DrawStaminaBar(Crawler);
+	if (IsHudFeatureUnlocked(EDCCHudFeature::Vitals))
+	{
+		DrawStaminaBar(Crawler);
+	}
 
 	// Always on, both of them: the hotbar is useless if it only appears in a menu,
 	// and a conversation has to be readable while the world is still visible.
-	DrawHotbar(Crawler);
+	if (IsHudFeatureUnlocked(EDCCHudFeature::Hotbar))
+	{
+		DrawHotbar(Crawler);
+	}
 	DrawInteractionMenu(Crawler);
 	DrawNPCInteractionMenu(Crawler);
 	DrawLootMenu(Crawler);
@@ -417,11 +468,35 @@ void ADCCHUD::DrawHUD()
 
 	if (!bShowMenu || !Crawler)
 	{
-		if (!bShowMenu)
+		if (!bShowMenu && IsHudFeatureUnlocked(EDCCHudFeature::MenuCharacter))
 		{
 			DrawText(TEXT("[Tab] Character"), DimColour, 24.0f, 24.0f);
 		}
+		LastTutorialTab = 0xFF;
 		return;
+	}
+
+	// A tab that has not been issued yet is skipped over rather than shown
+	// empty. Falls back to the first unlocked page; if there is none the menu
+	// should not be open at all (ToggleMenu refuses), so just close it.
+	if (!IsMenuTabUnlocked(MenuTab))
+	{
+		CycleMenuTab(1);
+		if (!IsMenuTabUnlocked(MenuTab))
+		{
+			ToggleMenu();
+			return;
+		}
+	}
+
+	// First visit to each page: its explainer window, once per session.
+	if (LastTutorialTab != static_cast<uint8>(MenuTab))
+	{
+		LastTutorialTab = static_cast<uint8>(MenuTab);
+		if (Crawler->Onboarding)
+		{
+			Crawler->Onboarding->ShowLocalTutorialOnce(TutorialRowForTab(MenuTab));
+		}
 	}
 
 	// A dark backing panel, otherwise light text vanishes against the sky.
@@ -1124,7 +1199,19 @@ void ADCCHUD::HandleAdminAction(const FString& Action, ADCCCharacterBase* Crawle
 void ADCCHUD::CycleMenuTab(int32 Delta)
 {
 	const int32 Count = static_cast<int32>(EDCCMenuTab::MAX);
-	const int32 Next = ((static_cast<int32>(MenuTab) + Delta) % Count + Count) % Count;
+	const int32 Step = Delta >= 0 ? 1 : -1;
+	int32 Next = static_cast<int32>(MenuTab);
+
+	// Walk past pages that have not been issued yet. Bounded by Count so a
+	// crawler with nothing unlocked cannot spin here forever.
+	for (int32 Tries = 0; Tries < Count; ++Tries)
+	{
+		Next = ((Next + (Tries == 0 ? Delta : Step)) % Count + Count) % Count;
+		if (IsMenuTabUnlocked(static_cast<EDCCMenuTab>(Next)))
+		{
+			break;
+		}
+	}
 	MenuTab = static_cast<EDCCMenuTab>(Next);
 
 	// Selection belongs to the Achievements page; carrying it to another tab
@@ -4175,4 +4262,199 @@ void ADCCHUD::HandleChatInputSubmitted(const FString& SubmittedText)
 void ADCCHUD::HandleChatInputCancelled()
 {
 	CloseChatInput();
+}
+
+// ---------------------------------------------------------------------------
+// Onboarding: HUD gating and the System window (2026-11-05)
+// ---------------------------------------------------------------------------
+
+bool ADCCHUD::IsHudFeatureUnlocked(EDCCHudFeature Feature) const
+{
+	const ADCCCharacterBase* Crawler = GetOwningCrawler();
+	const UDCCOnboardingComponent* Onboarding = Crawler ? Crawler->Onboarding.Get() : nullptr;
+
+	// No pawn (spectating, a rover) or no component: nothing is withheld.
+	return !Onboarding || Onboarding->IsFeatureUnlocked(Feature);
+}
+
+bool ADCCHUD::IsMenuTabUnlocked(EDCCMenuTab Tab) const
+{
+	switch (Tab)
+	{
+	case EDCCMenuTab::Character:    return IsHudFeatureUnlocked(EDCCHudFeature::MenuCharacter);
+	case EDCCMenuTab::Skills:       return IsHudFeatureUnlocked(EDCCHudFeature::MenuSkills);
+	case EDCCMenuTab::Inventory:    return IsHudFeatureUnlocked(EDCCHudFeature::MenuInventory);
+	case EDCCMenuTab::Feed:         return IsHudFeatureUnlocked(EDCCHudFeature::EventFeed);
+	default:                        return IsHudFeatureUnlocked(EDCCHudFeature::MenuSocial);
+	}
+}
+
+namespace
+{
+	FLinearColor SystemAccent(EDCCSystemWindowStyle Style)
+	{
+		switch (Style)
+		{
+		case EDCCSystemWindowStyle::Reward:  return FLinearColor(1.0f, 0.78f, 0.22f);
+		case EDCCSystemWindowStyle::Warning: return FLinearColor(1.0f, 0.28f, 0.25f);
+		default:                             return FLinearColor(0.30f, 0.86f, 1.0f);
+		}
+	}
+}
+
+void ADCCHUD::DrawSystemWindow(ADCCCharacterBase* Crawler)
+{
+	UDCCOnboardingComponent* Onboarding = Crawler ? Crawler->Onboarding.Get() : nullptr;
+	const FDCCSystemWindowPayload* Window = Onboarding ? Onboarding->GetActiveWindow() : nullptr;
+	if (!Window || !Canvas || !GEngine)
+	{
+		return;
+	}
+
+	// The look is the bright, glassy "status window" of the isekai shows the
+	// party already knows: a dark pane, a hard glowing frame, everything in
+	// caps, and it unrolls instead of fading. Built from rects and text on
+	// Canvas for the same reason the rest of this HUD is (see the header).
+	const float Age = Onboarding->GetActiveWindowAge();
+	const float Unroll = FMath::InterpEaseOut(0.0f, 1.0f, FMath::Clamp(Age / 0.28f, 0.0f, 1.0f), 3.0f);
+	const float TextAlpha = FMath::Clamp((Age - 0.2f) / 0.25f, 0.0f, 1.0f);
+	const FLinearColor Accent = SystemAccent(Window->Style);
+
+	UFont* TitleFont = GEngine->GetLargeFont();
+	UFont* BodyFont = GEngine->GetMediumFont();
+
+	const float PanelW = FMath::Min(780.0f, Canvas->SizeX - 80.0f);
+	const float Pad = 34.0f;
+
+	// Body text, wrapped by measured width. '|' forces a paragraph break.
+	TArray<FString> Lines;
+	{
+		TArray<FString> Paragraphs;
+		Window->Body.ToString().ParseIntoArray(Paragraphs, TEXT("|"), /*CullEmpty=*/false);
+		for (int32 P = 0; P < Paragraphs.Num(); ++P)
+		{
+			TArray<FString> Words;
+			Paragraphs[P].TrimStartAndEnd().ParseIntoArray(Words, TEXT(" "), true);
+			FString Current;
+			for (const FString& Word : Words)
+			{
+				const FString Candidate = Current.IsEmpty() ? Word : Current + TEXT(" ") + Word;
+				float W = 0.0f, H = 0.0f;
+				GetTextSize(Candidate, W, H, BodyFont, 1.0f);
+				if (W > PanelW - Pad * 2.0f && !Current.IsEmpty())
+				{
+					Lines.Add(Current);
+					Current = Word;
+				}
+				else
+				{
+					Current = Candidate;
+				}
+			}
+			Lines.Add(Current);
+			if (P < Paragraphs.Num() - 1)
+			{
+				Lines.Add(FString());
+			}
+		}
+	}
+
+	const float BodyLineH = 24.0f;
+	const float FullH = Pad + 22.0f + 46.0f + 18.0f + Lines.Num() * BodyLineH + 22.0f + 30.0f + Pad * 0.5f;
+	const float PanelH = FMath::Max(6.0f, FullH * Unroll);
+	const float X = (Canvas->SizeX - PanelW) * 0.5f;
+	const float CentreY = Canvas->SizeY * 0.42f;
+	const float Y = CentreY - PanelH * 0.5f;
+
+	// Dim the world a little: the window is the only thing that matters right now.
+	DrawRect(FLinearColor(0.0f, 0.0f, 0.02f, 0.35f * Unroll), 0.0f, 0.0f, Canvas->SizeX, Canvas->SizeY);
+
+	// Outer glow: a few widening, fading frames.
+	for (int32 Ring = 4; Ring >= 1; --Ring)
+	{
+		const float Grow = Ring * 3.0f;
+		FLinearColor Glow = Accent;
+		Glow.A = 0.10f * Unroll;
+		DrawRect(Glow, X - Grow, Y - Grow, PanelW + Grow * 2.0f, PanelH + Grow * 2.0f);
+	}
+
+	DrawRect(FLinearColor(0.01f, 0.03f, 0.09f, 0.94f), X, Y, PanelW, PanelH);
+
+	// Scanlines, faint.
+	for (float LineY = Y + 3.0f; LineY < Y + PanelH; LineY += 5.0f)
+	{
+		DrawRect(FLinearColor(Accent.R, Accent.G, Accent.B, 0.035f), X, LineY, PanelW, 1.0f);
+	}
+
+	// Hard frame plus corner brackets.
+	const float T = 2.0f;
+	DrawRect(Accent, X, Y, PanelW, T);
+	DrawRect(Accent, X, Y + PanelH - T, PanelW, T);
+	DrawRect(Accent, X, Y, T, PanelH);
+	DrawRect(Accent, X + PanelW - T, Y, T, PanelH);
+	const float Bracket = 22.0f;
+	const float BT = 5.0f;
+	if (PanelH > Bracket * 2.0f)
+	{
+		DrawRect(Accent, X - 4.0f, Y - 4.0f, Bracket, BT);
+		DrawRect(Accent, X - 4.0f, Y - 4.0f, BT, Bracket);
+		DrawRect(Accent, X + PanelW + 4.0f - Bracket, Y - 4.0f, Bracket, BT);
+		DrawRect(Accent, X + PanelW + 4.0f - BT, Y - 4.0f, BT, Bracket);
+		DrawRect(Accent, X - 4.0f, Y + PanelH + 4.0f - BT, Bracket, BT);
+		DrawRect(Accent, X - 4.0f, Y + PanelH + 4.0f - Bracket, BT, Bracket);
+		DrawRect(Accent, X + PanelW + 4.0f - Bracket, Y + PanelH + 4.0f - BT, Bracket, BT);
+		DrawRect(Accent, X + PanelW + 4.0f - BT, Y + PanelH + 4.0f - Bracket, BT, Bracket);
+	}
+
+	if (TextAlpha <= 0.0f)
+	{
+		return;
+	}
+
+	float CursorY = Y + Pad * 0.6f;
+
+	// Header: [ NOTIFICATION ]
+	{
+		const FString Header = FString::Printf(TEXT("[ %s ]"),
+			*(Window->Header.IsEmpty() ? FString(TEXT("NOTIFICATION")) : Window->Header.ToString().ToUpper()));
+		float W = 0.0f, H = 0.0f;
+		GetTextSize(Header, W, H, BodyFont, 1.0f);
+		FLinearColor C = Accent;
+		C.A = TextAlpha;
+		DrawText(Header, C, X + (PanelW - W) * 0.5f, CursorY, BodyFont, 1.0f);
+		CursorY += 30.0f;
+	}
+
+	// Title, large and centred.
+	{
+		const FString Title = Window->Title.ToString().ToUpper();
+		const float Scale = 1.5f;
+		float W = 0.0f, H = 0.0f;
+		GetTextSize(Title, W, H, TitleFont, Scale);
+		DrawText(Title, FLinearColor(1.0f, 1.0f, 1.0f, TextAlpha), X + (PanelW - W) * 0.5f, CursorY, TitleFont, Scale);
+		CursorY += 46.0f;
+	}
+
+	// Divider.
+	DrawRect(FLinearColor(Accent.R, Accent.G, Accent.B, 0.55f * TextAlpha), X + Pad, CursorY, PanelW - Pad * 2.0f, 1.0f);
+	CursorY += 16.0f;
+
+	for (const FString& Line : Lines)
+	{
+		DrawText(Line, FLinearColor(0.88f, 0.94f, 1.0f, TextAlpha), X + Pad, CursorY, BodyFont, 1.0f);
+		CursorY += BodyLineH;
+	}
+
+	// Footer: the prompt pulses so it reads as live, plus how many are waiting.
+	const float Pulse = 0.55f + 0.45f * FMath::Sin(GetWorld()->GetRealTimeSeconds() * 4.0f);
+	FString Footer = TEXT("[E]  ACKNOWLEDGE");
+	if (Onboarding->GetQueuedWindowCount() > 1)
+	{
+		Footer = FString::Printf(TEXT("%d MORE  -  %s"), Onboarding->GetQueuedWindowCount() - 1, *Footer);
+	}
+	float FW = 0.0f, FH = 0.0f;
+	GetTextSize(Footer, FW, FH, BodyFont, 1.0f);
+	FLinearColor FooterColour = Accent;
+	FooterColour.A = TextAlpha * Pulse;
+	DrawText(Footer, FooterColour, X + PanelW - Pad - FW, Y + PanelH - Pad * 0.5f - FH - 6.0f, BodyFont, 1.0f);
 }

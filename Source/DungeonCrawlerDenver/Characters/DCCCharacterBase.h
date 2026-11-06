@@ -22,6 +22,7 @@ class UDCCInventoryComponent;
 class UDCCAchievementComponent;
 class UDCCEquipmentComponent;
 class UDCCClassComponent;
+class UDCCOnboardingComponent;
 class ADCCCharacterBase;
 class ADCCDialogueNPC;
 class ADCCDialogueNPC_RaceBookie;
@@ -113,6 +114,10 @@ public:
 	 *  Docs/races-and-classes.md. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "DCC")
 	TObjectPtr<UDCCClassComponent> Class;
+
+	/** Who this crawler is (CJ, Scott...), their onboarding stage, and which HUD parts they have been issued. See Onboarding/DCCOnboardingComponent.h. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "DCC")
+	TObjectPtr<UDCCOnboardingComponent> Onboarding;
 
 	/**
 	 * Known skills and spells. On enemies too, so a boss casts through exactly
@@ -552,8 +557,11 @@ public:
 	UFUNCTION(BlueprintPure, Category = "DCC|Allegiance")
 	FText GetNameplateText() const;
 
-	/** Shown above the head. Defaults to the actor label when left empty. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Allegiance")
+	/** Shown above the head. Defaults to the actor label when left empty.
+	 *  Replicated (2026-11-05) so a server-side rename - a solo trial's rolled
+	 *  'Kombucha Mother' - reaches clients' nameplates. Set before FinishSpawning
+	 *  and it arrives with the first bunch, ahead of the client's BeginPlay. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = "DCC|Allegiance")
 	FText DisplayName;
 
 	/**
@@ -2408,6 +2416,10 @@ protected:
 	float BodyCollectorSpawnRadius = 600.0f;
 
 public:
+	/** The body was swapped (UDCCOnboardingComponent::ApplyCrawlerLook): forget which loop was playing so the next
+	 *  tick starts it on the new mesh. Without this the cache still says "idle" and the new body stands in T-pose. */
+	void RestartLoopAnimation() { ActiveLoopAnimation = nullptr; OneShotAnimationUntil = 0.0f; }
+
 	/** Whether any loot-menu action (LootOne, LootAll, or StowInto) has ever been taken on this corpse. */
 	bool HasLootBeenHandled() const { return bLootHandled; }
 

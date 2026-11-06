@@ -66,3 +66,13 @@ __pycache__/
 # Marketplace/Fab code plugins: same reasoning as Content packs above -
 # licensed to Zoe's Epic account, re-download from Fab on a fresh clone.
 /Plugins/Marketplace/
+# Crawler Companion
+Companion/node_modules/
+Companion/snapshot.png
+Companion/snapshot_*.png
+Companion/studio_snapshot.png
+Companion/dist/
+Companion/release/
+Companion/server/table-data/
+Companion/server/table-config.json
+Tools/.meshy_key

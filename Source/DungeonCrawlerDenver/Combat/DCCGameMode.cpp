@@ -3,6 +3,7 @@
 #include "Combat/DCCGameState.h"
 #include "Characters/DCCCharacterBase.h"
 #include "Rooms/DCCRoom.h"
+#include "Onboarding/DCCOnboardingComponent.h"
 #include "UI/DCCHUD.h"
 #include "UI/DCCEventLogTypes.h"
 #include "GameFramework/PlayerStart.h"
@@ -86,6 +87,24 @@ AActor* ADCCGameMode::ChoosePlayerStart_Implementation(AController* Player)
 	if (!World)
 	{
 		return Super::ChoosePlayerStart_Implementation(Player);
+	}
+
+	// A crawler with a bedroom goes to their bedroom, before any other rule:
+	// the onboarding level is built around everyone waking up in their own room.
+	{
+		FSavedOnboarding& Saved = OnboardingByController.FindOrAdd(Player);
+		if (Saved.CrawlerId.IsNone())
+		{
+			Saved.CrawlerId = PickFreeCrawlerId();
+			UE_LOG(LogTemp, Log, TEXT("[DCC Crawlers] %s assigned crawler %s."), *GetNameSafe(Player), *Saved.CrawlerId.ToString());
+		}
+		if (!Saved.bHasProgress)
+		{
+			if (APlayerStart* Bedroom = FindTaggedStart(Saved.CrawlerId))
+			{
+				return Bedroom;
+			}
+		}
 	}
 
 	// A match already underway means this is a late joiner, and the Safe Room is
@@ -202,4 +221,124 @@ void ADCCGameMode::DCCWhoAmI()
 	UE_LOG(LogTemp, Warning,
 		TEXT("[DCC Session] If you are not on the same LAN, use the Tailscale address instead - "
 			"the LAN one will not route."));
+}
+
+// ---------------------------------------------------------------------------
+// Crawler identity
+// ---------------------------------------------------------------------------
+
+FString ADCCGameMode::InitNewPlayer(APlayerController* NewPlayerController, const FUniqueNetIdRepl& UniqueId,
+	const FString& Options, const FString& Portal)
+{
+	const FString Result = Super::InitNewPlayer(NewPlayerController, UniqueId, Options, Portal);
+
+	const FString Requested = UGameplayStatics::ParseOption(Options, TEXT("Crawler"));
+	if (!Requested.IsEmpty() && NewPlayerController)
+	{
+		// Matched case-insensitively against the roster so "?Crawler=cj" works,
+		// but stored in the roster's own spelling so it matches PlayerStart tags.
+		FName Id(*Requested);
+		for (const FName& Known : CrawlerRoster)
+		{
+			if (Known.ToString().Equals(Requested, ESearchCase::IgnoreCase))
+			{
+				Id = Known;
+				break;
+			}
+		}
+		OnboardingByController.FindOrAdd(NewPlayerController).CrawlerId = Id;
+		UE_LOG(LogTemp, Log, TEXT("[DCC Crawlers] %s joined as %s."), *GetNameSafe(NewPlayerController), *Id.ToString());
+	}
+
+	return Result;
+}
+
+void ADCCGameMode::Logout(AController* Exiting)
+{
+	// Frees the name so the same person can rejoin as themselves. Progress is
+	// lost with it; a rejoin is a fresh wake-up, which is acceptable for now.
+	OnboardingByController.Remove(Exiting);
+	Super::Logout(Exiting);
+}
+
+APlayerStart* ADCCGameMode::FindTaggedStart(FName Tag) const
+{
+	if (Tag.IsNone() || !GetWorld())
+	{
+		return nullptr;
+	}
+
+	for (TActorIterator<APlayerStart> It(GetWorld()); It; ++It)
+	{
+		if (It->PlayerStartTag == Tag)
+		{
+			return *It;
+		}
+	}
+	return nullptr;
+}
+
+FName ADCCGameMode::PickFreeCrawlerId() const
+{
+	for (const FName& Candidate : CrawlerRoster)
+	{
+		bool bTaken = false;
+		for (const TPair<TWeakObjectPtr<AController>, FSavedOnboarding>& Pair : OnboardingByController)
+		{
+			if (Pair.Key.IsValid() && Pair.Value.CrawlerId == Candidate)
+			{
+				bTaken = true;
+				break;
+			}
+		}
+
+		// Only names with a bedroom are handed out automatically, so a level
+		// without the onboarding wing leaves everyone unidentified - which is
+		// what lets an unidentified crawler pick up any personal item in a test.
+		if (!bTaken && FindTaggedStart(Candidate))
+		{
+			return Candidate;
+		}
+	}
+	return NAME_None;
+}
+
+FName ADCCGameMode::GetCrawlerIdFor(AController* Controller) const
+{
+	const FSavedOnboarding* Saved = OnboardingByController.Find(Controller);
+	return Saved ? Saved->CrawlerId : NAME_None;
+}
+
+void ADCCGameMode::RememberOnboarding(AController* Controller, const UDCCOnboardingComponent* Onboarding)
+{
+	if (!Controller || !Onboarding)
+	{
+		return;
+	}
+
+	FSavedOnboarding& Saved = OnboardingByController.FindOrAdd(Controller);
+	if (!Onboarding->CrawlerId.IsNone())
+	{
+		Saved.CrawlerId = Onboarding->CrawlerId;
+	}
+	Saved.bHasProgress = true;
+	Saved.Stage = static_cast<uint8>(Onboarding->GetStage());
+	Saved.Features = Onboarding->GetUnlockedFeatures();
+}
+
+void ADCCGameMode::RestoreOnboarding(AController* Controller, UDCCOnboardingComponent* Onboarding)
+{
+	if (!Controller || !Onboarding)
+	{
+		return;
+	}
+
+	const FSavedOnboarding* Saved = OnboardingByController.Find(Controller);
+	UE_LOG(LogTemp, Verbose, TEXT("[DCC Crawlers] Restore for %s: %s (progress=%d)"), *GetNameSafe(Controller),
+		Saved ? *Saved->CrawlerId.ToString() : TEXT("no record"), Saved ? Saved->bHasProgress : 0);
+	if (Saved)
+	{
+		Onboarding->ApplyRestoredState(Saved->CrawlerId, Saved->bHasProgress,
+			static_cast<EDCCOnboardingStage>(Saved->Stage), Saved->Features);
+	}
 }

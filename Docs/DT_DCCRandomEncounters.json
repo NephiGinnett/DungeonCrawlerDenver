@@ -1,0 +1,185 @@
+[
+  {
+    "Name": "MillerMoths",
+    "encounterName": "Miller Moth Season",
+    "introLine": "It's June in Denver, which means the moths are back, and this year they have been to the gym.",
+    "weight": 1.0,
+    "introVoice": "/Game/DCC/Audio/SystemAI/VO_Encounter_MillerMoths.VO_Encounter_MillerMoths",
+    "spawns": [
+      {
+        "enemyClass": "/Script/DungeonCrawlerDenver.DCCEnemyCharacter_SurveyDrone",
+        "count": 3,
+        "level": 1,
+        "displayNameOverride": "Miller Moth (Seasonal)"
+      }
+    ]
+  },
+  {
+    "Name": "KombuchaMother",
+    "encounterName": "The Kombucha Mother",
+    "introLine": "Someone left a jar in a RiNo taproom for eleven years. It has opinions about your gut health.",
+    "weight": 1.0,
+    "introVoice": "/Game/DCC/Audio/SystemAI/VO_Encounter_KombuchaMother.VO_Encounter_KombuchaMother",
+    "spawns": [
+      {
+        "enemyClass": "/Script/DungeonCrawlerDenver.DCCEnemyCharacter_FinePrint",
+        "count": 1,
+        "level": 2,
+        "displayNameOverride": "Kombucha Mother"
+      }
+    ]
+  },
+  {
+    "Name": "StorageAuction",
+    "encounterName": "Storage Unit Auction",
+    "introLine": "Lot four four seven one. Contents unknown. Contents, it turns out, hungry.",
+    "weight": 0.8,
+    "introVoice": "/Game/DCC/Audio/SystemAI/VO_Encounter_StorageAuction.VO_Encounter_StorageAuction",
+    "spawns": [
+      {
+        "enemyClass": "/Script/DungeonCrawlerDenver.DCCEnemyCharacter_UnclaimedProperty",
+        "count": 1,
+        "level": 2,
+        "displayNameOverride": "Storage Unit Lot #4471"
+      }
+    ]
+  },
+  {
+    "Name": "Xeriscape",
+    "encounterName": "Xeriscape Enforcement",
+    "introLine": "Your lawn was in violation of the watering schedule. Enforcement has arrived, and it is mostly spines.",
+    "weight": 1.0,
+    "introVoice": "/Game/DCC/Audio/SystemAI/VO_Encounter_Xeriscape.VO_Encounter_Xeriscape",
+    "spawns": [
+      {
+        "enemyClass": "/Script/DungeonCrawlerDenver.DCCEnemyCharacter_Thornback",
+        "count": 2,
+        "level": 1,
+        "displayNameOverride": "Xeriscape Enforcement Officer"
+      }
+    ]
+  },
+  {
+    "Name": "Dispensary",
+    "encounterName": "Dispensary Overflow",
+    "introLine": "These mushrooms are not licensed for sale in the state of Colorado. They are, however, licensed to bite.",
+    "weight": 1.0,
+    "introVoice": "/Game/DCC/Audio/SystemAI/VO_Encounter_Dispensary.VO_Encounter_Dispensary",
+    "spawns": [
+      {
+        "enemyClass": "/Script/DungeonCrawlerDenver.DCCEnemyCharacter_BreakRoomMold",
+        "count": 3,
+        "level": 1,
+        "displayNameOverride": "Recreational Mushroom (Unlicensed)"
+      }
+    ]
+  },
+  {
+    "Name": "HOAPresident",
+    "encounterName": "The HOA President",
+    "introLine": "You have been cited for an unapproved mailbox colour. The President will be handling this personally.",
+    "weight": 0.8,
+    "introVoice": "/Game/DCC/Audio/SystemAI/VO_Encounter_HOAPresident.VO_Encounter_HOAPresident",
+    "spawns": [
+      {
+        "enemyClass": "/Script/DungeonCrawlerDenver.DCCEnemyCharacter_ShellCompany",
+        "count": 1,
+        "level": 2,
+        "displayNameOverride": "HOA President (Snapping)"
+      }
+    ]
+  },
+  {
+    "Name": "Doorbell",
+    "encounterName": "Motion Detected",
+    "introLine": "Your smart doorbell has been recording you for six years. It would like to discuss what it saw.",
+    "weight": 0.8,
+    "introVoice": "/Game/DCC/Audio/SystemAI/VO_Encounter_Doorbell.VO_Encounter_Doorbell",
+    "spawns": [
+      {
+        "enemyClass": "/Script/DungeonCrawlerDenver.DCCEnemyCharacter_Beholder",
+        "count": 1,
+        "level": 1,
+        "displayNameOverride": "Smart Doorbell, Always Recording"
+      }
+    ]
+  },
+  {
+    "Name": "MallCops",
+    "encounterName": "Off-Duty Mall Cops",
+    "introLine": "Cherry Creek mall security, off the clock and out of patience. They have been waiting for this their whole lives.",
+    "weight": 1.0,
+    "introVoice": "/Game/DCC/Audio/SystemAI/VO_Encounter_MallCops.VO_Encounter_MallCops",
+    "spawns": [
+      {
+        "enemyClass": "/Script/DungeonCrawlerDenver.DCCEnemyCharacter_Guard",
+        "count": 2,
+        "level": 1,
+        "displayNameOverride": "Mall Cop, Off the Clock"
+      }
+    ]
+  },
+  {
+    "Name": "Collections",
+    "encounterName": "Collections Has Called Several Times",
+    "introLine": "You have an outstanding balance. They are here to discuss your options. You don't have any.",
+    "weight": 0.9,
+    "introVoice": "/Game/DCC/Audio/SystemAI/VO_Encounter_Collections.VO_Encounter_Collections",
+    "spawns": [
+      {
+        "enemyClass": "/Script/DungeonCrawlerDenver.DCCEnemyCharacter_DebtEater",
+        "count": 2,
+        "level": 1,
+        "displayNameOverride": "Collections Agent"
+      }
+    ]
+  },
+  {
+    "Name": "Orientation",
+    "encounterName": "New Hire Orientation",
+    "introLine": "Welcome to the team! Your manager would like a quick sync. The interns would like your lunch.",
+    "weight": 0.9,
+    "introVoice": "/Game/DCC/Audio/SystemAI/VO_Encounter_Orientation.VO_Encounter_Orientation",
+    "spawns": [
+      {
+        "enemyClass": "/Script/DungeonCrawlerDenver.DCCEnemyCharacter_InternManager",
+        "count": 1,
+        "level": 1,
+        "displayNameOverride": "Shift Lead"
+      },
+      {
+        "enemyClass": "/Script/DungeonCrawlerDenver.DCCEnemyCharacter_Intern",
+        "count": 2,
+        "level": 1,
+        "displayNameOverride": "Unpaid Intern"
+      }
+    ]
+  },
+  {
+    "Name": "TheNeighbors",
+    "encounterName": "The Neighbors",
+    "introLine": "They brought a casserole. They brought it at you.",
+    "weight": 0.4,
+    "introVoice": "/Game/DCC/Audio/SystemAI/VO_Encounter_TheNeighbors.VO_Encounter_TheNeighbors",
+    "spawns": [
+      {
+        "enemyClass": "/Script/DungeonCrawlerDenver.DCCEnemy_NuclearDad",
+        "count": 1,
+        "level": 1,
+        "displayNameOverride": "Dad, Still Grilling"
+      },
+      {
+        "enemyClass": "/Script/DungeonCrawlerDenver.DCCEnemy_NuclearMom",
+        "count": 1,
+        "level": 1,
+        "displayNameOverride": "Mom, Insisting You Eat"
+      },
+      {
+        "enemyClass": "/Script/DungeonCrawlerDenver.DCCEnemy_NuclearKid",
+        "count": 1,
+        "level": 1,
+        "displayNameOverride": "The Kid, Showing You Something"
+      }
+    ]
+  }
+]

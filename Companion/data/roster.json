@@ -1,0 +1,78 @@
+{
+  "_comment": "Who can log in. 'model' is the crawler's Meshy merged-animations .glb (mesh + clips), relative to the repo root. 'colour' tints their login card and token. 'pin' is optional; leave empty for none.",
+  "crawlers": [
+    {
+      "id": "CJ",
+      "name": "CJ",
+      "colour": "#ff6a3d",
+      "model": "SourceArt/CJ_HockeyWings/Meshy_AI_Hockey_Wings_biped/Meshy_AI_Hockey_Wings_biped_Meshy_AI_Meshy_Merged_Animations.glb",
+      "pin": ""
+    },
+    {
+      "id": "Scott",
+      "name": "Scott",
+      "colour": "#3dd6ff",
+      "model": "SourceArt/Scott_OfficeAirplane/Meshy_AI_Office_Airplane_Pose_biped/Meshy_AI_Office_Airplane_Pose_biped_Meshy_AI_Meshy_Merged_Animations.glb",
+      "pin": ""
+    },
+    {
+      "id": "Marcel",
+      "name": "Marcel",
+      "colour": "#c77dff",
+      "model": "SourceArt/Marcel/Meshy_AI_Dice_Winged_Portrait_biped/Meshy_AI_Dice_Winged_Portrait_biped_Meshy_AI_Meshy_Merged_Animations.glb",
+      "pin": ""
+    },
+    {
+      "id": "Vaughn",
+      "name": "Vaughn",
+      "colour": "#7dff9a",
+      "model": "SourceArt/Vaughn/Vaughn.glb",
+      "pin": ""
+    },
+    {
+      "id": "Kyle",
+      "name": "Kyle",
+      "colour": "#ffd23d",
+      "model": "SourceArt/Kyle/Meshy_AI_Arms_Outstretched_Aga_biped/Meshy_AI_Arms_Outstretched_Aga_biped_Meshy_AI_Meshy_Merged_Animations.glb",
+      "pin": ""
+    },
+    {
+      "id": "Zoe",
+      "name": "Zoe",
+      "colour": "#ff7dd1",
+      "model": "SourceArt/Zoe/Zoe.glb",
+      "pin": ""
+    }
+  ],
+  "animationLibrary": [
+    "SourceArt/Kyle/Meshy_AI_Arms_Outstretched_Aga_biped/Meshy_AI_Arms_Outstretched_Aga_biped_Meshy_AI_Meshy_Merged_Animations.glb",
+    "SourceArt/Marcel/Meshy_AI_Dice_Winged_Portrait_biped/Meshy_AI_Dice_Winged_Portrait_biped_Meshy_AI_Meshy_Merged_Animations.glb",
+    "SourceArt/Scott_OfficeAirplane/Meshy_AI_Office_Airplane_Pose_biped/Meshy_AI_Office_Airplane_Pose_biped_Meshy_AI_Meshy_Merged_Animations.glb",
+    "SourceArt/CJ_HockeyWings/Meshy_AI_Hockey_Wings_biped/Meshy_AI_Hockey_Wings_biped_Meshy_AI_Meshy_Merged_Animations.glb"
+  ],
+  "actions": [
+    { "id": "idle",     "label": "Stand",      "clip": "Idle_Stand",            "loop": true,  "group": "move" },
+    { "id": "look",     "label": "Look around","clip": "Alert",                 "loop": true,  "group": "move" },
+    { "id": "walk",     "label": "Walk",       "clip": "Walking",               "loop": true,  "group": "move" },
+    { "id": "run",      "label": "Run",        "clip": "Running",               "loop": true,  "group": "move" },
+    { "id": "climb",    "label": "Climb",      "clip": "Climb_Stairs",          "loop": true,  "group": "move" },
+    { "id": "cast",     "label": "Cast",       "clip": "Call_Gesture",          "loop": false, "group": "fight" },
+    { "id": "attack",   "label": "Attack",     "clip": "Charged_Upward_Slash",  "loop": false, "group": "fight" },
+    { "id": "shoot",    "label": "Shoot",      "clip": "Archery_Shot_1",        "loop": false, "group": "fight" },
+    { "id": "aim",      "label": "Aim",        "clip": "Archery_Aim_with_Lateral_Scan", "loop": true, "group": "fight" },
+    { "id": "stance",   "label": "Stance",     "clip": "Axe_Stance",            "loop": true,  "group": "fight" },
+    { "id": "workout",  "label": "Work out",   "clip": "air_squat",             "loop": true,  "group": "train" },
+    { "id": "practice", "label": "Practice",   "clip": "Boxing_Warmup",         "loop": true,  "group": "train" },
+    { "id": "agree",    "label": "Nod",        "clip": "Agree_Gesture",         "loop": false, "group": "show" },
+    { "id": "spin",     "label": "Show off",   "clip": "360_Power_Spin_Jump",   "loop": false, "group": "show" },
+    { "id": "dance1",   "label": "Dance",      "clip": "Boom_Dance",            "loop": true,  "group": "show" },
+    { "id": "dance2",   "label": "Dance II",   "clip": "All_Night_Dance",       "loop": true,  "group": "show" },
+    { "id": "dance3",   "label": "Cardio",     "clip": "Cardio_Dance",          "loop": true,  "group": "show" }
+  ],
+  "groups": [
+    { "id": "move",  "icon": "➜", "name": "Move" },
+    { "id": "fight", "icon": "⚔", "name": "Fight" },
+    { "id": "train", "icon": "♥", "name": "Train" },
+    { "id": "show",  "icon": "★", "name": "Show off" }
+  ]
+}

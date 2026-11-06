@@ -5,6 +5,8 @@
 #include "DCCGameMode.generated.h"
 
 class ADCCRoom;
+class APlayerStart;
+class UDCCOnboardingComponent;
 
 /**
  * The match rules, and specifically where a joining crawler appears.
@@ -40,6 +42,31 @@ public:
 
 	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
 	virtual void PostLogin(APlayerController* NewPlayer) override;
+	virtual FString InitNewPlayer(APlayerController* NewPlayerController, const FUniqueNetIdRepl& UniqueId,
+		const FString& Options, const FString& Portal = TEXT("")) override;
+	virtual void Logout(AController* Exiting) override;
+
+	// --- Crawler identity (2026-11-05) ----------------------------------------
+	//
+	// Who is CJ and who is Scott. A player can say so when joining
+	// (`open <host>?Crawler=CJ`, which the companion app's login can pass
+	// along), otherwise they are given the first free name from the roster
+	// that has a bedroom PlayerStart tagged with it. A level with no tagged
+	// starts skips all of this and behaves exactly as before.
+
+	/** In assignment order. Each needs a PlayerStart whose Player Start Tag matches. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "DCC|Crawlers")
+	TArray<FName> CrawlerRoster = { TEXT("CJ"), TEXT("Scott"), TEXT("Marcel"), TEXT("Vaughn"), TEXT("Kyle"), TEXT("Zoe") };
+
+	/** Server: record where a crawler has got to, so a respawn does not restart onboarding. */
+	void RememberOnboarding(AController* Controller, const UDCCOnboardingComponent* Onboarding);
+
+	/** Server: give a fresh pawn its crawler's name and progress. */
+	void RestoreOnboarding(AController* Controller, UDCCOnboardingComponent* Onboarding);
+
+	UFUNCTION(BlueprintPure, Category = "DCC|Crawlers")
+	FName GetCrawlerIdFor(AController* Controller) const;
+
 
 	/**
 	 * How close another crawler has to be for a PlayerStart to count as taken.
@@ -88,4 +115,18 @@ protected:
 	 * are instead of taking the first one that passes a threshold.
 	 */
 	float DistanceToNearestCrawler(const FVector& Location) const;
+
+	APlayerStart* FindTaggedStart(FName Tag) const;
+	FName PickFreeCrawlerId() const;
+
+private:
+	struct FSavedOnboarding
+	{
+		FName CrawlerId;
+		bool bHasProgress = false;
+		uint8 Stage = 0;
+		int32 Features = 0;
+	};
+
+	TMap<TWeakObjectPtr<AController>, FSavedOnboarding> OnboardingByController;
 };

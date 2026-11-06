@@ -148,6 +148,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Equipment|Container")
 	ADCCPickup* RetrieveFromContainer(EDCCEquipmentSlot Slot, int32 Index);
 
+	/** Re-hang equipped meshes after the owner's body changes (sockets live on the mesh, not the skeleton). */
+	void RefreshAttachments() { RebuildVisuals(); }
+
 protected:
 	UFUNCTION()
 	void OnRep_Equipped();

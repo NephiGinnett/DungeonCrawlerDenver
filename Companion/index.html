@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Crawler Companion</title>
+  <link rel="stylesheet" href="src/styles.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./node_modules/three/build/three.module.js",
+        "three/addons/": "./src/vendor/three-addons/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <!-- LOGIN ------------------------------------------------------------------------------------------>
+  <section id="login" class="screen">
+    <div class="sys-window login-window">
+      <div class="sys-header">[ CRAWLER AUTHENTICATION ]</div>
+      <h1 class="sys-title">WHO ARE YOU?</h1>
+      <p class="sys-body">Select your crawler. The System already knows, but it likes to watch you say it.</p>
+      <div id="crawler-cards" class="crawler-cards"></div>
+      <div id="pin-row" class="pin-row hidden">
+        <input id="pin" type="password" inputmode="numeric" maxlength="8" placeholder="PIN" />
+        <button id="pin-go" class="btn primary">Enter</button>
+      </div>
+      <div id="login-error" class="error"></div>
+    </div>
+  </section>
+
+  <!-- SHEET ------------------------------------------------------------------------------------------>
+  <section id="sheet-screen" class="screen hidden">
+    <header class="topbar">
+      <div class="brand">DUNGEON CRAWLER <span>DENVER</span></div>
+      <div class="topbar-right">
+        <span id="save-state" class="save-state">Saved</span>
+        <button id="table-btn" class="btn" title="Join the shared Table: party, dice log, live chatter">Table: off</button>
+        <button id="buddy-toggle" class="btn">Desktop buddy</button>
+        <button id="logout" class="btn ghost">Log out</button>
+      </div>
+    </header>
+
+    <div id="table-panel" class="sys-window table-panel hidden">
+      <div class="sys-header">[ THE TABLE ]</div>
+      <p class="hint">Ask Zoe for the address. It looks like <b>192.168.1.20:8770</b>.</p>
+      <input id="table-address" class="fld" placeholder="Table address" />
+      <div id="table-dm-row" class="hidden"><input id="table-dmkey" class="fld" placeholder="DM key (optional)" style="margin-top:6px" /></div>
+      <div style="display:flex; gap:8px; margin-top:10px">
+        <button id="table-connect" class="btn primary">Connect</button>
+        <button id="table-disconnect" class="btn ghost">Disconnect</button>
+      </div>
+      <p id="table-status" class="hint">Not connected. The Companion works fine on its own.</p>
+    </div>
+    <main class="layout">
+      <!-- Left: the model -->
+      <aside class="model-panel sys-window">
+        <div class="sys-header">[ CRAWLER VIEW ]</div>
+        <div class="model-stage">
+          <div id="chatter" class="chatter"></div>
+          <canvas id="model-canvas"></canvas>
+          <button id="chatter-toggle" class="btn tiny chatter-toggle" title="Show what the audience is saying">Chatter</button>
+          <div id="model-status" class="model-status">Loading model...</div>
+        </div>
+        <div id="action-buttons" class="action-buttons"></div>
+        <p class="hint">Drag to turn. Middle-click and drag on your crawler for the action wheel.</p>
+      </aside>
+
+      <!-- Right: the sheet -->
+      <section id="sheet" class="sheet"></section>
+    </main>
+  </section>
+
+  <!-- Dice result toast -->
+  <div id="roll-toast" class="roll-toast hidden"></div>
+
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>

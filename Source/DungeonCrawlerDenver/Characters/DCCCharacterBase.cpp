@@ -25,6 +25,7 @@
 #include "Progression/DCCAchievementComponent.h"
 #include "Equipment/DCCEquipmentComponent.h"
 #include "Classes/DCCClassComponent.h"
+#include "Onboarding/DCCOnboardingComponent.h"
 #include "Quests/DCCQuestComponent.h"
 #include "Dialogue/DCCDialogueNPC.h"
 #include "Dialogue/DCCDialogueNPC_LiftAttendant.h"
@@ -115,6 +116,7 @@ ADCCCharacterBase::ADCCCharacterBase()
 	Achievements = CreateDefaultSubobject<UDCCAchievementComponent>(TEXT("Achievements"));
 	Equipment = CreateDefaultSubobject<UDCCEquipmentComponent>(TEXT("Equipment"));
 	Class = CreateDefaultSubobject<UDCCClassComponent>(TEXT("Class"));
+	Onboarding = CreateDefaultSubobject<UDCCOnboardingComponent>(TEXT("Onboarding"));
 
 	Nameplate = CreateDefaultSubobject<UTextRenderComponent>(TEXT("Nameplate"));
 	Nameplate->SetupAttachment(RootComponent);
@@ -166,6 +168,7 @@ void ADCCCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(ADCCCharacterBase, ActiveClimbPoint);
+	DOREPLIFETIME(ADCCCharacterBase, DisplayName);
 	DOREPLIFETIME(ADCCCharacterBase, bIsSprinting);
 	DOREPLIFETIME(ADCCCharacterBase, bIsMounted);
 	DOREPLIFETIME(ADCCCharacterBase, bIsCasting);
@@ -1894,6 +1897,13 @@ void ADCCCharacterBase::BuildInteractionOptions()
 
 void ADCCCharacterBase::HandleInteractPressed()
 {
+	// A System window on screen owns E until it is read. Checked before death,
+	// menus and everything else, because the window is drawn over all of them.
+	if (IsLocallyControlled() && Onboarding && Onboarding->DismissActiveWindow())
+	{
+		return;
+	}
+
 	if (bHasDied)
 	{
 		return;

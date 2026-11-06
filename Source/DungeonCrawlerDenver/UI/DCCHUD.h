@@ -5,6 +5,7 @@
 #include "UI/DCCChatTypes.h"
 #include "Stats/DCCAbilityTypes.h"
 #include "Rooms/DCCGauntletEncounter.h"
+#include "Onboarding/DCCOnboardingTypes.h"
 #include "DCCHUD.generated.h"
 
 class ADCCCharacterBase;
@@ -121,6 +122,10 @@ class DUNGEONCRAWLERDENVER_API ADCCHUD : public AHUD
 
 public:
 	virtual void DrawHUD() override;
+
+	/** Onboarding: has this crawler been issued this part of the HUD yet? Always true with no onboarding in the level. */
+	bool IsHudFeatureUnlocked(EDCCHudFeature Feature) const;
+	bool IsMenuTabUnlocked(EDCCMenuTab Tab) const;
 
 	UFUNCTION(BlueprintCallable, Category = "DCC|UI")
 	void ToggleMenu();
@@ -632,6 +637,15 @@ private:
 
 	/** Draws the transient centre-screen notice, if one is live. */
 	void DrawNotice();
+
+	/** Everything DrawHUD used to do. Split out so the System window can always draw last, past every early return. */
+	void DrawHUDContents();
+
+	/** The isekai pop-up. See UDCCOnboardingComponent for the queue behind it. */
+	void DrawSystemWindow(ADCCCharacterBase* Crawler);
+
+	/** Last tab a first-visit tutorial was requested for, so it is asked once per change, not every frame. */
+	uint8 LastTutorialTab = 0xFF;
 
 	/** How long the LEVEL BOSS card stays up, including its fade in/out. */
 	UPROPERTY(EditDefaultsOnly, Category = "DCC|UI", meta = (ClampMin = "1.0"))

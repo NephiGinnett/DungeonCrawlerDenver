@@ -1,0 +1,155 @@
+[
+  {
+    "Name": "PersonalItem",
+    "header": "Item",
+    "title": "Something of Yours",
+    "body": "You picked it up without thinking. It is the most normal thing you will hold for a very long time.",
+    "style": "Reward",
+    "voice": "",
+    "unlockFeatures": 0
+  },
+  {
+    "Name": "PersonalItem_CJ",
+    "header": "Item",
+    "title": "The Board Game",
+    "body": "Two pieces missing, rules annotated in three colours of pen. Somebody always wanted to play one more round.",
+    "style": "Reward",
+    "voice": "",
+    "unlockFeatures": 0
+  },
+  {
+    "Name": "PersonalItem_Scott",
+    "header": "Item",
+    "title": "The Lacrosse Stick",
+    "body": "The mesh is shot and the tape is older than some of your friends. It still feels right in your hands.",
+    "style": "Reward",
+    "voice": "",
+    "unlockFeatures": 0
+  },
+  {
+    "Name": "PersonalItem_Marcel",
+    "header": "Item",
+    "title": "The Lucky Dice",
+    "body": "Rolled a natural twenty once, in front of witnesses. You have been chasing that feeling ever since.",
+    "style": "Reward",
+    "voice": "",
+    "unlockFeatures": 0
+  },
+  {
+    "Name": "WorldDungeonAnnouncement",
+    "header": "Global Broadcast",
+    "title": "The World Dungeon Is Open",
+    "body": "Good morning, Earth! Every structure on your planet has been reclaimed under the terms of your civilisation's outstanding balance. | Surviving residents of Denver may now report to the World Dungeon for processing. Look up. We've made a very large arrow. | Participation is voluntary. The surface is not.",
+    "style": "Warning",
+    "voice": "/Game/DCC/Audio/SystemAI/VO_WorldDungeonAnnouncement.VO_WorldDungeonAnnouncement",
+    "unlockFeatures": 0
+  },
+  {
+    "Name": "WelcomeCrawler",
+    "header": "System",
+    "title": "You Have Been Registered",
+    "body": "Congratulations, Crawler! You are now a contestant on the most watched program in the known universe. | Your statistics have been measured. Most of them are disappointing. That's fine. Disappointing is relatable, and relatable sells.",
+    "style": "Info",
+    "voice": "/Game/DCC/Audio/SystemAI/VO_WelcomeCrawler.VO_WelcomeCrawler",
+    "unlockFeatures": 0
+  },
+  {
+    "Name": "TheRules",
+    "header": "System",
+    "title": "The Rules, Abridged",
+    "body": "Go down. Do not stop going down. | Kill things for experience. Open boxes for loot. Entertain the audience and the audience will occasionally save your life. Bore them and we will find something less boring to put in the room with you. | Your first trial is solo. Good luck! It is statistically irrelevant.",
+    "style": "Info",
+    "voice": "/Game/DCC/Audio/SystemAI/VO_TheRules.VO_TheRules",
+    "unlockFeatures": 0
+  },
+  {
+    "Name": "FirstFightWon",
+    "header": "Trial Complete",
+    "title": "You Survived",
+    "body": "First trial cleared. The audience is cautiously interested. | A safe room has opened, with hot food, a bed, and your interface. Or you can keep going on your own, which the ratings would adore.",
+    "style": "Reward",
+    "voice": "/Game/DCC/Audio/SystemAI/VO_FirstFightWon.VO_FirstFightWon",
+    "unlockFeatures": 0
+  },
+  {
+    "Name": "ContinueAlone",
+    "header": "Warning",
+    "title": "Bold Choice",
+    "body": "You skipped the safe room. Chat is screaming. Several sponsors have just leaned forward. | Your interface has been issued anyway. We are not monsters. The monsters are downstairs.",
+    "style": "Warning",
+    "voice": "/Game/DCC/Audio/SystemAI/VO_ContinueAlone.VO_ContinueAlone",
+    "unlockFeatures": 0
+  },
+  {
+    "Name": "SafeRoomWelcome",
+    "header": "Safe Room",
+    "title": "Welcome to Your Safe Room",
+    "body": "Nothing can hurt you in here, by contract. Breathe. Eat something. Find your friends. | Your vital signs are now on screen. Health is how much of you is left. Mana is how much magic you can afford. Stamina is how much running away you have in you.",
+    "style": "Info",
+    "voice": "/Game/DCC/Audio/SystemAI/VO_SafeRoomWelcome.VO_SafeRoomWelcome",
+    "unlockFeatures": 9
+  },
+  {
+    "Name": "InterfaceIssued",
+    "header": "System",
+    "title": "Interface Issued",
+    "body": "Your full crawler interface is now available. Press Tab to open it. | Each page will explain itself the first time you visit. Please read them. We wrote them ourselves, and we are very sensitive.",
+    "style": "Reward",
+    "voice": "/Game/DCC/Audio/SystemAI/VO_InterfaceIssued.VO_InterfaceIssued",
+    "unlockFeatures": 246
+  },
+  {
+    "Name": "Tab_Character",
+    "header": "Interface",
+    "title": "Your Character Sheet",
+    "body": "Five stats: Strength, Intelligence, Constitution, Dexterity and Charisma. The number is your score; the bonus beside it is what gets added to your dice. | Rolls are a d20 plus that bonus plus your skill rank, against a difficulty. Evade is how hard you are to hit. AI Favor is how much the audience likes you.",
+    "style": "Info",
+    "voice": "/Game/DCC/Audio/SystemAI/VO_Tab_Character.VO_Tab_Character",
+    "unlockFeatures": 0
+  },
+  {
+    "Name": "Tab_Skills",
+    "header": "Interface",
+    "title": "Skills",
+    "body": "Skills improve by using them, win or lose. Every few hours of play we roll to see if practice paid off. | You can try a skill you don't have, at disadvantage. That is how you learn new ones. Spells are the exception. Please do not try spells you don't have. It is very messy.",
+    "style": "Info",
+    "voice": "/Game/DCC/Audio/SystemAI/VO_Tab_Skills.VO_Tab_Skills",
+    "unlockFeatures": 0
+  },
+  {
+    "Name": "Tab_Inventory",
+    "header": "Interface",
+    "title": "Inventory and Equipment",
+    "body": "Everything you carry is here. Gear goes in five slots: main hand, off hand, head, body and trinket. | Equipment changes your enhanced stats, never your base ones. Take it off and you go back to being you. Cursed items are the exception, which is what makes them fun.",
+    "style": "Info",
+    "voice": "/Game/DCC/Audio/SystemAI/VO_Tab_Inventory.VO_Tab_Inventory",
+    "unlockFeatures": 0
+  },
+  {
+    "Name": "Tab_Party",
+    "header": "Interface",
+    "title": "Your Party",
+    "body": "These are the people you are surviving with. Their health is your business now. | A crawler who goes down is not dead yet. Get to them. The audience loves a rescue almost as much as it loves a funeral.",
+    "style": "Info",
+    "voice": "/Game/DCC/Audio/SystemAI/VO_Tab_Party.VO_Tab_Party",
+    "unlockFeatures": 0
+  },
+  {
+    "Name": "Tab_Achievements",
+    "header": "Interface",
+    "title": "Achievements",
+    "body": "We are watching everything you do, and some of it deserves a trophy. Achievements come with loot boxes. | Loot boxes must be opened in a safe room. Yes, the timing is deliberate.",
+    "style": "Reward",
+    "voice": "/Game/DCC/Audio/SystemAI/VO_Tab_Achievements.VO_Tab_Achievements",
+    "unlockFeatures": 0
+  },
+  {
+    "Name": "Tab_Chatter",
+    "header": "Interface",
+    "title": "The Audience",
+    "body": "This is what the viewers are saying about you, live. They are not always kind. | They are, however, always right. Keep them entertained and AI Favor follows: a reroll, an extra action, a nudge when it matters most.",
+    "style": "Info",
+    "voice": "/Game/DCC/Audio/SystemAI/VO_Tab_Chatter.VO_Tab_Chatter",
+    "unlockFeatures": 0
+  }
+]
