@@ -70,11 +70,11 @@ ADCCCrowdCrawler::ADCCCrowdCrawler()
 	// Defaults so a hand-placed crowd member works with no configuration. All on
 	// the shared crawler skeleton, so any of them can play any idle in the pool.
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> MeshA(
-		TEXT("/Game/DCC/Characters/OfficeAirplane/SK_OfficeAirplane_Shared.SK_OfficeAirplane_Shared"));
+		TEXT("/Game/DCC/Characters/OfficeAirplane/SK_OfficeAirplane_Rebound.SK_OfficeAirplane_Rebound"));
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> MeshB(
-		TEXT("/Game/DCC/Characters/ArmsOut/SK_ArmsOut_Shared.SK_ArmsOut_Shared"));
+		TEXT("/Game/DCC/Characters/ArmsOut/SK_ArmsOut_Rebound.SK_ArmsOut_Rebound"));
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> MeshC(
-		TEXT("/Game/DCC/Characters/DiceWinged/SK_DiceWinged_Shared.SK_DiceWinged_Shared"));
+		TEXT("/Game/DCC/Characters/DiceWinged/SK_DiceWinged_Rebound.SK_DiceWinged_Rebound"));
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> MeshD(
 		TEXT("/Game/DCC/Characters/HockeyWings/SK_HockeyWings.SK_HockeyWings"));
 
@@ -87,13 +87,13 @@ ADCCCrowdCrawler::ADCCCrowdCrawler()
 	}
 
 	static ConstructorHelpers::FObjectFinder<UAnimationAsset> IdleA(
-		TEXT("/Game/DCC/Characters/Shared/Anims/A_DCC_OA_Alert.A_DCC_OA_Alert"));
+		TEXT("/Game/DCC/Characters/Shared/AnimsFixed/A_DCC_OA_Alert.A_DCC_OA_Alert"));
 	static ConstructorHelpers::FObjectFinder<UAnimationAsset> IdleB(
-		TEXT("/Game/DCC/Characters/Shared/Anims/A_DCC_OA_BoxingWarmup.A_DCC_OA_BoxingWarmup"));
+		TEXT("/Game/DCC/Characters/Shared/AnimsFixed/A_DCC_OA_BoxingWarmup.A_DCC_OA_BoxingWarmup"));
 	static ConstructorHelpers::FObjectFinder<UAnimationAsset> IdleC(
-		TEXT("/Game/DCC/Characters/Shared/Anims/A_DCC_AO_AirSquat.A_DCC_AO_AirSquat"));
+		TEXT("/Game/DCC/Characters/Shared/AnimsFixed/A_DCC_AO_AirSquat.A_DCC_AO_AirSquat"));
 	static ConstructorHelpers::FObjectFinder<UAnimationAsset> IdleD(
-		TEXT("/Game/DCC/Characters/Shared/Anims/A_DCC_AO_AgreeGesture.A_DCC_AO_AgreeGesture"));
+		TEXT("/Game/DCC/Characters/Shared/AnimsFixed/A_DCC_AO_AgreeGesture.A_DCC_AO_AgreeGesture"));
 
 	for (const auto* Finder : { &IdleA, &IdleB, &IdleC, &IdleD })
 	{

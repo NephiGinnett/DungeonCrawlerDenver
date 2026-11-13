@@ -21,7 +21,7 @@ ADCCAlly_HockeyWings::ADCCAlly_HockeyWings()
 ADCCAlly_OfficeAirplane::ADCCAlly_OfficeAirplane()
 {
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> MeshAsset(
-		TEXT("/Game/DCC/Characters/OfficeAirplane/SK_OfficeAirplane_Shared.SK_OfficeAirplane_Shared"));
+		TEXT("/Game/DCC/Characters/OfficeAirplane/SK_OfficeAirplane_Rebound.SK_OfficeAirplane_Rebound"));
 	if (USkeletalMeshComponent* MeshComponent = GetMesh())
 	{
 		if (MeshAsset.Succeeded())
@@ -36,7 +36,7 @@ ADCCAlly_OfficeAirplane::ADCCAlly_OfficeAirplane()
 ADCCAlly_ArmsOut::ADCCAlly_ArmsOut()
 {
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> MeshAsset(
-		TEXT("/Game/DCC/Characters/ArmsOut/SK_ArmsOut_Shared.SK_ArmsOut_Shared"));
+		TEXT("/Game/DCC/Characters/ArmsOut/SK_ArmsOut_Rebound.SK_ArmsOut_Rebound"));
 	if (USkeletalMeshComponent* MeshComponent = GetMesh())
 	{
 		if (MeshAsset.Succeeded())
@@ -51,7 +51,7 @@ ADCCAlly_ArmsOut::ADCCAlly_ArmsOut()
 ADCCAlly_DiceWinged::ADCCAlly_DiceWinged()
 {
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> MeshAsset(
-		TEXT("/Game/DCC/Characters/DiceWinged/SK_DiceWinged_Shared.SK_DiceWinged_Shared"));
+		TEXT("/Game/DCC/Characters/DiceWinged/SK_DiceWinged_Rebound.SK_DiceWinged_Rebound"));
 	if (USkeletalMeshComponent* MeshComponent = GetMesh())
 	{
 		if (MeshAsset.Succeeded())
@@ -68,7 +68,7 @@ ADCCAlly_Vaughn::ADCCAlly_Vaughn()
 	// _Shared, like the other three below - see this class's header comment
 	// on why the original "own skeleton, Compatible-marked" plan was replaced.
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> MeshAsset(
-		TEXT("/Game/DCC/Characters/Shared/SK_Vaughn_Shared.SK_Vaughn_Shared"));
+		TEXT("/Game/DCC/Characters/Vaughn/SK_Vaughn_Rebound.SK_Vaughn_Rebound"));
 	if (USkeletalMeshComponent* MeshComponent = GetMesh())
 	{
 		if (MeshAsset.Succeeded())

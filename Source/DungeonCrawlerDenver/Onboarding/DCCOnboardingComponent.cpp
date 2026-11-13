@@ -24,11 +24,11 @@ UDCCOnboardingComponent::UDCCOnboardingComponent()
 	// Matches what each crawler's ally Blueprint wears (the rig-fitted _Fixed meshes where they exist).
 	auto Look = [this](const TCHAR* Id, const TCHAR* Path) { CrawlerMeshes.Add(FName(Id), TSoftObjectPtr<USkeletalMesh>(FSoftObjectPath(Path))); };
 	Look(TEXT("CJ"), TEXT("/Game/DCC/Characters/HockeyWings/SK_HockeyWings.SK_HockeyWings"));
-	Look(TEXT("Scott"), TEXT("/Game/DCC/Characters/OfficeAirplane/SK_OfficeAirplane_Fixed.SK_OfficeAirplane_Fixed"));
-	Look(TEXT("Kyle"), TEXT("/Game/DCC/Characters/ArmsOut/SK_ArmsOut_Fixed.SK_ArmsOut_Fixed"));
-	Look(TEXT("Marcel"), TEXT("/Game/DCC/Characters/DiceWinged/SK_DiceWinged_Fixed.SK_DiceWinged_Fixed"));
-	Look(TEXT("Vaughn"), TEXT("/Game/DCC/Characters/Shared/SK_Vaughn_Shared.SK_Vaughn_Shared"));
-	Look(TEXT("Zoe"), TEXT("/Game/DCC/Characters/Zoe/SK_Zoe.SK_Zoe"));
+	Look(TEXT("Scott"), TEXT("/Game/DCC/Characters/OfficeAirplane/SK_OfficeAirplane_Rebound.SK_OfficeAirplane_Rebound"));
+	Look(TEXT("Kyle"), TEXT("/Game/DCC/Characters/ArmsOut/SK_ArmsOut_Rebound.SK_ArmsOut_Rebound"));
+	Look(TEXT("Marcel"), TEXT("/Game/DCC/Characters/DiceWinged/SK_DiceWinged_Rebound.SK_DiceWinged_Rebound"));
+	Look(TEXT("Vaughn"), TEXT("/Game/DCC/Characters/Vaughn/SK_Vaughn_Rebound.SK_Vaughn_Rebound"));
+	Look(TEXT("Zoe"), TEXT("/Game/DCC/Characters/Zoe/SK_Zoe_Rebound.SK_Zoe_Rebound"));
 
 	SystemWindowTable = TSoftObjectPtr<UDataTable>(
 		FSoftObjectPath(TEXT("/Game/DCC/UI/DT_DCCSystemWindows.DT_DCCSystemWindows")));

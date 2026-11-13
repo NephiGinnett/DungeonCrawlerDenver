@@ -92,7 +92,7 @@ ADCCEnemy_NuclearDad::ADCCEnemy_NuclearDad()
 	// Reskinned onto a shared-skeleton crawler until real art exists, so he at
 	// least walks and swings rather than T-posing through the fight.
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FamilyMesh(
-		TEXT("/Game/DCC/Characters/OfficeAirplane/SK_OfficeAirplane_Shared.SK_OfficeAirplane_Shared"));
+		TEXT("/Game/DCC/Characters/OfficeAirplane/SK_OfficeAirplane_Rebound.SK_OfficeAirplane_Rebound"));
 	if (USkeletalMeshComponent* MeshComponent = GetMesh())
 	{
 		if (FamilyMesh.Succeeded())
@@ -131,7 +131,7 @@ ADCCEnemy_NuclearMom::ADCCEnemy_NuclearMom()
 	DisplayName = NSLOCTEXT("DCC", "NuclearMomName", "Mom, Insisting You Eat");
 
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FamilyMesh(
-		TEXT("/Game/DCC/Characters/ArmsOut/SK_ArmsOut_Shared.SK_ArmsOut_Shared"));
+		TEXT("/Game/DCC/Characters/ArmsOut/SK_ArmsOut_Rebound.SK_ArmsOut_Rebound"));
 	if (USkeletalMeshComponent* MeshComponent = GetMesh())
 	{
 		if (FamilyMesh.Succeeded())
@@ -167,7 +167,7 @@ ADCCEnemy_NuclearKid::ADCCEnemy_NuclearKid()
 	DisplayName = NSLOCTEXT("DCC", "NuclearKidName", "The Kid, Showing You Something");
 
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FamilyMesh(
-		TEXT("/Game/DCC/Characters/DiceWinged/SK_DiceWinged_Shared.SK_DiceWinged_Shared"));
+		TEXT("/Game/DCC/Characters/DiceWinged/SK_DiceWinged_Rebound.SK_DiceWinged_Rebound"));
 	if (USkeletalMeshComponent* MeshComponent = GetMesh())
 	{
 		if (FamilyMesh.Succeeded())

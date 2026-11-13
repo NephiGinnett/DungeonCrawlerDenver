@@ -184,6 +184,40 @@ inverse-bind matrices hold the real rest pose. Anything that reads "rest pose" f
   shared skeleton's per-bone translation retargeting: Hips = AnimationScaled, everything else = Skeleton.
   The standard UE remedy: bone lengths come from each mesh, motion comes from the clip. **Run it once,
   save the skeleton, PIE-check all four allies.** Not yet run.
+**The bent spine / twisted hips: real root cause (found 2026-11-13).** The Meshy rigs share bone *names*,
+not bone *axes*. Each auto-rig orients its bones differently at rest. Measured against CJ's rig (the source
+of `SK_DCCCrawler_Skeleton`): Scott's Hips are rotated 144°, Spine02 143°, the upper legs 153°, and the feet up to
+47°. Kyle and Marcel are similar. A clip stores each bone's local rotation in its own rig's axes, and UE plays
+it verbatim. So any clip played on a body from another rig spins Hips, Spine02 and the legs by the axis
+difference. Every crawler idles in Scott's `A_DCC_OA_Alert`, so CJ was always bent. Translation retargeting
+cannot help, because it never touches rotation. Bodies were affected too: only `SK_HockeyWings` and
+`SK_OfficeAirplane_Fixed` are on CJ's axes. `SK_ArmsOut_Fixed`, `SK_DiceWinged_Fixed`, Vaughn, Zoe and every
+`_Shared` mesh except Scott's are 130–140° off at the hips.
+
+**Fix: put everything on CJ's axes.**
+- `Tools/rebake_clip_to_shared_rest.py` re-bakes a clip onto CJ's rest: per bone, the source's world-space
+  change from rest is applied to CJ's rest, and Hips height is scaled. All 20 non-CJ clips are re-baked into
+  `SourceArt/Shared_Rebaked/A_DCC_*.fbx`. `--render` writes before/after PNGs.
+- `Tools/rebind_mesh_to_shared_frames.py` turns a body's bones onto CJ's axes while keeping its own joint
+  positions, weights and vertices. At rest, no vertex moves. Output is in `SourceArt/Shared_Rebound/`.
+- Checked in Blender. Scott's Alert re-baked on CJ matches Scott's own body playing it. Re-baked clips on
+  rebound Kyle and Zoe, played the way UE plays them, stand straight.
+- **In UE (done 2026-11-13, built and seen in game):** all 24 clips are in
+  `/Game/DCC/Characters/Shared/AnimsFixed/`. The 20 non-CJ clips are re-baked, and CJ's 4 are copied unchanged. Bodies
+  `SK_{ArmsOut,DiceWinged,OfficeAirplane,Vaughn,Zoe}_Rebound` all sit directly on `SK_DCCCrawler_Skeleton` (no more
+  per-body `_Fixed_Skeleton`), with materials and sockets copied from the old meshes. C++ (anim set, onboarding looks,
+  allies, Nuclear Family, crowd) points at the new assets. The player and ally Blueprint defaults were re-pointed and
+  saved. The gear bench hides the old `Shared/Anims` folder. Before/after: `Docs/images/cj-spine-before-after.png`.
+- **Left over:** 8 placed actors in `Lvl_ThirdPerson` (the old RPG level) still store the old clips and meshes as
+  per-instance overrides. MCP cannot save World Partition actors. Fix: open the level in the editor, select the
+  `BP_DCCEnemy_*` allies and reset Mesh and animation fields to default, then save. The old `Shared/Anims`,
+  `*_Shared` and `*_Fixed` assets can be deleted once nothing references them. Socket transforms were copied as-is,
+  so expect held props to need a nudge on the bench.
+- **Also found:** importing a mesh onto the shared skeleton reset its per-bone translation modes to `Animation`.
+  The asset was restored from git, and `DCCRetarget::EnsureForMesh` enforces the modes at runtime anyway. FBX
+  armatures must be named `Armature`, because any other name becomes an extra root bone in UE.
+- **Rule from now on:** a new Meshy clip goes through `rebake_clip_to_shared_rest.py`, and a new Meshy body goes
+  through `rebind_mesh_to_shared_frames.py`, before either is imported against the shared skeleton.
 - **Companion:** borrowed clips are retargeted rotation-only, relative to each rig's inverse-bind rest pose,
   with Hips motion scaled to body height. Verified by screenshot against each clip played on its own crawler.
 
@@ -369,3 +403,25 @@ Sources, best fit first:
   - The bedroom lights are warmed (900 intensity, warm colour). **In memory only: needs Save All.**
   - Not yet seen: the body swap on a second, networked client (the OnRep path), and the jersey texture at full
     resolution (the test screenshot caught it still streaming).
+- **2026-11-13 (spine fix)**: Found the real cause of the twisted hips and backwards-S spine: the Meshy rigs disagree on
+  bone axes, not just bone lengths (§7). Re-baked 20 clips and rebound 5 bodies onto CJ's axes, repointed code and
+  Blueprints, built, and confirmed CJ standing straight on the gear bench. Not committed.
+- **2026-11-13: playtest fixes (Zoe played Neon Mile).**
+  - **The party menu stopped opening at every level load.** Before, every launched-game level opened it, so it appeared
+    at the start of every minigame. Now it opens on its own only after a failed join, or once after HOST A PARTY with
+    the invite.
+  - **Front door: crawlers faced away.** The stage now turns the body to the camera every frame. A start rotation was
+    not enough, because something turns the pawn after it spawns.
+  - **Neon Mile, spaced for the loose rover handling:**
+    - The road is wider (half-width 1150, lanes 680 apart).
+    - Traffic is at most one car per 1000-unit slot, so cars are about 750+ units apart and never block all three lanes.
+    - Traffic starts at chunk 3 and fills from 30% to 75%. From 1.2 km a slot can hold two cars side by side, with one lane open.
+    - A smaller crash margin.
+  - **Neon Mile, decorated:**
+    - The traffic looks like cars: cabin, tail lights and underglow.
+    - A neon grid ground, glowing posts, palms, and a skyline of towers with neon rims.
+    - A neon arch with the distance every 1 km.
+    - A striped retro sun that stays at the end of the road.
+    - Thinner fog.
+    - Scenery uses a new `bCollide=false` `Block()` option.
+  - The DebugGame compile succeeds. The Development Editor build waits for the game window to close. **Not seen in game yet.**
