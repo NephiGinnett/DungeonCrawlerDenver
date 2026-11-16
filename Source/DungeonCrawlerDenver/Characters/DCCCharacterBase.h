@@ -23,6 +23,8 @@ class UDCCAchievementComponent;
 class UDCCEquipmentComponent;
 class UDCCClassComponent;
 class UDCCOnboardingComponent;
+class UDCCWalletComponent;
+struct FDCCEquipmentDef;
 class ADCCCharacterBase;
 class ADCCDialogueNPC;
 class ADCCDialogueNPC_RaceBookie;
@@ -48,6 +50,14 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDCCCharacterDied, ADCCCharacterBase
  * ahead of time, which a per-instance delegate would require.
  */
 DECLARE_MULTICAST_DELEGATE_TwoParams(FDCCAttackAttempted, ADCCCharacterBase* /*Attacker*/, ADCCCharacterBase* /*Target*/);
+
+/**
+ * Server only. A hit that actually applied damage: melee, ranged, spells,
+ * thrown props and explosives. The amount is what the caller passed in,
+ * before the target's resistances. Static for the same reason as
+ * OnAnyAttackAttempted, so a meter does not have to know every fighter.
+ */
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FDCCDamageLanded, ADCCCharacterBase* /*Dealer*/, ADCCCharacterBase* /*Target*/, int32 /*Amount*/);
 
 /**
  * Common ground for anything that fights: players and enemies both derive from
@@ -76,6 +86,10 @@ public:
 	 * AI ally today and CJ as a player's crawler the moment he joins.
 	 */
 	virtual void PossessedBy(AController* NewController) override;
+	/** Network fix (2026-11-16): a locally built floor or prop is never a movement base. See the .cpp. */
+	virtual void SetBase(UPrimitiveComponent* NewBase, const FName BoneName = NAME_None, bool bNotifyActor = true) override;
+	virtual void SetBase(FMovementBaseInterfaceData* MovementBaseInterfaceData, const FName BoneName = NAME_None, bool bNotifyActor = true) override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -118,6 +132,10 @@ public:
 	/** Who this crawler is (CJ, Scott...), their onboarding stage, and which HUD parts they have been issued. See Onboarding/DCCOnboardingComponent.h. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "DCC")
 	TObjectPtr<UDCCOnboardingComponent> Onboarding;
+
+	/** Arcade tickets, owned cosmetics and the outfit drawn on this crawler. See Arcade/DCCWalletComponent.h. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "DCC")
+	TObjectPtr<UDCCWalletComponent> Wallet;
 
 	/**
 	 * Known skills and spells. On enemies too, so a boss casts through exactly
@@ -185,6 +203,12 @@ public:
 
 	/** See FDCCAttackAttempted's own comment. Server-side only - nothing broadcasts this on a client. */
 	static FDCCAttackAttempted OnAnyAttackAttempted;
+
+	/** See FDCCDamageLanded. Server-side only. */
+	static FDCCDamageLanded OnAnyDamageLanded;
+
+	/** Server only. Call after ApplyDamage with the amount that was passed in. Misses do not call this. */
+	void NoteDamageDealtTo(ADCCCharacterBase* Target, int32 Amount);
 
 	/**
 	 * Per-character HUD, created only for the local player.
@@ -960,6 +984,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DCC|Downed")
 	void Revive(ADCCCharacterBase* Rescuer);
 
+	/**
+	 * Server only. Stands a downed crawler back up with no rescuer, no log line and
+	 * no Favor. For the System doing it (the tale floor's narrator rewrite, the
+	 * stairs carrying a downed crawler down): the caller says what happened.
+	 */
+	void ReviveQuietly(float HealthFraction);
+
 	// -------------------------------------------------------------------------
 	// LOOTING THE BODY
 	//
@@ -1151,6 +1182,11 @@ public:
 	void Server_ToggleRoverRadio(class ADCCRover* Rover);
 	void Server_ToggleRoverRadio_Implementation(class ADCCRover* Rover);
 
+	/** Next KMHR track, while the driver is in the rover and the station is on. */
+	UFUNCTION(Server, Reliable)
+	void Server_CycleRoverRadio(class ADCCRover* Rover);
+	void Server_CycleRoverRadio_Implementation(class ADCCRover* Rover);
+
 	/**
 	 * Empties one Stowed Remains record from this crawler's own pack, at their
 	 * feet - the Tab menu's Inventory page calls this on a clicked row.
@@ -1202,6 +1238,49 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "DCC|LootBox")
 	void ClaimAndOpenAllLootBoxes();
+
+	/**
+	 * The loot box screen (O). Asks the server to open Count boxes of Tier, or
+	 * every box owned when Tier is None. Gear goes into the bag, gold into the
+	 * purse, boons apply at once, and the result comes back through
+	 * Client_LootBoxReveal for the screen to show.
+	 */
+	void RequestOpenLootBoxes(EDCCLootBoxTier Tier, int32 Count);
+
+	// --- Weapon skills and explosives (2026-11-13) -------------------------
+	/** The equipped main-hand item's row, if any. */
+	bool GetMainHandDef(FDCCEquipmentDef& Out) const;
+
+	/** Marks a known skill for advancement, or records an untrained attempt (how new skills are learned). */
+	void NoteSkillUse(FName SkillId, int32 Rank);
+
+	/** Server. Handling check, throw, scatter on a miss, then Detonate where it lands. */
+	FDCCAttackResult ThrowExplosive(ADCCCharacterBase* Target, const FDCCEquipmentDef& Def);
+
+	/** Server. Damages everyone in Def.SplashRadius of Where (thrower and party included), half at the edge. */
+	void Detonate(const FVector& Where, const FDCCEquipmentDef& Def, int32 Damage);
+
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_Explosion(FVector Where, float Radius, bool bFire);
+
+	static int32 RollD20ForSkill(bool bDisadvantage)
+	{
+		const int32 First = FMath::RandRange(1, 20);
+		return bDisadvantage ? FMath::Min(First, FMath::RandRange(1, 20)) : First;
+	}
+
+	/** O. Opens or closes the loot box screen. Local only. */
+	void ToggleLootBoxScreen();
+
+	/** F3. Opens or closes the gear bench. Local only. */
+	void ToggleGearBench();
+
+	/**
+	 * Boxes open in a Safe Room, or anywhere nothing hostile is close. The
+	 * second half is what lets them open on a World Dungeon floor, which has no
+	 * Safe Room, once the room is clear.
+	 */
+	bool CanOpenLootBoxesHere(FText& OutWhyNot) const;
 
 	/**
 	 * Party command: stop escorting and stand still, or resume.
@@ -1308,6 +1387,9 @@ public:
 	/** Opens or closes the DM panel. Local and cosmetic. */
 	UFUNCTION(BlueprintCallable, Category = "DCC|Admin")
 	void ToggleAdminPanel();
+
+	/** F2. Opens the party menu (host, invite, join). Local only. */
+	void ToggleSessionMenu();
 
 	/** Server. Spawns one of anything at the caller's feet. */
 	UFUNCTION(Server, Reliable)
@@ -1494,6 +1576,94 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DCC|Climb")
 	void ReleaseClimb();
 
+	// --- Hold-to-climb (2026-11-13, Zoe's design) ------------------------------
+	// 1. Equip the Climbing skill (hotbar). 2. Hold the left mouse button: you grab
+	// the wall in front of you and climb (also when you walk into a wall while
+	// holding). 3. Let go of the button, or run out of stamina, and you drop.
+	// Right mouse, held, climbs down. Without Climbing equipped a wall is never
+	// grabbed, so a fight near a wall never turns into a climb.
+
+	/** Climbing is the equipped skill. */
+	bool IsClimbingEquipped() const { return SelectedSkillId == FName(TEXT("Climbing")); }
+
+	/** Server: drop off the wall now (a rock hit, a gust). */
+	void ForceReleaseClimb();
+
+	/** Local, for the automated climb test (DCC.ClimbTest): as if the left mouse were held or released. */
+	void DebugSetClimbHold(bool bHeld) { bClimbHeld = bHeld; bDescendHeld = false; ClimbGrabRetry = 0.0f; }
+
+	/** [Q] / [T]: use or switch the Fourteener tool in hand (UDCCWalletComponent). */
+	void UseClimbTool();
+	void NextClimbTool();
+
+	/** Server: move this climber somewhere at once, on every machine including their own (a grappling hook). */
+	void SnapTo(const FVector& Location);
+
+	UFUNCTION(Client, Reliable)
+	void Client_SnapTo(FVector Location);
+
+	/** Server: a short notice on this player's own screen (hazard warnings, checkpoints). */
+	void NotifyClimber(const FText& Message) { Client_ShowClimbNotice(Message); }
+
+	/**
+	 * Server-side multipliers the arena (or anything else) sets each tick: on the
+	 * cost of climbing (ice x2, a gust x3, roped in x0.6) and on resting stamina
+	 * regeneration (a camp x2). Reset to 1 when nothing is setting them.
+	 */
+	float ClimbStaminaMultiplier = 1.0f;
+
+	/**
+	 * Arcade fairness (2026-11-14). When > 0, climbing stamina is measured against this "reference bar"
+	 * instead of the crawler's own: costs and recovery scale by MaxStamina / this, and the up-climb is charged
+	 * per metre rather than per second. So a levelled DCD crawler (bar 360) and a fresh one (bar 120) both get
+	 * about 1.3 pitches per bar. Fourteener sets it (ADCCArcadeClimb::TickKits); 0 everywhere else.
+	 */
+	float ClimbStaminaReferenceMax = 0.0f;
+	/** Set while climbing: sideways is slow (a fraction of the climb speed), not the 6 m/s flying default. */
+	bool bClimbFlyTuned = false;
+
+	/**
+	 * A short screen shake for this machine's own player (2026-11-13: a rock
+	 * landing nearby). Zero-sum wobble on the control rotation, so the view
+	 * comes back exactly where it was. Local only; call it on the client.
+	 */
+	void AddScreenShake(float Strength, float Seconds);
+
+	/**
+	 * Hotbar slots 2 and 3 (2026-11-13, Zoe): they start empty and fill with the
+	 * first useful things picked up - a Fourteener tool, a consumable - in the
+	 * order they arrive. The key uses it; a slot whose item runs out empties
+	 * again for the next one. Each entry is an item id: a DCCClimbItems id or a
+	 * consumable's ItemId. Owner-only.
+	 */
+	UPROPERTY(Replicated)
+	TArray<FName> QuickSlots;
+
+	/** Server: put a newly picked-up useful item into the first empty quick slot. */
+	void OfferQuickItem(FName ItemId);
+	/** How many of this quick item the crawler still has (tools from the wallet mirror, consumables from the pack). */
+	int32 QuickItemCount(FName ItemId) const;
+	void UseQuickSlot(int32 Index);
+
+	UFUNCTION(Server, Reliable)
+	void Server_UseQuickSlot(int32 Index);
+	float StaminaRegenMultiplier = 1.0f;
+
+	/** Seconds continuously on the ground. Stamina does not come back during a stall or a fall. Server only. */
+	float StaminaGroundedFor = 0.0f;
+
+	/** Server: no fall damage until this world time (roped in, a respawn). */
+	double FallSafeUntil = 0.0;
+
+	/** Falls up to this many metres are free; past it, damage grows until FatalFallMetres. */
+	UPROPERTY(EditDefaultsOnly, Category = "DCC|Climb", meta = (ClampMin = "0.0"))
+	float SafeFallMetres = 6.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "DCC|Climb", meta = (ClampMin = "1.0"))
+	float FatalFallMetres = 20.0f;
+
+	virtual void Landed(const FHitResult& Hit) override;
+
 	// -------------------------------------------------------------------------
 	// SPRINTING
 	//
@@ -1590,11 +1760,12 @@ protected:
 
 	/** Arms the Nth known skill. One handler per key; BindKey carries no payload. */
 	void SelectSkillSlot(int32 Index);
+	// Hotbar (2026-11-13): 1 = your first skill, 2 and 3 = quick items, 4 and 5 = your next two skills.
 	void SelectSkillSlot1() { SelectSkillSlot(0); }
-	void SelectSkillSlot2() { SelectSkillSlot(1); }
-	void SelectSkillSlot3() { SelectSkillSlot(2); }
-	void SelectSkillSlot4() { SelectSkillSlot(3); }
-	void SelectSkillSlot5() { SelectSkillSlot(4); }
+	void SelectSkillSlot2() { UseQuickSlot(0); }
+	void SelectSkillSlot3() { UseQuickSlot(1); }
+	void SelectSkillSlot4() { SelectSkillSlot(1); }
+	void SelectSkillSlot5() { SelectSkillSlot(2); }
 
 public:
 
@@ -1739,6 +1910,12 @@ protected:
 
 	UFUNCTION(Server, Reliable)
 	void Server_ClaimAndOpenAllLootBoxes();
+
+	UFUNCTION(Server, Reliable)
+	void Server_OpenLootBoxBatch(EDCCLootBoxTier Tier, int32 Count);
+
+	UFUNCTION(Client, Reliable)
+	void Client_LootBoxReveal(const FDCCLootBoxReveal& Reveal);
 	void Server_ClaimAndOpenAllLootBoxes_Implementation();
 
 	UFUNCTION(Server, Reliable)
@@ -1840,7 +2017,7 @@ public:
 	 * being hit while still being destructible by something heavy, which is
 	 * exactly what ADCCEnemyCharacter_LegacySystem is built on.
 	 */
-	virtual int32 ModifyIncomingDamage(int32 Damage, ADCCCharacterBase* Attacker) { return Damage; }
+	virtual int32 ModifyIncomingDamage(int32 Damage, ADCCCharacterBase* Attacker);
 
 	/**
 	 * Logs the level and records it against achievements.
@@ -2042,6 +2219,24 @@ protected:
 	/** bDrinkNow: apply effects immediately. False: add to StowedConsumables instead. */
 	UFUNCTION(Server, Reliable)
 	void Server_PurchaseDrink(AActor* VendorActor, FName ConsumableItemId, bool bDrinkNow);
+
+	// --- The shop screen (2026-11-13) ---------------------------------------
+	// Buying puts gear in the bag (not straight on, as the old menu did) and
+	// potions in the pack. Selling pays half the item's value. Both re-check
+	// the vendor, the range, the stock and the gold on the server.
+	UFUNCTION(Server, Reliable)
+	void Server_ShopBuy(AActor* VendorActor, FName ItemId, bool bConsumable);
+
+	UFUNCTION(Server, Reliable)
+	void Server_ShopSell(AActor* VendorActor, int32 BagIndex);
+
+public:
+	/** What the shop pays for the bag item at Index: half its value, at least 1. */
+	int32 GetShopSellPrice(int32 BagIndex) const;
+
+	/** Asks the server; safe to call on any machine. */
+	void ShopBuy(AActor* VendorActor, FName ItemId, bool bConsumable);
+	void ShopSell(AActor* VendorActor, int32 BagIndex);
 
 	/**
 	 * Both the NPC and the id are re-checked here - NPC->OfferedQuestIds must
@@ -2420,6 +2615,22 @@ public:
 	 *  tick starts it on the new mesh. Without this the cache still says "idle" and the new body stands in T-pose. */
 	void RestartLoopAnimation() { ActiveLoopAnimation = nullptr; OneShotAnimationUntil = 0.0f; }
 
+	/** Set by the gear bench (F3) while it plays animations by hand; locomotion leaves the mesh alone. */
+	bool bBenchPosing = false;
+
+	/**
+	 * V: the body cam is rolling (Dead Air, Arcade/DCCArcadeHaunt). Replicated so
+	 * everyone's HUD and the server's scoring agree on who is filming. Any game
+	 * can read it; only Dead Air scores it today.
+	 */
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "DCC|Camera")
+	bool bRecordingFootage = false;
+
+	void ToggleRecording();
+
+	UFUNCTION(Server, Reliable)
+	void Server_SetRecording(bool bRecording);
+
 	/** Whether any loot-menu action (LootOne, LootAll, or StowInto) has ever been taken on this corpse. */
 	bool HasLootBeenHandled() const { return bLootHandled; }
 
@@ -2446,6 +2657,90 @@ private:
 	/** Held climb input, mirrored to the server. */
 	bool bClimbInputUp = false;
 	bool bClimbInputDown = false;
+
+	/** Local: the left mouse button is held with Climbing equipped. */
+	bool bClimbHeld = false;
+	bool bDescendHeld = false;
+	float ClimbGrabRetry = 0.0f;
+
+	/** Local: looks for a wall right in front and asks the server to grab it. Quiet: no notices. */
+	bool TryGrabWallAhead();
+
+	/** Local: a wall under the cursor, in reach, while Climbing is not equipped: say how to climb it. */
+	bool HintEquipClimbingIfWall();
+
+	void TickHoldToClimb(float DeltaSeconds);
+
+	/**
+	 * Local: while climbing, a wide shot from behind (2026-11-13). The boom pulls
+	 * out and up, turns to face the wall, and stops doing collision tests so a
+	 * ledge or a passing rock never snaps it into the climber's head or the rock.
+	 * Everything eases back when the climb ends.
+	 */
+	void TickClimbCamera(float DeltaSeconds);
+	float ClimbCamBlend = 0.0f;
+	float BaseArmLength = -1.0f;
+	FVector BaseSocketOffset = FVector::ZeroVector;
+	bool bBaseCollisionTest = true;
+	bool bBaseCameraLag = false;
+
+	/**
+	 * Where a climber should be this frame on the way to Target: the height at
+	 * once, but sideways onto the wall at no more than 7 m/s. Grabbing used to
+	 * snap the crawler onto the wall in one frame (81 cm from a step away, 191 cm
+	 * from the back of High Camp), found by DCC.ClimbTest (2026-11-13).
+	 */
+	FVector ClimbStepToward(const FVector& Target, float DeltaSeconds) const;
+
+	// --- Crawling over a ledge (2026-11-13) --------------------------------------
+	// Climbing into the underside of a ledge used to teleport the climber onto its
+	// top. Now they crawl it like an ant over a boulder: out along the underside
+	// to the lip, up around the edge, and in onto the top. The path is worked out
+	// on the server and sent to the climber's own machine, so both play it.
+
+	/** Server: start crawling over the ledge above. False if there is no room on top. */
+	bool BeginLedgeCrawl(const FHitResult& Underside);
+
+	UFUNCTION(Client, Reliable)
+	void Client_BeginLedgeCrawl(const TArray<FVector>& Path);
+
+	/** Moves along CrawlPath. True while still crawling. On the server, finishing stands the climber on top. */
+	bool TickLedgeCrawl(float DeltaSeconds);
+
+	TArray<FVector> CrawlPath;
+
+	// Screen shake (AddScreenShake) and the climbing tilt (TickClimbTilt): the body
+	// leans with the surface as it crawls over a ledge, like an ant over a boulder.
+	double ShakeStarted = 0.0, ShakeUntil = 0.0;
+	float ShakeStrength = 0.0f;
+	FRotator ShakeApplied = FRotator::ZeroRotator;
+	void TickScreenShake();
+	FQuat ClimbTilt = FQuat::Identity;
+	FVector CrawlDirection = FVector::ZeroVector;
+	FTransform BaseMeshRelative;
+	bool bBaseMeshRelativeSet = false;
+	void TickClimbTilt(float DeltaSeconds);
+
+	/**
+	 * The climb animation keeps pace with the climber (2026-11-13): its play rate
+	 * is the real vertical speed over ClimbAnimNaturalSpeed, the speed it looks
+	 * right at 1x. Hanging still pauses it, climbing down plays it backwards, a
+	 * faster climber's arms move faster. Measured from position on every machine,
+	 * so other players see the same pace.
+	 */
+	// Measured: A_DCC_ClimbLoop (the stair clip made seamless and in place, Tools/make_seamless_loop.py)
+	// lifts the hips 85 cm per 2.9 s cycle in its original form, so 1x looks right at ~29 cm/s.
+	static constexpr float ClimbAnimNaturalSpeed = 70.0f; // was 29: looked far faster than the climber moved (Zoe)
+	float SmoothedClimbSpeed = 0.0f;
+	float LastClimbAnimZ = 0.0f;
+	void TickClimbAnimRate(float DeltaSeconds);
+	/** This climber's speed on the wall (cm/s), from the ruleset; the ledge crawl moves at a multiple of it. */
+	float GetClimbSpeedNow() const;
+	float CrawlDistance = 0.0f;
+	bool bCrawling = false;
+
+	/** Server: the highest point of the current fall, for fall damage. */
+	float FallPeakZ = 0.0f;
 
 	/**
 	 * Position-only cosmetic mirror of TickStamina's climbing branch, run on

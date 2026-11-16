@@ -128,6 +128,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Dialogue")
 	bool HasMoreToSay() const;
 
+	/** The line being said right now, or empty. The HUD shows it as a subtitle (2026-11-13). */
+	const FText& GetCurrentLine() const { return CurrentLineText; }
+
 	/**
 	 * Advances the script one line, same as walking up already does via
 	 * HandleTalkOverlapBegin - but on demand, and a line already showing gets
@@ -159,15 +162,20 @@ protected:
 	void HandleTalkOverlapEnd(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
-	/** Collects this speaker's rows from the table, in order, hints last. */
-	void BuildScript();
+	/** Collects this speaker's rows from the table, in order, hints last. Subclasses may supply their own. */
+	virtual void BuildScript();
 
 	void ShowLine(const FDCCDialogueLine& Line);
 
 	/** Falls back to the display name, or hides the bubble entirely. */
 	void ShowIdleText();
 
-private:
+	/**
+	 * The recording for a line, played from SourceArt/Voice/NPC/<SpeakerId>/VO_<LineId>.wav if
+	 * it exists (Voice Studio exports, DCCVoiceLines.h). Silent, never an error, when it doesn't.
+	 */
+	virtual void PlayVoiceFor(const FDCCDialogueLine& Line);
+
 	/** This speaker's lines, ordered. Built once at BeginPlay. */
 	UPROPERTY(Transient)
 	TArray<FDCCDialogueLine> Script;
@@ -175,16 +183,23 @@ private:
 	/** How far through Script we are. Never rewinds unless bLoopWhenExhausted. */
 	int32 NextLineIndex = 0;
 
-	/** Seconds left on the current line, or on the gap after it. */
-	float LineTimeRemaining = 0.0f;
+	TWeakObjectPtr<class UAudioComponent> CurrentVoice;
 
-	bool bSpeaking = false;
+	FText CurrentLineText;
 
 	/**
 	 * Someone is close enough to be spoken to.
 	 *
 	 * A count rather than a bool: with five players, one walking away must not
-	 * silence a conversation the other four are still standing in.
+	 * silence a conversation the other four are still standing in. The impound
+	 * staff set this from distance, because a rover's box does not trip the
+	 * talk sphere the way a crawler on foot does.
 	 */
 	int32 ListenerCount = 0;
+
+private:
+	/** Seconds left on the current line, or on the gap after it. */
+	float LineTimeRemaining = 0.0f;
+
+	bool bSpeaking = false;
 };

@@ -144,6 +144,46 @@ struct FDCCEquipmentDef : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment|Combat", meta = (ClampMin = "0.0"))
 	float AttackRangeOverride = 0.0f;
 
+	// --- Skills (2026-11-13), per the DCC books ---------------------------------
+	// "The name of the weapon is also the name of the Skill used to wield that
+	// weapon" (Crawlers Preview, Attack Skills). All optional: an item that
+	// names no skill behaves exactly as it always has.
+
+	/**
+	 * The Attack Skill this weapon uses: Axe, Dagger, Club, Longsword, Warhammer,
+	 * ImprovisedWeapons, Throwing... Known: its Rank adds to the attack roll, and
+	 * at Rank 5 an extra damage die is rolled. Unknown: the attack is made
+	 * untrained, at Disadvantage, and counts towards learning the skill.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment|Skills")
+	FName WeaponSkillId;
+
+	/**
+	 * Above zero, this is an explosive: it is thrown (WeaponSkillId should be
+	 * Throwing), lands where the throw says (a miss scatters by the margin), and
+	 * damages everything within this radius in cm, the thrower and the party
+	 * included. Damage falls to half at the edge.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment|Skills", meta = (ClampMin = "0.0"))
+	float SplashRadius = 0.0f;
+
+	/**
+	 * The skill that keeps an explosive from going off in your hand:
+	 * ExplosivesHandling, GoblinExplosives or IncendiaryDeviceHandling. Rolled
+	 * (Int) before every throw. A fail is a dud; a natural roll at or under
+	 * FumbleOnNatural detonates it at your feet.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment|Skills")
+	FName HandlingSkillId;
+
+	/** Natural rolls that blow up in hand. 1 for standard explosives; 4 for Goblin ones (3 at Rank 5), per the books. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment|Skills", meta = (ClampMin = "0", ClampMax = "20"))
+	int32 FumbleOnNatural = 1;
+
+	/** Seconds between attacks with this item, if longer than the wielder's own. Explosives need a breather. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment|Skills", meta = (ClampMin = "0.0"))
+	float AttackCooldownOverride = 0.0f;
+
 	/**
 	 * How heavy this item is to wear/wield, in kilograms - feeds
 	 * UDCCEquipmentComponent::GetTotalEquippedMass, which UDCCRuleset's stamina
@@ -181,6 +221,15 @@ struct FDCCEquipmentDef : public FTableRowBase
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment|Visual")
 	TSoftObjectPtr<UStaticMesh> Mesh;
+
+	/**
+	 * What the item looks like lying on the ground, when that should differ from what is worn (2026-11-14).
+	 * Body clothing is a material change on the wearer, never geometry (CLAUDE.md, the skeleton problem), and a
+	 * ring or a cheque bolted to a socket reads wrong, so those rows leave Mesh empty and set this instead: a folded
+	 * blazer, a ring in its box. Empty means "use Mesh". The placeholders live in /Game/DCC/Equipment/Placeholders.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment|Visual")
+	TSoftObjectPtr<UStaticMesh> GroundMesh;
 
 	/**
 	 * Socket on the character's skeletal mesh to snap to.

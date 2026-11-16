@@ -84,6 +84,18 @@ struct FDCCConsumableDef : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Consumable")
 	TArray<FDCCConsumableEffect> Effects;
 
+	/**
+	 * A skill that makes this work better (First Aid, for a med kit). Using it is
+	 * a skill check (Int): a success adds HealPerSkillRank per Rank on top of the
+	 * Effects; a fail gives the Effects alone. Untrained use counts towards
+	 * learning the skill. None means a plain drink, as before.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Consumable|Skills")
+	FName LinkedSkillId;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Consumable|Skills", meta = (ClampMin = "0"))
+	int32 HealPerSkillRank = 0;
+
 	/** Optional - shown held/stowed once a visual pass exists. Not required for Effects to work. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Consumable")
 	TSoftObjectPtr<UStaticMesh> Mesh;

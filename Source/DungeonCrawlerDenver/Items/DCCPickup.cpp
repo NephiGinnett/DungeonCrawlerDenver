@@ -1,4 +1,5 @@
 #include "Items/DCCPickup.h"
+#include "Onboarding/DCCOnboardingComponent.h"
 
 #include "Characters/DCCCharacterBase.h"
 #include "Stats/DCCStatsComponent.h"
@@ -83,14 +84,25 @@ void ADCCPickup::OnPickedUp(ADCCCharacterBase* Carrier)
 	// path below even if someone also gave it a GoldValue for sell-back.
 	if (!EquipmentItemId.IsNone())
 	{
+		// Captured first: a successful stow destroys this actor.
+		const FText ItemName = DisplayName.IsEmpty() ? FText::FromName(EquipmentItemId) : DisplayName;
+		const FText Who = Carrier->DisplayName.IsEmpty() ? FText::FromString(GetNameSafe(Carrier)) : Carrier->DisplayName;
 		if (Carrier->Inventory && Carrier->Inventory->StowPickup(this))
 		{
+			// In the feed too, so a pickup is never silent (2026-11-13).
+			ADCCGameState::Log(Carrier, EDCCLogCategory::Experience, FText::Format(
+				NSLOCTEXT("DCC", "LogGearStowed", "{0} stows {1}."), Who, ItemName));
 			return;
 		}
 
 		// Pack full: leave it exactly where it was rather than destroying it
 		// for nothing - same "nothing is ever lost to a failed stow" rule
-		// StowPickup itself already follows.
+		// StowPickup itself already follows. And say so, rather than nothing.
+		if (Carrier->Onboarding)
+		{
+			Carrier->Onboarding->NotifyOwner(FText::Format(
+				NSLOCTEXT("DCC", "GearPackFull", "Your bag is full. {0} stays on the floor."), ItemName));
+		}
 		bIsHeld = false;
 		ApplyHeldState();
 		return;
@@ -252,5 +264,6 @@ void ADCCPickup::HandleMeshHit(
 	if (Damage > 0)
 	{
 		VictimStats->ApplyDamage(Damage);
+		Thrower->NoteDamageDealtTo(Victim, Damage);
 	}
 }

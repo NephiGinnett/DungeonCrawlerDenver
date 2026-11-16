@@ -6,6 +6,12 @@ Five players: Zoe (DM), Scott, CJ, Marcel, Vaughn, Kyle. Synchronous, co-op.
 
 ## Where we actually are
 
+> **Update 2026-11-12.** Sessions now have a front end: F2 opens the party menu (host in place, invite codes,
+> join, who's here, start the run for everyone; see ROADMAP's log for that day). Late-joiner routing and crawler
+> identity (`?Crawler=`) were already in `ADCCGameMode`, and the listen-server billboard fixes landed earlier.
+> The World Dungeon replicates a seed, not geometry. The rest of this page is the original plan. The two-client
+> test and the pause-under-latency check below are still owed, and so is a packaged build for friends.
+
 Better than it looks in one respect and worse in another.
 
 **Good:** the game has been written server-authoritative from the first commit.

@@ -138,3 +138,65 @@ struct FDCCOpenedLootBoxResult
 	UPROPERTY(BlueprintReadOnly, Category = "LootBox")
 	TArray<FDCCBoonDef> Boons;
 };
+
+/** What kind of thing one revealed entry is, so the screen can draw it. */
+UENUM(BlueprintType)
+enum class EDCCLootRevealKind : uint8
+{
+	Item,
+	Gold,
+	Boon
+};
+
+/**
+ * One thing that came out of a box, as the loot box screen shows it.
+ * Equipment is sent by id and resolved on the client against DT_DCCEquipment,
+ * so its rarity, slot and stats are the same data the item pop-ups use.
+ */
+USTRUCT(BlueprintType)
+struct FDCCLootRevealEntry
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "LootBox")
+	EDCCLootRevealKind Kind = EDCCLootRevealKind::Item;
+
+	/** DT_DCCEquipment row, for gear. */
+	UPROPERTY(BlueprintReadOnly, Category = "LootBox")
+	FName ItemId;
+
+	/** Shown as-is for anything that is not gear (a prop, a boon). */
+	UPROPERTY(BlueprintReadOnly, Category = "LootBox")
+	FText Name;
+
+	UPROPERTY(BlueprintReadOnly, Category = "LootBox")
+	FText Detail;
+
+	/** Gold amount, for Kind == Gold. */
+	UPROPERTY(BlueprintReadOnly, Category = "LootBox")
+	int32 Amount = 0;
+};
+
+/**
+ * Server to owning client: one box (or a batch) was opened. Sent by
+ * ADCCCharacterBase::Client_LootBoxReveal; drawn by the HUD's loot box screen.
+ * BoxCount 0 means the server refused, and Message says why.
+ */
+USTRUCT(BlueprintType)
+struct FDCCLootBoxReveal
+{
+	GENERATED_BODY()
+
+	/** The box's tier, or the best tier in a batch. */
+	UPROPERTY(BlueprintReadOnly, Category = "LootBox")
+	EDCCLootBoxTier Tier = EDCCLootBoxTier::None;
+
+	UPROPERTY(BlueprintReadOnly, Category = "LootBox")
+	int32 BoxCount = 0;
+
+	UPROPERTY(BlueprintReadOnly, Category = "LootBox")
+	TArray<FDCCLootRevealEntry> Entries;
+
+	UPROPERTY(BlueprintReadOnly, Category = "LootBox")
+	FText Message;
+};

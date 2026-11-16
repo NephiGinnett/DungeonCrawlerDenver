@@ -1,4 +1,10 @@
 #include "Combat/DCCGameMode.h"
+#include "Session/DCCSaveSystem.h"
+#include "Session/DCCSession.h"
+#include "Session/DCCProfile.h"
+#include "Session/DCCBuildStamp.h"
+#include "Engine/NetConnection.h"
+#include "GameFramework/PlayerState.h"
 
 #include "Combat/DCCGameState.h"
 #include "Characters/DCCCharacterBase.h"
@@ -145,6 +151,8 @@ AActor* ADCCGameMode::ChoosePlayerStart_Implementation(AController* Player)
 		}
 	}
 
+	UE_LOG(LogTemp, Verbose, TEXT("[DCC Spawn] %s: chose %s at %s"), *GetNameSafe(Player), *GetNameSafe(Best),
+		Best ? *Best->GetActorLocation().ToCompactString() : TEXT("-"));
 	if (Best)
 	{
 		// Only worth saying when it was actually a problem - five people joining
@@ -233,6 +241,48 @@ FString ADCCGameMode::InitNewPlayer(APlayerController* NewPlayerController, cons
 	const FString Result = Super::InitNewPlayer(NewPlayerController, UniqueId, Options, Portal);
 
 	const FString Requested = UGameplayStatics::ParseOption(Options, TEXT("Crawler"));
+
+	// A player from another machine has to prove the crawler is theirs (2026-11-14). The saves are on this host,
+	// so this is where the password is checked: the join URL carries a hash, never the password. The host's own
+	// player has no connection and was checked at the main menu. A level change reconnects everyone with the same
+	// URL, so the hash arrives again each time; a connection that already proved itself this session is also let
+	// through, in case a travel ever drops the option.
+	if (UNetConnection* Connection = NewPlayerController ? Cast<UNetConnection>(NewPlayerController->Player) : nullptr)
+	{
+		static TMap<FString, FString> Proven; // crawler -> address that proved it
+		const FString Address = Connection->LowLevelGetRemoteAddress(false);
+		const FString Hash = UGameplayStatics::ParseOption(Options, TEXT("Pw"));
+
+		// Everyone has to run the same build. A "dev" host (the editor) lets anyone in for testing.
+		const FString TheirBuild = UGameplayStatics::ParseOption(Options, TEXT("Build"));
+		if (!DCCBuildStamp::IsDev() && TheirBuild != DCCBuildStamp::Get())
+		{
+			const FString* Seen = Proven.Find(Requested.ToLower());
+			if (!(TheirBuild.IsEmpty() && Seen && *Seen == Address))
+			{
+				UE_LOG(LogTemp, Warning, TEXT("[DCC Crawlers] Refused %s: build %s, host is %s."), *Address,
+					TheirBuild.IsEmpty() ? TEXT("(older than stamps)") : *TheirBuild, *DCCBuildStamp::Get());
+				return FString::Printf(TEXT("Your game is a different version from the host's (yours: %s, host: %s). Get the latest build, then join again."),
+					TheirBuild.IsEmpty() ? TEXT("older") : *TheirBuild, *DCCBuildStamp::Get());
+			}
+		}
+		if (Requested.IsEmpty())
+		{
+			return TEXT("Pick your crawler on the main menu, then use JOIN A PARTY.");
+		}
+		const FString* Before = Proven.Find(Requested.ToLower());
+		const bool bProvenHere = Before && *Before == Address;
+		if (DCCProfile::CheckPassword(Requested, Hash))
+		{
+			Proven.Add(Requested.ToLower(), Address);
+		}
+		else if (!(Hash.IsEmpty() && bProvenHere))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[DCC Crawlers] Refused %s as %s: wrong password."), *Address, *Requested);
+			return FString::Printf(TEXT("Wrong password for %s. Type it on the main menu, under the crawlers."), *Requested);
+		}
+	}
+
 	if (!Requested.IsEmpty() && NewPlayerController)
 	{
 		// Matched case-insensitively against the roster so "?Crawler=cj" works,
@@ -258,6 +308,12 @@ void ADCCGameMode::Logout(AController* Exiting)
 	// Frees the name so the same person can rejoin as themselves. Progress is
 	// lost with it; a rejoin is a fresh wake-up, which is acceptable for now.
 	OnboardingByController.Remove(Exiting);
+
+	// Their progress is on disk now, so a rejoin picks up where they left off.
+	if (Exiting)
+	{
+		DCCSave::Save(Cast<ADCCCharacterBase>(Exiting->GetPawn()));
+	}
 	Super::Logout(Exiting);
 }
 
@@ -340,5 +396,37 @@ void ADCCGameMode::RestoreOnboarding(AController* Controller, UDCCOnboardingComp
 	{
 		Onboarding->ApplyRestoredState(Saved->CrawlerId, Saved->bHasProgress,
 			static_cast<EDCCOnboardingStage>(Saved->Stage), Saved->Features);
+	}
+
+	// Identity across games (2026-11-13). A player's name follows them through
+	// seamless travel, so after arriving in another game (where nobody has a
+	// tagged PlayerStart) their crawler is recovered from it; the host falls
+	// back to the crawler picked in the party menu. Then the name is set to the
+	// crawler, so the per-game profile and the DCD save share one key.
+	APlayerState* PlayerState = Controller->PlayerState;
+	FName Id = Onboarding->CrawlerId;
+	if (Id.IsNone() && PlayerState)
+	{
+		for (const FName& Known : CrawlerRoster)
+		{
+			if (Known.ToString().Equals(PlayerState->GetPlayerName(), ESearchCase::IgnoreCase))
+			{
+				Id = Known;
+				break;
+			}
+		}
+		if (Id.IsNone() && Controller->IsLocalController())
+		{
+			Id = DCCSession::GetPreferredCrawler();
+		}
+		if (!Id.IsNone())
+		{
+			Onboarding->CrawlerId = Id;
+			Onboarding->ApplyCrawlerLook();
+		}
+	}
+	if (!Id.IsNone() && PlayerState && PlayerState->GetPlayerName() != Id.ToString())
+	{
+		ChangeName(Controller, Id.ToString(), false);
 	}
 }

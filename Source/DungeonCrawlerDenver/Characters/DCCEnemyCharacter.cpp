@@ -1,5 +1,6 @@
 #include "Characters/DCCEnemyCharacter.h"
 
+#include "Rooms/DCCDungeonGrid.h"
 #include "Stats/DCCStatsComponent.h"
 #include "Skills/DCCSkillComponent.h"
 #include "Items/DCCPickupVariants.h"
@@ -449,6 +450,28 @@ void ADCCEnemyCharacter::TickFollowLeader(ADCCCharacterBase* Leader, AAIControll
 	// held ally still defends itself - it just stops trailing the party.
 	if (bHoldingPosition)
 	{
+		return;
+	}
+
+	// A generated floor has no navmesh, so MoveToActor does nothing there. Walk
+	// the floor's grid instead, with the same settle/resume dead band as below.
+	if (ChaseGrid)
+	{
+		const float Distance = Leader ? FVector::Dist2D(GetActorLocation(), Leader->GetActorLocation()) : 0.0f;
+		if (!Leader || Distance <= FollowDistance)
+		{
+			bIsChasing = false;
+			SetMovementSpeedOverride(0.0f);
+			return;
+		}
+		if (!bIsChasing && Distance <= FollowDistance * FollowResumeMultiplier)
+		{
+			return;
+		}
+
+		// Walk while close; run to catch up once the leader has got well ahead.
+		SetMovementSpeedOverride(Distance > FollowDistance * 3.0f ? 0.0f : FollowWalkSpeed);
+		FollowChaseGrid(Leader, FollowDistance * 0.8f);
 		return;
 	}
 
@@ -1000,12 +1023,15 @@ void ADCCEnemyCharacter::Tick(float DeltaSeconds)
 		// firing. Gated on the move being idle so this issues one retreat order
 		// rather than a fresh one every frame, which would cancel itself
 		// continuously and leave the character twitching in place.
-		if (bIsRanged && AIController
-			&& DistanceToTarget < EffectiveRange * RangedRetreatFraction
-			&& AIController->GetMoveStatus() == EPathFollowingStatus::Idle)
+		if (bIsRanged && DistanceToTarget < EffectiveRange * RangedRetreatFraction)
 		{
 			const FVector Away = (GetActorLocation() - CurrentTarget->GetActorLocation()).GetSafeNormal2D();
-			if (!Away.IsNearlyZero())
+			if (!Away.IsNearlyZero() && ChaseGrid)
+			{
+				AddMovementInput(Away, 1.0f);
+			}
+			else if (!Away.IsNearlyZero() && AIController
+				&& AIController->GetMoveStatus() == EPathFollowingStatus::Idle)
 			{
 				const float Backpedal = FMath::Max(
 					EffectiveRange * RangedStandoffFraction - DistanceToTarget, 0.0f);
@@ -1028,6 +1054,12 @@ void ADCCEnemyCharacter::Tick(float DeltaSeconds)
 		? EffectiveRange * RangedStandoffFraction
 		: EffectiveRange * 0.5f;
 
+	if (ChaseGrid)
+	{
+		FollowChaseGrid(CurrentTarget, StopDistance);
+		return;
+	}
+
 	if (AIController && !bIsChasing)
 	{
 		// Requires a NavMeshBoundsVolume covering the room; without one this is
@@ -1044,6 +1076,37 @@ void ADCCEnemyCharacter::Tick(float DeltaSeconds)
 			AIController->MoveToActor(CurrentTarget, StopDistance);
 		}
 	}
+}
+
+void ADCCEnemyCharacter::SetChaseGrid(UDCCDungeonGrid* Grid)
+{
+	ChaseGrid = Grid;
+}
+
+void ADCCEnemyCharacter::FollowChaseGrid(const ADCCCharacterBase* Target, float StopDistance)
+{
+	if (!ChaseGrid || !Target)
+	{
+		return;
+	}
+
+	if (FVector::Dist2D(GetActorLocation(), Target->GetActorLocation()) <= StopDistance)
+	{
+		return;
+	}
+
+	FVector Waypoint = Target->GetActorLocation();
+	ChaseGrid->NextWaypoint(GetActorLocation(), Target->GetActorLocation(), Waypoint);
+	Waypoint.Z = GetActorLocation().Z;
+
+	const FVector Direction = (Waypoint - GetActorLocation()).GetSafeNormal2D();
+	if (Direction.IsNearlyZero())
+	{
+		return;
+	}
+
+	AddMovementInput(Direction, 1.0f);
+	bIsChasing = true;
 }
 
 void ADCCEnemyCharacter::TickPatrol(AAIController* AIController)

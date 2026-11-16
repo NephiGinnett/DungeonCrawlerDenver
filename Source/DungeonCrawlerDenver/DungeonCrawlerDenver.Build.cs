@@ -18,6 +18,7 @@ public class DungeonCrawlerDenver : ModuleRules
 			"UMG",
 			"Slate",
 			"SlateCore",
+			"RenderCore", // GWhiteTexture for the HUD's solid triangles (2026-11-14)
 			"NetCore",
 			// Skill cast and impact effects. Niagara is enabled by default in UE5,
 			// and every VFX in the installed Fab packs is an NS_ Niagara system, so
@@ -43,11 +44,22 @@ public class DungeonCrawlerDenver : ModuleRules
 			// DCCWhoAmI reads the machine's own address so the host can read it
 			// out to the party. Private: nothing in the public headers needs it.
 			"Sockets",
+			// FPlatformApplicationMisc::ClipboardCopy, for the party menu's "Copy invite".
+			"ApplicationCore",
+			// The gear bench lists every animation on a skeleton.
+			"AssetRegistry",
 			"HTTP",
 			"Json",
 			"JsonUtilities",
 			"DeveloperSettings"
 		});
+
+		// DCC.NpcRetarget (Arcade/DCCNpcRetarget.cpp, editor only): builds IK Rigs and a retargeter in code and batch
+		// retargets the mannequin clips onto the NPC Forge skeleton (2026-11-14).
+		if (Target.bBuildEditor)
+		{
+			PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd", "IKRig", "IKRigEditor" });
+		}
 
 		PublicIncludePaths.AddRange(new string[] {
 			"DungeonCrawlerDenver"

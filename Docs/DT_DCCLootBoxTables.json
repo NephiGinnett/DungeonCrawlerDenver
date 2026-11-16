@@ -1,80 +1,990 @@
 [
-  {
-    "Name": "Bronze",
-    "DisplayName": "Bronze Box",
-    "ItemEntries": [
-      { "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Coins", "Chance": 1.0, "MinGold": 5, "MaxGold": 20, "ScatterRadius": 90.0, "EquipmentItemId": "" },
-      { "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment", "Chance": 0.8, "MinGold": 0, "MaxGold": 0, "ScatterRadius": 90.0, "EquipmentItemId": "ThrownBottle" },
-      { "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment", "Chance": 0.6, "MinGold": 0, "MaxGold": 0, "ScatterRadius": 90.0, "EquipmentItemId": "ServiceTray" }
-    ],
-    "BoonEntries": []
-  },
-  {
-    "Name": "Silver",
-    "DisplayName": "Silver Box",
-    "ItemEntries": [
-      { "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Coins", "Chance": 1.0, "MinGold": 20, "MaxGold": 50, "ScatterRadius": 100.0, "EquipmentItemId": "" },
-      { "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment", "Chance": 0.65, "MinGold": 0, "MaxGold": 0, "ScatterRadius": 100.0, "EquipmentItemId": "HighVisibilitySafetyVest" },
-      { "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment", "Chance": 0.5, "MinGold": 0, "MaxGold": 0, "ScatterRadius": 100.0, "EquipmentItemId": "ComplaintFolderOverstuffed" }
-    ],
-    "BoonEntries": [
-      { "BoonId": "SteadyHands", "Chance": 0.1 }
-    ]
-  },
-  {
-    "Name": "Gold",
-    "DisplayName": "Gold Box",
-    "ItemEntries": [
-      { "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Coins", "Chance": 1.0, "MinGold": 50, "MaxGold": 120, "ScatterRadius": 110.0, "EquipmentItemId": "" },
-      { "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment", "Chance": 0.5, "MinGold": 0, "MaxGold": 0, "ScatterRadius": 110.0, "EquipmentItemId": "ConfettiCrossbow" },
-      { "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment", "Chance": 0.4, "MinGold": 0, "MaxGold": 0, "ScatterRadius": 110.0, "EquipmentItemId": "NailGunPro" }
-    ],
-    "BoonEntries": [
-      { "BoonId": "MinorFortitude", "Chance": 0.25 },
-      { "BoonId": "SilverTongue", "Chance": 0.15 }
-    ]
-  },
-  {
-    "Name": "Platinum",
-    "DisplayName": "Platinum Box",
-    "ItemEntries": [
-      { "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Coins", "Chance": 1.0, "MinGold": 120, "MaxGold": 250, "ScatterRadius": 120.0, "EquipmentItemId": "" },
-      { "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment", "Chance": 0.5, "MinGold": 0, "MaxGold": 0, "ScatterRadius": 120.0, "EquipmentItemId": "FlareGunEmergency" },
-      { "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment", "Chance": 0.3, "MinGold": 0, "MaxGold": 0, "ScatterRadius": 120.0, "EquipmentItemId": "SeveranceCheckUncashed" }
-    ],
-    "BoonEntries": [
-      { "BoonId": "AdrenalineSurge", "Chance": 0.35 },
-      { "BoonId": "IronWill", "Chance": 0.25 },
-      { "BoonId": "ClarityOfPurpose", "Chance": 0.2 }
-    ]
-  },
-  {
-    "Name": "Legendary",
-    "DisplayName": "Legendary Box",
-    "ItemEntries": [
-      { "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Coins", "Chance": 1.0, "MinGold": 250, "MaxGold": 500, "ScatterRadius": 130.0, "EquipmentItemId": "" },
-      { "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment", "Chance": 0.3, "MinGold": 0, "MaxGold": 0, "ScatterRadius": 130.0, "EquipmentItemId": "MinionEyes" },
-      { "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment", "Chance": 0.2, "MinGold": 0, "MaxGold": 0, "ScatterRadius": 130.0, "EquipmentItemId": "WaterBottle" }
-    ],
-    "BoonEntries": [
-      { "BoonId": "IronWill", "Chance": 0.5 },
-      { "BoonId": "AdrenalineSurge", "Chance": 0.4 },
-      { "BoonId": "ClarityOfPurpose", "Chance": 0.4 },
-      { "BoonId": "SponsorsBlessing", "Chance": 0.15 }
-    ]
-  },
-  {
-    "Name": "Celestial",
-    "DisplayName": "Celestial Box",
-    "ItemEntries": [
-      { "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Coins", "Chance": 1.0, "MinGold": 500, "MaxGold": 1000, "ScatterRadius": 140.0, "EquipmentItemId": "" },
-      { "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment", "Chance": 0.3, "MinGold": 0, "MaxGold": 0, "ScatterRadius": 140.0, "EquipmentItemId": "SyndicateBadge" }
-    ],
-    "BoonEntries": [
-      { "BoonId": "SponsorsBlessing", "Chance": 0.6 },
-      { "BoonId": "IronWill", "Chance": 0.3 },
-      { "BoonId": "ClarityOfPurpose", "Chance": 0.3 },
-      { "BoonId": "AdrenalineSurge", "Chance": 0.3 }
-    ]
-  }
+ {
+  "Name": "Bronze",
+  "DisplayName": "Bronze Box",
+  "ItemEntries": [
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Coins",
+    "Chance": 1.0,
+    "MinGold": 5,
+    "MaxGold": 25,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": ""
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.18,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "FiveKiloDumbbell"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.18,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "WorldsOkayestMug"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.18,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "AspirationalButterKnife"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.15,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "UnsupervisedChisel"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.15,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "StuckNonStickPan"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.15,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "ExpiredVisitorLanyard"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.15,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "DecorativeHardHat"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.15,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "ClipboardOfImpliedAuthority"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.06,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "CustomerOfTheMonthPlaque"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.15,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "ThrownBottle"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.12,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "ServiceTray"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.1,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "NameTagDave"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.1,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "HighVisibilitySafetyVest"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.05,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "ApprenticeForgeHammer"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.04,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "BrandedFleeceVest"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.1,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "DynamiteBundledSingle"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.1,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "FireworksSurplus"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.08,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "MolotovWellSpirit"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.08,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "TableLegLiberated"
+   }
+  ],
+  "BoonEntries": [
+   {
+    "BoonId": "ComplimentaryRefill",
+    "Chance": 0.35
+   },
+   {
+    "BoonId": "SecondWind",
+    "Chance": 0.15
+   }
+  ]
+ },
+ {
+  "Name": "Silver",
+  "DisplayName": "Silver Box",
+  "ItemEntries": [
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Coins",
+    "Chance": 1.0,
+    "MinGold": 20,
+    "MaxGold": 60,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": ""
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.18,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "ApprenticeForgeHammer"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.18,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "FullyCommittedHandSaw"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.16,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "RecentlyBoiledKettle"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.16,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "GiftShopVikingShield"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.15,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "ExecutiveLetterOpener"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.15,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "BrandedFleeceVest"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.14,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "SomeoneElsesBifocals"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.14,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "KettlebellOnABungee"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.12,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "CastIronSkillet"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.12,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "FireAxe"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.12,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "ServiceKnifeSet"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.1,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "SodaGun"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.08,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "Boombox"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.12,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "ClipboardOfImpliedAuthority"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.1,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "DecorativeHardHat"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.05,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "HistoricallyInaccurateHelm"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.04,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "SickleOfRollingDeadlines"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.1,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "PipeBombHardwareSpecial"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.1,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "GoblinBombProbablyStable"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.08,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "RockiesGiveawayBat"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.08,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "ConfiscatedSwitchblade"
+   }
+  ],
+  "BoonEntries": [
+   {
+    "BoonId": "SteadyHands",
+    "Chance": 0.25
+   },
+   {
+    "BoonId": "SponsoredHydration",
+    "Chance": 0.25
+   },
+   {
+    "BoonId": "ComplimentaryRefill",
+    "Chance": 0.25
+   }
+  ]
+ },
+ {
+  "Name": "Gold",
+  "DisplayName": "Gold Box",
+  "ItemEntries": [
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Coins",
+    "Chance": 1.0,
+    "MinGold": 50,
+    "MaxGold": 140,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": ""
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.18,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "HistoricallyInaccurateHelm"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.18,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "UnsignedJourneymanBlade"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.16,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "SickleOfRollingDeadlines"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.16,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "SpearOfAnnualReview"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.16,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "HardShellBriefcase"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.14,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "PineappleNotTheFruit"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.14,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "TenYearServiceRing"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.14,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "MaceOfRegulatoryCompliance"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.1,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "WallSword"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.1,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "ConfettiCrossbow"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.1,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "NailGunPro"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.08,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "SecuritySidearm"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.12,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "ExecutiveLetterOpener"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.1,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "KettlebellOnABungee"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.05,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "ChieftainsHelmRental"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.04,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "BladeOfStoreCredit"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.08,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "DemolitionChargeUnion"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.08,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "NapalmPotCeramic"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.08,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "GoblinGrenadeExtraSpicy"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.08,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "IronicallyBeardedAxe"
+   }
+  ],
+  "BoonEntries": [
+   {
+    "BoonId": "ViralMoment",
+    "Chance": 0.3
+   },
+   {
+    "BoonId": "SecondOpinion",
+    "Chance": 0.25
+   },
+   {
+    "BoonId": "MinorFortitude",
+    "Chance": 0.25
+   },
+   {
+    "BoonId": "CaffeineDrip",
+    "Chance": 0.2
+   }
+  ]
+ },
+ {
+  "Name": "Platinum",
+  "DisplayName": "Platinum Box",
+  "ItemEntries": [
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Coins",
+    "Chance": 1.0,
+    "MinGold": 120,
+    "MaxGold": 300,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": ""
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.18,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "DemolitionNotice"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.16,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "HalberdOfZoningVariance"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.18,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "BladeOfStoreCredit"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.16,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "ChieftainsHelmRental"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.16,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "HeatLampBulwark"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.16,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "MonogrammedExecutiveFleece"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.14,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "NoiseCancellingHeadset"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.1,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "HuntingRifleColorado"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.1,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "RiotShotgun"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.1,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "ConfiscatedSMG"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.12,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "UnsignedJourneymanBlade"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.12,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "PineappleNotTheFruit"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.04,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "CrownOfMiddleManagement"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.03,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "MasterworkBladeSignedInPen"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.12,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "GoblinSatchelDoNotShake"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.1,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "DemolitionChargeUnion"
+   }
+  ],
+  "BoonEntries": [
+   {
+    "BoonId": "PerformanceEnhancerLegal",
+    "Chance": 0.3
+   },
+   {
+    "BoonId": "ExtendedWarranty",
+    "Chance": 0.3
+   },
+   {
+    "BoonId": "SilverTongue",
+    "Chance": 0.25
+   },
+   {
+    "BoonId": "PlotArmor",
+    "Chance": 0.15
+   }
+  ]
+ },
+ {
+  "Name": "Legendary",
+  "DisplayName": "Legendary Box",
+  "ItemEntries": [
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Coins",
+    "Chance": 1.0,
+    "MinGold": 250,
+    "MaxGold": 600,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": ""
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.18,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "MasterworkBladeSignedInPen"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.16,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "HostileTakeover"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.15,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "GoldenParachute"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.15,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "AegisOfTheTermsOfService"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.16,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "CrownOfMiddleManagement"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.15,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "PlateOfLimitedLiability"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.08,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "NonTransferableSponsorSignet"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.1,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "BoilerplateRifle"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.12,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "DemolitionNotice"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.12,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "HalberdOfZoningVariance"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.1,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "MonogrammedExecutiveFleece"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.03,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "EndOfQuarter"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.03,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "HaloOfMaximumEngagement"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.12,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "GoblinSatchelDoNotShake"
+   }
+  ],
+  "BoonEntries": [
+   {
+    "BoonId": "StandingOvation",
+    "Chance": 0.35
+   },
+   {
+    "BoonId": "DirectorsCut",
+    "Chance": 0.3
+   },
+   {
+    "BoonId": "PlotArmor",
+    "Chance": 0.3
+   },
+   {
+    "BoonId": "AdrenalineSurge",
+    "Chance": 0.25
+   },
+   {
+    "BoonId": "IronWill",
+    "Chance": 0.2
+   }
+  ]
+ },
+ {
+  "Name": "Celestial",
+  "DisplayName": "Celestial Box",
+  "ItemEntries": [
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Coins",
+    "Chance": 1.0,
+    "MinGold": 600,
+    "MaxGold": 1200,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": ""
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.25,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "EndOfQuarter"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.25,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "ThunderHammerOnLease"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.25,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "HaloOfMaximumEngagement"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.2,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "DeedToDenverNotarised"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.2,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "SyndicateBadge"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.2,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "GoldenParachute"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.2,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "HostileTakeover"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.18,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "AegisOfTheTermsOfService"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.18,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "PlateOfLimitedLiability"
+   },
+   {
+    "PickupClass": "/Script/DungeonCrawlerDenver.DCCPickup_Equipment",
+    "Chance": 0.12,
+    "MinGold": 0,
+    "MaxGold": 0,
+    "ScatterRadius": 120.0,
+    "EquipmentItemId": "NonTransferableSponsorSignet"
+   }
+  ],
+  "BoonEntries": [
+   {
+    "BoonId": "DivineIntervention",
+    "Chance": 0.4
+   },
+   {
+    "BoonId": "AudienceFavorite",
+    "Chance": 0.4
+   },
+   {
+    "BoonId": "SponsorsBlessing",
+    "Chance": 0.4
+   },
+   {
+    "BoonId": "DirectorsCut",
+    "Chance": 0.3
+   },
+   {
+    "BoonId": "ClarityOfPurpose",
+    "Chance": 0.25
+   }
+  ]
+ }
 ]

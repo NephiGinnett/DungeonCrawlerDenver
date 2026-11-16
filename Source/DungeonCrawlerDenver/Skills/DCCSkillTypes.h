@@ -299,6 +299,19 @@ struct FDCCKnownSkill
 	 */
 	UPROPERTY(BlueprintReadOnly, Category = "Skill")
 	bool bAdvancementMark = false;
+
+	/**
+	 * Practice toward the next Rank, 0..1 (2026-11-14, Zoe: "a small exp bar widget that shows up when a skill
+	 * is being used to track incoming progress").
+	 *
+	 * Fills a little each time the skill is used (at most once every couple of seconds, so holding a wall or a
+	 * throttle is not a faucet), slower at higher Ranks. At 1 the skill gains a Rank and this starts again. It
+	 * runs beside the mark-and-roll rule above, which still fires when an encounter is cleared: the arcade games
+	 * never clear an encounter, and a bar that might roll a failure when it fills teaches nothing.
+	 * Saved with the rest of KnownSkills.
+	 */
+	UPROPERTY(BlueprintReadOnly, Category = "Skill")
+	float Practice = 0.0f;
 };
 
 /**

@@ -245,6 +245,30 @@ protected:
 	FDCCKnownSkill* FindKnownSkill(FName SkillId);
 	const FDCCKnownSkill* FindKnownSkill(FName SkillId) const;
 
+	/** Server: one tick of practice on a known skill (see FDCCKnownSkill::Practice). Rate-limited per skill. */
+	void AddPractice(FDCCKnownSkill& Known);
+	/** Server clock of the last practice tick, per skill. */
+	TMap<FName, double> LastPracticeAt;
+	/** Practice ticks on a skill not known yet. Enough of them and it is learned at Rank 1 (learning by doing). */
+	TMap<FName, int32> UntrainedTicks;
+
+public:
+	/** Seconds between practice ticks on one skill, and how many ticks a Rank takes: Base + PerRank x Rank. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skills|Practice")
+	float PracticeInterval = 2.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skills|Practice")
+	float PracticeTicksBase = 10.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skills|Practice")
+	float PracticeTicksPerRank = 8.0f;
+	/** Untrained practice ticks before a skill is simply learned (driving a car teaches Piloting). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skills|Practice")
+	int32 UntrainedTicksToLearn = 5;
+
+	/** Every known skill, for the HUD's practice bar. */
+	const TArray<FDCCKnownSkill>& GetKnownSkills() const { return KnownSkills; }
+
+protected:
+
 	/**
 	 * Archetypes this component does not resolve itself land here, with the
 	 * definition and the gathered targets already worked out. Implement in

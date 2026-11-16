@@ -17,6 +17,10 @@ class USkeletalMesh;
 // ---------------------------------------------------------------------------
 // A GRID OF ROOMS THAT DOES NOT EXIST YET
 //
+// The playable generated floor is ADCCTaleFloor (Elyra's room-and-corridor
+// layout, built in one pass, enemies walking the grid). This frontier
+// expander is the older experiment: it was never placed, and it has no navmesh.
+//
 // Floor 1 is - deliberately - entirely hand-authored: seven specific rooms,
 // a named boss, a tone bible. That approach does not scale to "10-20 rooms to
 // explore" on demand, and was never meant to; this is a second, parallel way

@@ -7,7 +7,7 @@
 //   Play      a recorded take, rendered offline through the identical chain plus the intro/outro and the glitch
 //             track. This is exactly what Export writes.
 
-import { DEFAULTS, PRESETS, buildChain, renderTake } from './chain.js';
+import { DEFAULTS, PRESETS, VOICE_KEYS, buildChain, renderTake } from './chain.js';
 import { bootSound, shutdownSound, glitchSting } from './sounds.js';
 import { encodeWav } from './wav.js';
 
@@ -16,8 +16,12 @@ const api = window.studio || null; // Electron (npm run studio); null when opene
 const GLITCH_TYPES = ['stutter', 'tapestop', 'dropout', 'static', 'crush', 'warble'];
 
 const KNOBS = [
+  // The first four are a character's own voice: on a cast line they save to that speaker automatically.
   ['VOICE', [
-    ['pitch', 'Pitch', -12, 12, 0.5, 'st'],
+    ['pitch', 'Pitch', -12, 12, 0.1, 'st'],
+    ['nasal', 'Nasal', 0, 1, 0.01, ''],
+    ['body', 'Deep / chest', -9, 9, 0.5, 'dB'],
+    ['air', 'Breathy / airy', -9, 9, 0.5, 'dB'],
     ['sub', 'Sub octave', 0, 1, 0.01, ''],
   ]],
   ['ROBOT', [
@@ -56,8 +60,14 @@ const KNOBS = [
 
 // --- State ---------------------------------------------------------------------------------------------------
 
+// The System AI's lines, then the Fort Tiner townsfolk's (each with a speaker and its own folder), then a free take.
+// Fort Tiner and the impound staff come from SourceArt/Voice/NPC/*_lines.json, which this studio can edit.
 const lines = [...(window.DCC_LINES || []), { row: 'FreeTake', text: '(Anything you like. Saved as VO_FreeTake.)' }];
+let npcData = null;
+const lineFor = (row) => lines.find((x) => x.row === row);
+const folderLabel = (l) => (l?.folder ? `SourceArt/Voice/${l.folder}` : api?.voiceFolder);
 const takes = new Map(); // row -> { raw: AudioBuffer, glitches: [{time, type}], exported: bool }
+const exportedOnDisk = new Set(); // rows whose VO_<row>.wav exists, raw take or not
 let current = lines[0]?.row || 'FreeTake';
 let settings = loadSettings();
 let userPresets = loadUserPresets();
@@ -134,6 +144,7 @@ function buildRack() {
         settings[key] = Number(r.value);
         o.textContent = `${fmt(settings[key], step)}${unit}`;
         applySettings();
+        if (VOICE_KEYS.includes(key)) scheduleVoiceSave();
       });
       row.append(l, r, o);
       host.append(row);
@@ -207,16 +218,38 @@ $('#outro').addEventListener('change', (e) => { settings.outro = e.target.checke
 
 // --- Lines -----------------------------------------------------------------------------------------------------
 
+function lineGroup(l) {
+  if (l.row === 'FreeTake') return 'Booth';
+  if (l.npc) return l.group || 'Cast';
+  return 'System AI';
+}
+
+function lineCaption(l) {
+  if (l.speaker) return `${l.speaker} · ${l.row.replace(/^[A-Z]+_[A-Za-z0-9]+_/, '')}`;
+  return l.row.replace(/^Encounter_/, '⚔ ').replace(/^Tab_/, '▤ ');
+}
+
 function renderLines() {
   const host = $('#lines');
   host.replaceChildren();
+  let lastGroup = '';
   for (const l of lines) {
+    const group = lineGroup(l);
+    if (group !== lastGroup) {
+      const h = document.createElement('div');
+      h.className = 'line-group';
+      h.textContent = group;
+      host.append(h);
+      lastGroup = group;
+    }
     const take = takes.get(l.row);
     const b = document.createElement('button');
     b.className = `line-btn${l.row === current ? ' on' : ''}`;
     const dot = document.createElement('span');
-    dot.className = `dot${take?.exported ? ' done' : take ? ' raw' : ''}`;
-    b.append(dot, l.row.replace(/^Encounter_/, '⚔ ').replace(/^Tab_/, '▤ '));
+    // Done = exported where the game reads it. That is true even with no raw take kept in the studio
+    // (a line exported before imports were saved as raw), so check the file itself too.
+    dot.className = `dot${take?.exported || exportedOnDisk.has(l.row) ? ' done' : take ? ' raw' : ''}`;
+    b.append(dot, lineCaption(l));
     b.addEventListener('click', () => select(l.row));
     host.append(b);
   }
@@ -224,16 +257,174 @@ function renderLines() {
 
 function select(row) {
   stopPlayback();
+  const previous = lineFor(current);
   current = row;
   const l = lines.find((x) => x.row === row);
+  // Moving between the System AI and a townsperson switches to that group's preset (NPCs: Clean),
+  // so a friend's country accent is not run through the robot voice by accident. A character's own voice
+  // (pitch, nasal, chest, air) goes on top, so switching to Dale's line makes you sound like Dale.
+  if (l?.preset && (previous?.folder || '') !== (l.folder || '') && PRESETS[l.preset]) {
+    const voice = speakerFor(l)?.voice || {};
+    settings = { ...DEFAULTS, ...PRESETS[l.preset], pitch: 0, nasal: 0, body: 0, air: 0, ...voice };
+    buildRack();
+    applySettings();
+    const tuned = Object.values(voice).some((v) => v);
+    status(`Preset: ${l.preset}${tuned ? ` + ${l.speaker}'s voice` : ''} (for ${l.speaker || 'this line'})`);
+  }
   $('#prompter').innerHTML = '';
   const id = document.createElement('span');
   id.className = 'row-id';
-  id.textContent = `VO_${row}`;
+  id.textContent = l?.speaker ? `${l.speaker}  ·  VO_${row}` : `VO_${row}`;
   $('#prompter').append(id, document.createTextNode(l?.text || ''));
+  endEdit();
+  $('#line-tools').classList.toggle('hidden', !(l?.npc && api));
   renderLines();
   drawWave();
 }
+
+// --- Character lines: edit, add, delete -------------------------------------------------------------------------
+
+function rebuildNpcLines() {
+  for (let i = lines.length - 1; i >= 0; i--) if (lines[i].npc) lines.splice(i, 1);
+  if (!npcData) return;
+  const names = Object.fromEntries(npcData.speakers.map((s) => [s.id, s.name]));
+  const groups = {
+    'fort_tiner_lines.json': 'Fort Tiner',
+    'impound_lines.json': 'Mile High Impound',
+  };
+  // The radio show is long, so it gets one heading per segment (rows are KMHR_S<segment>_<line>).
+  const RADIO_SEGMENTS = ['Cold open', 'Ad: Summit Compliance', 'The horse', 'Ad: LIQUIDATOR', 'Call-in hour',
+    'Ad: Bright Path', 'Theory board', 'Sign-off', 'Station IDs'];
+  const groupFor = (l) => {
+    const seg = l.file === 'radio_lines.json' && /^KMHR_S(\d+)_/.exec(l.row);
+    if (seg) return `KMHR 5280 AM · ${seg[1]} ${RADIO_SEGMENTS[parseInt(seg[1], 10) - 1] || ''}`.trim();
+    // Car owners who yell during a repo. Separate from the yard staff so they are easy to record.
+    if (l.file === 'impound_lines.json' && ['Pryce', 'Nia', 'Holt'].includes(l.speaker)) {
+      return 'Repo Rally · Angry owners';
+    }
+    return groups[l.file] || 'Cast';
+  };
+  const at = lines.findIndex((l) => l.row === 'FreeTake');
+  const npcLines = npcData.lines.map((l) => ({
+    row: l.row, text: l.text, speaker: names[l.speaker] || l.speaker, speakerId: l.speaker,
+    folder: `NPC/${l.speaker}`, preset: 'Clean', npc: true, group: groupFor(l), file: l.file,
+  }));
+  lines.splice(at < 0 ? lines.length : at, 0, ...npcLines);
+}
+
+async function loadNpcLines() {
+  if (!api?.loadNpcLines) return;
+  try { npcData = await api.loadNpcLines(); } catch { npcData = null; }
+  rebuildNpcLines();
+}
+
+// --- Character voices: the VOICE knobs on a cast line save to that speaker --------------------------------------
+
+const speakerFor = (l) => (l?.npc && npcData ? npcData.speakers.find((s) => s.id === l.speakerId) : null);
+let voiceSaveTimer = null;
+
+/** Tuning Pitch, Nasal, Deep or Airy on a character's line saves it as their voice, shortly after you stop. */
+function scheduleVoiceSave() {
+  const l = lineFor(current);
+  const speaker = speakerFor(l);
+  if (!speaker || !api) return;
+  clearTimeout(voiceSaveTimer);
+  voiceSaveTimer = setTimeout(async () => {
+    speaker.voice = Object.fromEntries(VOICE_KEYS.filter((k) => settings[k]).map((k) => [k, settings[k]]));
+    const ok = await api.saveNpcLines(npcData);
+    status(ok ? `Saved ${l.speaker}'s voice. Every line of theirs uses it.` : 'Could not save the voice.');
+  }, 700);
+}
+
+async function resetVoice() {
+  const l = lineFor(current);
+  const speaker = speakerFor(l);
+  if (!speaker) return;
+  for (const k of VOICE_KEYS) settings[k] = 0;
+  speaker.voice = {};
+  buildRack();
+  applySettings();
+  const ok = await api.saveNpcLines(npcData);
+  status(ok ? `${l.speaker} is back to your natural voice.` : 'Could not save the voice.');
+}
+
+async function saveNpcLines(message, selectRow) {
+  const ok = await api.saveNpcLines(npcData);
+  if (!ok) { status('Could not save the lines (check the row names).'); return false; }
+  rebuildNpcLines();
+  select(selectRow);
+  status(message);
+  return true;
+}
+
+function endEdit() {
+  $('#line-edit').classList.add('hidden');
+  $('#prompter').classList.remove('hidden');
+  for (const id of ['#line-edit-btn', '#line-new', '#line-delete']) $(id).classList.remove('hidden');
+  for (const id of ['#line-save', '#line-cancel']) $(id).classList.add('hidden');
+}
+
+function beginEdit() {
+  const l = lineFor(current);
+  if (!l?.npc) return;
+  $('#line-edit').value = l.text;
+  $('#line-edit').classList.remove('hidden');
+  $('#prompter').classList.add('hidden');
+  for (const id of ['#line-edit-btn', '#line-new', '#line-delete']) $(id).classList.add('hidden');
+  for (const id of ['#line-save', '#line-cancel']) $(id).classList.remove('hidden');
+  $('#line-edit').focus();
+}
+
+$('#line-edit-btn').addEventListener('click', beginEdit);
+$('#line-cancel').addEventListener('click', () => select(current));
+$('#line-save').addEventListener('click', async () => {
+  const text = $('#line-edit').value.replace(/\s+/g, ' ').trim();
+  const entry = npcData?.lines.find((x) => x.row === current);
+  if (!entry || !text) return;
+  entry.text = text;
+  const recorded = takes.has(current) || await api.hasVoice(`VO_${current}.wav`, lineFor(current)?.folder);
+  await saveNpcLines(recorded
+    ? 'Saved. This line already has a recording, so re-record it to match the new words.'
+    : 'Saved. The game uses it from the next round.', current);
+});
+
+$('#voice-reset').addEventListener('click', resetVoice);
+
+$('#line-new').addEventListener('click', async () => {
+  const l = lineFor(current);
+  if (!l?.npc || !npcData) return;
+  // A radio-show line is a script: the new line goes right after this one, in the same segment, because
+  // radio_mix.py plays lines in file order. Everyone else's lines group by speaker.
+  const radio = l.file === 'radio_lines.json';
+  const sample = radio ? npcData.lines.find((x) => x.row === l.row) : npcData.lines.find((x) => x.speaker === l.speakerId);
+  const prefix = sample ? sample.row.replace(/\d+$/, '') : `${l.speakerId}_`;
+  const used = npcData.lines.filter((x) => x.row.startsWith(prefix)).map((x) => parseInt(x.row.slice(prefix.length), 10) || 0);
+  const row = `${prefix}${String((used.length ? Math.max(...used) : 0) + 1).padStart(2, '0')}`;
+  const after = radio
+    ? npcData.lines.findIndex((x) => x.row === l.row)
+    : npcData.lines.map((x) => x.speaker).lastIndexOf(l.speakerId);
+  npcData.lines.splice(after + 1, 0, {
+    speaker: l.speakerId, row, text: '(New line. Click Edit line to write it.)', file: sample?.file,
+  });
+  if (await saveNpcLines(`Added ${row}. Write it, then record it.`, row)) beginEdit();
+});
+
+let deleteArmed = null;
+$('#line-delete').addEventListener('click', async () => {
+  const l = lineFor(current);
+  if (!l?.npc || !npcData) return;
+  if (deleteArmed !== current) {
+    deleteArmed = current;
+    status(`Click Delete line again to remove ${current}. Any recording of it stays on disk.`);
+    setTimeout(() => { if (deleteArmed === current) deleteArmed = null; }, 4000);
+    return;
+  }
+  deleteArmed = null;
+  const i = lines.findIndex((x) => x.row === current);
+  const neighbour = lines[i + 1]?.npc ? lines[i + 1].row : (lines[i - 1]?.row || 'FreeTake');
+  npcData.lines = npcData.lines.filter((x) => x.row !== current);
+  await saveNpcLines(`Deleted ${l.row}.`, neighbour);
+});
 
 // --- Live ------------------------------------------------------------------------------------------------------
 
@@ -322,6 +513,8 @@ $('#import-file').addEventListener('change', async (e) => {
   await audio();
   const raw = toMono(await ctx.decodeAudioData(await file.arrayBuffer()));
   takes.set(current, { raw, glitches: [], exported: false });
+  // Keep it like a recorded take, so it is still here (and still marked) next time the studio opens.
+  api?.saveRaw(current, encodeWav(raw));
   status(`Imported ${file.name} (${raw.duration.toFixed(1)} s).`);
   e.target.value = '';
   renderLines();
@@ -473,7 +666,7 @@ async function exportRow(row) {
   const wav = encodeWav(buffer);
   const name = `VO_${row}.wav`;
   if (api) {
-    await api.saveVoice(name, wav);
+    await api.saveVoice(name, wav, lineFor(row)?.folder);
   } else {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([wav], { type: 'audio/wav' }));
@@ -487,7 +680,7 @@ async function exportRow(row) {
 $('#export').addEventListener('click', async () => {
   status('Rendering and saving…');
   const ok = await exportRow(current);
-  status(ok ? `Saved VO_${current}.wav${api ? ` to ${api.voiceFolder}` : ' (downloaded)'}.` : 'Nothing to export yet.');
+  status(ok ? `Saved VO_${current}.wav${api ? ` to ${folderLabel(lineFor(current))}` : ' (downloaded)'}.` : 'Nothing to export yet.');
   renderLines();
 });
 
@@ -533,13 +726,18 @@ const meterData = new Float32Array(1024);
 
 async function restoreRawTakes() {
   if (!api) return;
+  for (const l of lines) {
+    try {
+      if (await api.hasVoice(`VO_${l.row}.wav`, l.folder)) exportedOnDisk.add(l.row);
+    } catch { /* keep going */ }
+  }
   const names = await api.listRaw();
   for (const name of names) {
     try {
       await audio();
       const raw = toMono(await ctx.decodeAudioData(await api.loadRaw(name)));
       const row = name.replace(/^VO_/, '').replace(/_raw\.wav$/, '');
-      takes.set(row, { raw, glitches: [], exported: await api.hasVoice(`VO_${row}.wav`) });
+      takes.set(row, { raw, glitches: [], exported: await api.hasVoice(`VO_${row}.wav`, lineFor(row)?.folder) });
     } catch { /* a bad file should not stop the rest loading */ }
   }
   renderLines();
@@ -550,7 +748,7 @@ $('#save-target').textContent = api ? `Saving to ${api.voiceFolder}` : 'Browser 
 buildRack();
 buildPresetList();
 select(current);
-restoreRawTakes();
+loadNpcLines().then(() => { renderLines(); restoreRawTakes(); });
 
 // Self-test hook (see main.js, DCC_STUDIO_TEST).
 window.__studio = {

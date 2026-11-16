@@ -84,7 +84,7 @@ class McpSession:
             headers["Mcp-Session-Id"] = self.session_id
 
         req = urllib.request.Request(self.url, data=data, headers=headers, method="POST")
-        with urllib.request.urlopen(req, timeout=120) as resp:
+        with urllib.request.urlopen(req, timeout=900) as resp:
             if self.session_id is None:
                 self.session_id = resp.headers.get("Mcp-Session-Id")
             body = resp.read().decode("utf-8", errors="replace")

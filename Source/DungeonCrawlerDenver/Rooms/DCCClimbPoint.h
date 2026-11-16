@@ -58,13 +58,33 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Climb", meta = (ClampMin = "0.0"))
 	float ReachDistance = 220.0f;
 
-	/** Highest point a climber may reach, in world Z. Derived from the box if zero. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Climb")
+	/** Highest point a climber may reach, in world Z. Derived from the box if zero. Replicated (2026-11-13): clients predict the climb from it. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = "Climb")
 	float ClimbTopZ = 0.0f;
 
 	/** Lowest point, in world Z. Derived from the box if zero. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Climb")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, Category = "Climb")
 	float ClimbBottomZ = 0.0f;
+
+	/**
+	 * Set for a point made from a plain wall (FindOrCreateForSurfaceHit, 2026-11-13):
+	 * the wall is the plane through WallPoint facing WallNormal, and the climber is
+	 * held a capsule-width off that plane. Zero for authored points, which keep
+	 * using their box. Before this, a plain wall got an unrotated 5 m box centred
+	 * on the surface, half of it sticking out into the air: climbers were held
+	 * against the box, not the rock, traces hit the invisible box, and the top
+	 * was capped at 18 m above the grab, which is what "glitching at the top"
+	 * and the camera going into the wall were.
+	 */
+	UPROPERTY(Replicated)
+	FVector WallNormal = FVector::ZeroVector;
+
+	UPROPERTY(Replicated)
+	FVector WallPoint = FVector::ZeroVector;
+
+	bool IsWallPlane() const { return !WallNormal.IsNearlyZero(); }
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	/**
 	 * Extra distance held off the wall in GetAttachLocationFor, on top of the

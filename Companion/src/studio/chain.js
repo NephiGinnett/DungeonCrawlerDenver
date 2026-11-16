@@ -18,7 +18,12 @@ export const DEFAULTS = {
   reverbMix: 0.28, reverbSize: 2.4,
   glitchRate: 0.15, glitchTypes: ['stutter', 'tapestop', 'dropout', 'static', 'crush', 'warble'], seed: 7,
   gain: 1, intro: true, outro: true,
+  // Character voice: small changes that make one reader sound like a different person. All zero = untouched.
+  nasal: 0, body: 0, air: 0,
 };
+
+/** The settings a character's voice owns. They are saved per speaker and laid over the line's preset. */
+export const VOICE_KEYS = ['pitch', 'nasal', 'body', 'air'];
 
 export const PRESETS = {
   'The House': { ...DEFAULTS },
@@ -93,9 +98,28 @@ export async function buildChain(ctx, settings) {
   presence.Q.value = 0.9;
   afterComb.connect(shaper).connect(lowCut).connect(highCut).connect(presence);
 
+  // Character voice. Nasal is a honk around 1.1 kHz with the chest scooped out under it (talking through the
+  // nose). Body is chest weight: a low shelf, up for deeper and fuller, down for thin and small. Air is breath
+  // and sizzle on top, down for muffled.
+  const nasalHonk = ctx.createBiquadFilter();
+  nasalHonk.type = 'peaking';
+  nasalHonk.frequency.value = 1100;
+  nasalHonk.Q.value = 2.2;
+  const nasalScoop = ctx.createBiquadFilter();
+  nasalScoop.type = 'peaking';
+  nasalScoop.frequency.value = 280;
+  nasalScoop.Q.value = 1;
+  const bodyShelf = ctx.createBiquadFilter();
+  bodyShelf.type = 'lowshelf';
+  bodyShelf.frequency.value = 220;
+  const airShelf = ctx.createBiquadFilter();
+  airShelf.type = 'highshelf';
+  airShelf.frequency.value = 6500;
+  presence.connect(nasalHonk).connect(nasalScoop).connect(bodyShelf).connect(airShelf);
+
   // Intro/outro stingers join here: after the voice-only processing, before the shared space.
   const post = ctx.createGain();
-  presence.connect(post);
+  airShelf.connect(post);
 
   // Chorus: a modulated short delay, for a synthetic, slightly-doubled sheen.
   const chorusDelay = ctx.createDelay(0.05);
@@ -156,6 +180,10 @@ export async function buildChain(ctx, settings) {
     lowCut.frequency.value = s.lowCut;
     highCut.frequency.value = s.highCut;
     presence.gain.value = s.presence;
+    nasalHonk.gain.value = s.nasal * 10;
+    nasalScoop.gain.value = -s.nasal * 5;
+    bodyShelf.gain.value = s.body;
+    airShelf.gain.value = s.air;
     chorusWet.gain.value = s.chorus;
     echo.delayTime.value = s.echoMs / 1000;
     echoFb.gain.value = Math.min(0.85, s.echoFb);

@@ -268,7 +268,7 @@ public:
 	 * and the roll, not where a character is allowed to be when it asks.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Inventory|LootBox")
-	bool TryOpenLootBox(EDCCLootBoxTier Tier, const FVector& WorldLocation, FDCCOpenedLootBoxResult& OutResult);
+	bool TryOpenLootBox(EDCCLootBoxTier Tier, const FVector& WorldLocation, FDCCOpenedLootBoxResult& OutResult, ADCCCharacterBase* Looter = nullptr);
 
 protected:
 	UFUNCTION()
@@ -284,5 +284,5 @@ protected:
 	void OnRep_LootBoxCounts();
 
 	/** Shared spawn loop for TryOpenLootBox's item half - kept out of that function so its own logic reads as roll, then spawn, then boons, not interleaved. */
-	void SpawnLootBoxItems(const TArray<FDCCRolledLoot>& RolledItems, const FVector& WorldLocation) const;
+	void SpawnLootBoxItems(const TArray<FDCCRolledLoot>& RolledItems, const FVector& WorldLocation, ADCCCharacterBase* Looter = nullptr) const;
 };

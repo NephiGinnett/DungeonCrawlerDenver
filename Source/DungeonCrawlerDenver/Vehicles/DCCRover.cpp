@@ -1,6 +1,15 @@
 #include "Vehicles/DCCRover.h"
+#include "Components/PointLightComponent.h"
+#include "Components/SpotLightComponent.h"
 
+#include "Arcade/DCCArcadeArena.h"
+#include "Dialogue/DCCVoiceLines.h"
+#include "Arcade/DCCArcadeGames.h"
+#include "Arcade/DCCChopShop.h"
+#include "Arcade/DCCRallyItems.h"
+#include "Arcade/DCCWalletComponent.h"
 #include "Characters/DCCCharacterBase.h"
+#include "UI/DCCHUD.h"
 #include "Components/AudioComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -18,6 +27,7 @@
 #include "Skills/DCCSkillComponent.h"
 #include "Stats/DCCStatsComponent.h"
 #include "UObject/ConstructorHelpers.h"
+#include "Math/RotationMatrix.h"
 
 ADCCRover::ADCCRover()
 {
@@ -37,6 +47,15 @@ ADCCRover::ADCCRover()
 	Collision->SetCollisionResponseToAllChannels(ECR_Block);
 	Collision->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 	Collision->SetCollisionObjectType(ECC_Pawn);
+
+	TrafficShell = CreateDefaultSubobject<UBoxComponent>(TEXT("TrafficShell"));
+	TrafficShell->SetupAttachment(Collision);
+	TrafficShell->SetBoxExtent(FVector(310.0f, 170.0f, 85.0f));
+	TrafficShell->SetCollisionObjectType(ECC_WorldDynamic);
+	TrafficShell->SetCollisionResponseToAllChannels(ECR_Ignore);
+	TrafficShell->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
+	TrafficShell->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	TrafficShell->SetGenerateOverlapEvents(false);
 
 	Body = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Body"));
 	Body->SetupAttachment(Collision);
@@ -100,24 +119,53 @@ ADCCRover::ADCCRover()
 	RadioAudio->bAutoActivate = false;
 	RadioAudio->bIsUISound = false; // Spatialized - it plays FROM the car, not straight to the listener's ear.
 
-	// Zoe's own track, added 2026-09-03 (SourceArt/Freaks.mp3) - ahead of the
-	// generic sample per her ask ("play it before other songs for now").
-	// ConstructorHelpers resolves live at editor startup, not baked into the
-	// DLL - if this import hasn't landed at /Game/DCC/Audio/Freaks yet, this
-	// entry is silently skipped and self-heals on the next restart once it
-	// has, same as every other asset added mid-session in this project.
-	static ConstructorHelpers::FObjectFinder<USoundBase> FreaksTrack(
-		TEXT("/Game/DCC/Audio/Freaks.Freaks"));
-	if (FreaksTrack.Succeeded())
+	// KMHR's playlist: every music track the project actually has. Repo Rally
+	// is first so a rally tune-in (TuneIn(0)) lands on it. ConstructorHelpers
+	// resolves at startup; a missing asset is skipped and self-heals next launch.
 	{
-		RadioTracks.Add(FreaksTrack.Object);
+		static ConstructorHelpers::FObjectFinder<USoundBase> RepoRally(
+			TEXT("/Game/Songs/Repo_Rally.Repo_Rally"));
+		if (RepoRally.Succeeded())
+		{
+			RadioTracks.Add(RepoRally.Object);
+			RadioTrackNames.Add(TEXT("REPO RALLY"));
+		}
 	}
-
-	static ConstructorHelpers::FObjectFinder<USoundBase> SampleTrack(
-		TEXT("/Game/SoulCity/Sound/Cue/Music/Soul_Music_FlyUp01_Cue.Soul_Music_FlyUp01_Cue"));
-	if (SampleTrack.Succeeded())
 	{
-		RadioTracks.Add(SampleTrack.Object);
+		static ConstructorHelpers::FObjectFinder<USoundBase> Freaks(
+			TEXT("/Game/DCC/Audio/Freaks.Freaks"));
+		if (Freaks.Succeeded())
+		{
+			RadioTracks.Add(Freaks.Object);
+			RadioTrackNames.Add(TEXT("FREAKS"));
+		}
+	}
+	{
+		static ConstructorHelpers::FObjectFinder<USoundBase> SweptAway(
+			TEXT("/Game/Songs/Swept_Away.Swept_Away"));
+		if (SweptAway.Succeeded())
+		{
+			RadioTracks.Add(SweptAway.Object);
+			RadioTrackNames.Add(TEXT("SWEPT AWAY"));
+		}
+	}
+	{
+		static ConstructorHelpers::FObjectFinder<USoundBase> FlyUp(
+			TEXT("/Game/SoulCity/Sound/Cue/Music/Soul_Music_FlyUp01_Cue.Soul_Music_FlyUp01_Cue"));
+		if (FlyUp.Succeeded())
+		{
+			RadioTracks.Add(FlyUp.Object);
+			RadioTrackNames.Add(TEXT("FLY UP"));
+		}
+	}
+	{
+		static ConstructorHelpers::FObjectFinder<USoundBase> Whoops(
+			TEXT("/Game/Songs/Meet_the_Whoops.Meet_the_Whoops"));
+		if (Whoops.Succeeded())
+		{
+			RadioTracks.Add(Whoops.Object);
+			RadioTrackNames.Add(TEXT("MEET THE WHOOPS"));
+		}
 	}
 
 	Movement = CreateDefaultSubobject<UFloatingPawnMovement>(TEXT("Movement"));
@@ -134,8 +182,11 @@ ADCCRover::ADCCRover()
 	// "drags a little": releasing the throttle now coasts down over a real
 	// couple of seconds instead of snapping to a stop, which is what a
 	// heavy vehicle's own momentum should feel like.
-	Movement->Acceleration = 1500.0f;
-	Movement->Deceleration = 900.0f;
+	// 2026-11-14: a little heavier, and the throttle has to catch the truck instead of
+	// gliding it up to speed. Deceleration is the coast: shorter than the old 900,
+	// still a real slide when you lift.
+	Movement->Acceleration = 2100.0f;
+	Movement->Deceleration = 1350.0f;
 }
 
 void ADCCRover::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -147,6 +198,28 @@ void ADCCRover::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetim
 	DOREPLIFETIME(ADCCRover, bRadioOn);
 	DOREPLIFETIME(ADCCRover, AutoPilotWaypointIndex);
 	DOREPLIFETIME(ADCCRover, AutoPilotLapsCompleted);
+	DOREPLIFETIME(ADCCRover, RaceSpeedScale);
+	DOREPLIFETIME(ADCCRover, RaceAbsorb);
+	DOREPLIFETIME_CONDITION(ADCCRover, RallyTools, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(ADCCRover, RallyToolIndex, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(ADCCRover, RallyStatus, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(ADCCRover, RallyCargo, COND_OwnerOnly);
+	DOREPLIFETIME(ADCCRover, RallyEngine);
+	DOREPLIFETIME(ADCCRover, RallyBoostExtra);
+	DOREPLIFETIME(ADCCRover, RallyBody);
+	DOREPLIFETIME(ADCCRover, RallyDuty);
+	DOREPLIFETIME(ADCCRover, RallyPlate);
+	DOREPLIFETIME(ADCCRover, RallyStrain);
+	DOREPLIFETIME(ADCCRover, bRallyHeld);
+	DOREPLIFETIME(ADCCRover, RallyTow);
+	DOREPLIFETIME(ADCCRover, bRallyTowDocked);
+	DOREPLIFETIME(ADCCRover, bRallyInYard);
+	DOREPLIFETIME(ADCCRover, RallyHookRange);
+	DOREPLIFETIME_CONDITION(ADCCRover, RallyFuel, COND_OwnerOnly);
+	DOREPLIFETIME(ADCCRover, RadioTrackIndex);
+	DOREPLIFETIME(ADCCRover, RadioStartOffset);
+	DOREPLIFETIME(ADCCRover, RadioTuneSerial);
+	DOREPLIFETIME(ADCCRover, bWrecker);
 }
 
 void ADCCRover::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -182,6 +255,13 @@ void ADCCRover::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 	PlayerInputComponent->BindKey(EKeys::E, IE_Pressed,  this, &ADCCRover::InputExit);
 	PlayerInputComponent->BindKey(EKeys::R, IE_Pressed,  this, &ADCCRover::WindowTogglePressed);
 	PlayerInputComponent->BindKey(EKeys::T, IE_Pressed,  this, &ADCCRover::RadioTogglePressed);
+	// C changes the station while it is already on. On foot, C is still the selfie.
+	PlayerInputComponent->BindKey(EKeys::C, IE_Pressed,  this, &ADCCRover::RadioChannelPressed);
+	// Repo Rally's kit. [T] is already the radio, so [F] switches tools.
+	PlayerInputComponent->BindKey(EKeys::Q, IE_Pressed, this, &ADCCRover::RallyToolPressed);
+	PlayerInputComponent->BindKey(EKeys::F, IE_Pressed, this, &ADCCRover::RallyCyclePressed);
+	// Repo Rally's hook camera. Right mouse is free on the rover (left mouse is boost).
+	PlayerInputComponent->BindKey(EKeys::RightMouseButton, IE_Pressed, this, &ADCCRover::HookAimPressed);
 	// The click-and-drag flap lever (LMB + MouseY) is gone - Zoe, 2026-09-04:
 	// "let's remove the click and drag aspect of flying, I don't think it's
 	// working great." Flying pitch is now just a fixed level attitude; climb
@@ -190,7 +270,9 @@ void ADCCRover::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 
 	// Mouse X swings the chase camera rather than steering, so a driver can
 	// look into a corner without changing where the car is pointed.
+	// Mouse Y only pitches while the hook camera is up. The chase view stays at -18.
 	PlayerInputComponent->BindAxisKey(EKeys::MouseX, this, &ADCCRover::CameraLook);
+	PlayerInputComponent->BindAxisKey(EKeys::MouseY, this, &ADCCRover::CameraPitchLook);
 }
 
 void ADCCRover::DriftPressed()  { bDrifting = true; }
@@ -208,7 +290,7 @@ void ADCCRover::BoostPressed()
 		return;
 	}
 	bBoosting = true;
-	BoostSecondsRemaining = BoostDurationSeconds;
+	BoostSecondsRemaining = BoostDurationSeconds + RallyBoostExtra;
 }
 
 void ADCCRover::GrantBoost()
@@ -222,15 +304,228 @@ void ADCCRover::GrantBoost()
 	}
 
 	bBoosting = true;
-	BoostSecondsRemaining = BoostDurationSeconds;
+	BoostSecondsRemaining = BoostDurationSeconds + RallyBoostExtra;
 	BoostCooldownRemaining = 0.0f;
+}
+
+void ADCCRover::SetRallyBody(int32 Index)
+{
+	RallyBody = FMath::Clamp(Index, 0, 4);
+	OnRep_RallyBody();
+}
+
+void ADCCRover::OnRep_RallyBody()
+{
+	// The wrecker mesh is not one of the five car bodies. A body swap would put the car back.
+	if (bWrecker || RallyBody < 0 || !Body)
+	{
+		return;
+	}
+	const TCHAR* Meshes[] = {
+		TEXT("/Game/Synthwave_city/Meshes/Car/SM_car_01.SM_car_01"),
+		TEXT("/Game/Synthwave_city/Meshes/Car/SM_car_02.SM_car_02"),
+		TEXT("/Game/Synthwave_city/Meshes/Car/SM_car_B.SM_car_B"),
+		TEXT("/Game/Synthwave_city/Meshes/Car/SM_car_B1.SM_car_B1"),
+		TEXT("/Game/Synthwave_city/Meshes/Car/SM_car_B2.SM_car_B2"),
+	};
+	if (UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, Meshes[FMath::Clamp(RallyBody, 0, 4)]))
+	{
+		Body->SetStaticMesh(Mesh);
+		// The window fade was a material on the old mesh. The next opacity tick rebuilds it.
+		WindowMID = nullptr;
+	}
+}
+
+void ADCCRover::SetRacePace(float Scale)
+{
+	RaceSpeedScale = FMath::Clamp(Scale, 0.2f, 2.2f);
+	// A hard snare (a net, a limp, a clip) cuts a boost. The city's lower gearing stays above this,
+	// so a truck can still boost without the pace wipe cancelling it.
+	if (RaceSpeedScale < 0.40f)
+	{
+		bBoosting = false;
+		BoostSecondsRemaining = 0.0f;
+	}
+}
+
+bool ADCCRover::TryAbsorb()
+{
+	if (RaceAbsorb <= 0)
+	{
+		return false;
+	}
+	if (HasAuthority())
+	{
+		--RaceAbsorb;
+	}
+	return true;
+}
+
+void ADCCRover::Stumble(float Seconds)
+{
+	if (!HasAuthority() || !Movement)
+	{
+		return;
+	}
+	Movement->Velocity *= 0.15f;
+	SpeedRamp = 0.0f;
+	CrashRecoveryRemaining = FMath::Max(CrashRecoveryRemaining, Seconds);
+	bBoosting = false;
+	BoostSecondsRemaining = 0.0f;
+}
+
+void ADCCRover::ForceBoost(float Seconds)
+{
+	if (!HasAuthority() || CrashRecoveryRemaining > 0.0f)
+	{
+		return;
+	}
+	bBoosting = true;
+	BoostSecondsRemaining = FMath::Max(BoostSecondsRemaining, Seconds + RallyBoostExtra);
+	BoostCooldownRemaining = 0.0f;
+}
+
+void ADCCRover::Client_RallyNote_Implementation(const FString& Message)
+{
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		if (ADCCHUD* HUD = Cast<ADCCHUD>(PC->GetHUD()))
+		{
+			HUD->ShowNotice(FText::FromString(Message), 4.0f);
+		}
+	}
+}
+
+void ADCCRover::Server_ArcadeVote_Implementation(bool bPlayAgain)
+{
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	for (TActorIterator<ADCCArcadeArena> It(GetWorld()); It; ++It)
+	{
+		if (PC)
+		{
+			It->CastVote(PC, bPlayAgain);
+		}
+		break;
+	}
+}
+
+void ADCCRover::Client_RallyRadio_Implementation(FName Row)
+{
+	const FString Wav = DCCVoice::FindLine(TEXT("Dispatch"), Row);
+	if (!Wav.IsEmpty())
+	{
+		DCCVoice::PlayAt(this, Wav, GetActorLocation(), 1.0f);
+	}
+}
+
+ADCCRover* ADCCRover::FindHookLock(FVector& OutDirection) const
+{
+	if (!ChaseCamera || !GetWorld())
+	{
+		return nullptr;
+	}
+	const FVector Start = GetActorLocation() + FVector(0.0f, 0.0f, 20.0f);
+	const FVector Aim = ChaseCamera->GetForwardVector().GetSafeNormal();
+	const float Range = RallyHookRange > 0.0f ? RallyHookRange : 2600.0f;
+	ADCCRover* Best = nullptr;
+	float BestCos = FMath::Cos(FMath::DegreesToRadians(7.0f));
+	for (TActorIterator<ADCCRover> It(GetWorld()); It; ++It)
+	{
+		ADCCRover* Car = *It;
+		if (Car == this || Car->RallyDuty != 1)
+		{
+			continue;
+		}
+		const FVector To = Car->GetActorLocation() - Start;
+		const float Dist = To.Size();
+		if (Dist > Range || Dist < 1.0f)
+		{
+			continue;
+		}
+		const float Cos = FVector::DotProduct(To / Dist, Aim);
+		if (Cos > BestCos)
+		{
+			BestCos = Cos;
+			Best = Car;
+			OutDirection = To / Dist;
+		}
+	}
+	return Best;
+}
+
+void ADCCRover::RallyToolPressed()
+{
+	const int32 Index = RallyTools.Num() > 0 ? FMath::Clamp(RallyToolIndex, 0, RallyTools.Num() - 1) : 0;
+	const bool bNet = RallyTools.IsValidIndex(Index) && RallyTools[Index] == DCCRallyItems::Net;
+	// A net still throws on Q. The hook only fires from the aim camera, and the direction has to
+	// ride in the RPC: the camera never leaves this machine.
+	if (bHookAim && !bNet && ChaseCamera)
+	{
+		// A locked mark gets the shot aimed at its centre: what the ring shows is what you hit.
+		FVector LockDir;
+		Server_FireHook(FindHookLock(LockDir) ? LockDir : ChaseCamera->GetForwardVector().GetSafeNormal());
+		// Back to the driving view the moment the hook is away (Zoe: the camera stayed in the aim view and
+		// fought the driving). Right mouse aims again for the next shot.
+		bHookAim = false;
+		CameraYawTarget = 0.0f;
+		return;
+	}
+	Server_UseRallyTool();
+}
+
+void ADCCRover::Server_UseRallyTool_Implementation()
+{
+	for (TActorIterator<ADCCArcadeKart> It(GetWorld()); It; ++It)
+	{
+		It->UseTool(this);
+		break;
+	}
+}
+
+void ADCCRover::Server_FireHook_Implementation(FVector Dir)
+{
+	for (TActorIterator<ADCCArcadeKart> It(GetWorld()); It; ++It)
+	{
+		It->FireHook(this, Dir);
+		break;
+	}
+}
+
+void ADCCRover::Server_CycleRallyTool_Implementation()
+{
+	for (TActorIterator<ADCCArcadeKart> It(GetWorld()); It; ++It)
+	{
+		It->CycleTool(this);
+		break;
+	}
 }
 
 void ADCCRover::CameraLook(float Value)
 {
 	// Accumulates an offset the camera then eases back out of, so letting go of
 	// the mouse drifts the view back behind the car instead of snapping.
-	CameraYawTarget = FMath::Clamp(CameraYawTarget + Value * 2.5f, -120.0f, 120.0f);
+	// The hook camera does not ease back: the mouse owns the view until right mouse again.
+	const float Limit = bHookAim ? 170.0f : 120.0f;
+	const float Scale = bHookAim ? 1.6f : 2.5f;
+	CameraYawTarget = FMath::Clamp(CameraYawTarget + Value * Scale, -Limit, Limit);
+}
+
+void ADCCRover::CameraPitchLook(float Value)
+{
+	if (!bHookAim)
+	{
+		return;
+	}
+	CameraPitch = FMath::Clamp(CameraPitch - Value * 1.5f, -42.0f, 32.0f);
+}
+
+void ADCCRover::HookAimPressed()
+{
+	bHookAim = !bHookAim;
+	if (bHookAim)
+	{
+		CameraPitch = -8.0f;
+	}
 }
 
 float ADCCRover::GetBoostChargeFraction() const
@@ -327,13 +622,82 @@ void ADCCRover::RadioTogglePressed()
 
 void ADCCRover::ToggleRadio()
 {
-	bRadioOn = !bRadioOn;
-	// The server doesn't get its own OnRep call - drive the audio directly
-	// here too, same as every other ReplicatedUsing property in this project.
+	if (bRadioOn)
+	{
+		bRadioOn = false;
+		++RadioTuneSerial;
+		ApplyRadioState();
+	}
+	else
+	{
+		// Turning the station on is a tune-in: a song, already in progress.
+		TuneIn(-1);
+	}
+}
+
+void ADCCRover::TuneIn(int32 Track)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+	bRadioOn = true;
+	if (!RadioTracks.IsEmpty())
+	{
+		RadioTrackIndex = RadioTracks.IsValidIndex(Track)
+			? Track
+			: FMath::RandRange(0, RadioTracks.Num() - 1);
+		const USoundBase* Sound = RadioTracks[RadioTrackIndex];
+		const float Reported = Sound ? Sound->GetDuration() : 0.0f;
+		// The middle of the file, not the intro and not the last few seconds.
+		RadioStartOffset = Reported > 8.0f
+			? FMath::FRandRange(Reported * 0.22f, Reported * 0.68f)
+			: 0.0f;
+	}
+	++RadioTuneSerial;
 	ApplyRadioState();
 }
 
+FString ADCCRover::GetRadioLine() const
+{
+	if (!bRadioOn || !RadioTrackNames.IsValidIndex(RadioTrackIndex))
+	{
+		return FString();
+	}
+	return FString::Printf(TEXT("[C] next    %s"), *RadioTrackNames[RadioTrackIndex]);
+}
+
+void ADCCRover::RadioChannelPressed()
+{
+	if (!bRadioOn)
+	{
+		return;
+	}
+	if (HasAuthority())
+	{
+		CycleRadio();
+	}
+	else if (Driver)
+	{
+		Driver->Server_CycleRoverRadio(this);
+	}
+}
+
+void ADCCRover::CycleRadio()
+{
+	if (!HasAuthority() || !bRadioOn || RadioTracks.IsEmpty())
+	{
+		return;
+	}
+	TuneIn((RadioTrackIndex + 1) % RadioTracks.Num());
+}
+
 void ADCCRover::OnRep_RadioOn()
+{
+	ApplyRadioState();
+}
+
+void ADCCRover::OnRep_RadioTune()
 {
 	ApplyRadioState();
 }
@@ -344,18 +708,289 @@ void ADCCRover::ApplyRadioState()
 	{
 		return;
 	}
-
-	if (bRadioOn && !RadioTracks.IsEmpty() && RadioTracks[0])
+	// Both rep notifies call this in one burst. The serial only moves when
+	// the station actually changes, so the second call must not restart it.
+	if (AppliedRadioSerial == RadioTuneSerial)
 	{
-		// Always track 0 for now - there's exactly one sample track. Once
-		// real music lands, this is the one line that grows into a "next
-		// track" cycle rather than a rewrite.
-		RadioAudio->SetSound(RadioTracks[0]);
-		RadioAudio->Play();
+		if (!bRadioOn)
+		{
+			RadioAudio->Stop();
+		}
+		return;
 	}
-	else
+	AppliedRadioSerial = RadioTuneSerial;
+
+	USoundBase* Sound = (bRadioOn && RadioTracks.IsValidIndex(RadioTrackIndex))
+		? RadioTracks[RadioTrackIndex].Get()
+		: nullptr;
+	if (!Sound)
 	{
 		RadioAudio->Stop();
+		RadioTrackPlaySeconds = 0.0f;
+		return;
+	}
+
+	const float Reported = Sound->GetDuration();
+	const float Dur = Reported > 1.0f ? Reported : 180.0f;
+	const float Offset = FMath::Clamp(RadioStartOffset, 0.0f, FMath::Max(0.0f, Dur - 1.0f));
+	RadioTrackElapsed = 0.0f;
+	RadioTrackPlaySeconds = FMath::Max(1.0f, Dur - Offset);
+	RadioAudio->Stop();
+	RadioAudio->SetSound(Sound);
+	RadioAudio->FadeIn(0.45f, 0.72f, Offset);
+}
+
+void ADCCRover::AdvanceRadio(float DeltaSeconds)
+{
+	if (!HasAuthority() || !bRadioOn || RadioTracks.IsEmpty() || RadioTrackPlaySeconds <= 0.0f)
+	{
+		return;
+	}
+	RadioTrackElapsed += DeltaSeconds;
+	if (RadioTrackElapsed < RadioTrackPlaySeconds - 0.05f)
+	{
+		return;
+	}
+	RadioTrackIndex = (RadioTrackIndex + 1) % RadioTracks.Num();
+	RadioStartOffset = 0.0f;
+	++RadioTuneSerial;
+	ApplyRadioState();
+}
+
+void ADCCRover::SetWrecker(bool bOn)
+{
+	bWrecker = bOn;
+	ApplyWreckerLook();
+}
+
+void ADCCRover::OnRep_Wrecker()
+{
+	ApplyWreckerLook();
+}
+
+void ADCCRover::ApplyWreckerLook()
+{
+	if (!bWrecker || !Body || !Collision)
+	{
+		return;
+	}
+	UStaticMesh* BodyMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Game/DCC/Vehicles/RepoTruck/Full/SM_RepoTruck_Body.SM_RepoTruck_Body"));
+	UStaticMesh* BoomMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Game/DCC/Vehicles/RepoTruck/Full/SM_RepoTruck_Boom.SM_RepoTruck_Boom"));
+	UStaticMesh* MagnetMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Game/DCC/Vehicles/RepoTruck/Full/SM_RepoTruck_Magnet.SM_RepoTruck_Magnet"));
+	if (!BodyMesh)
+	{
+		return;
+	}
+	Body->SetStaticMesh(BodyMesh);
+	// The mesh's nose is +Y, same as the synthwave cars, so the same yaw points it forward.
+	// Origin is the tire contact, so it sits on the bottom of a taller box. The boom is not
+	// part of the box: a swinging crane must not be a wall.
+	Collision->SetBoxExtent(FVector(410.0f, 195.0f, 170.0f));
+	Body->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.0f));
+	Body->SetRelativeLocation(FVector(0.0f, 0.0f, -170.0f));
+	// Just clear of the 170 cm box, so the tires sit down instead of hovering the street.
+	RideHeight = 186.0f;
+	WindowMID = nullptr;
+	// The truck starts in the yard with the dispatch building and crates behind it: a spring arm that
+	// tests collision kept yanking the long chase camera in tight behind the magnet. No test for the wrecker.
+	if (CameraBoom)
+	{
+		CameraBoom->bDoCollisionTest = false;
+	}
+
+	auto Piece = [this](TObjectPtr<UStaticMeshComponent>& Slot, const TCHAR* Name, UStaticMesh* Mesh) -> UStaticMeshComponent*
+	{
+		if (!Mesh)
+		{
+			return nullptr;
+		}
+		if (!Slot)
+		{
+			Slot = NewObject<UStaticMeshComponent>(this, Name);
+			Slot->SetupAttachment(Body);
+			Slot->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			Slot->RegisterComponent();
+		}
+		Slot->SetStaticMesh(Mesh);
+		return Slot;
+	};
+	if (UStaticMeshComponent* Boom = Piece(CraneBoom, TEXT("CraneBoom"), BoomMesh))
+	{
+		// Knuckle, in the body mesh's space (cm). Printed by Tools' export.
+		Boom->SetRelativeLocation(FVector(9.8f, -186.8f, 345.2f));
+		Boom->SetRelativeRotation(FRotator::ZeroRotator);
+	}
+	if (UStaticMeshComponent* Disc = Piece(Magnet, TEXT("Magnet"), MagnetMesh))
+	{
+		Disc->SetRelativeLocation(FVector(1.3f, -642.0f, 295.1f));
+		Disc->SetRelativeRotation(FRotator::ZeroRotator);
+	}
+	// Neon underglow (2026-11-14, Zoe: "light neon near the bottom"): pink strips along the sides, cyan
+	// front and back, and two soft lights spilling onto the street. The paint is the mesh's own material.
+	if (!FindObject<UStaticMeshComponent>(this, TEXT("Underglow_L")))
+	{
+		const FBox Box = BodyMesh->GetBoundingBox(); // the body mesh's own space: nose +Y, wheels at Min.Z
+		const FVector C = Box.GetCenter(), E = Box.GetExtent();
+		UStaticMesh* Cube = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cube.Cube"));
+		UMaterialInterface* Pink = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Synthwave_city/Material/MI_neon_1.MI_neon_1"));
+		UMaterialInterface* Cyan = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Synthwave_city/Material/MI_neon_4.MI_neon_4"));
+		struct FStrip { const TCHAR* Name; FVector At; FVector Size; UMaterialInterface* Mat; };
+		const float Z = Box.Min.Z + 28.0f;
+		const FStrip Strips[] = {
+			{ TEXT("Underglow_L"), FVector(C.X - E.X * 0.92f, C.Y, Z), FVector(8, E.Y * 1.7f, 6), Pink },
+			{ TEXT("Underglow_R"), FVector(C.X + E.X * 0.92f, C.Y, Z), FVector(8, E.Y * 1.7f, 6), Pink },
+			{ TEXT("Underglow_F"), FVector(C.X, C.Y + E.Y * 0.86f, Z), FVector(E.X * 1.6f, 8, 6), Cyan },
+			{ TEXT("Underglow_B"), FVector(C.X, C.Y - E.Y * 0.86f, Z), FVector(E.X * 1.6f, 8, 6), Cyan },
+		};
+		for (const FStrip& Strip : Strips)
+		{
+			UStaticMeshComponent* Glow = NewObject<UStaticMeshComponent>(this, Strip.Name);
+			Glow->SetupAttachment(Body);
+			Glow->SetStaticMesh(Cube);
+			Glow->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			Glow->SetCastShadow(false);
+			Glow->SetRelativeLocation(Strip.At);
+			Glow->SetRelativeScale3D(Strip.Size / 100.0f);
+			if (Strip.Mat) { Glow->SetMaterial(0, Strip.Mat); }
+			Glow->RegisterComponent();
+		}
+		// Its own light (2026-11-14: the dark paint went black at night, "a weird dark blurry mesh"): a soft
+		// key light over the cab and bed so the body reads, and two headlights throwing light up the road.
+		{
+			UPointLightComponent* Key = NewObject<UPointLightComponent>(this, TEXT("TruckKeyLight"));
+			Key->SetupAttachment(Body);
+			Key->SetRelativeLocation(FVector(C.X, C.Y + E.Y * 0.2f, Box.Max.Z + 260.0f));
+			Key->SetLightColor(FLinearColor(1.0f, 0.88f, 0.85f));
+			Key->SetIntensity(45000.0f);
+			Key->SetAttenuationRadius(2600.0f);
+			Key->SetCastShadows(false);
+			Key->RegisterComponent();
+			// Fill from behind and above, the side the chase camera sees.
+			UPointLightComponent* Fill = NewObject<UPointLightComponent>(this, TEXT("TruckFillLight"));
+			Fill->SetupAttachment(Body);
+			Fill->SetRelativeLocation(FVector(C.X, Box.Min.Y - 450.0f, Box.Max.Z + 150.0f));
+			Fill->SetLightColor(FLinearColor(0.85f, 0.9f, 1.0f));
+			Fill->SetIntensity(35000.0f);
+			Fill->SetAttenuationRadius(2600.0f);
+			Fill->SetCastShadows(false);
+			Fill->RegisterComponent();
+			for (int32 Lamp = 0; Lamp < 2; ++Lamp)
+			{
+				USpotLightComponent* Head = NewObject<USpotLightComponent>(this, Lamp ? TEXT("HeadlightR") : TEXT("HeadlightL"));
+				Head->SetupAttachment(Body);
+				Head->SetRelativeLocation(FVector(C.X + (Lamp ? 1.0f : -1.0f) * E.X * 0.6f, Box.Max.Y - 10.0f, Box.Min.Z + E.Z * 0.45f));
+				Head->SetRelativeRotation(FRotator(-6.0f, 90.0f, 0.0f)); // the body mesh's nose is +Y
+				Head->SetLightColor(FLinearColor(0.85f, 0.92f, 1.0f));
+				Head->SetIntensity(14000.0f);
+				Head->SetAttenuationRadius(3200.0f);
+				Head->SetInnerConeAngle(12.0f);
+				Head->SetOuterConeAngle(28.0f);
+				Head->SetCastShadows(false);
+				Head->RegisterComponent();
+			}
+		}
+		for (int32 Side = 0; Side < 2; ++Side)
+		{
+			UPointLightComponent* Spill = NewObject<UPointLightComponent>(this, Side ? TEXT("Underglow_LightB") : TEXT("Underglow_LightF"));
+			Spill->SetupAttachment(Body);
+			// Below the chassis, pointing at the road, small and soft: it should colour the street, not the paint.
+			Spill->SetRelativeLocation(FVector(C.X, C.Y + (Side ? -E.Y : E.Y) * 0.45f, Box.Min.Z - 25.0f));
+			Spill->SetLightColor(Side ? FLinearColor(0.25f, 0.85f, 1.0f) : FLinearColor(1.0f, 0.25f, 0.85f));
+			Spill->SetIntensity(900.0f);
+			Spill->SetAttenuationRadius(320.0f);
+			Spill->SetCastShadows(false);
+			Spill->RegisterComponent();
+		}
+	}
+
+	if (!WinchLine)
+	{
+		WinchLine = NewObject<UStaticMeshComponent>(this, TEXT("WinchLine"));
+		WinchLine->SetupAttachment(Body);
+		WinchLine->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		WinchLine->SetCastShadow(false);
+		if (UStaticMesh* Cylinder = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cylinder.Cylinder")))
+		{
+			WinchLine->SetStaticMesh(Cylinder);
+		}
+		if (UMaterialInterface* Neon = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Synthwave_city/Material/MI_neon_1.MI_neon_1")))
+		{
+			WinchLine->SetMaterial(0, Neon);
+		}
+		WinchLine->RegisterComponent();
+		WinchLine->SetVisibility(false);
+	}
+}
+
+void ADCCRover::UpdateWreckerCrane(float DeltaSeconds)
+{
+	if (!bWrecker || !CraneBoom || !Body)
+	{
+		return;
+	}
+
+	// Rest is the sculpted pose: straight back over the bed, almost level.
+	// Local -Y is the rear. The crane may yaw about 70 degrees off that and
+	// pitch up, but it does not swing through the cab.
+	FVector LocalDir(0.0f, -1.0f, 0.04f);
+	const bool bTowing = RallyTow != nullptr;
+	if (bTowing)
+	{
+		const FVector WorldDir = (RallyTow->GetActorLocation() - CraneBoom->GetComponentLocation()).GetSafeNormal();
+		LocalDir = Body->GetComponentTransform().InverseTransformVectorNoScale(WorldDir);
+	}
+	else if (IsLocallyControlled() && bHookAim && ChaseCamera)
+	{
+		LocalDir = Body->GetComponentTransform().InverseTransformVectorNoScale(ChaseCamera->GetForwardVector());
+	}
+	if (LocalDir.IsNearlyZero())
+	{
+		LocalDir = FVector(0.0f, -1.0f, 0.04f);
+	}
+
+	const float Yaw = FMath::Clamp(FMath::RadiansToDegrees(FMath::Atan2(LocalDir.X, -LocalDir.Y)), -70.0f, 70.0f);
+	const float Horiz = FMath::Max(1.0f, FVector(LocalDir.X, LocalDir.Y, 0.0f).Size());
+	const float PitchUp = FMath::Clamp(FMath::RadiansToDegrees(FMath::Atan2(LocalDir.Z, Horiz)), -8.0f, 32.0f);
+	// Roll around local X. Positive roll drops the rear of the arm, so raising it is negative.
+	const FRotator Target(0.0f, Yaw, -PitchUp);
+	CraneBoom->SetRelativeRotation(FMath::RInterpTo(CraneBoom->GetRelativeRotation(), Target, DeltaSeconds, bTowing ? 4.0f : 7.0f));
+
+	if (!Magnet)
+	{
+		return;
+	}
+	// Seated on the boom, this is where the disc was sculpted.
+	const FVector RestLocal(-8.5f, -455.2f, -50.1f);
+	const FVector Rest = CraneBoom->GetComponentTransform().TransformPosition(RestLocal);
+	FVector Goal = Rest;
+	float Want = 0.0f;
+	if (bTowing)
+	{
+		const float Roof = RallyTow->Collision ? RallyTow->Collision->GetScaledBoxExtent().Z + 30.0f : 140.0f;
+		Goal = RallyTow->GetActorLocation() + FVector(0.0f, 0.0f, Roof);
+		Want = 1.0f;
+	}
+	MagnetAlpha = FMath::FInterpTo(MagnetAlpha, Want, DeltaSeconds, 6.0f);
+	const FVector At = FMath::Lerp(Rest, Goal, MagnetAlpha);
+	Magnet->SetWorldLocation(At);
+	Magnet->SetWorldRotation(MagnetAlpha < 0.2f ? CraneBoom->GetComponentRotation() : FRotator(0.0f, GetActorRotation().Yaw, 0.0f));
+
+	if (!WinchLine)
+	{
+		return;
+	}
+	const FVector TipLocal(-17.3f, -417.0f, 15.2f);
+	const FVector Tip = CraneBoom->GetComponentTransform().TransformPosition(TipLocal);
+	const FVector Span = At - Tip;
+	const float Len = Span.Size();
+	const bool bShow = MagnetAlpha > 0.05f && Len > 30.0f;
+	WinchLine->SetVisibility(bShow);
+	if (bShow)
+	{
+		WinchLine->SetWorldLocation(Tip + Span * 0.5f);
+		WinchLine->SetWorldRotation(FRotationMatrix::MakeFromZ(Span).Rotator());
+		// Engine cylinder: 100 tall on Z, 100 across. A thin beam the length of the gap.
+		WinchLine->SetWorldScale3D(FVector(0.08f, 0.08f, Len / 100.0f));
 	}
 }
 
@@ -363,9 +998,30 @@ void ADCCRover::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
+	// The driver's machine reports the truck to the host (Server_DriveSync).
+	if (!HasAuthority() && IsLocallyControlled() && Cast<APlayerController>(GetController()))
+	{
+		DriveSyncTimer -= DeltaSeconds;
+		if (DriveSyncTimer <= 0.0f)
+		{
+			DriveSyncTimer = 0.05f;
+			Server_DriveSync(GetActorLocation(), GetActorRotation(), Movement ? Movement->Velocity : FVector::ZeroVector, ThrottleInput, SteerInput);
+		}
+	}
+	// The host moved a remotely driven truck itself (a teleport, not driving): tell the driver.
+	else if (HasAuthority() && bHasDriveSync && GetController() && !IsLocallyControlled()
+		&& FVector::Dist(GetActorLocation(), LastDriveSyncLocation) > 2500.0f)
+	{
+		IgnoreDriveSyncUntil = FPlatformTime::Seconds() + 0.6;
+		LastDriveSyncLocation = GetActorLocation();
+		Client_ForceTransform(GetActorLocation(), GetActorRotation());
+	}
+
 	// Runs on every machine rendering this rover, driver or not - it is a
 	// pure visual ease toward the replicated bWindowsDown, not gameplay.
 	UpdateWindowOpacity(DeltaSeconds);
+	AdvanceRadio(DeltaSeconds);
+	UpdateWreckerCrane(DeltaSeconds);
 
 	// --- timers ------------------------------------------------------------
 	if (bBoosting)
@@ -410,7 +1066,10 @@ void ADCCRover::Tick(float DeltaSeconds)
 	// Pressed callback, so it shares the same never-misses-a-transition
 	// guarantee as the rest of this poll instead of reintroducing the bug
 	// this whole block exists to avoid.
-	if (bControllable && IsLocallyControlled())
+	// A player's car reads the keys. An AI-controlled car (Repo Rally's traffic, crews and marks have an
+	// AIController so the floating-pawn movement applies their input at all) is also "locally controlled"
+	// on the server, so it must fall through to the autopilot branch below, not stop here (2026-11-13).
+	if (bControllable && IsLocallyControlled() && Cast<APlayerController>(GetController()))
 	{
 		if (const APlayerController* PC = Cast<APlayerController>(GetController()))
 		{
@@ -523,11 +1182,15 @@ void ADCCRover::Tick(float DeltaSeconds)
 			// a shove rather than a slightly steeper acceleration curve.
 			// AutoPilotSpeedScale is 1 for everything a player drives, so this
 			// is a no-op outside a race - see its own comment.
-			const float SpeedScale = (bAutoPilotActive && AutoPilotWaypoints.Num() > 0)
+			const float Pace = (bAutoPilotActive && AutoPilotWaypoints.Num() > 0)
 				? FMath::Clamp(AutoPilotSpeedScale, 0.1f, 2.0f) : 1.0f;
+			// RaceSpeedScale is 1 outside Repo Rally. In the race the server sets it
+			// (a boot, a cable, a draft) and it replicates, so this machine agrees.
+			const float SpeedScale = Pace * FMath::Clamp(RaceSpeedScale, 0.2f, 1.6f) * FMath::Clamp(RallyEngine, 1.0f, 1.25f);
+			// The old 0.15 floor put the truck on a glide the instant the key went down.
 			Movement->MaxSpeed = SpeedScale * (bBoosting
 				? BoostSpeed
-				: FMath::Max(600.0f, MaxCruiseSpeed * FMath::Max(SpeedRamp, 0.15f)));
+				: FMath::Max(320.0f, MaxCruiseSpeed * FMath::Max(SpeedRamp, 0.06f)));
 		}
 
 		// --- steering ------------------------------------------------------
@@ -542,6 +1205,11 @@ void ADCCRover::Tick(float DeltaSeconds)
 		{
 			AddActorWorldRotation(FRotator(0.0f,
 				SteerInput * TurnRate * SteerScale * DeltaSeconds, 0.0f));
+			// A hard corner scrubs a little speed, so the truck has to be pointed, not slid.
+			if (Speed > 800.0f)
+			{
+				SpeedRamp = FMath::Max(0.0f, SpeedRamp - FMath::Abs(SteerInput) * 0.12f * DeltaSeconds);
+			}
 		}
 
 		// --- throttle ------------------------------------------------------
@@ -566,14 +1234,66 @@ void ADCCRover::Tick(float DeltaSeconds)
 		SpeedRamp = FMath::Max(0.0f, SpeedRamp - DeltaSeconds);
 	}
 
+	// --- traffic is solid to trucks, not to itself (every machine: sweeps run locally) ----
+	{
+		const bool bTraffic = RallyDuty == 2;
+		if (TrafficShell && (TrafficShell->GetCollisionEnabled() != ECollisionEnabled::NoCollision) != bTraffic)
+		{
+			TrafficShell->SetCollisionEnabled(bTraffic ? ECollisionEnabled::QueryOnly : ECollisionEnabled::NoCollision);
+			if (bTraffic && Collision)
+			{
+				Collision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			}
+		}
+	}
+
 	// --- camera ------------------------------------------------------------
 	if (CameraBoom)
 	{
-		// Eases back to centre once the mouse stops, so the view trails the car
-		// rather than staying wherever it was last flicked.
-		CameraYawTarget = FMath::FInterpTo(CameraYawTarget, 0.0f, DeltaSeconds, 1.4f);
-		CameraYawOffset = FMath::FInterpTo(CameraYawOffset, CameraYawTarget, DeltaSeconds, 6.0f);
-		CameraBoom->SetRelativeRotation(FRotator(-18.0f, CameraYawOffset, 0.0f));
+		// The hook camera is the driver's own view. Everyone else's copy of this pawn
+		// keeps the chase camera, and losing the pawn (getting out) drops the aim.
+		if (!IsLocallyControlled())
+		{
+			bHookAim = false;
+		}
+		if (bHookAim)
+		{
+			// Short, high, and held where the mouse left it. The reticle is the screen centre,
+			// which is this boom's forward, and that forward is what Q sends.
+			CameraYawOffset = FMath::FInterpTo(CameraYawOffset, CameraYawTarget, DeltaSeconds, 14.0f);
+			CameraBoom->TargetArmLength = FMath::FInterpTo(CameraBoom->TargetArmLength, 260.0f, DeltaSeconds, 8.0f);
+			CameraBoom->SetRelativeLocation(FMath::VInterpTo(CameraBoom->GetRelativeLocation(), FVector(-20.0f, 0.0f, 280.0f), DeltaSeconds, 8.0f));
+			CameraBoom->SetRelativeRotation(FRotator(CameraPitch, CameraYawOffset, 0.0f));
+		}
+		else if (RallyTow && IsLocallyControlled())
+		{
+			// Towing: the same chase view, pulled back and up with the line's length so the car on the hook
+			// stays in shot - but never recentred, so it does not swing while you drive (2026-11-14).
+			const float Span = FVector::Dist(GetActorLocation(), RallyTow->GetActorLocation());
+			CameraYawTarget = FMath::FInterpTo(CameraYawTarget, 0.0f, DeltaSeconds, 1.4f);
+			CameraYawOffset = FMath::FInterpTo(CameraYawOffset, CameraYawTarget, DeltaSeconds, 6.0f);
+			CameraBoom->TargetArmLength = FMath::FInterpTo(CameraBoom->TargetArmLength, FMath::Clamp((bWrecker ? 1700.0f : 1100.0f) + Span * 0.35f, 1100.0f, 2800.0f), DeltaSeconds, 2.5f);
+			CameraBoom->SetRelativeLocation(FMath::VInterpTo(CameraBoom->GetRelativeLocation(), FVector(0.0f, 0.0f, bWrecker ? 380.0f : 200.0f), DeltaSeconds, 3.0f));
+			CameraBoom->SetRelativeRotation(FRotator(-24.0f, CameraYawOffset, 0.0f));
+		}
+		else
+		{
+			// Eases back to centre once the mouse stops, so the view trails the car
+			// rather than staying wherever it was last flicked.
+			CameraYawTarget = FMath::FInterpTo(CameraYawTarget, 0.0f, DeltaSeconds, 1.4f);
+			CameraYawOffset = FMath::FInterpTo(CameraYawOffset, CameraYawTarget, DeltaSeconds, 6.0f);
+			// The wrecker is twice a car's size: a longer, higher chase so the whole truck is in view.
+			CameraBoom->TargetArmLength = FMath::FInterpTo(CameraBoom->TargetArmLength, bWrecker ? 1400.0f : 900.0f, DeltaSeconds, 6.0f);
+			CameraBoom->SetRelativeLocation(FMath::VInterpTo(CameraBoom->GetRelativeLocation(), bWrecker ? FVector(0.0f, 0.0f, 400.0f) : FVector::ZeroVector, DeltaSeconds, 6.0f));
+			CameraBoom->SetRelativeRotation(FRotator(-18.0f, CameraYawOffset, 0.0f));
+		}
+		// After the chain above, never inside it (2026-11-14: wedged between its branches, this block
+		// swallowed the chase and tow cameras, so the view stayed in the aim pose after a shot).
+		// Aiming zooms in; everything else is the wide chase view (90, the camera's own default).
+		if (ChaseCamera)
+		{
+			ChaseCamera->SetFieldOfView(FMath::FInterpTo(ChaseCamera->FieldOfView, bHookAim ? 58.0f : 90.0f, DeltaSeconds, 9.0f));
+		}
 	}
 
 	// --- drift lean -----------------------------------------------------------
@@ -619,7 +1339,10 @@ void ADCCRover::Tick(float DeltaSeconds)
 		const float Bob = World
 			? FMath::Sin(World->GetTimeSeconds() * (2.0f * PI / BobPeriod)) * HoverBobAmplitude * (1.0f - SpeedFraction)
 			: 0.0f;
-		Body->SetRelativeLocation(FVector(0.0f, 0.0f, -90.0f + Bob + SuspensionOffset));
+		// The wrecker's rest pose is the tire contact (-170). Overwriting it with the car's
+		// -90 every tick is what left the truck floating above the asphalt.
+		const float RestZ = bWrecker ? -170.0f : -90.0f;
+		Body->SetRelativeLocation(FVector(0.0f, 0.0f, RestZ + Bob + SuspensionOffset));
 	}
 
 	// Flight has its own throttle - the ground ramp does not apply, and the
@@ -630,7 +1353,9 @@ void ADCCRover::Tick(float DeltaSeconds)
 	// set, discarding boost outright the instant bFlying was true.
 	if (bFlying && Movement)
 	{
-		Movement->MaxSpeed = bBoosting ? BoostSpeed : FlightSpeed;
+		const float Engine = (Driver && Driver->Wallet)
+			? DCCChopShop::Pace(Driver->Wallet->ChopLevel(DCCChopShop::Engine)) : 1.0f;
+		Movement->MaxSpeed = (bBoosting ? BoostSpeed : FlightSpeed) * Engine;
 		if (!FMath::IsNearlyZero(ThrottleInput))
 		{
 			AddMovementInput(GetActorForwardVector(), ThrottleInput);
@@ -780,12 +1505,38 @@ void ADCCRover::NotifyHit(UPrimitiveComponent* MyComp, AActor* Other, UPrimitive
 		return;
 	}
 
+	// Studded tires (Repo Rally): one real hit, shrugged off. Checked before the
+	// crash so the driver's own machine doesn't lock the controls and then get
+	// corrected a moment later.
+	if (TryAbsorb())
+	{
+		if (HasAuthority())
+		{
+			Client_RallyNote(TEXT("Studded tires. The wall didn't stop you."));
+		}
+		return;
+	}
+
 	// A real wall. Stop, shove gently back off it, and take the controls away
 	// for a moment so it reads as an impact rather than as the car sticking to
 	// the surface with the throttle still buried.
+	const float ImpactSpeed = GetVelocity().Size();
+	if (HasAuthority())
+	{
+		for (TActorIterator<ADCCArcadeKart> It(GetWorld()); It; ++It)
+		{
+			It->NoteImpact(this, ImpactSpeed);
+		}
+	}
+	float Recovery = CrashRecoverySeconds;
+	if (Driver && Driver->Wallet)
+	{
+		Recovery *= DCCChopShop::DamageTaken(Driver->Wallet->ChopLevel(DCCChopShop::Plating));
+		Recovery = FMath::Max(0.12f, Recovery);
+	}
 	Movement->Velocity = HitNormal * BounceBackSpeed;
 	SpeedRamp = 0.0f;
-	CrashRecoveryRemaining = CrashRecoverySeconds;
+	CrashRecoveryRemaining = Recovery;
 	bBoosting = false;
 	BoostSecondsRemaining = 0.0f;
 
@@ -841,6 +1592,14 @@ void ADCCRover::UpdateGroundAndAir(float DeltaSeconds)
 		return;
 	}
 
+	// Repo Rally owns the height of a hovering mark, and of a mark on a hook. The street
+	// trace below would plant either one every tick and fight the tow.
+	if (bRallyHeld)
+	{
+		bAirborne = false;
+		return;
+	}
+
 	const FVector Origin = GetActorLocation();
 	const bool bWasAirborneBeforeThisTick = bAirborne;
 
@@ -862,7 +1621,9 @@ void ADCCRover::UpdateGroundAndAir(float DeltaSeconds)
 	{
 		if (FlightDurationSeconds > 0.0f)
 		{
-			FlightSecondsRemaining -= DeltaSeconds;
+			const float Burn = (Driver && Driver->Wallet)
+				? DCCChopShop::FuelBurn(Driver->Wallet->ChopLevel(DCCChopShop::Tank)) : 1.0f;
+			FlightSecondsRemaining -= DeltaSeconds * Burn;
 			if (FlightSecondsRemaining <= 0.0f)
 			{
 				EndFlight();
@@ -1393,14 +2154,10 @@ void ADCCRover::EnterRover(ADCCCharacterBase* NewDriver)
 	// would otherwise still get locked for the clip's full length while
 	// nothing plays: "stuck for several seconds, then pops in," Zoe's exact
 	// report, and a real bug in this function, not a cosmetic one.
+	// 2026-11-13 (Zoe: "when you enter a car it sometimes takes 3-4 full seconds where nothing is
+	// happening"): the "getting in" clip is the agree gesture, a 3-4 s nod, and the driver stood rooted
+	// for all of it. There is no real climb-in clip, so entering is immediate until there is one.
 	float Delay = 0.0f;
-	if (NewDriver->CanPlayOnThisSkeleton(NewDriver->EnterVehicleAnimation))
-	{
-		if (const UAnimSequenceBase* Sequence = Cast<UAnimSequenceBase>(NewDriver->EnterVehicleAnimation))
-		{
-			Delay = FMath::Max(0.0f, Sequence->GetPlayLength());
-		}
-	}
 
 	if (Delay <= 0.0f)
 	{
@@ -1611,4 +2368,30 @@ void ADCCRover::StopAutoPilot()
 	// Deliberately NOT clearing AutoPilotLapsCompleted: ADCCRaceTrack reads it
 	// after the finish to decide the placings, and a race is only over once
 	// somebody crossed the line. StartAutoPilotRoute zeroes it for the next run.
+}
+
+void ADCCRover::Server_DriveSync_Implementation(FVector_NetQuantize10 Location, FRotator Rotation, FVector_NetQuantize10 Velocity, float Throttle, float Steer)
+{
+	if (FPlatformTime::Seconds() < IgnoreDriveSyncUntil)
+	{
+		return; // the host just moved this truck; wait for the driver to catch up
+	}
+	SetActorLocationAndRotation(Location, Rotation, false, nullptr, ETeleportType::TeleportPhysics);
+	if (Movement)
+	{
+		Movement->Velocity = Velocity;
+	}
+	ThrottleInput = FMath::Clamp(Throttle, -1.0f, 1.0f);
+	SteerInput = FMath::Clamp(Steer, -1.0f, 1.0f);
+	LastDriveSyncLocation = GetActorLocation();
+	bHasDriveSync = true;
+}
+
+void ADCCRover::Client_ForceTransform_Implementation(FVector_NetQuantize10 Location, FRotator Rotation)
+{
+	SetActorLocationAndRotation(Location, Rotation, false, nullptr, ETeleportType::TeleportPhysics);
+	if (Movement)
+	{
+		Movement->StopMovementImmediately();
+	}
 }

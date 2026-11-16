@@ -1,0 +1,80 @@
+DUNGEON CRAWLER DENVER
+======================
+An arcade of original party games for one crew of friends, inspired in spirit by the Dungeon Crawler Carl books
+and tabletop game. Not affiliated with or endorsed by the books' author or publishers.
+
+
+CREATED, DIRECTED AND GAME-MASTERED BY
+--------------------------------------
+Zoe                 creator, developer, designer and Dungeon Master
+
+
+THE CRAWLERS
+------------
+The people this game was made for, who lent it their names, their faces and their bad decisions.
+
+Scott
+CJ
+Marcel
+Vaughn
+Kyle
+Zoe
+
+Every crawler, every voice line aimed at them, and every trap that went off in their faces is dedicated to them.
+
+
+THE GAMES
+---------
+Dead Air            film the ghosts of the Lucky Tuesday mine inside Mount Fourteener
+Repo Rally          a city shift in a tow truck
+Fourteener          climb together, fall apart
+Gate Run            a portal, a string of rooms, and the Gatekeeper
+Neon Mile, the Den, and the World Dungeon
+
+
+MUSIC
+-----
+"Platinum Dust Mine"            (Dead Air)
+"Repo Rally"                    (Repo Rally)
+"Swept Away"                    (Fourteener)
+"Meet the Whoops"               P Worthy (KMHR radio)
+Songs supplied by Zoe.
+
+
+VOICES
+------
+System AI, announcers, the yard crew and townsfolk: synthesised with Kokoro TTS (Apache 2.0 licence).
+
+
+CHARACTERS AND ART
+------------------
+Crawler models, minions and monsters: generated with Meshy AI, then rigged and fixed up in Blender.
+Background people: NPC Forge, built on MakeHuman / MPFB for Blender (MakeHuman assets, CC0).
+Paragon characters and props (Muriel, Serath, Zinx and the Paragon props): Epic Games, released free for Unreal Engine.
+Item icons and placeholder props: modelled in Blender for this game.
+
+Environment, prop, effect and animation packs from Fab.com, used under the Fab Standard Licence:
+  Abandoned Brutalist, AE BR Props, AI Generated Robots, Alien Cave Biome, Alien Portal, Ancient Civilization,
+  Atris Swords, Beach House, Cave Camp, Cyberpunk City, Dam City, Dead Bodies Poses (nikoff), Desert Cave,
+  Desert Temple Kit, Diner, Dynamic Falling, Egypt Statue, Egyptian Temple Kit, Evil Planet, Free Crawl Animation,
+  Gym, Hidden Shrine, Hidden Temple, Ice Station, Jungle Ruins Kit, Kingdom Capital, Legendary Forge,
+  Medieval Ruins, Megastructure Sci-Fi World, Modern House, Modern Villa Kit, Modular Sewer Kit,
+  Monster for Survival Game, NY Subway, Planet 385CY, RPG Class Icons, SF White Desert, SF Geothermal City,
+  Sci-Fi World, Sci-Fi Cliff, Sci-Fi Props, Sci-Fi Valley Village, Sci-Fi City, SoulCave, SoulCity,
+  Sun Temple Kit, Synthwave World, Synthwave City, Synthwave Creator, Thai Market, Tropical Island Biome,
+  Underground Sci-Fi, UnrealBucket, Vefects, Viking Village, Weapon Pack, Whisper,
+  Undead Skeleton (free sample), Crimson Knight Warrior (free version), Abyssal Reaper (free demonic wraith boss).
+Thank you to every artist who made these packs.
+
+
+TOOLS
+-----
+Unreal(R) Engine, Copyright 1998-2026, Epic Games, Inc. All rights reserved.
+Blender, the Blender Foundation.
+Developed with help from Claude (Anthropic).
+
+
+THANKS
+------
+To Matt Dinniman, for a dungeon worth crawling.
+To everyone who sat at the table.

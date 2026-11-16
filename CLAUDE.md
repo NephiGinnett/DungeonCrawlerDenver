@@ -61,6 +61,13 @@ while Live Coding is active". Ask Zoe to close it rather than trying to work aro
   -Project="C:/Users/kmett/Documents/Unreal Projects/DungeonCrawlerDenver/DungeonCrawlerDenver.uproject" -WaitMutex
 ```
 
+## Checking on / closing the editor: `Tools/editor_ctl.py` (2026-11-13)
+
+`status` (is it running, is MCP up, is PIE running), `shot` (PNG of the Unreal windows ONLY, by window handle;
+never screenshot the whole desktop, which captured Zoe's private windows once), `save`, `close [--nosave]` (a
+normal close; the editor asks about unsaved work itself and the script reports it), `kill` (only when asked).
+Zoe asked for this so builds do not wait on her. Prefer `close --nosave` unless she said to save.
+
 ## UE5 MCP
 
 The editor hosts the MCP server via the built-in `ModelContextProtocol` plugin at
@@ -463,6 +470,13 @@ source art lives in `SourceArt/`.
   mesh whose normals are never used. `mesh_smooth_type='FACE'` is now set in both scripts to
   silence it, because the noise obscures real import errors.
 
+**⚠️ Meshy `.glb` props must not be imported into a shared folder (found 2026-11-13).** Their materials and images
+are unnamed, so the glTF importer calls every one `Material_0` / `Image_0..2`; five props imported into
+`DCC/Equipment/Props/` ended up sharing ONE material, and four of them wore another prop's texture (the "black
+smears" on the goggles, popcorn bucket and trainer). Fixed with `Tools/fix_prop_materials.py` (Blender: named
+material + extracted textures) and `Tools/fix_prop_materials_ue.py` (MCP: per-prop folder, texture wired to Base
+Color, original mesh repointed). For a new prop, run both, or import into its own folder.
+
 **Grey character thumbnails are usually a stale cache, not missing textures.** The mesh thumbnail
 renders before the material and textures finish importing. Check `CaptureAssetImage` on the
 *material* — if the sphere is textured, the character is fine in-world.
@@ -659,6 +673,48 @@ the sky arrow, a solo random-encounter trial, then the safe room issues the HUD.
   names) reach clients.
 - Crawler identity: join with `?Crawler=CJ`, or get the first roster name that has a PlayerStart whose
   **Player Start Tag** matches.
+
+### ⭐ Direction as of 2026-11-13: an arcade of minigames, not a long-term RPG
+Zoe moved the project away from the long-term RPG. **Dungeon Crawler Denver is now gate-entered roguelike runs**
+(Concourse Zero, then Departures, then the endless World Dungeon), and **other minigames are preferred**
+(Dead Air, Fourteener, Repo Rally, Neon Mile, and more to come). Weigh new work by whether it makes a minigame
+or a run more fun, not by long-term RPG progression. The older onboarding, bedroom, floor-design and RPG
+material below is history unless she brings it back.
+
+### The arcade (`Source/DungeonCrawlerDenver/Arcade/`, 2026-11-13)
+The lobby ("The Den") is where players vote. Each game is a level load: `DCCArcade::Travel` server-travels to
+`<map>?game=<GameMode>`. The non-DCD games run on `/Engine/Maps/Entry`, and their `ADCCArcadeArena` subclass
+builds everything at runtime (sky included) and sets the replicated `Title`/`StatusLines` that the HUD draws.
+To add a game: add a row to `DCCArcade::Games()`, a GameMode subclass, and an arena. Per-player records go
+through `DCCProfile` (`Profile_<Name>.sav`). **Never write a game's records into the DCD character save.**
+Build original games in a genre, never a recreation of a specific existing game.
+
+**The front door (character select).** A launched game starts on `/Engine/Maps/Entry` with `ADCCFrontDoorGameMode`, set by
+`GameDefaultMap` + `LocalMapOptions` in `DefaultEngine.ini` (the editor still opens `Lvl_ThirdPerson`). The player picks a crawler, and
+then `DCCArcade::Travel` goes to the Den. Failed joins and Leave come back here too. Switching crawlers goes through
+`DCCSession::SwitchCrawler`, which saves the old crawler and then changes the body **and the player name**. The name is the key
+for every save, so changing only the body would revert on the next travel. In PIE, try it with `DCC.Arcade FrontDoor`.
+The front door widget is the **main menu**: PLAY, HOST A PARTY, JOIN A PARTY (joins the invite on the clipboard), POSE BENCH, QUIT. Zoe wants every in-game action to be a button. Never make her type console commands for normal use.
+Caveat for later: a dedicated server would also boot into the front door. Give the server its own map options when that target is built.
+
+### Saves, the hub, and skill gear (2026-11-13)
+- **Saves** (`Session/DCCSaveSystem.cpp`) export a fixed list of component properties by name. To keep
+  something new across sessions, add its property name to `Parts()` there, not to the save class. Only the
+  pawn that loaded a crawler may save it (`GOwners`).
+- **Concourse Zero** (`Rooms/DCCHub`) is the hub. It is built at runtime at (120000, 150000, 5000), and every
+  tale-floor run returns there. Vendor stock lives in `Dialogue/DCCHubVendors.cpp` constructors.
+- **Item skills:** `FDCCEquipmentDef::WeaponSkillId` (an Attack Skill named after the weapon, per the books),
+  plus `SplashRadius`/`HandlingSkillId`/`FumbleOnNatural` for explosives. Skill rows and the gear itself come
+  from `Tools/gen_loot_content.py` -> `Tools/import_loot_content.py`.
+
+### `Source/DungeonCrawlerDenver/Bench/` - the gear bench (F3), added 2026-11-13
+**It is also a separate program:** `Pose bench.lnk` in the project root (via `Tools/pose_bench.bat`) runs `ADCCBenchGameMode`, the bench alone on a stage. This is what Zoe means by "the pose bench". In game it is F3, or the POSE BENCH button on the main menu.
+Nudges for item grips (every body, or one body), sockets per body, and bones per body live in
+`Content/DCC/Bench/DCCBench.json`. They are not in the DataTable or the mesh assets. Bone nudges are applied
+in `RegisterOnBoneTransformsFinalizedDelegate`: the hook runs after the anim pose is final and before socket
+children and rendering read it. **If a grip "will not change" from the DataTable, check DCCBench.json first,
+because the bench value wins.**
+**Save writes one entry only** (`DCCBench::SaveEntry`): it re-reads the file from disk and patches just the grip, socket or bone on screen, so nudges tried and abandoned elsewhere in the session never reach the file. Zoe asked for this.
 
 ### Stretched crawlers: `DCC.FixCrawlerRetargeting`
 Meshy clips key translation on every bone, so shared clips force the source body's bone lengths onto every
@@ -913,6 +969,10 @@ it through the boss fight. A second copy silently removes that choice. It was *m
 - `Docs/POST_BUILD_TASKS.md` — the live wiring checklist.
 
 ### Climbing is universal now, and no longer needs a skill armed (2026-08-19)
+> **SUPERSEDED 2026-11-13 by Zoe's hold-to-climb design:** equip Climbing, HOLD left mouse to grab the wall
+> ahead and climb, release (or run out of stamina) to drop. Walls are never grabbed without Climbing equipped.
+> Falls over 6 m hurt (fatal at 20 m). See ROADMAP's 2026-11-13 log. The text below is history.
+
 
 **Root cause of "skills/climbing don't seem to work" (session found this by reading the input
 code, not guessing):** `TrySelectClimbTargetUnderCursor` only ran at all when a skill was armed
@@ -1145,3 +1205,34 @@ dev; explain the *why* behind UE-specific idioms when you do explain.
 
 Prefer asking her to do a quick manual step (restart the editor, flip a setting) over
 spending minutes researching an automatic workaround.
+
+### Fourteener items, chests and the trailer (2026-11-13)
+Items are in `Arcade/DCCClimbItems` (tools on Q/T, boosts, artifacts) and chests in `Arcade/DCCSupplyChest`. The kit
+lives on the arena (`ADCCArcadeClimb::Kits`) and is mirrored to the owner's `UDCCWalletComponent` for the HUD.
+Artifacts bank into the profile's `Trophies` only if the carrier survives the round. The ad is rendered by
+`Tools/make_trailer.py` (`DCC.Trailer capture`, then ffmpeg at `D:\Tools\ffmpeg`).
+
+### Repo Rally (2026-11-13)
+A city shift, not laps. Players drive wreckers. Right mouse aims the hook, Q fires it, the mark reels onto the back bumper, and the truck tows it to the yard. The drop pays for speed and how clean the car is. Hooking the wrong car is a fine. Marks go parked, then boxed in, then driving, then they spook and leave the ground. Gas is on a tab that can go red; debt makes rival crews hunt you. They do not take marks. Roles (runner, net, winch, tank) last the shift and are not saved. The kit is mirrored onto the **rover**, because the crawler is unpossessed while driving. Rhee, Jan and Diaz explain it from the yard (`SourceArt/Voice/NPC/impound_lines.json`). Since 2026-11-13 the city is a vaporwave one built from the Synthwave/Cyberpunk/Sci-Fi packs (Claude took it over from Grok at Zoe's request).
+Traffic is solid to trucks through `ADCCRover::TrafficShell` (WorldDynamic, blocks only Pawn), so it never jams itself. While a car is hooked, the
+rover replicates `RallyTow`/`bRallyTowDocked`/`bRallyInYard`; the chase camera frames both cars, and the HUD shows the [Q] drop prompt.
+
+### Gotcha: runtime-spawned rovers need a controller to move (2026-11-13)
+`ADCCRover` moves with `UFloatingPawnMovement`, which only applies input when a *local controller* possesses the pawn.
+Rovers spawned at runtime get none, so autopilot cars (Repo Rally traffic, crews, running marks) sat still at full
+throttle. `ADCCArcadeKart::TickTraffic` gives them `SpawnDefaultController()`, and `ADCCRover::Tick` reads keys only
+when the controller is a PlayerController (an AIController is also "locally controlled" on the server).
+
+### NPC Forge and item placeholders (2026-11-14)
+- **Background people:** `Tools/npc_forge.py` (Blender + MPFB/MakeHuman, seed + role -> the same person every time) ->
+  `Tools/import_npcs.py` (MCP) -> `UnrealEditor.exe <project> -ExecCmds="DCC.NpcRetarget"` (editor-only C++, builds the
+  IK rigs and retargets the mannequin clips to `NPC_*`). All NPCs share one skeleton. Asset packs: `D:\Assets\MakeHuman`.
+- **Blender -> Unreal FBX units:** skeletal = centimetres natively (scene unit 0.01, scale x100, apply, `apply_unit_scale=True,
+  FBX_SCALE_NONE`); metres make the importer scale the root bone and retargeted clips fling the body away. Static =
+  `apply_unit_scale=False, FBX_SCALE_NONE`. Name the armature object `Armature` or it becomes an extra root bone.
+- **MCP imports keep no materials or texture links.** Rebuild them (master material + instances), and set
+  `bUsedWithSkeletalMesh` on any material a skeletal mesh or overlay uses, or it will not draw in the game.
+- **`DataTableTools.get_rows` fails the whole call if any row name is missing**, and returns its JSON as a string inside
+  `returnValue` (parse twice).
+- Equipment: clothing and trinkets use `GroundMesh` (what lies on the floor), never `Mesh` (what is worn).
+- Characters in arcade arenas get `M_CharacterShade` as an overlay (`ApplyCharacterShade`), graded from the arena's sky.

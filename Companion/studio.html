@@ -9,6 +9,8 @@
     .studio { display: grid; grid-template-columns: 250px 1fr 360px; gap: 16px; padding: 16px; height: calc(100vh - 49px); }
     .col-scroll { overflow-y: auto; min-height: 0; }
     .lines { display: flex; flex-direction: column; gap: 4px; }
+    .line-group { color: var(--dim); font: 700 10px/1.2 var(--font); letter-spacing: 0.16em; text-transform: uppercase; margin: 12px 2px 2px; }
+    .line-group:first-child { margin-top: 0; }
     .line-btn {
       text-align: left; font: 600 11px/1.3 var(--font); letter-spacing: 0.06em; color: var(--text); padding: 6px 8px;
       background: rgba(255,255,255,0.02); border: 1px solid rgba(72,216,255,0.18); cursor: pointer; display: flex; gap: 8px; align-items: center;
@@ -61,7 +63,7 @@
     <section class="sys-window col-scroll">
       <div class="sys-header">[ SCRIPT ]</div>
       <div id="lines" class="lines"></div>
-      <p class="hint">Gold = recorded. Green = exported to the game folder.</p>
+      <p class="hint">Gold = recorded. Green = exported. Mile High Impound is Rhee, Jan and Diaz. Record them on Clean.</p>
     </section>
 
     <!-- Centre -->
@@ -69,6 +71,15 @@
       <div class="sys-window">
         <div class="sys-header">[ TELEPROMPTER ]</div>
         <div id="prompter" class="prompter"></div>
+        <textarea id="line-edit" class="fld hidden" rows="4" style="width: 100%; font: 18px/1.4 var(--font); margin-top: 6px"></textarea>
+        <div id="line-tools" class="hidden" style="display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap">
+          <button id="line-edit-btn" class="btn tiny" title="Change what this character says">&#9998; Edit line</button>
+          <button id="line-new" class="btn tiny" title="Add a new line for this character">+ New line</button>
+          <button id="line-delete" class="btn tiny" title="Remove this line (click twice)">&#10005; Delete line</button>
+          <button id="voice-reset" class="btn tiny" title="Clear this character's pitch, nasal, deep and airy settings">&#8634; Reset voice</button>
+          <button id="line-save" class="btn tiny hidden">Save line</button>
+          <button id="line-cancel" class="btn tiny hidden">Cancel</button>
+        </div>
       </div>
 
       <div class="sys-window">

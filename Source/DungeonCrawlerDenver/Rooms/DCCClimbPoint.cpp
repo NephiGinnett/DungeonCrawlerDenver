@@ -7,6 +7,7 @@
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "CollisionQueryParams.h"
+#include "Net/UnrealNetwork.h"
 
 ADCCClimbPoint::ADCCClimbPoint()
 {
@@ -34,8 +35,22 @@ ADCCClimbPoint::ADCCClimbPoint()
 	PromptText = NSLOCTEXT("DCC", "ClimbPromptDefault", "Begin climbing?");
 }
 
+void ADCCClimbPoint::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(ADCCClimbPoint, ClimbTopZ);
+	DOREPLIFETIME(ADCCClimbPoint, ClimbBottomZ);
+	DOREPLIFETIME(ADCCClimbPoint, WallNormal);
+	DOREPLIFETIME(ADCCClimbPoint, WallPoint);
+}
+
 bool ADCCClimbPoint::IsWithinReach(const ADCCCharacterBase* Character) const
 {
+	if (Character && IsWallPlane())
+	{
+		const float PlaneDistance = FVector::DotProduct(Character->GetActorLocation() - WallPoint, WallNormal);
+		return PlaneDistance > -50.0f && PlaneDistance <= ReachDistance + 60.0f;
+	}
 	if (!Character || !Surface)
 	{
 		return false;
@@ -70,14 +85,27 @@ float ADCCClimbPoint::GetBottomZ() const
 
 FVector ADCCClimbPoint::GetAttachLocationFor(const ADCCCharacterBase* Character, float WorldZ) const
 {
+	const float CapsuleRadius = Character && Character->GetCapsuleComponent()
+		? Character->GetCapsuleComponent()->GetScaledCapsuleRadius()
+		: 35.0f;
+
+	// A plain wall: slide onto the plane, then hold off it by the capsule radius.
+	// Same distance every frame, wherever on the face, so nothing jitters.
+	if (Character && IsWallPlane())
+	{
+		const FVector Location = Character->GetActorLocation();
+		const float PlaneDistance = FVector::DotProduct(Location - WallPoint, WallNormal);
+		FVector OnPlane = Location - WallNormal * PlaneDistance;
+		OnPlane.Z = WorldZ;
+		// +22: the cliff-rock tiles on Fourteener bulge out past the wall plane,
+		// and climbers' faces were sinking into them (2026-11-13).
+		return OnPlane + WallNormal * (CapsuleRadius + SurfaceOffset + 22.0f);
+	}
+
 	if (!Character || !Surface)
 	{
 		return GetActorLocation();
 	}
-
-	const float CapsuleRadius = Character->GetCapsuleComponent()
-		? Character->GetCapsuleComponent()->GetScaledCapsuleRadius()
-		: 35.0f;
 
 	const FBox Box = Surface->Bounds.GetBox();
 	const FVector CharacterLocation = Character->GetActorLocation();
@@ -99,11 +127,51 @@ FVector ADCCClimbPoint::GetAttachLocationFor(const ADCCCharacterBase* Character,
 	return Target + Outward.GetSafeNormal() * FMath::Max(0.0f, CapsuleRadius + SurfaceOffset);
 }
 
+namespace
+{
+	float CapsuleRadiusOr(const ADCCCharacterBase* Character)
+	{
+		return Character && Character->GetCapsuleComponent() ? Character->GetCapsuleComponent()->GetScaledCapsuleRadius() : 35.0f;
+	}
+}
+
 FVector ADCCClimbPoint::GetDismountLocation(const ADCCCharacterBase* Character) const
 {
 	const float HalfHeight = Character && Character->GetCapsuleComponent()
 		? Character->GetCapsuleComponent()->GetScaledCapsuleHalfHeight()
 		: 90.0f;
+
+	// A plain wall: the floor at the top is over the lip, INTO the wall's
+	// footprint (-WallNormal), not out in the air in front of it.
+	if (Character && IsWallPlane())
+	{
+		const float TopZ = GetTopZ();
+		const FVector Location = Character->GetActorLocation();
+		const float PlaneDistance = FVector::DotProduct(Location - WallPoint, WallNormal);
+		const FVector Lip = Location - WallNormal * PlaneDistance;
+		if (UWorld* World = GetWorld())
+		{
+			FCollisionQueryParams Params;
+			Params.AddIgnoredActor(Character);
+			for (const float Distance : { 70.0f, 120.0f, 180.0f, 260.0f })
+			{
+				const FVector XY = Lip - WallNormal * Distance;
+				FHitResult Floor;
+				if (World->LineTraceSingleByChannel(Floor, FVector(XY.X, XY.Y, TopZ + 200.0f), FVector(XY.X, XY.Y, TopZ - 60.0f), ECC_WorldStatic, Params)
+					&& Floor.ImpactNormal.Z > 0.6f)
+				{
+					// Room to stand? A capsule sweep from just above.
+					const FVector Stand(XY.X, XY.Y, Floor.ImpactPoint.Z + HalfHeight + 4.0f);
+					if (!World->OverlapAnyTestByChannel(Stand, FQuat::Identity, ECC_Pawn,
+						FCollisionShape::MakeCapsule(CapsuleRadiusOr(Character), HalfHeight - 2.0f), Params))
+					{
+						return Stand;
+					}
+				}
+			}
+		}
+		return FVector(Lip.X, Lip.Y, TopZ) - WallNormal * 90.0f + FVector(0, 0, HalfHeight + 10.0f);
+	}
 
 	// The same "away from the wall, into the room" direction GetAttachLocationFor
 	// derives from the character's actual position against the box - NOT
@@ -192,25 +260,13 @@ ADCCClimbPoint* ADCCClimbPoint::FindOrCreateForSurfaceHit(UWorld* World, const F
 		return nullptr;
 	}
 
-	// Reuse range is generous relative to the reach distance a character clicks
-	// from (see ADCCCharacterBase::GenericClimbReachDistance) - two clicks a
-	// couple of metres apart on the same rock face should find the same point,
-	// not spawn a neighbour.
-	constexpr float ReuseRadius = 300.0f;
-
-	for (TActorIterator<ADCCClimbPoint> It(World); It; ++It)
+	// The wall's facing, flattened: walls are climbed straight up.
+	FVector Normal = HitNormal;
+	Normal.Z = 0.0f;
+	Normal = Normal.GetSafeNormal();
+	if (Normal.IsNearlyZero())
 	{
-		ADCCClimbPoint* Existing = *It;
-		if (!Existing || !Existing->Surface)
-		{
-			continue;
-		}
-
-		const FVector ClosestPoint = Existing->Surface->Bounds.GetBox().GetClosestPointTo(HitLocation);
-		if (FVector::Dist(ClosestPoint, HitLocation) <= ReuseRadius)
-		{
-			return Existing;
-		}
+		return nullptr;
 	}
 
 	FCollisionQueryParams Params;
@@ -218,85 +274,96 @@ ADCCClimbPoint* ADCCClimbPoint::FindOrCreateForSurfaceHit(UWorld* World, const F
 	if (IgnoreActor)
 	{
 		// Without this, the requesting character's own capsule - standing right
-		// where it clicked - could be what a probe hits instead of the wall,
-		// corrupting the estimated span.
+		// where it clicked - could be what a probe hits instead of the wall.
 		Params.AddIgnoredActor(IgnoreActor);
 	}
+	for (TActorIterator<ADCCClimbPoint> It(World); It; ++It)
+	{
+		Params.AddIgnoredActor(*It); // older climb boxes are never the wall
+	}
 
-	// Bottom: search down for the floor this wall actually stands on. Falls
-	// back to a fixed drop below the hit if nothing is found, which just means
-	// a generous rather than an exact climb range - not a failure.
+	// Is there solid wall at this height, right here on the plane?
+	auto WallAt = [World, &Params, &HitLocation, &Normal](float Z)
+	{
+		const FVector At(HitLocation.X, HitLocation.Y, Z);
+		FHitResult Hit;
+		return World->LineTraceSingleByChannel(Hit, At + Normal * 80.0f, At - Normal * 40.0f, ECC_WorldStatic, Params)
+			&& FVector::DotProduct(Hit.ImpactNormal, Normal) > 0.7f;
+	};
+
+	// Reuse a plane point on the same face if its column covers this spot.
+	for (TActorIterator<ADCCClimbPoint> It(World); It; ++It)
+	{
+		ADCCClimbPoint* Existing = *It;
+		if (!Existing || !Existing->IsWallPlane())
+		{
+			continue;
+		}
+		const FVector D = HitLocation - Existing->WallPoint;
+		if (FVector::DotProduct(Existing->WallNormal, Normal) > 0.98f
+			&& FMath::Abs(FVector::DotProduct(D, Normal)) < 30.0f
+			&& D.Size2D() < 400.0f
+			&& HitLocation.Z >= Existing->ClimbBottomZ - 50.0f && HitLocation.Z <= Existing->ClimbTopZ)
+		{
+			return Existing;
+		}
+	}
+
+	// Bottom: the floor this wall stands on.
 	float BottomZ = HitLocation.Z - 400.0f;
 	{
 		FHitResult FloorHit;
-		const FVector Start = HitLocation + FVector(0.0f, 0.0f, 50.0f);
-		const FVector End = HitLocation - FVector(0.0f, 0.0f, 3000.0f);
-		if (World->LineTraceSingleByChannel(FloorHit, Start, End, ECC_Visibility, Params))
+		const FVector Start = HitLocation + Normal * 60.0f + FVector(0.0f, 0.0f, 50.0f);
+		if (World->LineTraceSingleByChannel(FloorHit, Start, Start - FVector(0.0f, 0.0f, 6000.0f), ECC_WorldStatic, Params))
 		{
 			BottomZ = FloorHit.Location.Z;
 		}
 	}
 
-	// Top: walk upward in steps, probing back into the wall at each height from
-	// just outside its surface. The first step that finds nothing solid is
-	// where the wall stops, so the previous step's height is the usable top -
-	// capped so one click can never make something absurdly tall climbable.
-	const FVector ProbeOutward = HitNormal.GetSafeNormal() * 80.0f;
-	float TopZ = HitLocation.Z;
-	constexpr float StepHeight = 300.0f;
-	constexpr float MaxClimbSpan = 1800.0f;
-
-	for (int32 Step = 1; Step <= 6; ++Step)
+	// Top: climb the plane in 50 cm steps until the wall stops, then pin the lip
+	// to a few centimetres. No cap: a 24 m face is climbable to its real top.
+	float Solid = HitLocation.Z;
+	float Air = -1.0f;
+	for (float Z = HitLocation.Z + 50.0f; Z < HitLocation.Z + 12000.0f; Z += 50.0f)
 	{
-		const float ProbeZ = HitLocation.Z + Step * StepHeight;
-		if (ProbeZ - HitLocation.Z > MaxClimbSpan)
+		if (!WallAt(Z))
 		{
+			Air = Z;
 			break;
 		}
-
-		const FVector ProbeStart = FVector(HitLocation.X, HitLocation.Y, ProbeZ) + ProbeOutward;
-		const FVector ProbeEnd = FVector(HitLocation.X, HitLocation.Y, ProbeZ) - ProbeOutward;
-
-		FHitResult WallHit;
-		if (!World->LineTraceSingleByChannel(WallHit, ProbeStart, ProbeEnd, ECC_Visibility, Params))
-		{
-			break;
-		}
-
-		TopZ = ProbeZ;
+		Solid = Z;
 	}
+	if (Air < 0.0f)
+	{
+		return nullptr; // a wall with no top: not something to climb
+	}
+	for (int32 i = 0; i < 6; ++i)
+	{
+		const float Mid = (Solid + Air) * 0.5f;
+		(WallAt(Mid) ? Solid : Air) = Mid;
+	}
+	const float TopZ = Solid;
 
-	// No FMath::Max floor here on purpose - TopZ already starts at HitLocation.Z,
-	// which the sweep that got us here proves is solid wall, so a short wall
-	// (Step 1's probe finding nothing) correctly yields a short climb span
-	// rather than being forced 300 units taller than any probe actually
-	// verified. An earlier version of this function did force that floor,
-	// which meant clicking near the top of a short wall could synthesize a
-	// climb box extending into open air above the real geometry - the MaxClimbSpan
-	// break above is the only cap this needs, and it is already a ceiling, not
-	// a floor.
 	const FVector SpawnLocation(HitLocation.X, HitLocation.Y, (BottomZ + TopZ) * 0.5f);
-
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-	ADCCClimbPoint* NewPoint = World->SpawnActor<ADCCClimbPoint>(SpawnLocation, FRotator::ZeroRotator, SpawnParams);
+	ADCCClimbPoint* NewPoint = World->SpawnActor<ADCCClimbPoint>(SpawnLocation, Normal.Rotation(), SpawnParams);
 	if (!NewPoint)
 	{
 		return nullptr;
 	}
 
-	// A squarish footprint rather than a thin oriented panel: unrotated, so it
-	// covers the reachable patch of wall regardless of which way the surface
-	// actually faces (see the class comment on FindOrCreateForSurfaceHit).
+	// A thin panel on the wall that collides with nothing: the rock does the
+	// blocking, and an invisible box must never be what a trace or camera finds.
 	if (NewPoint->Surface)
 	{
-		NewPoint->Surface->SetBoxExtent(FVector(250.0f, 250.0f, (TopZ - BottomZ) * 0.5f));
+		NewPoint->Surface->SetBoxExtent(FVector(5.0f, 250.0f, FMath::Max(50.0f, (TopZ - BottomZ) * 0.5f)));
+		NewPoint->Surface->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	}
-
+	NewPoint->WallNormal = Normal;
+	NewPoint->WallPoint = HitLocation;
 	NewPoint->ClimbBottomZ = BottomZ;
 	NewPoint->ClimbTopZ = TopZ;
 	NewPoint->PromptText = NSLOCTEXT("DCC", "ClimbPromptGeneric", "Climb this surface?");
-
 	return NewPoint;
 }

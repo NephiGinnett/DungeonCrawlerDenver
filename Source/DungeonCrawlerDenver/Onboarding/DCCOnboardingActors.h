@@ -53,6 +53,8 @@ class DUNGEONCRAWLERDENVER_API ADCCOnboardingSettings : public AActor
 public:
 	ADCCOnboardingSettings();
 
+	virtual void BeginPlay() override;
+
 	/** Where every crawler starts. Waking for the real thing; later stages for testing a single beat. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Onboarding")
 	EDCCOnboardingStage StartingStage = EDCCOnboardingStage::Waking;
@@ -151,7 +153,7 @@ public:
 
 	/** The local player sees the arrow once they reach this stage. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Beacon")
-	EDCCOnboardingStage RevealAtStage = EDCCOnboardingStage::Announced;
+	EDCCOnboardingStage RevealAtStage = EDCCOnboardingStage::Waking;
 
 	/** ...and stops seeing it once they are through the door. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Beacon")

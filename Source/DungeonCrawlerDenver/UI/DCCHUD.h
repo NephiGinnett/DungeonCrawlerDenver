@@ -6,15 +6,42 @@
 #include "Stats/DCCAbilityTypes.h"
 #include "Rooms/DCCGauntletEncounter.h"
 #include "Onboarding/DCCOnboardingTypes.h"
+#include "Items/DCCLootBoxTypes.h"
 #include "DCCHUD.generated.h"
 
 class ADCCCharacterBase;
 class ADCCIntroDirector;
 class UDCCStatsComponent;
 class UDCCChatInputWidget;
+class UDCCSessionMenuWidget;
+class UDCCCharacterSelectWidget;
+class UDCCCosmeticShopWidget;
+class UDCCRoundOverWidget;
+class UDCCLootScreenInput;
+class UDCCGearBenchWidget;
+class UDCCShopWidget;
 class UDCCBossComponent;
 enum class EDCCLogCategory : uint8;
 struct FDCCEventLogEntry;
+
+/**
+ * One item pop-up card (2026-11-12, after Elyra's Tales' notices.gd and its rarity
+ * colours). Plain C++, client-side only: the HUD builds these itself by watching
+ * the owning crawler's replicated inventory, equipment, loot boxes and gold.
+ */
+struct FDCCItemToastCard
+{
+	FString Header;
+	FString Name;
+	FString Subtitle;
+	TArray<FString> Lines;
+	FString Compare;
+	int32 CompareSign = 0;
+	FLinearColor Colour = FLinearColor::White;
+	uint8 Icon = 0;
+	int32 GoldAmount = 0;
+	double ShownAt = -1.0;
+};
 
 /** Pages of the Tab menu. Clickable tabs, or Q/E-style arrow keys. */
 enum class EDCCMenuTab : uint8
@@ -179,6 +206,43 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DCC|Admin")
 	void ToggleAdminPanel();
 
+	/** The Den shop (prize counter): spend arcade tickets on cosmetics. */
+	/** Tab: 0 prizes, 1 trophies, 2 chop shop. */
+	void OpenCosmeticShop(int32 Tab = 0);
+
+	/** Guides that show once per player, ever (DCCSession::HasSeenGuide), cached so the HUD can ask every frame. */
+	bool IsGuideSeen(FName Guide);
+	void MarkGuideSeen(FName Guide);
+	TMap<FName, bool> GuideCache;
+	FString GuideCacheKey;
+	float RoverGuideSeconds = 0.0f;
+	void CloseCosmeticShop();
+	bool IsCosmeticShopOpen() const;
+
+	/** The party menu (F2): host, invite, join, who's here, start the run. */
+	void ToggleSessionMenu();
+	bool IsSessionMenuOpen() const;
+
+	// --- Loot box screen (O) - UI/DCCHUD_LootBoxScreen.cpp -----------------
+	// Every sealed box in a row. Hold Space (or hold the mouse on a box) to
+	// open one, and keep holding to open the next. Hold R to open them all.
+	void ToggleLootBoxScreen();
+	bool IsLootBoxScreenOpen() const { return bLootScreenOpen; }
+	void ReceiveLootBoxReveal(const FDCCLootBoxReveal& Reveal);
+	/** From UDCCLootScreenInput. True if the screen used the key. */
+	bool HandleLootScreenKey(const FKey& Key, bool bPressed);
+
+	/** The gear bench (F3): nudge grips, sockets and bones. See Bench/DCCGearBenchWidget.h. */
+	void ToggleGearBench();
+	bool IsGearBenchOpen() const;
+
+	/** The shop screen. Opens itself when the crawler picks Shop on a vendor. */
+	bool IsShopOpen() const;
+	void CloseShop();
+
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
 	UFUNCTION(BlueprintPure, Category = "DCC|Admin")
 	bool IsAdminPanelVisible() const { return bShowAdminPanel; }
 
@@ -295,6 +359,19 @@ protected:
 	 * them similar, rather than building two that could drift apart).
 	 */
 	void DrawSpeedGauge();
+
+	/**
+	 * The skill practice bar (2026-11-14): pops up for a few seconds whenever one of your skills gains practice,
+	 * with its Rank and how full the bar to the next Rank is, and flashes on a Rank up. UI/DCCHUD_RallyMenus.cpp.
+	 */
+	void DrawSkillProgress();
+	TWeakObjectPtr<const class ADCCCharacterBase> SkillBarCrawler;
+	TMap<FName, float> SkillBarSeen;
+	TMap<FName, int32> SkillBarRanks;
+	FName SkillBarId;
+	double SkillBarUntil = -100.0;
+	double SkillBarRankUpAt = -100.0;
+	float SkillBarShown = 0.0f;
 
 	/**
 	 * Checked once per nearby living character in DrawNearbyHealthBars' own
@@ -605,12 +682,75 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "HUD")
 	float ExcitingChatterSpeedupFactor = 0.35f;
 
-	EDCCFeedVisibility FeedVisibility = EDCCFeedVisibility::Pinned;
+	// Minimized by default since 2026-11-13 (Zoe: the full box was distracting). K cycles it as before.
+	EDCCFeedVisibility FeedVisibility = EDCCFeedVisibility::Minimized;
 
 	/** Lazily created C++-only Slate text box - see DCCChatInputWidget.h for
 	 *  why this exists instead of a WBP. */
 	UPROPERTY(Transient)
 	TObjectPtr<UDCCChatInputWidget> ChatInputWidget;
+
+	/** Created on first open, kept for the life of the HUD. See UI/DCCSessionMenuWidget.h. */
+	UPROPERTY(Transient)
+	TObjectPtr<UDCCSessionMenuWidget> SessionMenu;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UDCCCosmeticShopWidget> CosmeticShop;
+
+	/** PLAY AGAIN / BACK TO THE DEN, while an arcade arena's round is over. */
+	UPROPERTY(Transient)
+	TObjectPtr<UDCCRoundOverWidget> RoundOver;
+	void UpdateRoundOver();
+
+	/** Running as the standalone pose bench (DCCArcade::IsBenchTool). */
+	bool bBenchTool = false;
+	FTimerHandle BenchToolTimer;
+
+	/** The front door's character select (UI/DCCCharacterSelectWidget.h). Only exists there. */
+	UPROPERTY(Transient)
+	TObjectPtr<UDCCCharacterSelectWidget> CharacterSelect;
+	void OpenCharacterSelect();
+
+	/** Cursor and input mode for whatever is open right now (Tab menu, DM panel, party menu). */
+	void ApplyCursorForOpenPanels();
+
+	UPROPERTY(Transient)
+	TObjectPtr<UDCCLootScreenInput> LootScreenInput;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UDCCGearBenchWidget> GearBench;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UDCCShopWidget> ShopWidget;
+
+	/** Opens or closes the shop to match the crawler's vendor target. */
+	void SyncShop(ADCCCharacterBase* Crawler);
+
+	bool bLootScreenOpen = false;
+	int32 LootSelected = 0;
+	float LootScroll = 0.0f;
+	double LootHoldStart = -1.0;
+	double LootHoldAllStart = -1.0;
+	bool bLootHoldOne = false;
+	bool bLootHoldAll = false;
+	/** Earliest time the next box may start charging (a reveal is playing). */
+	double LootNextChargeAt = 0.0;
+	/** Requested, not yet back from the server, per tier. */
+	TArray<int32> LootInFlight;
+	TArray<int32> LootSeenCounts;
+	double LootRequestSentAt = -1.0;
+	FDCCLootBoxReveal LootReveal;
+	double LootRevealStart = -1.0;
+	FString LootNotice;
+	double LootNoticeUntil = 0.0;
+	/** Screen rects of the boxes drawn last frame, for mouse picking. Index matches the row. */
+	TArray<FBox2D> LootBoxRects;
+
+	void DrawLootBoxScreen();
+	void BuildLootRow(TArray<EDCCLootBoxTier>& OutRow) const;
+	void SendLootOpen(EDCCLootBoxTier Tier, int32 Count, bool bAll);
+	void DrawGiftBox(float CentreX, float BaseY, float Size, const FLinearColor& Colour, float Alpha, float Glow);
+	void DrawLootReveal(double Now);
 
 	EDCCChatInputMode ChatInputMode = EDCCChatInputMode::None;
 
@@ -670,6 +810,84 @@ private:
 	 * for why this exists.
 	 */
 	void DrawQuestCompleteBanner();
+
+	/** The arcade's top-centre panel: whichever game's arena is loaded (Arcade/DCCArcadeArena). */
+	void DrawArcadeStatus();
+
+	/** Dead Air's body-cam overlay while the local crawler is recording (Arcade/DCCArcadeHaunt). */
+	void DrawBodyCam();
+	/** Dead Air: the note you are reading off a body, on a scrap of paper (2026-11-15). */
+	void DrawMineNote();
+	/** Dead Air's end of round: data extraction bars over the heads, then the highlight reel (2026-11-15). */
+	void DrawMineReel();
+public:
+	/** A trailer is rolling (DCC.HauntTrailer): draw only the extraction and the feed. */
+	static inline bool bTrailerMinimal = false;
+private:
+
+	// --- Item pop-ups (UI/DCCHUD_ItemToasts.cpp) ---------------------------
+	// Watches the owning crawler and queues a card for anything new: an item in
+	// the bag, a potion, a loot box, a newly equipped piece, gold. Diffing the
+	// replicated state rather than adding an RPC means every source (pickups,
+	// chests, corpses, payouts, achievements) gets a card with no new plumbing.
+	void WatchForNewItems(ADCCCharacterBase* Crawler);
+	void PushItemToast(FDCCItemToastCard&& Card);
+	void DrawItemToasts();
+
+	/** The arcade game's arena, if this level is one (the HUD trims itself there). */
+	const class ADCCArcadeArena* GetArcadeArena() const;
+
+	/** Fourteener: tools ([Q]/[T]), boosts and carried artifacts, bottom right. */
+	void DrawClimbKit(class ADCCCharacterBase* Crawler);
+
+	/** Repo Rally: tools ([Q]/[F]) and the shift readout. Read off the car, which is the possessed pawn. */
+	void DrawRallyKit(const class ADCCRover* Rover);
+
+	// Repo Rally's screens: work order, board, crew, truck, shift report (UI/DCCHUD_RallyMenus.cpp, 2026-11-14).
+	void DrawRallyScreens(const class ADCCArcadeKart* Kart);
+	void DrawRallyBriefing(const class ADCCArcadeKart* Kart);
+	void DrawRallyClock(const class ADCCArcadeKart* Kart);
+	void DrawRallyBoard(const class ADCCArcadeKart* Kart);
+	void DrawRallyCrew(const class ADCCArcadeKart* Kart);
+	void DrawRallyTruck(const class ADCCArcadeKart* Kart, const class ADCCRover* Rover);
+	void DrawRallyReport(const class ADCCArcadeKart* Kart);
+	void RallyPanel(float X, float Y, float W, float H, const FLinearColor& Accent);
+	/** A key cap; returns its width. */
+	float RallyKey(float X, float Y, const FString& Key, float S);
+	void RallyBar(float X, float Y, float W, float H, float Fraction, const FLinearColor& Colour);
+	/** A coloured label in a tinted box; returns its width (2026-11-14). */
+	float RallyPill(float X, float Y, const FString& Text, const FLinearColor& Colour, float S);
+	/** A small arrow pointing at Angle (degrees, 0 = up the screen). */
+	void RallyArrow(float CX, float CY, float Size, float Angle, const FLinearColor& Colour);
+	/** Tags over angry owners, and the red edge when your truck takes a hit. */
+	void DrawRallyTrouble(const class ADCCArcadeKart* Kart);
+	/**
+	 * Repo Rally text in crisp Slate fonts (Roboto) instead of the engine's bitmap fonts scaled up (2026-11-14).
+	 * Same arguments as DrawText / GetTextSize, so the size of a line matches what the bitmap font gave.
+	 */
+	void RallyText(const FString& Text, const FLinearColor& Colour, float X, float Y, class UFont* Font, float Scale = 1.0f, bool bShadow = true);
+	void RallyTextSize(const FString& Text, float& OutW, float& OutH, class UFont* Font, float Scale = 1.0f);
+	float RallyLastHull = -1.0f;
+	double RallyHurtAt = -100.0;
+
+	/** Repo Rally: the city, bottom left. Marks, crews, traffic, gas. */
+	void DrawRepoMinimap(const class ADCCRover* Self);
+
+	/** Repo Rally: the centre reticle while the hook camera is up. */
+	void DrawHookReticle(const class ADCCRover* Rover);
+
+	/** What the nearest talking NPC is saying, as a subtitle above the hotbar (2026-11-13). */
+	void DrawNPCSubtitle();
+	void DrawItemIcon(uint8 Icon, float X, float Y, float Size, const FLinearColor& Colour, float Alpha);
+
+	TArray<FDCCItemToastCard> ItemToastQueue;
+	TArray<FDCCItemToastCard> ItemToastsShowing;
+	TWeakObjectPtr<ADCCCharacterBase> ItemToastWatched;
+	int32 SeenItemCount = 0;
+	TMap<FName, int32> SeenConsumables;
+	TArray<int32> SeenLootBoxes;
+	TMap<uint8, FName> SeenEquipped;
+	int32 SeenGold = 0;
 
 	UPROPERTY(EditDefaultsOnly, Category = "DCC|UI", meta = (ClampMin = "1.0"))
 	float QuestCompleteBannerDurationSeconds = 4.0f;

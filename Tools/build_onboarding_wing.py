@@ -97,8 +97,9 @@ def box_room(name, folder, cx, cy, sx, sy, h=300, door=None, roof=True, light=Tr
     if light:
         lamp = place_class(f"{name}_Light", "/Script/Engine.PointLight", folder, x=cx, y=cy, z=h - 40)
         # The engine default blew the white rooms out to pure white under auto exposure. Warm and dim reads as "home".
-        setp(f"{lamp}.LightComponent0", {"Intensity": 900, "AttenuationRadius": max(sx, sy) * 0.95,
-                                         "LightColor": {"R": 255, "G": 214, "B": 170, "A": 255}})
+        setp(f"{lamp}.LightComponent0", {"Intensity": 500, "IntensityUnits": "Unitless", "AttenuationRadius": 480,
+                                         "IndirectLightingIntensity": 0.25, "CastShadows": False,
+                                         "LightColor": {"R": 255, "G": 214, "B": 158, "A": 255}})
 
 
 def clear_previous():
@@ -153,7 +154,10 @@ def street_and_plaza():
     place_mesh("HomeStreet_Floor", CUBE, folder, x=OX + length / 2 - 600, y=OY, z=-10, sx=length / 100, sy=10, sz=0.2)
     px = OX + 7000
     place_mesh("Plaza_Floor", CUBE, folder, x=px, y=OY, z=-10, sx=24, sy=24, sz=0.2)
-    place_class("Street_Sun", "/Script/Engine.PointLight", folder, x=OX + 2500, y=OY, z=900)
+    sun = place_class("Street_Sun", "/Script/Engine.PointLight", folder, x=OX + 2500, y=OY, z=900)
+    setp(f"{sun}.LightComponent0", {"Intensity": 250, "IntensityUnits": "Unitless", "AttenuationRadius": 2000,
+                                    "IndirectLightingIntensity": 0.4, "CastShadows": False,
+                                    "LightColor": {"R": 255, "G": 214, "B": 158, "A": 255}})
     # The archway: two pillars and a lintel, with the entrance volume in the gap.
     gx = px + 1100
     for side in (-1, 1):

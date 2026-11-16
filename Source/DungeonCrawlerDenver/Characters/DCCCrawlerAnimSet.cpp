@@ -31,6 +31,10 @@ namespace DCCCrawlerAnimSet
 			TEXT("/Game/DCC/Characters/Shared/AnimsFixed/A_DCC_DW_CallGesture.A_DCC_DW_CallGesture"));
 		static ConstructorHelpers::FObjectFinder<UAnimSequence> Climb(
 			TEXT("/Game/DCC/Characters/Shared/AnimsFixed/A_DCC_DW_ClimbStairs.A_DCC_DW_ClimbStairs"));
+		// The same clip made seamless and in place (Tools/make_seamless_loop.py), so a long
+		// climb does not snap back every cycle. Falls back to the stair clip if not imported.
+		static ConstructorHelpers::FObjectFinder<UAnimSequence> ClimbLoop(
+			TEXT("/Game/DCC/Characters/Shared/AnimsFixed/A_DCC_ClimbLoop.A_DCC_ClimbLoop"));
 		static ConstructorHelpers::FObjectFinder<UAnimSequence> FistBump(
 			TEXT("/Game/DCC/Characters/Shared/AnimsFixed/A_DCC_HW_AgreeGesture.A_DCC_HW_AgreeGesture"));
 
@@ -70,7 +74,8 @@ namespace DCCCrawlerAnimSet
 		if (Run.Succeeded())      { Character.RunAnimation = Run.Object; }
 		if (Attack.Succeeded())   { Character.AttackAnimation = Attack.Object; }
 		if (Cast.Succeeded())     { Character.CastAnimation = Cast.Object; }
-		if (Climb.Succeeded())    { Character.ClimbAnimation = Climb.Object; }
+		if (ClimbLoop.Succeeded()) { Character.ClimbAnimation = ClimbLoop.Object; }
+		else if (Climb.Succeeded()) { Character.ClimbAnimation = Climb.Object; }
 		if (FistBump.Succeeded()) { Character.FistBumpAnimation = FistBump.Object; }
 		if (HitReact.Succeeded()) { Character.HitReactionAnimation = HitReact.Object; }
 

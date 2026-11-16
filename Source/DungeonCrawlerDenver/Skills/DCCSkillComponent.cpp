@@ -164,7 +164,60 @@ void UDCCSkillComponent::MarkSkillUsed(FName SkillId)
 	if (FDCCKnownSkill* Known = FindKnownSkill(SkillId))
 	{
 		Known->bAdvancementMark = true;
+		AddPractice(*Known);
 	}
+}
+
+void UDCCSkillComponent::AddPractice(FDCCKnownSkill& Known)
+{
+	const UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+	const double Now = World->GetTimeSeconds();
+	double& Last = LastPracticeAt.FindOrAdd(Known.SkillId, -1000.0);
+	if (Now - Last < PracticeInterval)
+	{
+		return;
+	}
+	Last = Now;
+
+	const UDCCStatsComponent* Stats = GetOwnerStats();
+	const UDCCRuleset* Ruleset = Stats ? Stats->GetRuleset() : nullptr;
+	const int32 MaxRank = Ruleset ? Ruleset->GetMaxSkillRank() : 15;
+	if (Known.Rank >= MaxRank)
+	{
+		Known.Practice = 1.0f; // a full bar at the cap
+		return;
+	}
+
+	Known.Practice += 1.0f / FMath::Max(1.0f, PracticeTicksBase + PracticeTicksPerRank * Known.Rank);
+	if (Known.Practice < 1.0f)
+	{
+		return;
+	}
+
+	// The bar filled: the Rank lands, through the same announcements as a rolled advancement.
+	Known.Practice = 0.0f;
+	Known.Rank = FMath::Min(Known.Rank + 1, MaxRank);
+	OnSkillAdvanced.Broadcast(this, Known.SkillId, Known.Rank);
+	Multicast_SkillAdvanced(Known.SkillId, Known.Rank);
+	UDCCQuestComponent::NotifyEvent(this, EDCCObjectiveType::SkillRankGained, Known.SkillId, 1);
+	if (AActor* SkillOwner = GetOwner())
+	{
+		if (UDCCStatsComponent* OwnerStats = SkillOwner->FindComponentByClass<UDCCStatsComponent>())
+		{
+			OwnerStats->AddExperience(ExperiencePerSkillRank * Known.Rank);
+		}
+	}
+	ADCCGameState::Log(this, EDCCLogCategory::Advancement, FText::Format(
+		NSLOCTEXT("DCC", "LogPractice", "{0} is now Rank {1} in {2}. Practice is permitted."),
+		FText::FromString(GetNameSafe(GetOwner())),
+		FText::AsNumber(Known.Rank),
+		FText::FromName(Known.SkillId)));
+	UE_LOG(LogTemp, Log, TEXT("DCCSkill '%s' practised to Rank %d for %s."),
+		*Known.SkillId.ToString(), Known.Rank, *GetNameSafe(GetOwner()));
 }
 
 void UDCCSkillComponent::RecordUntrainedAttempt(FName SkillId)
@@ -175,6 +228,23 @@ void UDCCSkillComponent::RecordUntrainedAttempt(FName SkillId)
 	}
 
 	UntrainedAttempts.Add(SkillId);
+
+	// Learning by doing (2026-11-14): the arcade games never run the advancement roll that turns an untrained
+	// attempt into a skill, so enough practice simply teaches it. Same rate limit as the practice bar.
+	if (const UWorld* World = GetWorld())
+	{
+		const double Now = World->GetTimeSeconds();
+		double& Last = LastPracticeAt.FindOrAdd(SkillId, -1000.0);
+		if (Now - Last >= PracticeInterval)
+		{
+			Last = Now;
+			if (++UntrainedTicks.FindOrAdd(SkillId) >= UntrainedTicksToLearn)
+			{
+				UntrainedTicks.Remove(SkillId);
+				GrantSkill(SkillId, 1);
+			}
+		}
+	}
 }
 
 int32 UDCCSkillComponent::RunSkillAdvancement()
@@ -691,6 +761,10 @@ FDCCSkillResult UDCCSkillComponent::ActivateSkillInternal(const FDCCSkillDef& Sk
 				// like several separate hits instead of a flat number.
 				const int32 Magnitude = FMath::Max(1, FMath::RandRange(1, FMath::Max(1, Skill.PowerDie)) + AbilityModifier);
 				TargetStats->ApplyDamage(Magnitude);
+				if (ADCCCharacterBase* Caster = GetOwningCharacter())
+				{
+					Caster->NoteDamageDealtTo(Affected, Magnitude);
+				}
 				Result.TotalMagnitude += Magnitude;
 				Result.AffectedActors.Add(Affected);
 				break;

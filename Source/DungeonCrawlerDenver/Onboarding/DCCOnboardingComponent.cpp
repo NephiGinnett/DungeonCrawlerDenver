@@ -1,4 +1,9 @@
 #include "Onboarding/DCCOnboardingComponent.h"
+#include "Characters/DCCRetargetFix.h"
+#include "Session/DCCSaveSystem.h"
+#include "Session/DCCSession.h"
+#include "GameFramework/PlayerState.h"
+#include "Characters/DCCCharacterBase.h"
 
 #include "Onboarding/DCCOnboardingActors.h"
 #include "Combat/DCCGameMode.h"
@@ -80,6 +85,9 @@ void UDCCOnboardingComponent::BeginPlay()
 			UE_LOG(LogTemp, Verbose, TEXT("[DCC Onboarding] %s: controller %s after %d retries, restoring."),
 				*GetNameSafe(Pawn), *GetNameSafe(Pawn->GetController()), *Attempts);
 			GameMode->RestoreOnboarding(Pawn->GetController(), Self);
+
+			// Identity known: bring back this crawler's saved progress (or start their save).
+			DCCSave::Load(Cast<ADCCCharacterBase>(Pawn));
 		}
 		else if (bDone && GameMode)
 		{
@@ -289,6 +297,7 @@ void UDCCOnboardingComponent::ApplyCrawlerLook()
 	}
 
 	MeshComponent->SetSkeletalMesh(Body, /*bReinitPose=*/true);
+	DCCRetarget::EnsureForMesh(MeshComponent);
 	Crawler->RestartLoopAnimation();
 
 	// Sockets are per mesh (CLAUDE.md), so anything held or worn has to be re-hung on the new body.
@@ -324,6 +333,20 @@ void UDCCOnboardingComponent::ShowLocalTutorialOnce(FName RowName)
 		return;
 	}
 	ShownLocalTutorials.Add(RowName);
+
+	// Once per player, ever (2026-11-14, Zoe: "make sure the menu guides only show up once for a player").
+	// ShownLocalTutorials only lasted the session, so every launch explained every page again.
+	const APawn* OwnerPawn = Cast<APawn>(GetOwner());
+	const APlayerState* OwnerState = OwnerPawn ? OwnerPawn->GetPlayerState() : nullptr;
+	const FString PlayerKey = OwnerState ? OwnerState->GetPlayerName() : FString();
+	if (!PlayerKey.IsEmpty())
+	{
+		if (DCCSession::HasSeenGuide(PlayerKey, RowName))
+		{
+			return;
+		}
+		DCCSession::MarkGuideSeen(PlayerKey, RowName);
+	}
 
 	FDCCSystemWindowPayload Payload;
 	int32 IgnoredUnlocks = 0;

@@ -274,6 +274,11 @@ async function snapshotSelfTest(id) {
 const VOICE_DIR = path.join(REPO_ROOT, 'SourceArt', 'Voice', 'SystemAI', 'zoe');
 const RAW_DIR = path.join(VOICE_DIR, 'raw');
 const safeName = (n) => path.basename(String(n)).replace(/[^\w.-]/g, '_'); // never a path, only a file name
+// NPC lines (Fort Tiner, Tools/gen_fort_tiner_lines.py) save beside the System AI's, one folder per speaker.
+// Only "NPC/<Name>" is accepted, so a line can never write anywhere else.
+const voiceDirFor = (folder) => (/^NPC\/[A-Za-z0-9_]+$/.test(String(folder || ''))
+  ? path.join(REPO_ROOT, 'SourceArt', 'Voice', ...String(folder).split('/'))
+  : VOICE_DIR);
 
 function createStudioWindow() {
   const win = new BrowserWindow({
@@ -291,8 +296,8 @@ function createStudioWindow() {
   return win;
 }
 
-ipcMain.handle('studio-save', (_e, kind, name, wav) => {
-  const dir = kind === 'raw' ? RAW_DIR : VOICE_DIR;
+ipcMain.handle('studio-save', (_e, kind, name, wav, folder) => {
+  const dir = kind === 'raw' ? RAW_DIR : voiceDirFor(folder);
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, safeName(name)), Buffer.from(wav));
   return true;
@@ -302,7 +307,61 @@ ipcMain.handle('studio-load-raw', (_e, name) => {
   const b = fs.readFileSync(path.join(RAW_DIR, safeName(name)));
   return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength);
 });
-ipcMain.handle('studio-has-voice', (_e, name) => fs.existsSync(path.join(VOICE_DIR, safeName(name))));
+ipcMain.handle('studio-has-voice', (_e, name, folder) => fs.existsSync(path.join(voiceDirFor(folder), safeName(name))));
+
+// Townsfolk and lot staff (Tools/gen_fort_tiner_lines.py, Tools/gen_impound_lines.py). The game reads these
+// every round, so the studio can edit, add and delete lines with no rebuild. Each file is kept as .bak.
+const NPC_LINE_FILES = {
+  'fort_tiner_lines.json': path.join(REPO_ROOT, 'SourceArt', 'Voice', 'NPC', 'fort_tiner_lines.json'),
+  'impound_lines.json': path.join(REPO_ROOT, 'SourceArt', 'Voice', 'NPC', 'impound_lines.json'),
+  // The KMHR radio show (Docs/radio-show-altitude-sickness.md). Line order is script order; Tools/radio_mix.py
+  // stitches the recordings into segments for the rover radio.
+  'radio_lines.json': path.join(REPO_ROOT, 'SourceArt', 'Voice', 'NPC', 'radio_lines.json'),
+};
+ipcMain.handle('studio-npc-load', () => {
+  const speakers = [];
+  const lines = [];
+  for (const [file, filePath] of Object.entries(NPC_LINE_FILES)) {
+    if (!fs.existsSync(filePath)) continue;
+    const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    for (const speaker of data.speakers || []) speakers.push({ ...speaker, file });
+    for (const line of data.lines || []) lines.push({ ...line, file });
+  }
+  return speakers.length ? { speakers, lines } : null;
+});
+ipcMain.handle('studio-npc-save', (_e, data) => {
+  const ok = data && Array.isArray(data.speakers) && Array.isArray(data.lines)
+    && data.speakers.every((s) => s && /^[A-Za-z0-9_]+$/.test(s.id) && typeof s.name === 'string' && NPC_LINE_FILES[s.file])
+    && data.lines.every((l) => l && /^[A-Za-z0-9_]+$/.test(l.row) && typeof l.text === 'string' && l.text.length < 1000
+      && data.speakers.some((s) => s.id === l.speaker))
+    && new Set(data.lines.map((l) => l.row)).size === data.lines.length;
+  if (!ok) return false;
+  const buckets = {};
+  for (const speaker of data.speakers) {
+    // A character's voice from the studio (pitch, nasal, body, air): plain numbers only. The game ignores it.
+    const voice = Object.fromEntries(Object.entries(speaker.voice || {})
+      .filter(([k, v]) => ['pitch', 'nasal', 'body', 'air'].includes(k) && Number.isFinite(v) && Math.abs(v) <= 12));
+    (buckets[speaker.file] ??= { speakers: [], lines: [] }).speakers.push({
+      id: speaker.id, name: speaker.name, body: speaker.body || '', hat: speaker.hat || '',
+      ...(Object.keys(voice).length ? { voice } : {}),
+    });
+  }
+  for (const line of data.lines) {
+    const speaker = data.speakers.find((s) => s.id === line.speaker);
+    const file = line.file || speaker?.file;
+    if (!buckets[file]) return false;
+    buckets[file].lines.push({ speaker: line.speaker, row: line.row, text: line.text });
+  }
+  for (const [file, bucket] of Object.entries(buckets)) {
+    const dest = NPC_LINE_FILES[file];
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    if (fs.existsSync(dest)) fs.copyFileSync(dest, `${dest}.bak`);
+    const tmp = `${dest}.tmp`;
+    fs.writeFileSync(tmp, `${JSON.stringify(bucket, null, 2)}\n`, 'utf8');
+    fs.renameSync(tmp, dest);
+  }
+  return true;
+});
 
 // Self-test: DCC_STUDIO_TEST=<in.wav>;<preset>;<out.wav> renders a file through a preset with no one at the mic.
 async function studioSelfTest(win, spec) {

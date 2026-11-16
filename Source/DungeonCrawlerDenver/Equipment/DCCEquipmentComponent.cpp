@@ -12,6 +12,7 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "Net/UnrealNetwork.h"
+#include "Bench/DCCBenchData.h"
 #include "UObject/ConstructorHelpers.h"
 
 UDCCEquipmentComponent::UDCCEquipmentComponent()
@@ -643,6 +644,10 @@ void UDCCEquipmentComponent::RebuildVisuals()
 		return;
 	}
 
+	// Bench socket overrides live on the body's mesh asset; make sure this
+	// body has them before anything is hung from its sockets.
+	DCCBench::ApplySockets(CharacterMesh->GetSkeletalMeshAsset());
+
 	// Tear down first. Rebuilding wholesale rather than diffing keeps this
 	// correct for the replicated case, where an array arrives changed without
 	// any record of what it used to be.
@@ -705,6 +710,15 @@ void UDCCEquipmentComponent::RebuildVisuals()
 					// leaves the mesh exactly where SnapToTarget already put it.
 					MeshComponent->SetRelativeLocation(Item.GripOffsetLocation);
 					MeshComponent->SetRelativeRotation(Item.GripOffsetRotation);
+
+					// The gear bench (F3) wins over the table when it has a value:
+					// this body's own grip first, then the every-body one.
+					DCCBench::FNudge BenchGrip;
+					const USkeletalMesh* BodyMesh = CharacterMesh->GetSkeletalMeshAsset();
+					if (DCCBench::FindGrip(BodyMesh ? BodyMesh->GetPathName() : FString(), Item.ItemId, BenchGrip))
+					{
+						MeshComponent->SetRelativeTransform(BenchGrip.ToTransform());
+					}
 
 					SlotMeshes.Add(Entry.Slot, MeshComponent);
 				}

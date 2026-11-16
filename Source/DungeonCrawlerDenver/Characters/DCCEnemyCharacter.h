@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Characters/DCCCharacterBase.h"
+#include "Rooms/DCCDungeonGrid.h"
 #include "DCCEnemyCharacter.generated.h"
 
 class ADCCLootContainer;
@@ -137,6 +138,12 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "DCC|AI")
 	ADCCCharacterBase* GetCurrentTarget() const { return CurrentTarget; }
+
+	/**
+	 * Walk this grid instead of asking the navmesh.
+	 * Generated floors have no baked nav, and MoveToActor on an empty mesh is a no-op.
+	 */
+	void SetChaseGrid(UDCCDungeonGrid* Grid);
 
 	// -------------------------------------------------------------------------
 	// BODY COLLECTOR - a one-shot ambient task, not a persistent AI mode
@@ -518,6 +525,11 @@ protected:
 private:
 	UPROPERTY(Transient)
 	TObjectPtr<ADCCCharacterBase> CurrentTarget;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UDCCDungeonGrid> ChaseGrid;
+
+	void FollowChaseGrid(const ADCCCharacterBase* Target, float StopDistance);
 
 	/** Resolved once in BeginPlay - null for anything that isn't a boss. */
 	UPROPERTY(Transient)

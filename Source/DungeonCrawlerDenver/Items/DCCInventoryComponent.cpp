@@ -312,6 +312,10 @@ void UDCCInventoryComponent::AddConsumable(FName ItemId, int32 Quantity)
 		return;
 	}
 
+	if (ADCCCharacterBase* Holder = Cast<ADCCCharacterBase>(GetOwner()))
+	{
+		Holder->OfferQuickItem(ItemId); // hotbar slot 2 or 3, if one is free (2026-11-13)
+	}
 	for (FDCCStowedConsumable& Existing : StowedConsumables)
 	{
 		if (Existing.ItemId == ItemId)
@@ -388,7 +392,7 @@ void UDCCInventoryComponent::GrantLootBox(EDCCLootBoxTier Tier, int32 Count)
 	OnInventoryChanged.Broadcast(this);
 }
 
-bool UDCCInventoryComponent::TryOpenLootBox(EDCCLootBoxTier Tier, const FVector& WorldLocation, FDCCOpenedLootBoxResult& OutResult)
+bool UDCCInventoryComponent::TryOpenLootBox(EDCCLootBoxTier Tier, const FVector& WorldLocation, FDCCOpenedLootBoxResult& OutResult, ADCCCharacterBase* Looter)
 {
 	OutResult = FDCCOpenedLootBoxResult();
 
@@ -418,7 +422,9 @@ bool UDCCInventoryComponent::TryOpenLootBox(EDCCLootBoxTier Tier, const FVector&
 	--LootBoxCounts[Index];
 
 	DCCLoot::RollLootTable(Row->ItemEntries, OutResult.Items);
-	SpawnLootBoxItems(OutResult.Items, WorldLocation);
+	// With a looter, gear goes into their bag and gold into their purse (the
+	// loot box screen); without one, everything lands on the floor as before.
+	SpawnLootBoxItems(OutResult.Items, WorldLocation, Looter);
 
 	if (BoonTable)
 	{
@@ -441,7 +447,7 @@ bool UDCCInventoryComponent::TryOpenLootBox(EDCCLootBoxTier Tier, const FVector&
 	return true;
 }
 
-void UDCCInventoryComponent::SpawnLootBoxItems(const TArray<FDCCRolledLoot>& RolledItems, const FVector& WorldLocation) const
+void UDCCInventoryComponent::SpawnLootBoxItems(const TArray<FDCCRolledLoot>& RolledItems, const FVector& WorldLocation, ADCCCharacterBase* Looter) const
 {
 	UWorld* World = GetWorld();
 	if (!World)
@@ -451,7 +457,7 @@ void UDCCInventoryComponent::SpawnLootBoxItems(const TArray<FDCCRolledLoot>& Rol
 
 	for (const FDCCRolledLoot& Rolled : RolledItems)
 	{
-		DCCLoot::SpawnRolledLoot(World, Rolled, WorldLocation);
+		DCCLoot::SpawnRolledLoot(World, Rolled, WorldLocation, Looter);
 	}
 }
 

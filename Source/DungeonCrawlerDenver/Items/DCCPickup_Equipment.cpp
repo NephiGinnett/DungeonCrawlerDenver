@@ -46,7 +46,8 @@ void ADCCPickup_Equipment::BeginPlay()
 	// Soft on the DataTable row so a floor's worth of equipment definitions
 	// does not drag every mesh into memory at load - resolved here, the
 	// moment one is actually placed and needs to be seen.
-	if (UStaticMesh* ResolvedMesh = Row->Mesh.LoadSynchronous())
+	// The ground look first (folded clothing, a ring in its box), then the worn one.
+	if (UStaticMesh* ResolvedMesh = !Row->GroundMesh.IsNull() ? Row->GroundMesh.LoadSynchronous() : Row->Mesh.LoadSynchronous())
 	{
 		if (Mesh)
 		{

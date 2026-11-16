@@ -1,74 +1,312 @@
 [
-  {
-    "Name": "SecondWind",
-    "BoonId": "SecondWind",
-    "DisplayName": "Second Wind",
-    "Description": "A sudden, unearned burst of not-dying. Sponsors love this one - it's cheap and it always plays well.",
-    "Effects": [
-      { "InstantHealthChange": 15, "ModifiedAbility": "Strength", "ModifierAmount": 0, "ModifierDurationSeconds": 0.0 }
-    ]
-  },
-  {
-    "Name": "SteadyHands",
-    "BoonId": "SteadyHands",
-    "DisplayName": "Steady Hands",
-    "Description": "For a while, nothing shakes. Deeply suspicious for someone who fell down a hole this morning.",
-    "Effects": [
-      { "InstantHealthChange": 0, "ModifiedAbility": "Dexterity", "ModifierAmount": 1, "ModifierDurationSeconds": 300.0 }
-    ]
-  },
-  {
-    "Name": "MinorFortitude",
-    "BoonId": "MinorFortitude",
-    "DisplayName": "Minor Fortitude",
-    "Description": "A little sturdier than you have any right to be. The audience is told this is 'grit.'",
-    "Effects": [
-      { "InstantHealthChange": 0, "ModifiedAbility": "Constitution", "ModifierAmount": 1, "ModifierDurationSeconds": 300.0 }
-    ]
-  },
-  {
-    "Name": "SilverTongue",
-    "BoonId": "SilverTongue",
-    "DisplayName": "Silver Tongue",
-    "Description": "Everything you say for the next while sounds like it was written by someone who gets paid to write things.",
-    "Effects": [
-      { "InstantHealthChange": 0, "ModifiedAbility": "Charisma", "ModifierAmount": 1, "ModifierDurationSeconds": 300.0 }
-    ]
-  },
-  {
-    "Name": "AdrenalineSurge",
-    "BoonId": "AdrenalineSurge",
-    "DisplayName": "Adrenaline Surge",
-    "Description": "The building already fell on you once today. This is your body deciding that was rehearsal.",
-    "Effects": [
-      { "InstantHealthChange": 0, "ModifiedAbility": "Strength", "ModifierAmount": 2, "ModifierDurationSeconds": 600.0 }
-    ]
-  },
-  {
-    "Name": "IronWill",
-    "BoonId": "IronWill",
-    "DisplayName": "Iron Will",
-    "Description": "A real, load-bearing toughness, on loan. Return policy unclear.",
-    "Effects": [
-      { "InstantHealthChange": 25, "ModifiedAbility": "Constitution", "ModifierAmount": 2, "ModifierDurationSeconds": 600.0 }
-    ]
-  },
-  {
-    "Name": "ClarityOfPurpose",
-    "BoonId": "ClarityOfPurpose",
-    "DisplayName": "Clarity Of Purpose",
-    "Description": "Every decision for a while feels correct in advance. This has never once been true before now.",
-    "Effects": [
-      { "InstantHealthChange": 0, "ModifiedAbility": "Intelligence", "ModifierAmount": 2, "ModifierDurationSeconds": 600.0 }
-    ]
-  },
-  {
-    "Name": "SponsorsBlessing",
-    "BoonId": "SponsorsBlessing",
-    "DisplayName": "Sponsor's Blessing",
-    "Description": "Someone with real money is now, briefly, personally invested in you surviving. Enjoy it - it will not renew itself.",
-    "Effects": [
-      { "InstantHealthChange": 40, "ModifiedAbility": "Constitution", "ModifierAmount": 3, "ModifierDurationSeconds": 3600.0 }
-    ]
-  }
+ {
+  "Name": "SecondWind",
+  "BoonId": "SecondWind",
+  "DisplayName": "Second Wind",
+  "Description": "A sudden, unearned burst of not-dying. Sponsors love this one - it's cheap and it always plays well.",
+  "Effects": [
+   {
+    "InstantHealthChange": 15,
+    "ModifiedAbility": "Strength",
+    "ModifierAmount": 0,
+    "ModifierDurationSeconds": 0.0
+   }
+  ]
+ },
+ {
+  "Name": "SteadyHands",
+  "BoonId": "SteadyHands",
+  "DisplayName": "Steady Hands",
+  "Description": "For a while, nothing shakes. Deeply suspicious for someone who fell down a hole this morning.",
+  "Effects": [
+   {
+    "InstantHealthChange": 0,
+    "ModifiedAbility": "Dexterity",
+    "ModifierAmount": 1,
+    "ModifierDurationSeconds": 300.0
+   }
+  ]
+ },
+ {
+  "Name": "MinorFortitude",
+  "BoonId": "MinorFortitude",
+  "DisplayName": "Minor Fortitude",
+  "Description": "A little sturdier than you have any right to be. The audience is told this is 'grit.'",
+  "Effects": [
+   {
+    "InstantHealthChange": 0,
+    "ModifiedAbility": "Constitution",
+    "ModifierAmount": 1,
+    "ModifierDurationSeconds": 300.0
+   }
+  ]
+ },
+ {
+  "Name": "SilverTongue",
+  "BoonId": "SilverTongue",
+  "DisplayName": "Silver Tongue",
+  "Description": "Everything you say for the next while sounds like it was written by someone who gets paid to write things.",
+  "Effects": [
+   {
+    "InstantHealthChange": 0,
+    "ModifiedAbility": "Charisma",
+    "ModifierAmount": 1,
+    "ModifierDurationSeconds": 300.0
+   }
+  ]
+ },
+ {
+  "Name": "AdrenalineSurge",
+  "BoonId": "AdrenalineSurge",
+  "DisplayName": "Adrenaline Surge",
+  "Description": "The building already fell on you once today. This is your body deciding that was rehearsal.",
+  "Effects": [
+   {
+    "InstantHealthChange": 0,
+    "ModifiedAbility": "Strength",
+    "ModifierAmount": 2,
+    "ModifierDurationSeconds": 600.0
+   }
+  ]
+ },
+ {
+  "Name": "IronWill",
+  "BoonId": "IronWill",
+  "DisplayName": "Iron Will",
+  "Description": "A real, load-bearing toughness, on loan. Return policy unclear.",
+  "Effects": [
+   {
+    "InstantHealthChange": 25,
+    "ModifiedAbility": "Constitution",
+    "ModifierAmount": 2,
+    "ModifierDurationSeconds": 600.0
+   }
+  ]
+ },
+ {
+  "Name": "ClarityOfPurpose",
+  "BoonId": "ClarityOfPurpose",
+  "DisplayName": "Clarity Of Purpose",
+  "Description": "Every decision for a while feels correct in advance. This has never once been true before now.",
+  "Effects": [
+   {
+    "InstantHealthChange": 0,
+    "ModifiedAbility": "Intelligence",
+    "ModifierAmount": 2,
+    "ModifierDurationSeconds": 600.0
+   }
+  ]
+ },
+ {
+  "Name": "SponsorsBlessing",
+  "BoonId": "SponsorsBlessing",
+  "DisplayName": "Sponsor's Blessing",
+  "Description": "Someone with real money is now, briefly, personally invested in you surviving. Enjoy it - it will not renew itself.",
+  "Effects": [
+   {
+    "InstantHealthChange": 40,
+    "ModifiedAbility": "Constitution",
+    "ModifierAmount": 3,
+    "ModifierDurationSeconds": 3600.0
+   }
+  ]
+ },
+ {
+  "Name": "ComplimentaryRefill",
+  "BoonId": "ComplimentaryRefill",
+  "DisplayName": "Complimentary Refill",
+  "Description": "The System tops you up, the way a waiter tops up a glass you did not ask to have topped up.",
+  "Effects": [
+   {
+    "InstantHealthChange": 10,
+    "ModifiedAbility": "Strength",
+    "ModifierAmount": 0,
+    "ModifierDurationSeconds": 0.0
+   }
+  ]
+ },
+ {
+  "Name": "SponsoredHydration",
+  "BoonId": "SponsoredHydration",
+  "DisplayName": "Sponsored Hydration",
+  "Description": "This moment of not being thirsty is brought to you by a water brand with a mountain on it. Not this mountain.",
+  "Effects": [
+   {
+    "InstantHealthChange": 0,
+    "ModifiedAbility": "Constitution",
+    "ModifierAmount": 1,
+    "ModifierDurationSeconds": 600.0
+   }
+  ]
+ },
+ {
+  "Name": "ViralMoment",
+  "BoonId": "ViralMoment",
+  "DisplayName": "Viral Moment",
+  "Description": "Somebody clipped that. Somebody is setting it to music. For five minutes, everyone likes you.",
+  "Effects": [
+   {
+    "InstantHealthChange": 0,
+    "ModifiedAbility": "Charisma",
+    "ModifierAmount": 2,
+    "ModifierDurationSeconds": 300.0
+   }
+  ]
+ },
+ {
+  "Name": "PerformanceEnhancerLegal",
+  "BoonId": "PerformanceEnhancerLegal",
+  "DisplayName": "Performance Enhancer (Legal in Denver)",
+  "Description": "Approved by a board that met once, in a parking lot. You feel great. Do not read the label.",
+  "Effects": [
+   {
+    "InstantHealthChange": 0,
+    "ModifiedAbility": "Strength",
+    "ModifierAmount": 2,
+    "ModifierDurationSeconds": 240.0
+   }
+  ]
+ },
+ {
+  "Name": "SecondOpinion",
+  "BoonId": "SecondOpinion",
+  "DisplayName": "A Second Opinion",
+  "Description": "The System has consulted a second System. They agree you should be smarter, briefly.",
+  "Effects": [
+   {
+    "InstantHealthChange": 0,
+    "ModifiedAbility": "Intelligence",
+    "ModifierAmount": 2,
+    "ModifierDurationSeconds": 300.0
+   }
+  ]
+ },
+ {
+  "Name": "CaffeineDrip",
+  "BoonId": "CaffeineDrip",
+  "DisplayName": "Caffeine, Intravenous",
+  "Description": "Every bean in the break room, administered at once. Your hands are very fast and you can hear colours.",
+  "Effects": [
+   {
+    "InstantHealthChange": 0,
+    "ModifiedAbility": "Dexterity",
+    "ModifierAmount": 2,
+    "ModifierDurationSeconds": 180.0
+   }
+  ]
+ },
+ {
+  "Name": "ExtendedWarranty",
+  "BoonId": "ExtendedWarranty",
+  "DisplayName": "Extended Warranty",
+  "Description": "Covers you for another six hundred seconds of ordinary wear and tear. Acts of monster are excluded.",
+  "Effects": [
+   {
+    "InstantHealthChange": 10,
+    "ModifiedAbility": "Constitution",
+    "ModifierAmount": 2,
+    "ModifierDurationSeconds": 600.0
+   }
+  ]
+ },
+ {
+  "Name": "StandingOvation",
+  "BoonId": "StandingOvation",
+  "DisplayName": "Standing Ovation",
+  "Description": "The audience is on its feet. The applause physically heals you. Nobody can explain this and nobody is trying.",
+  "Effects": [
+   {
+    "InstantHealthChange": 30,
+    "ModifiedAbility": "Strength",
+    "ModifierAmount": 0,
+    "ModifierDurationSeconds": 0.0
+   },
+   {
+    "InstantHealthChange": 0,
+    "ModifiedAbility": "Charisma",
+    "ModifierAmount": 1,
+    "ModifierDurationSeconds": 300.0
+   }
+  ]
+ },
+ {
+  "Name": "PlotArmor",
+  "BoonId": "PlotArmor",
+  "DisplayName": "Plot Armour",
+  "Description": "The writers have decided you are not dying in this episode. They reserve the right to revisit that.",
+  "Effects": [
+   {
+    "InstantHealthChange": 0,
+    "ModifiedAbility": "Constitution",
+    "ModifierAmount": 3,
+    "ModifierDurationSeconds": 300.0
+   }
+  ]
+ },
+ {
+  "Name": "DirectorsCut",
+  "BoonId": "DirectorsCut",
+  "DisplayName": "The Director's Cut",
+  "Description": "Every scene you are in is now longer, faster and better lit.",
+  "Effects": [
+   {
+    "InstantHealthChange": 0,
+    "ModifiedAbility": "Strength",
+    "ModifierAmount": 2,
+    "ModifierDurationSeconds": 300.0
+   },
+   {
+    "InstantHealthChange": 0,
+    "ModifiedAbility": "Dexterity",
+    "ModifierAmount": 2,
+    "ModifierDurationSeconds": 300.0
+   }
+  ]
+ },
+ {
+  "Name": "AudienceFavorite",
+  "BoonId": "AudienceFavorite",
+  "DisplayName": "Audience Favourite",
+  "Description": "They chant your name. They spell it wrong. It works anyway.",
+  "Effects": [
+   {
+    "InstantHealthChange": 20,
+    "ModifiedAbility": "Strength",
+    "ModifierAmount": 0,
+    "ModifierDurationSeconds": 0.0
+   },
+   {
+    "InstantHealthChange": 0,
+    "ModifiedAbility": "Charisma",
+    "ModifierAmount": 3,
+    "ModifierDurationSeconds": 600.0
+   }
+  ]
+ },
+ {
+  "Name": "DivineIntervention",
+  "BoonId": "DivineIntervention",
+  "DisplayName": "Divine Intervention (Sponsored)",
+  "Description": "Something enormous reaches down and fixes you, then leaves a business card.",
+  "Effects": [
+   {
+    "InstantHealthChange": 60,
+    "ModifiedAbility": "Strength",
+    "ModifierAmount": 0,
+    "ModifierDurationSeconds": 0.0
+   },
+   {
+    "InstantHealthChange": 0,
+    "ModifiedAbility": "Constitution",
+    "ModifierAmount": 3,
+    "ModifierDurationSeconds": 600.0
+   },
+   {
+    "InstantHealthChange": 0,
+    "ModifiedAbility": "Strength",
+    "ModifierAmount": 2,
+    "ModifierDurationSeconds": 600.0
+   }
+  ]
+ }
 ]

@@ -55,6 +55,14 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Rover")
 	TObjectPtr<UBoxComponent> Collision;
 
+	/**
+	 * Repo Rally traffic (RallyDuty 2) is solid to trucks but not to itself (2026-11-13):
+	 * the root box stops colliding, so traffic never jams, and this shell - WorldDynamic,
+	 * blocking only Pawn - is what a truck's movement sweep runs into. Off for every other car.
+	 */
+	UPROPERTY(VisibleAnywhere, Category = "Rover")
+	TObjectPtr<UBoxComponent> TrafficShell;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Rover")
 	TObjectPtr<UStaticMeshComponent> Body;
 
@@ -106,7 +114,7 @@ public:
 	 *  heavy weight around that drags a little" - see Movement->Deceleration
 	 *  in the constructor for the other half of that ask). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|Speed")
-	float SecondsToReachCruise = 5.0f;
+	float SecondsToReachCruise = 5.8f;
 
 	/** Speed while boosting. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|Boost")
@@ -136,6 +144,172 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Rover|Boost")
 	void GrantBoost();
+
+	/**
+	 * Repo Rally writes this on the server (2026-11-13). 1 is a normal car.
+	 * Replicated so the driver's own machine slows down too, instead of
+	 * fighting the server for a frame and then snapping.
+	 */
+	UPROPERTY(Replicated)
+	float RaceSpeedScale = 1.0f;
+
+	/** Charges of "the next hit doesn't count" (studded tires). Server spends them. */
+	UPROPERTY(Replicated)
+	int32 RaceAbsorb = 0;
+
+	/** What the rally HUD draws. The kit lives on the car because the crawler is unpossessed while driving, so a wallet on the crawler would not replicate to them. */
+	UPROPERTY(Replicated)
+	TArray<FName> RallyTools;
+
+	UPROPERTY(Replicated)
+	int32 RallyToolIndex = 0;
+
+	/** "Studded x2   Quiet 12s   Drafting" */
+	UPROPERTY(Replicated)
+	FString RallyStatus;
+
+	UPROPERTY(Replicated)
+	TArray<FName> RallyCargo;
+
+	/** Permanent for this race. 1 is a stock truck. The governor-delete bay raises it. */
+	UPROPERTY(Replicated)
+	float RallyEngine = 1.0f;
+
+	/** Extra seconds on every boost, from the long-tank bay. */
+	UPROPERTY(Replicated)
+	float RallyBoostExtra = 0.0f;
+
+	/** Which company body. -1 keeps the mesh the rover was built with. The city shift does not use this:
+	 *  those five meshes are the old impound paint, and the grunge trucks are not imported yet. */
+	UPROPERTY(ReplicatedUsing = OnRep_RallyBody)
+	int32 RallyBody = -1;
+
+	UFUNCTION()
+	void OnRep_RallyBody();
+
+	/** Server. Swaps the mesh. The city shift leaves this at -1. */
+	void SetRallyBody(int32 Index);
+
+	/** 0 a player's truck, 1 a marked car, 2 traffic, 3 a rival crew, 4 a parked blocker. The columns and the minimap read it. */
+	UPROPERTY(Replicated)
+	uint8 RallyDuty = 0;
+
+	/** Painted on the column. Empty until the shift names the car. */
+	UPROPERTY(Replicated)
+	FString RallyPlate;
+
+	/** 0 fresh, 1 on the bumper. Marks only. The column brightens as the reel closes. */
+	UPROPERTY(Replicated)
+	float RallyStrain = 0.0f;
+
+	/**
+	 * Server. While set, ground snap leaves this car's height alone. Repo Rally sets it on a mark
+	 * that is hovering, or one being reeled onto a bumper, so the street trace does not plant it.
+	 */
+	UPROPERTY(Replicated)
+	bool bRallyHeld = false;
+
+	/** Repo Rally, on a player's truck: the car on its line (null if none), whether it is on the
+	 *  bumper, and whether the truck is in the yard. The tow camera and the drop prompt read these. */
+	UPROPERTY(Replicated)
+	TObjectPtr<ADCCRover> RallyTow;
+
+	UPROPERTY(Replicated)
+	bool bRallyTowDocked = false;
+
+	UPROPERTY(Replicated)
+	bool bRallyInYard = false;
+
+	/** Local to the driver. Right mouse. The magnet reticle reads this. The shot carries its own direction, so this is not replicated. */
+	bool bHookAim = false;
+
+	/**
+	 * The repo wrecker: a crane and a magnet instead of the synthwave car.
+	 * Player trucks and rival crews only. Marks, traffic and parked cars stay cars.
+	 */
+	UPROPERTY(ReplicatedUsing = OnRep_Wrecker)
+	bool bWrecker = false;
+
+	UFUNCTION()
+	void OnRep_Wrecker();
+
+	/** Server, or the trailer (which does not replicate). Swaps in the wrecker mesh. */
+	void SetWrecker(bool bOn = true);
+
+	/** Server. Multiplies top speed until the arena says otherwise. Below 0.40 also cuts a boost. */
+	void SetRacePace(float Scale);
+
+	/** Server. True if a studded-tire charge soaked this hit. */
+	bool TryAbsorb();
+
+	/** Server. Ignore the controls for a moment, the way a wall does. */
+	void Stumble(float Seconds);
+
+	/** Server. A boost that lasts at least Seconds. Nitro. */
+	void ForceBoost(float Seconds);
+
+	/** A notice on the driver's screen. The crawler has no controller while seated, so this has to leave from the car. */
+	UFUNCTION(Client, Reliable)
+	void Client_RallyNote(const FString& Message);
+
+	/**
+	 * Dispatch on the truck radio (2026-11-13): plays SourceArt/Voice/NPC/Dispatch/VO_<Row>.wav if it has
+	 * been recorded in the Voice Studio. Returns nothing either way; the arena still sends the text note,
+	 * so an unrecorded line is read instead of heard.
+	 */
+	UFUNCTION(Client, Reliable)
+	void Client_RallyRadio(FName Row);
+
+	/** The end-of-round vote while driving (the crawler is unpossessed, so its wallet cannot send it). */
+	UFUNCTION(Server, Reliable)
+	void Server_ArcadeVote(bool bPlayAgain);
+
+	/**
+	 * Network fix (2026-11-16, Repo Rally with Anke: "on my game she never moves while on hers she's driving
+	 * around"). The truck's floating-pawn movement only ever ran on the driver's machine, so a remote driver's truck
+	 * never moved on the host. The driver now sends where the truck is ~20 times a second; the host takes it, and
+	 * everyone else sees the host's copy as usual. When the host moves the truck itself (a teleport: recovery,
+	 * the yard, a respawn) it tells the driver with Client_ForceTransform and ignores their reports briefly.
+	 */
+	UFUNCTION(Server, Unreliable)
+	void Server_DriveSync(FVector_NetQuantize10 Location, FRotator Rotation, FVector_NetQuantize10 Velocity, float Throttle, float Steer);
+
+	UFUNCTION(Client, Reliable)
+	void Client_ForceTransform(FVector_NetQuantize10 Location, FRotator Rotation);
+
+	float DriveSyncTimer = 0.0f;
+	double IgnoreDriveSyncUntil = 0.0;
+	FVector LastDriveSyncLocation = FVector::ZeroVector;
+	bool bHasDriveSync = false;
+
+	/** Fuel 0-100, for the low-fuel beacons and arrow. Repo Rally only; -1 elsewhere. */
+	UPROPERTY(Replicated)
+	float RallyFuel = -1.0f;
+
+	/** How far this truck's hook reaches (cm). The aim reticle and the lock read it. */
+	UPROPERTY(Replicated)
+	float RallyHookRange = 0.0f;
+
+	/**
+	 * The hook's target lock: the marked car nearest the aim within a few degrees and in range, with the
+	 * direction a shot at it should take. Used by the reticle (to draw the pulsing ring) and by the shot,
+	 * so what you see locked is what you hit. Null if nothing is locked.
+	 */
+	ADCCRover* FindHookLock(FVector& OutDirection) const;
+
+	/** [Q] uses the rally tool. [F] switches. No-ops everywhere except Repo Rally. */
+	void RallyToolPressed();
+	void RallyCyclePressed() { Server_CycleRallyTool(); }
+
+	UFUNCTION(Server, Reliable)
+	void Server_UseRallyTool();
+
+	/** The aim camera is local, so the hook shot has to carry the direction the driver was looking. */
+	UFUNCTION(Server, Reliable)
+	void Server_FireHook(FVector Dir);
+
+	UFUNCTION(Server, Reliable)
+	void Server_CycleRallyTool();
 
 	// ---------------------------------------------------------------------
 	// DRIFT
@@ -169,7 +343,7 @@ public:
 
 	/** How far Body bobs up/down at rest, in units. Fades out with speed. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|Feel")
-	float HoverBobAmplitude = 12.0f;
+	float HoverBobAmplitude = 8.0f;
 
 	/** One full up-down cycle, in seconds. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|Feel")
@@ -189,11 +363,11 @@ public:
 	 * constant idle motion, this is a reaction to an actual event.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|Feel|Suspension")
-	float SuspensionStiffness = 140.0f;
+	float SuspensionStiffness = 175.0f;
 
 	/** Higher = settles faster/less bouncy. Kept well above the "critically damped" line (2*sqrt(Stiffness)) so this reads as a compress-and-settle, not a wobble. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|Feel|Suspension")
-	float SuspensionDamping = 26.0f;
+	float SuspensionDamping = 34.0f;
 
 	/** Units of initial compression per unit/s of landing speed. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|Feel|Suspension")
@@ -225,7 +399,7 @@ public:
 
 	/** Downward acceleration while airborne, cm/s^2. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|Slopes")
-	float Gravity = 2800.0f;
+	float Gravity = 3200.0f;
 
 	UFUNCTION(BlueprintPure, Category = "Rover|Slopes")
 	bool IsAirborne() const { return bAirborne; }
@@ -560,14 +734,14 @@ public:
 	float WindowRollSeconds = 0.4f;
 
 	// ---------------------------------------------------------------------
-	// RADIO
+	// RADIO  (KMHR 5280)
 	//
-	// Zoe's ask, 2026-09-03: "a car radio button while driving... I will
-	// import music but use samples for now so I know it's working." Only one
-	// real music asset exists anywhere in this project's library
-	// (SoulCity's Soul_Music_FlyUp01_Cue), so RadioTracks ships with exactly
-	// that one entry - an array on purpose, not a single sound reference, so
-	// dropping in real tracks later is a data change, not a code change.
+	// One station. The playlist is every music track in the project: Repo Rally,
+	// Freaks, Swept Away, the SoulCity sample, and Meet the Whoops. [T] tunes in
+	// or off. [C] moves to the next song while the station is on.
+	// Tuning in does not start a file at the top. It drops into a song at a
+	// random point in the middle, the way a station is already on. When that
+	// file ends, the next one plays from the start and the list loops.
 	// ---------------------------------------------------------------------
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|Radio")
@@ -581,8 +755,21 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Rover|Radio")
 	bool IsRadioOn() const { return bRadioOn; }
 
-	/** Server only. Flips bRadioOn; ApplyRadioState makes the audio match. */
+	/** "KMHR 5280   REPO RALLY" while the station is on. Empty when it is off. */
+	UFUNCTION(BlueprintPure, Category = "Rover|Radio")
+	FString GetRadioLine() const;
+
+	/**
+	 * Server. Tunes the cab into KMHR. Track < 0 picks a song at random; otherwise
+	 * that playlist index. Either way the file starts somewhere in its middle.
+	 */
+	void TuneIn(int32 Track = -1);
+
+	/** Server only. Flips the station. Turning it on is a fresh tune-in. */
 	void ToggleRadio();
+
+	/** Server only. The next song, already in progress, while the station is on. */
+	void CycleRadio();
 
 protected:
 	UFUNCTION()
@@ -607,6 +794,8 @@ protected:
 	void DriftReleased();
 	void BoostPressed();
 	void CameraLook(float Value);
+	void CameraPitchLook(float Value);
+	void HookAimPressed();
 
 	/** Blocking-hit handler: stop or bounce depending on what was hit. */
 	virtual void NotifyHit(class UPrimitiveComponent* MyComp, AActor* Other,
@@ -639,18 +828,63 @@ protected:
 	float WindowOpacityCurrent = 1.0f;
 
 	void RadioTogglePressed();
+	void RadioChannelPressed();
 
 	UFUNCTION()
 	void OnRep_RadioOn();
 
-	/** Plays/stops RadioTracks[0] on RadioAudio to match bRadioOn. Runs on
-	 *  every machine (called from both ToggleRadio, for the server's own
-	 *  copy, and OnRep_RadioOn, for everyone else) - the audio itself is
-	 *  local playback, only the on/off state is replicated. */
+	UFUNCTION()
+	void OnRep_RadioTune();
+
+	/** Plays or stops the current station track. The seek and the song are
+	 *  already chosen (RadioStartOffset / RadioTrackIndex). Local playback;
+	 *  the on/off state, the track and the seek are what replicate. */
 	void ApplyRadioState();
+
+	/** Server. When the current file runs out, the next playlist entry starts at the top. */
+	void AdvanceRadio(float DeltaSeconds);
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Rover|Radio")
 	TObjectPtr<class UAudioComponent> RadioAudio;
+
+	/** Which playlist entry is on. Replicated so every cab hears the same song. */
+	UPROPERTY(Replicated)
+	int32 RadioTrackIndex = 0;
+
+	/** Seconds into the file. Nonzero only for a tune-in; the following songs start at 0. */
+	UPROPERTY(Replicated)
+	float RadioStartOffset = 0.0f;
+
+	/** Bumps on every tune-in, track change and shutoff, so clients replay once. */
+	UPROPERTY(ReplicatedUsing = OnRep_RadioTune)
+	int32 RadioTuneSerial = 0;
+
+	/** Labels parallel to RadioTracks. Filled in the constructor, same on every machine. */
+	TArray<FString> RadioTrackNames;
+
+	/** Server clock for the file that is on. Not replicated; clients just play the seek they were given. */
+	float RadioTrackElapsed = 0.0f;
+	float RadioTrackPlaySeconds = 0.0f;
+
+	/** Last RadioTuneSerial this machine actually started, so two rep notifies don't restart the song. */
+	int32 AppliedRadioSerial = -1;
+
+	void ApplyWreckerLook();
+	void UpdateWreckerCrane(float DeltaSeconds);
+
+	/** Crane arm, hinged at the knuckle. Magnet hangs on it until a lock, then rides the mark. */
+	UPROPERTY(Transient)
+	TObjectPtr<UStaticMeshComponent> CraneBoom;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UStaticMeshComponent> Magnet;
+
+	/** Magenta beam from the boom tip to the magnet while it is paid out. */
+	UPROPERTY(Transient)
+	TObjectPtr<UStaticMeshComponent> WinchLine;
+
+	/** 0 magnet seated on the boom, 1 stuck to the mark. */
+	float MagnetAlpha = 0.0f;
 
 	/** Server+local. Turns flight on; assumes CanEngageFlight() already passed. */
 	void EngageFlight();
@@ -729,6 +963,9 @@ protected:
 	/** Camera yaw offset the player has dialled in, and where it is heading. */
 	float CameraYawOffset = 0.0f;
 	float CameraYawTarget = 0.0f;
+
+	/** Pitch while the hook camera is up. The chase view ignores it and sits at -18. */
+	float CameraPitch = -8.0f;
 
 	float PilotingSecondsAccumulated = 0.0f;
 	bool bDriftedCleanlyThisInterval = false;

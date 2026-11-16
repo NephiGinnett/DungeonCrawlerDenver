@@ -1,0 +1,94 @@
+{
+  "TenderiserMallet": {
+    "Rarity": "Bronze",
+    "WeaponSkillId": "Club"
+  },
+  "ChefsKnife": {
+    "Rarity": "Bronze",
+    "WeaponSkillId": "Dagger"
+  },
+  "ServiceTray": {
+    "Rarity": "Bronze"
+  },
+  "PatioSunHat": {
+    "Rarity": "Bronze"
+  },
+  "GreaseApron": {
+    "Rarity": "Bronze"
+  },
+  "NameTagDave": {
+    "Rarity": "Bronze"
+  },
+  "Torch": {
+    "Rarity": "Bronze"
+  },
+  "ThrownBottle": {
+    "Rarity": "Bronze",
+    "WeaponSkillId": "Throwing"
+  },
+  "HighVisibilitySafetyVest": {
+    "Rarity": "Bronze"
+  },
+  "ComplaintFolderOverstuffed": {
+    "Rarity": "Bronze"
+  },
+  "CastIronSkillet": {
+    "Rarity": "Silver",
+    "WeaponSkillId": "ImprovisedWeapons"
+  },
+  "FireAxe": {
+    "Rarity": "Silver",
+    "WeaponSkillId": "Axe"
+  },
+  "FeatureWallShield": {
+    "Rarity": "Silver"
+  },
+  "ManagersBlazer": {
+    "Rarity": "Silver"
+  },
+  "ServiceKnifeSet": {
+    "Rarity": "Silver",
+    "WeaponSkillId": "Throwing"
+  },
+  "SodaGun": {
+    "Rarity": "Silver",
+    "WeaponSkillId": "ImprovisedWeapons"
+  },
+  "FlareGunEmergency": {
+    "Rarity": "Silver"
+  },
+  "SeveranceCheckUncashed": {
+    "Rarity": "Silver"
+  },
+  "Boombox": {
+    "Rarity": "Silver"
+  },
+  "WallSword": {
+    "Rarity": "Gold",
+    "WeaponSkillId": "Longsword"
+  },
+  "ConfettiCrossbow": {
+    "Rarity": "Gold"
+  },
+  "NailGunPro": {
+    "Rarity": "Gold"
+  },
+  "SecuritySidearm": {
+    "Rarity": "Gold"
+  },
+  "HuntingRifleColorado": {
+    "Rarity": "Platinum"
+  },
+  "RiotShotgun": {
+    "Rarity": "Platinum"
+  },
+  "ConfiscatedSMG": {
+    "Rarity": "Platinum"
+  },
+  "BoilerplateRifle": {
+    "Rarity": "Legendary"
+  },
+  "SyndicateBadge": {
+    "Rarity": "Celestial"
+  }
+}

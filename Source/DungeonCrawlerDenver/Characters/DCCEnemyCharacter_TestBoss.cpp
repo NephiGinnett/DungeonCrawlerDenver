@@ -1,6 +1,6 @@
 #include "Characters/DCCEnemyCharacter_TestBoss.h"
 
-#include "Characters/DCCCrawlerAnimSet.h"
+#include "Characters/DCCForgeBody.h"
 #include "Combat/DCCBossComponent.h"
 #include "Stats/DCCStatsComponent.h"
 #include "Items/DCCPickup.h"
@@ -12,22 +12,9 @@ ADCCEnemyCharacter_TestBoss::ADCCEnemyCharacter_TestBoss()
 {
 	DisplayName = NSLOCTEXT("DCC", "TestBossName", "The Interim Manager");
 
-	// Reused rather than a placeholder capsule, so the fight is legible while
-	// this stands in for Voldemortgage. Already on the shared skeleton, so any
-	// of the consolidated animation set works here too.
-	static ConstructorHelpers::FObjectFinder<USkeletalMesh> BossMesh(
-		TEXT("/Game/DCC/Characters/HockeyWings/SK_HockeyWings.SK_HockeyWings"));
-	if (USkeletalMeshComponent* MeshComponent = GetMesh())
-	{
-		if (BossMesh.Succeeded())
-		{
-			MeshComponent->SetSkeletalMesh(BossMesh.Object);
-		}
-
-		// A boss should read as bigger than the mob standing next to it, even
-		// wearing someone else's model.
-		MeshComponent->SetRelativeScale3D(FVector(1.3f, 1.3f, 1.3f));
-	}
+	// An NPC Forge office worker in a manager's suit, scaled up so a boss reads as bigger than the mob beside it
+	// (2026-11-15: enemies no longer wear the crawlers' bodies; this used to be CJ's).
+	DCCForgeBody::Apply(*this, DCCForgeBody::Body(5), 1.3f);
 
 	// Tougher and harder-hitting than a Brute, but not tuned for real - this
 	// only has to survive long enough to demonstrate the charge and the lien.
@@ -76,8 +63,5 @@ ADCCEnemyCharacter_TestBoss::ADCCEnemyCharacter_TestBoss()
 	Boss->LienLine = NSLOCTEXT("DCC", "TestBossLien",
 		"A balance remains on your account.");
 
-	// HockeyWings reskin, so the shared clips apply. This one exists purely to
-	// prove the exit lock end to end - but a boss that never moves proves less
-	// than one that swings, so it gets the same set as the real fight.
-	DCCCrawlerAnimSet::Apply(*this, /*EmoteChanceOnKill=*/0.0f);
+	// Clips come with the Forge body (DCCForgeBody::Apply above).
 }

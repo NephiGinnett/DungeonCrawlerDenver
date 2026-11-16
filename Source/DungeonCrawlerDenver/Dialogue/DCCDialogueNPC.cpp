@@ -1,4 +1,7 @@
 #include "Dialogue/DCCDialogueNPC.h"
+#include "Dialogue/DCCVoiceLines.h"
+#include "Components/AudioComponent.h"
+#include "Sound/SoundBase.h"
 
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
@@ -62,8 +65,8 @@ ADCCDialogueNPC::ADCCDialogueNPC()
 	Speech->SetupAttachment(Collision);
 	Speech->SetRelativeLocation(FVector(0.0f, 0.0f, 120.0f));
 	Speech->SetHorizontalAlignment(EHTA_Center);
-	Speech->SetVerticalAlignment(EVRTA_TextCenter);
-	Speech->SetWorldSize(20.0f);
+	Speech->SetVerticalAlignment(EVRTA_TextBottom); // a wrapped line grows upward, off the NPC's face
+	Speech->SetWorldSize(16.0f);
 	Speech->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	// Movable for the same reason every other runtime text component here is: a
@@ -186,14 +189,51 @@ void ADCCDialogueNPC::TryPlayerInteract(ADCCCharacterBase* Interactor)
 	}
 }
 
+void ADCCDialogueNPC::PlayVoiceFor(const FDCCDialogueLine& Line)
+{
+	if (UAudioComponent* Previous = CurrentVoice.Get())
+	{
+		Previous->Stop(); // skipping ahead cuts the old line off
+	}
+	const FString Path = DCCVoice::FindLine(SpeakerId, Line.LineId);
+	if (Path.IsEmpty())
+	{
+		return;
+	}
+	UAudioComponent* Voice = DCCVoice::PlayAt(this, Path, GetActorLocation() + FVector(0, 0, 60));
+	CurrentVoice = Voice;
+	if (Voice && Voice->Sound)
+	{
+		// Keep the words up for as long as they are being said.
+		LineTimeRemaining = FMath::Max(LineTimeRemaining, Voice->Sound->Duration + 0.5f);
+	}
+}
+
 void ADCCDialogueNPC::ShowLine(const FDCCDialogueLine& Line)
 {
 	bSpeaking = true;
 	LineTimeRemaining = Line.DisplaySeconds > 0.0f ? Line.DisplaySeconds : DefaultLineSeconds;
+	PlayVoiceFor(Line);
 
+	CurrentLineText = Line.Text;
 	if (Speech)
 	{
-		Speech->SetText(Line.Text);
+		// Wrapped to a short block (2026-11-13): a long line as one strip of world
+		// text ran wider than a cabin, off screen and into walls.
+		TArray<FString> Words;
+		Line.Text.ToString().ParseIntoArrayWS(Words);
+		FString Wrapped, Row;
+		for (const FString& Word : Words)
+		{
+			if (!Row.IsEmpty() && Row.Len() + 1 + Word.Len() > 34)
+			{
+				Wrapped += Row + TEXT("\n");
+				Row.Reset();
+			}
+			Row += Row.IsEmpty() ? Word : TEXT(" ") + Word;
+		}
+		Wrapped += Row;
+		Speech->SetText(FText::FromString(Wrapped));
 		Speech->SetTextRenderColor(SpeechColour.ToFColor(/*bSRGB=*/true));
 		Speech->SetVisibility(true);
 	}
@@ -207,6 +247,7 @@ void ADCCDialogueNPC::ShowLine(const FDCCDialogueLine& Line)
 void ADCCDialogueNPC::ShowIdleText()
 {
 	bSpeaking = false;
+	CurrentLineText = FText::GetEmpty();
 
 	if (!Speech)
 	{

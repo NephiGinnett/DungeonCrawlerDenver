@@ -1,4 +1,17 @@
 #include "Characters/DCCCharacterBase.h"
+#include "Interfaces/MovementBaseInterface.h"
+#include "Items/DCCChestSound.h"
+#include "Items/DCCLootContainer.h"
+#include "Engine/OverlapResult.h"
+#include "Arcade/DCCClimbItems.h"
+#include "Arcade/DCCArcadeGames.h"
+#include "Arcade/DCCCosmetics.h"
+#include "Arcade/DCCWalletComponent.h"
+#include "Components/SpotLightComponent.h"
+#include "Items/DCCInventoryComponent.h"
+#include "EngineUtils.h"
+#include "Characters/DCCRetargetFix.h"
+#include "Arcade/DCCWalletComponent.h"
 
 #include "Stats/DCCStatsComponent.h"
 #include "Stats/DCCRuleset.h"
@@ -26,6 +39,12 @@
 #include "Equipment/DCCEquipmentComponent.h"
 #include "Classes/DCCClassComponent.h"
 #include "Onboarding/DCCOnboardingComponent.h"
+#include "Rooms/DCCTaleFloor.h"
+#include "Bench/DCCBenchData.h"
+#include "Session/DCCSaveSystem.h"
+#include "Items/DCCPickup_Equipment.h"
+#include "Engine/PointLight.h"
+#include "Components/PointLightComponent.h"
 #include "Quests/DCCQuestComponent.h"
 #include "Dialogue/DCCDialogueNPC.h"
 #include "Dialogue/DCCDialogueNPC_LiftAttendant.h"
@@ -39,6 +58,7 @@
 #include "Net/UnrealNetwork.h"
 #include "UI/DCCEventLogTypes.h"
 #include "Components/CapsuleComponent.h"
+#include "GameFramework/SpringArmComponent.h"
 #include "Components/InputComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
@@ -51,6 +71,15 @@
 #include "UnrealClient.h"
 
 FDCCAttackAttempted ADCCCharacterBase::OnAnyAttackAttempted;
+FDCCDamageLanded ADCCCharacterBase::OnAnyDamageLanded;
+
+void ADCCCharacterBase::NoteDamageDealtTo(ADCCCharacterBase* Target, int32 Amount)
+{
+	if (HasAuthority() && Target && Amount > 0)
+	{
+		OnAnyDamageLanded.Broadcast(this, Target, Amount);
+	}
+}
 
 ADCCCharacterBase::ADCCCharacterBase()
 {
@@ -117,6 +146,7 @@ ADCCCharacterBase::ADCCCharacterBase()
 	Equipment = CreateDefaultSubobject<UDCCEquipmentComponent>(TEXT("Equipment"));
 	Class = CreateDefaultSubobject<UDCCClassComponent>(TEXT("Class"));
 	Onboarding = CreateDefaultSubobject<UDCCOnboardingComponent>(TEXT("Onboarding"));
+	Wallet = CreateDefaultSubobject<UDCCWalletComponent>(TEXT("Wallet"));
 
 	Nameplate = CreateDefaultSubobject<UTextRenderComponent>(TEXT("Nameplate"));
 	Nameplate->SetupAttachment(RootComponent);
@@ -166,8 +196,10 @@ ADCCCharacterBase::ADCCCharacterBase()
 void ADCCCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME_CONDITION(ADCCCharacterBase, QuickSlots, COND_OwnerOnly);
 
 	DOREPLIFETIME(ADCCCharacterBase, ActiveClimbPoint);
+	DOREPLIFETIME(ADCCCharacterBase, bRecordingFootage);
 	DOREPLIFETIME(ADCCCharacterBase, DisplayName);
 	DOREPLIFETIME(ADCCCharacterBase, bIsSprinting);
 	DOREPLIFETIME(ADCCCharacterBase, bIsMounted);
@@ -195,14 +227,51 @@ void ADCCCharacterBase::PossessedBy(AController* NewController)
 	if (Stats && Cast<APlayerController>(NewController))
 	{
 		Stats->SetIsPlayerCharacter(true);
+
+		// dcc.AutoQuickPlay 1: skip the bedroom and drop straight onto floor 1.
+		ADCCTaleFloor::ScheduleQuickPlay(this);
 	}
 
 	RefreshNameplate();
 }
 
+void ADCCCharacterBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	// Destroyed, travelling, or the game closing: keep this crawler's progress.
+	// Only the pawn that loaded the save may write it (see DCCSave::Save).
+	if (HasAuthority())
+	{
+		DCCSave::Save(this);
+	}
+	Super::EndPlay(EndPlayReason);
+}
+
 void ADCCCharacterBase::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// Characters spawned straight from a C++ class (the dungeon's and the gate's enemies) never had a Blueprint set
+	// their body up, so they stood in a T-pose a metre off the floor (found 2026-11-15). Two fixes, only where nothing
+	// else has decided: no anim Blueprint but clips assigned means play the clips (single-node mode, which
+	// UpdateLocomotionAnimation drives), and a body left at the capsule's centre goes down to the capsule's feet.
+	if (USkeletalMeshComponent* Body = GetMesh())
+	{
+		if (Body->GetSkeletalMeshAsset() && Body->GetAnimationMode() == EAnimationMode::AnimationBlueprint && !Body->GetAnimClass()
+			&& (IdleAnimation || WalkAnimation || RunAnimation))
+		{
+			Body->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+		}
+		if (Body->GetSkeletalMeshAsset() && Body->GetRelativeLocation().IsNearlyZero() && GetCapsuleComponent())
+		{
+			Body->SetRelativeLocation(FVector(0.0f, 0.0f, -GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight()));
+		}
+	}
+
+	// Shared clips must not stretch this body to another crawler's bone lengths.
+	DCCRetarget::EnsureForMesh(GetMesh());
+
+	// Gear bench bone nudges (F3) apply on top of every animation, every frame.
+	DCCBench::BindBoneNudges(GetMesh());
 
 	// Captured before anything can ragdoll. Reviving reattaches the mesh to the
 	// capsule and needs the offset it had at rest - read it back after a ragdoll
@@ -326,6 +395,11 @@ void ADCCCharacterBase::ApplyDerivedMovementSpeed()
 	if (bIsCasting)
 	{
 		Speed = 0.0f;
+	}
+
+	if (Wallet && Wallet->WornIn(DCCCosmetics::Aura) == FName(TEXT("SponsorOrbs")))
+	{
+		Speed *= 1.10f;
 	}
 
 	Movement->MaxWalkSpeed = Speed;
@@ -512,7 +586,8 @@ void ADCCCharacterBase::OnPrimaryPressed()
 	// Climbing wins: while on a wall the button is the climb, not a swing.
 	if (IsClimbing())
 	{
-		SetClimbInput(/*bUp=*/true, /*bDown=*/bClimbInputDown);
+		bClimbHeld = true;
+		SetClimbInput(/*bUp=*/!bDescendHeld, /*bDown=*/bDescendHeld);
 		return;
 	}
 
@@ -520,6 +595,20 @@ void ADCCCharacterBase::OnPrimaryPressed()
 	// prompt they have not answered.
 	if (PendingClimbPoint)
 	{
+		return;
+	}
+
+	// Hold-to-climb: with Climbing equipped the button is "grab and climb", held.
+	// TickHoldToClimb keeps trying to grab while it is held, so walking into a
+	// wall with the button down grabs it too.
+	if (IsClimbingEquipped())
+	{
+		bClimbHeld = true;
+		ClimbGrabRetry = 0.0f;
+		if (!TryGrabWallAhead())
+		{
+			ShowLocalNotice(NSLOCTEXT("DCC", "ClimbHoldHint", "Keep holding and walk into a wall to grab it."));
+		}
 		return;
 	}
 
@@ -551,7 +640,9 @@ void ADCCCharacterBase::OnPrimaryPressed()
 	// mistaken for a climb attempt. Climbing is only probed for when there is
 	// nothing to fight, which is also the one situation where "the click did
 	// nothing" would otherwise be true instead of a swing-and-miss.
-	if (!FindNearestHostileInRange() && TrySelectClimbTargetUnderCursor())
+	// Climbing needs the skill equipped now (2026-11-13); a wall under the cursor
+	// with nothing to fight just says how.
+	if (!FindNearestHostileInRange() && HintEquipClimbingIfWall())
 	{
 		return;
 	}
@@ -572,9 +663,11 @@ void ADCCCharacterBase::OnPrimaryPressed()
 
 void ADCCCharacterBase::OnPrimaryReleased()
 {
+	bClimbHeld = false;
 	if (IsClimbing())
 	{
-		SetClimbInput(/*bUp=*/false, /*bDown=*/bClimbInputDown);
+		// Letting go of the button is letting go of the wall.
+		ReleaseClimb();
 	}
 }
 
@@ -582,7 +675,8 @@ void ADCCCharacterBase::OnSecondaryPressed()
 {
 	if (IsClimbing())
 	{
-		SetClimbInput(/*bUp=*/bClimbInputUp, /*bDown=*/true);
+		bDescendHeld = true;
+		SetClimbInput(/*bUp=*/false, /*bDown=*/true);
 		return;
 	}
 
@@ -596,9 +690,10 @@ void ADCCCharacterBase::OnSecondaryPressed()
 
 void ADCCCharacterBase::OnSecondaryReleased()
 {
+	bDescendHeld = false;
 	if (IsClimbing())
 	{
-		SetClimbInput(/*bUp=*/bClimbInputUp, /*bDown=*/false);
+		SetClimbInput(/*bUp=*/bClimbHeld, /*bDown=*/false);
 		return;
 	}
 
@@ -1174,7 +1269,7 @@ void ADCCCharacterBase::Server_BeginClimb_Implementation(ADCCClimbPoint* Point)
 		Skills->MarkSkillUsed(Point->ClimbSkillId);
 	}
 
-	SetActorLocation(Point->GetAttachLocationFor(this, GetActorLocation().Z));
+	// No snap onto the wall here any more: TickStamina eases the climber onto it.
 
 	ADCCGameState::Log(this, EDCCLogCategory::Encounter, FText::Format(
 		NSLOCTEXT("DCC", "ClimbBegin", "{0} takes hold of the rock."),
@@ -1281,8 +1376,251 @@ void ADCCCharacterBase::ReleaseClimb()
 	Server_ReleaseClimb();
 }
 
+void ADCCCharacterBase::UseClimbTool()
+{
+	if (Wallet && !Wallet->ClimbTools.IsEmpty())
+	{
+		Wallet->Server_UseClimbTool();
+	}
+}
+
+void ADCCCharacterBase::NextClimbTool()
+{
+	if (Wallet && Wallet->ClimbTools.Num() > 1)
+	{
+		Wallet->Server_NextClimbTool();
+	}
+}
+
+void ADCCCharacterBase::SnapTo(const FVector& Location)
+{
+	SetActorLocation(Location);
+	if (HasAuthority() && !IsLocallyControlled())
+	{
+		Client_SnapTo(Location);
+	}
+}
+
+void ADCCCharacterBase::Client_SnapTo_Implementation(FVector Location)
+{
+	SetActorLocation(Location);
+}
+
+void ADCCCharacterBase::ForceReleaseClimb()
+{
+	if (HasAuthority() && IsClimbing())
+	{
+		Server_ReleaseClimb_Implementation();
+	}
+}
+
+bool ADCCCharacterBase::TryGrabWallAhead()
+{
+	UWorld* World = GetWorld();
+	if (!World || IsClimbing() || !IsAlive())
+	{
+		return false;
+	}
+
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+	Params.bTraceComplex = true;
+
+	// Straight ahead at chest height, then the way the camera faces, since the
+	// body turns to its movement and the player may be looking past it.
+	FVector Directions[2] = { GetActorForwardVector(), GetActorForwardVector() };
+	if (const AController* C = GetController())
+	{
+		Directions[1] = FRotator(0.0f, C->GetControlRotation().Yaw, 0.0f).Vector();
+	}
+	for (const FVector& Direction : Directions)
+	{
+		const FVector Start = GetActorLocation() + FVector(0, 0, 40.0f);
+		FHitResult Hit;
+		if (!World->LineTraceSingleByChannel(Hit, Start, Start + Direction * GenericClimbReachDistance, ECC_Visibility, Params))
+		{
+			continue;
+		}
+		if (Cast<ADCCCharacterBase>(Hit.GetActor()) || FMath::Abs(Hit.Normal.Z) > 0.5f)
+		{
+			continue;
+		}
+		if (ADCCClimbPoint* Point = Cast<ADCCClimbPoint>(Hit.GetActor()))
+		{
+			if (HasAuthority()) { Server_BeginClimb_Implementation(Point); } else { Server_BeginClimb(Point); }
+			return true;
+		}
+		if (HasAuthority()) { Server_RequestGenericClimb_Implementation(Hit.Location, Hit.Normal); }
+		else { Server_RequestGenericClimb(Hit.Location, Hit.Normal); }
+		return true;
+	}
+	return false;
+}
+
+bool ADCCCharacterBase::HintEquipClimbingIfWall()
+{
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	UWorld* World = GetWorld();
+	if (!PC || !World)
+	{
+		return false;
+	}
+	FVector CameraLocation;
+	FRotator CameraRotation;
+	PC->GetPlayerViewPoint(CameraLocation, CameraRotation);
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+	FHitResult Hit;
+	if (!World->LineTraceSingleByChannel(Hit, CameraLocation, CameraLocation + CameraRotation.Vector() * 5000.0f, ECC_Visibility, Params)
+		|| Cast<ADCCCharacterBase>(Hit.GetActor()) || FMath::Abs(Hit.Normal.Z) > 0.5f
+		|| FVector::Dist(Hit.Location, GetActorLocation()) > GenericClimbReachDistance)
+	{
+		return false;
+	}
+	const float FootZ = GetActorLocation().Z - (GetCapsuleComponent() ? GetCapsuleComponent()->GetScaledCapsuleHalfHeight() : 90.0f);
+	if (Hit.Location.Z < FootZ + 30.0f)
+	{
+		return false;
+	}
+	ShowLocalNotice(NSLOCTEXT("DCC", "ClimbEquipHint", "Equip Climbing (hotbar) and hold the left mouse button to climb."));
+	return true;
+}
+
+void ADCCCharacterBase::TickHoldToClimb(float DeltaSeconds)
+{
+	if (!IsLocallyControlled())
+	{
+		return;
+	}
+	// Unequipping Climbing mid-climb lets go, like opening your hand.
+	if (IsClimbing() && !IsClimbingEquipped())
+	{
+		ReleaseClimb();
+		return;
+	}
+
+	if (!bClimbHeld || !IsClimbingEquipped())
+	{
+		return;
+	}
+	if (IsClimbing())
+	{
+		// The grab landed while the button was held: start climbing at once.
+		const bool bWantUp = !bDescendHeld;
+		if (bClimbInputUp != bWantUp || bClimbInputDown != bDescendHeld)
+		{
+			SetClimbInput(bWantUp, bDescendHeld);
+		}
+		return;
+	}
+	ClimbGrabRetry -= DeltaSeconds;
+	if (ClimbGrabRetry <= 0.0f)
+	{
+		ClimbGrabRetry = 0.15f;
+		TryGrabWallAhead();
+	}
+}
+
+void ADCCCharacterBase::TickClimbCamera(float DeltaSeconds)
+{
+	if (!IsLocallyControlled())
+	{
+		return;
+	}
+	USpringArmComponent* Boom = FindComponentByClass<USpringArmComponent>();
+	if (!Boom)
+	{
+		return;
+	}
+	if (BaseArmLength < 0.0f)
+	{
+		BaseArmLength = Boom->TargetArmLength;
+		BaseSocketOffset = Boom->SocketOffset;
+		bBaseCollisionTest = Boom->bDoCollisionTest;
+		bBaseCameraLag = Boom->bEnableCameraLag;
+	}
+
+	const bool bClimbing = IsClimbing();
+	const float Target = bClimbing ? 1.0f : 0.0f;
+	ClimbCamBlend = FMath::FInterpTo(ClimbCamBlend, Target, DeltaSeconds, bClimbing ? 3.0f : 2.0f);
+	if (ClimbCamBlend < 0.001f && !bClimbing)
+	{
+		ClimbCamBlend = 0.0f;
+		Boom->TargetArmLength = BaseArmLength;
+		Boom->SocketOffset = BaseSocketOffset;
+		Boom->bDoCollisionTest = bBaseCollisionTest;
+		Boom->bEnableCameraLag = bBaseCameraLag;
+		return;
+	}
+
+	Boom->TargetArmLength = FMath::Lerp(BaseArmLength, FMath::Max(BaseArmLength, 750.0f), ClimbCamBlend);
+	Boom->SocketOffset = FMath::Lerp(BaseSocketOffset, BaseSocketOffset + FVector(0.0f, 0.0f, 120.0f), ClimbCamBlend);
+	Boom->bDoCollisionTest = !bClimbing && bBaseCollisionTest;
+	Boom->bEnableCameraLag = true;
+	Boom->CameraLagSpeed = 8.0f;
+
+	// Face the wall: the camera sits behind the climber, outside the rock, with
+	// the climber and the wall above in view. Pitch stays the player's, within reason.
+	AController* C = GetController();
+	if (bClimbing && C && ActiveClimbPoint)
+	{
+		const FVector Wall = ActiveClimbPoint->IsWallPlane()
+			? -ActiveClimbPoint->WallNormal
+			: (ActiveClimbPoint->GetActorLocation() - GetActorLocation()).GetSafeNormal2D();
+		FRotator Want = C->GetControlRotation();
+		Want.Yaw = FMath::FixedTurn(Want.Yaw, Wall.Rotation().Yaw, 220.0f * DeltaSeconds);
+		Want.Pitch = FMath::ClampAngle(Want.Pitch, -45.0f, 5.0f);
+		C->SetControlRotation(Want);
+	}
+}
+
+int32 ADCCCharacterBase::ModifyIncomingDamage(int32 Damage, ADCCCharacterBase* Attacker)
+{
+	if (Damage <= 0 || !Wallet)
+	{
+		return Damage;
+	}
+	const FName Plate = Wallet->WornIn(DCCCosmetics::Shoulders);
+	float Keep = 1.0f;
+	if (Plate == FName(TEXT("CardboardPlate"))) { Keep = 0.85f; }
+	else if (Plate == FName(TEXT("SpikedPauldrons"))) { Keep = 0.70f; }
+	else if (Plate == FName(TEXT("PitBossPlate"))) { Keep = 0.55f; }
+	(void)Attacker;
+	return FMath::Max(1, FMath::RoundToInt(Damage * Keep));
+}
+
+void ADCCCharacterBase::Landed(const FHitResult& Hit)
+{
+	Super::Landed(Hit);
+	if (!HasAuthority() || !Stats || !IsAlive())
+	{
+		return;
+	}
+	float Metres = (FallPeakZ - GetActorLocation().Z) / 100.0f;
+	if (Wallet && Wallet->WornIn(DCCCosmetics::Back) == FName(TEXT("Cape")))
+	{
+		Metres *= 0.55f;
+	}
+	FallPeakZ = GetActorLocation().Z;
+	const UWorld* World = GetWorld();
+	if (Metres <= SafeFallMetres || (World && World->GetTimeSeconds() < FallSafeUntil))
+	{
+		return;
+	}
+	// Grows from nothing at SafeFallMetres to everything at FatalFallMetres.
+	const float Fraction = FMath::Clamp((Metres - SafeFallMetres) / FMath::Max(1.0f, FatalFallMetres - SafeFallMetres), 0.0f, 1.0f);
+	const int32 Damage = FMath::Max(1, FMath::CeilToInt(Stats->MaxHitPoints * Fraction));
+	Stats->ApplyDamage(Damage);
+	Client_ShowClimbNotice(FText::Format(NSLOCTEXT("DCC", "FallDamage", "You fell {0} m. That's going to leave a mark (-{1})."),
+		FText::AsNumber(FMath::RoundToInt(Metres)), FText::AsNumber(Damage)));
+	ADCCGameState::Log(this, EDCCLogCategory::Combat, FText::Format(
+		NSLOCTEXT("DCC", "LogFallDamage", "{0} falls {1} m and takes {2}."),
+		DisplayName.IsEmpty() ? FText::FromString(GetName()) : DisplayName, FText::AsNumber(FMath::RoundToInt(Metres)), FText::AsNumber(Damage)));
+}
+
 void ADCCCharacterBase::Server_ReleaseClimb_Implementation()
 {
+	bCrawling = false;
 	if (!ActiveClimbPoint)
 	{
 		return;
@@ -1367,9 +1705,19 @@ void ADCCCharacterBase::TickClimbMovementCosmetic(float DeltaSeconds)
 		return;
 	}
 
+	if (bCrawling && TickLedgeCrawl(DeltaSeconds))
+	{
+		return; // the server ends the crawl and puts us on top
+	}
+
 	const bool bMoving = bClimbInputUp != bClimbInputDown;
 	if (!bMoving)
 	{
+		const FVector Hold = ActiveClimbPoint->GetAttachLocationFor(this, GetActorLocation().Z);
+		if (FVector::DistSquared2D(Hold, GetActorLocation()) > 1.0f)
+		{
+			SetActorLocation(ClimbStepToward(Hold, DeltaSeconds));
+		}
 		return;
 	}
 
@@ -1385,7 +1733,189 @@ void ADCCCharacterBase::TickClimbMovementCosmetic(float DeltaSeconds)
 	float NewZ = GetActorLocation().Z + (Speed * Direction * DeltaSeconds);
 	NewZ = FMath::Clamp(NewZ, ActiveClimbPoint->GetBottomZ(), ActiveClimbPoint->GetTopZ());
 
-	SetActorLocation(ActiveClimbPoint->GetAttachLocationFor(this, NewZ));
+	SetActorLocation(ClimbStepToward(ActiveClimbPoint->GetAttachLocationFor(this, NewZ), DeltaSeconds));
+}
+
+bool ADCCCharacterBase::BeginLedgeCrawl(const FHitResult& Underside)
+{
+	UWorld* World = GetWorld();
+	UCapsuleComponent* Capsule = GetCapsuleComponent();
+	if (!World || !Capsule || !ActiveClimbPoint)
+	{
+		return false;
+	}
+	const float R = Capsule->GetScaledCapsuleRadius();
+	const float H = Capsule->GetScaledCapsuleHalfHeight();
+	const FVector Here = GetActorLocation();
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(DCCLedgeCrawl), false, this);
+
+	// Outward, away from the wall.
+	FVector Out = ActiveClimbPoint->IsWallPlane()
+		? ActiveClimbPoint->WallNormal
+		: (Here - ActiveClimbPoint->GetActorLocation()).GetSafeNormal2D();
+	Out.Z = 0.0f;
+	Out = Out.GetSafeNormal();
+	if (Out.IsNearlyZero())
+	{
+		return false;
+	}
+
+	// The ledge's top, straight above us.
+	FHitResult Top;
+	// 0.85, not 0.6: a 45-degree overhang wedge is not a top you can crawl onto (2026-11-13).
+	// From just above what we bumped into (a ledge slab is 2 m thick), not 4 m over our head: a start
+	// point inside the next rock up reported a fake, perfectly flat "top" (2026-11-13). A hit that
+	// starts inside something is never a top.
+	const float TopStart = FMath::Max(Here.Z + H, Underside.ImpactPoint.Z) + 280.0f;
+	if (!World->LineTraceSingleByChannel(Top, FVector(Here.X, Here.Y, TopStart), Here, ECC_WorldStatic, Params)
+		|| Top.bStartPenetrating || Top.ImpactNormal.Z < 0.85f)
+	{
+		UE_LOG(LogTemp, Verbose, TEXT("[DCC Crawl] no flat top above %s (hit %d, %s, normal %s)"), *Here.ToCompactString(),
+			Top.bBlockingHit, Top.GetActor() ? *Top.GetActor()->GetName() : TEXT("-"), *Top.ImpactNormal.ToCompactString());
+		return false;
+	}
+	const float TopZ = Top.ImpactPoint.Z;
+
+	// How far it sticks out: step outward along its top until there is no top.
+	float Edge = 0.0f;
+	for (float D = 40.0f; D <= 700.0f; D += 40.0f)
+	{
+		const FVector Probe = Here + Out * D;
+		FHitResult Hit;
+		if (!World->LineTraceSingleByChannel(Hit, FVector(Probe.X, Probe.Y, TopZ + 60.0f), FVector(Probe.X, Probe.Y, TopZ - 40.0f), ECC_WorldStatic, Params))
+		{
+			break;
+		}
+		Edge = D;
+	}
+	// Then to 5 cm, so the way round never grazes the lip (DCC.ClimbTest caught that).
+	for (float D = Edge + 5.0f; D < Edge + 40.0f; D += 5.0f)
+	{
+		const FVector Probe = Here + Out * D;
+		FHitResult Hit;
+		if (!World->LineTraceSingleByChannel(Hit, FVector(Probe.X, Probe.Y, TopZ + 60.0f), FVector(Probe.X, Probe.Y, TopZ - 40.0f), ECC_WorldStatic, Params))
+		{
+			break;
+		}
+		Edge = D;
+	}
+	const float Clear = Edge + R + 30.0f;
+
+	// Where to end up: on top, near the wall (or mid-ledge if that is blocked).
+	FVector Stand = FVector::ZeroVector;
+	for (const float D : { R + 70.0f, Edge * 0.5f, Edge - R })
+	{
+		const FVector Candidate(Here.X + Out.X * D, Here.Y + Out.Y * D, TopZ + H + 4.0f);
+		// Blocking only: an overlap volume (a supply chest's pickup sphere on the ledge) is not "in the way".
+		if (!World->OverlapBlockingTestByChannel(Candidate, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeCapsule(R, H - 2.0f), Params))
+		{
+			Stand = Candidate;
+			break;
+		}
+	}
+	if (Stand.IsZero())
+	{
+		{
+			TArray<FOverlapResult> Blockers;
+			const FVector Probe(Here.X + Out.X * (R + 70.0f), Here.Y + Out.Y * (R + 70.0f), TopZ + H + 4.0f);
+			World->OverlapMultiByChannel(Blockers, Probe, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeCapsule(R, H - 2.0f), Params);
+			FString Names;
+			for (const FOverlapResult& O : Blockers) { if (O.bBlockingHit && O.GetActor()) { Names += O.GetActor()->GetName() + TEXT(" "); } }
+			UE_LOG(LogTemp, Verbose, TEXT("[DCC Crawl] nowhere to stand on top at %s (edge %.0f, top %.0f from %s): blocked by %s"),
+				*Here.ToCompactString(), Edge, TopZ, Top.GetActor() ? *Top.GetActor()->GetName() : TEXT("-"), *Names);
+		}
+		return false;
+	}
+
+	// Out along the underside, up around the lip, in over the top - with the
+	// corners rounded, so it reads as crawling over rock, not sliding on rails.
+	const FVector Under = Here + Out * Clear;
+	const FVector Over(Under.X, Under.Y, TopZ + H + 6.0f); // just clears the lip: no floating above the top
+	TArray<FVector> Path;
+	Path.Add(Here);
+	Path.Add(Here + Out * (Clear * 0.55f) - FVector(0, 0, 15.0f));
+	Path.Add(Under - Out * 20.0f - FVector(0, 0, 15.0f));
+	Path.Add(Under + FVector(0, 0, (Over.Z - Under.Z) * 0.35f));
+	Path.Add(Under + FVector(0, 0, (Over.Z - Under.Z) * 0.75f) - Out * 10.0f);
+	Path.Add(Over - Out * 45.0f);
+	Path.Add(FMath::Lerp(Over, Stand, 0.55f) + FVector(0, 0, 2.0f));
+	Path.Add(Stand);
+
+	CrawlPath = Path;
+	CrawlDistance = 0.0f;
+	bCrawling = true;
+	if (!IsLocallyControlled())
+	{
+		Client_BeginLedgeCrawl(Path);
+	}
+	return true;
+}
+
+void ADCCCharacterBase::Client_BeginLedgeCrawl_Implementation(const TArray<FVector>& Path)
+{
+	CrawlPath = Path;
+	CrawlDistance = 0.0f;
+	bCrawling = true;
+}
+
+bool ADCCCharacterBase::TickLedgeCrawl(float DeltaSeconds)
+{
+	if (!bCrawling || CrawlPath.Num() < 2)
+	{
+		bCrawling = false;
+		return false;
+	}
+	// Along the path at a little over twice the climber's wall speed (it is a short
+	// scramble, not a pitch): a novice takes a few seconds over an outcrop, an expert ~1.
+	const float Speed = FMath::Clamp(GetClimbSpeedNow() * 2.2f, 120.0f, 420.0f);
+	CrawlDistance += Speed * DeltaSeconds;
+
+	float Remaining = CrawlDistance;
+	for (int32 i = 1; i < CrawlPath.Num(); ++i)
+	{
+		const float Segment = FVector::Dist(CrawlPath[i - 1], CrawlPath[i]);
+		if (Remaining <= Segment)
+		{
+			SetActorLocation(FMath::Lerp(CrawlPath[i - 1], CrawlPath[i], Segment > 0.0f ? Remaining / Segment : 1.0f));
+			// The last stretch is standing up, so it eases the tilt off rather than leaning into it.
+			CrawlDirection = i == CrawlPath.Num() - 1 ? FVector::ZeroVector : (CrawlPath[i] - CrawlPath[i - 1]).GetSafeNormal();
+			return true;
+		}
+		Remaining -= Segment;
+	}
+
+	// Over. The server stands the climber on top and tells their machine.
+	bCrawling = false;
+	const FVector Stand = CrawlPath.Last();
+	SetActorLocation(Stand);
+	if (HasAuthority())
+	{
+		Server_ReleaseClimb_Implementation();
+		SetActorLocation(Stand);
+		if (UCharacterMovementComponent* Movement = GetCharacterMovement())
+		{
+			Movement->SetMovementMode(MOVE_Walking);
+			Movement->bJustTeleported = true;
+		}
+		FallPeakZ = Stand.Z;
+		if (!IsLocallyControlled())
+		{
+			Client_SyncClimbLocation(Stand, true);
+		}
+	}
+	return false;
+}
+
+FVector ADCCCharacterBase::ClimbStepToward(const FVector& Target, float DeltaSeconds) const
+{
+	const FVector Here = GetActorLocation();
+	FVector Flat(Target.X - Here.X, Target.Y - Here.Y, 0.0f);
+	const float MaxStep = 700.0f * DeltaSeconds;
+	if (Flat.SizeSquared() > MaxStep * MaxStep)
+	{
+		Flat = Flat.GetSafeNormal() * MaxStep;
+	}
+	return FVector(Here.X + Flat.X, Here.Y + Flat.Y, Target.Z);
 }
 
 void ADCCCharacterBase::Client_SyncClimbLocation_Implementation(FVector NewLocation, bool bLandOnGround)
@@ -1488,11 +2018,60 @@ void ADCCCharacterBase::TickStamina(float DeltaSeconds)
 	if (ActiveClimbPoint)
 	{
 		bExerting = true;
+		StaminaGroundedFor = 0.0f;
 
-		const bool bMoving = bClimbInputUp != bClimbInputDown;
-		const float Cost = bMoving
+		// Crawling over a ledge: follow the path; it costs climbing stamina as usual.
+		if (bCrawling)
+		{
+			const float Fair = ClimbStaminaReferenceMax > 0.0f && Stats->MaxStamina > 0.0f ? Stats->MaxStamina / ClimbStaminaReferenceMax : 1.0f;
+			const float Pack = (Wallet && Wallet->WornIn(DCCCosmetics::Back) == FName(TEXT("TrailPack"))) ? 0.80f : 1.0f;
+			Stats->ConsumeStamina(Ruleset->GetClimbStaminaCost(ClimbRank) * FMath::Max(0.0f, ClimbStaminaMultiplier) * Pack * Fair * DeltaSeconds);
+			TickLedgeCrawl(DeltaSeconds);
+			return;
+		}
+
+		// Off the side of the rock (2026-11-13: Zoe could climb sideways past the
+		// mountain's corner and hang on air). Nothing solid behind us at chest or
+		// waist height means there is no wall here any more: let go and fall.
+		if (HasAuthority() && ActiveClimbPoint->IsWallPlane())
+		{
+			FCollisionQueryParams WallQuery(SCENE_QUERY_STAT(DCCClimbEdge), false, this);
+			const float Reach = (GetCapsuleComponent() ? GetCapsuleComponent()->GetScaledCapsuleRadius() : 35.0f) + 90.0f;
+			const FVector At = GetActorLocation();
+			FHitResult WallHit;
+			const bool bChest = GetWorld()->LineTraceSingleByChannel(WallHit, At + FVector(0, 0, 40), At + FVector(0, 0, 40) - ActiveClimbPoint->WallNormal * Reach, ECC_WorldStatic, WallQuery);
+			const bool bWaist = GetWorld()->LineTraceSingleByChannel(WallHit, At - FVector(0, 0, 30), At - FVector(0, 0, 30) - ActiveClimbPoint->WallNormal * Reach, ECC_WorldStatic, WallQuery);
+			if (!bChest && !bWaist)
+			{
+				Server_ReleaseClimb_Implementation();
+				return;
+			}
+		}
+
+		// Ease onto the wall (see ClimbStepToward) even while hanging still.
+		{
+			const FVector Hold = ActiveClimbPoint->GetAttachLocationFor(this, GetActorLocation().Z);
+			if (FVector::DistSquared2D(Hold, GetActorLocation()) > 1.0f)
+			{
+				SetActorLocation(ClimbStepToward(Hold, DeltaSeconds));
+			}
+		}
+
+		// Sideways counts as climbing too (2026-11-14): traversing a face is work, not a free float.
+		const bool bTraversing = GetVelocity().Size2D() > 15.0f;
+		const bool bMoving = bClimbInputUp != bClimbInputDown || bTraversing;
+		const float Pack = (Wallet && Wallet->WornIn(DCCCosmetics::Back) == FName(TEXT("TrailPack"))) ? 0.80f : 1.0f;
+		float Cost = (bMoving
 			? Ruleset->GetClimbStaminaCost(ClimbRank)
-			: Ruleset->GetClingStaminaCost(ClimbRank);
+			: Ruleset->GetClingStaminaCost(ClimbRank)) * FMath::Max(0.0f, ClimbStaminaMultiplier) * Pack;
+		if (ClimbStaminaReferenceMax > 0.0f && Stats->MaxStamina > 0.0f)
+		{
+			// The same share of anyone's bar per metre: a big bar costs proportionally more, and a faster
+			// climber (Strength, Rank) pays per metre rather than finishing a pitch on fewer seconds of cost.
+			// 0.70 makes a Rank 1 novice's bar last about 1.3 eight-metre pitches.
+			const float Fair = Stats->MaxStamina / ClimbStaminaReferenceMax;
+			Cost *= Fair * (bMoving ? FMath::Max(0.5f, GetClimbSpeedNow() / 46.0f) * 0.70f : 1.0f);
+		}
 
 		if (bMoving)
 		{
@@ -1504,7 +2083,42 @@ void ADCCCharacterBase::TickStamina(float DeltaSeconds)
 			float NewZ = PreviousZ + (Speed * Direction * DeltaSeconds);
 			NewZ = FMath::Clamp(NewZ, ActiveClimbPoint->GetBottomZ(), ActiveClimbPoint->GetTopZ());
 
-			SetActorLocation(ActiveClimbPoint->GetAttachLocationFor(this, NewZ));
+			// Swept, not teleported (2026-11-13): climbing used to pass straight
+			// through ledges and anything else on the face, and the movement
+			// component then shoved the capsule back out - the jitter.
+			const FVector Target = ClimbStepToward(ActiveClimbPoint->GetAttachLocationFor(this, NewZ), DeltaSeconds);
+			if (UCapsuleComponent* Capsule = GetCapsuleComponent())
+			{
+				FCollisionQueryParams Sweep(SCENE_QUERY_STAT(DCCClimbSweep), false, this);
+				FHitResult Blocked;
+				if (GetWorld()->SweepSingleByChannel(Blocked, GetActorLocation(), Target, FQuat::Identity, ECC_Pawn,
+					FCollisionShape::MakeCapsule(Capsule->GetScaledCapsuleRadius() - 2.0f, Capsule->GetScaledCapsuleHalfHeight() - 2.0f), Sweep))
+				{
+					// Climbing up into the underside of a ledge: crawl out, around and over it.
+					// Also when the hit is the ledge's side corner rather than its flat
+					// underside (climbing up beside an outcrop): anything struck above our
+					// middle counts. DCC.ClimbTest stalled 9 m up a face on exactly that.
+					const bool bFromBelow = Blocked.ImpactNormal.Z < -0.3f
+						|| Blocked.ImpactPoint.Z > GetActorLocation().Z + Capsule->GetScaledCapsuleHalfHeight() * 0.5f;
+					if (Direction > 0.0f && bFromBelow && BeginLedgeCrawl(Blocked))
+					{
+						return;
+					}
+					// Anything else in the way (a ledge below, an overhang with no room): hold still.
+					NewZ = PreviousZ;
+				}
+				else
+				{
+					SetActorLocation(Target);
+				}
+			}
+
+			// Climbing down to the ground steps off the wall.
+			if (Direction < 0.0f && NewZ <= ActiveClimbPoint->GetBottomZ() + 100.0f)
+			{
+				Server_ReleaseClimb_Implementation();
+				return;
+			}
 
 			// Accumulated in centimetres and banked a metre at a time, because
 			// recording a fractional metre every frame would only ever add zero.
@@ -1588,10 +2202,29 @@ void ADCCCharacterBase::TickStamina(float DeltaSeconds)
 		}
 	}
 
-	if (!bExerting)
+	// Recovery waits until the feet are actually down, and stays off through a short stall tap.
+	// Letting go against the rock used to refill the bar in the air, so a climber could
+	// grab, stall, and grab again all the way up the face.
+	UCharacterMovementComponent* Move = GetCharacterMovement();
+	const bool bFeetDown = Move && Move->IsMovingOnGround() && !Move->IsFalling();
+	if (!bFeetDown)
 	{
+		StaminaGroundedFor = 0.0f;
+	}
+	else if (!bExerting)
+	{
+		StaminaGroundedFor += DeltaSeconds;
+	}
+
+	if (!bExerting && bFeetDown && StaminaGroundedFor >= 0.85f)
+	{
+		const float Fair = ClimbStaminaReferenceMax > 0.0f && Stats->MaxStamina > 0.0f ? Stats->MaxStamina / ClimbStaminaReferenceMax : 1.0f;
+		const float Halo = (Wallet && Wallet->WornIn(DCCCosmetics::Aura) == FName(TEXT("UsedHalo"))) ? 1.25f : 1.0f;
+		// On the mountain, a ledge you reached still refills, just not in one breath.
+		// A camp (the arena sets the multiplier to 2) stays the fast rest.
+		const float Ledge = (ClimbStaminaReferenceMax > 0.0f && StaminaRegenMultiplier < 1.5f) ? 0.55f : 1.0f;
 		Stats->RecoverStamina(
-			Ruleset->GetStaminaRegenRate(Stats->GetEnhanced(), AthleticsRank, ExcessMassKg) * DeltaSeconds);
+			Ruleset->GetStaminaRegenRate(Stats->GetEnhanced(), AthleticsRank, ExcessMassKg) * FMath::Max(0.0f, StaminaRegenMultiplier) * Halo * Fair * Ledge * DeltaSeconds);
 	}
 }
 
@@ -2166,6 +2799,11 @@ void ADCCCharacterBase::HandleInteractPressed()
 	{
 		PendingTalkTarget = nullptr;
 
+		// A chest (not a body) creaks open as the menu comes up.
+		if (LootSource->IsA<ADCCLootContainer>() && LootTargetActor != LootSource)
+		{
+			DCCChestSound::PlayOpen(this, LootSource->GetActorLocation());
+		}
 		LootTargetActor = LootSource;
 		LootMenuIndex = 0;
 		bLootShowingItems = false;
@@ -2476,6 +3114,14 @@ void ADCCCharacterBase::Server_ToggleRoverRadio_Implementation(ADCCRover* Rover)
 	if (Rover && Rover->Driver == this)
 	{
 		Rover->ToggleRadio();
+	}
+}
+
+void ADCCCharacterBase::Server_CycleRoverRadio_Implementation(ADCCRover* Rover)
+{
+	if (Rover && Rover->Driver == this)
+	{
+		Rover->CycleRadio();
 	}
 }
 
@@ -2861,6 +3507,125 @@ void ADCCCharacterBase::HandleVendorMenuConfirm()
 	VendorMenuIndex = 0;
 }
 
+// ---------------------------------------------------------------------------
+// The shop screen (2026-11-13)
+// ---------------------------------------------------------------------------
+
+int32 ADCCCharacterBase::GetShopSellPrice(int32 BagIndex) const
+{
+	if (!Inventory || !Inventory->Items.IsValidIndex(BagIndex))
+	{
+		return 0;
+	}
+	const FDCCInventoryItem& Item = Inventory->Items[BagIndex];
+	int32 Value = 0;
+	FDCCEquipmentDef Def;
+	if (!Item.EquipmentItemId.IsNone() && Equipment && Equipment->FindItem(Item.EquipmentItemId, Def))
+	{
+		Value = Def.GoldValue;
+	}
+	else if (const ADCCPickup* Defaults = Item.PickupClass ? Item.PickupClass->GetDefaultObject<ADCCPickup>() : nullptr)
+	{
+		Value = Defaults->GoldValue;
+	}
+	return FMath::Max(1, Value / 2);
+}
+
+void ADCCCharacterBase::ShopBuy(AActor* VendorActor, FName ItemId, bool bConsumable)
+{
+	if (HasAuthority())
+	{
+		Server_ShopBuy_Implementation(VendorActor, ItemId, bConsumable);
+	}
+	else
+	{
+		Server_ShopBuy(VendorActor, ItemId, bConsumable);
+	}
+}
+
+void ADCCCharacterBase::ShopSell(AActor* VendorActor, int32 BagIndex)
+{
+	if (HasAuthority())
+	{
+		Server_ShopSell_Implementation(VendorActor, BagIndex);
+	}
+	else
+	{
+		Server_ShopSell(VendorActor, BagIndex);
+	}
+}
+
+void ADCCCharacterBase::Server_ShopBuy_Implementation(AActor* VendorActor, FName ItemId, bool bConsumable)
+{
+	const ADCCVendorNPC* Vendor = Cast<ADCCVendorNPC>(VendorActor);
+	if (!Vendor || !Stats || !Inventory || !IsAlive() || IsDowned()
+		|| FVector::Dist(GetActorLocation(), Vendor->GetActorLocation()) > InteractionRange * 1.5f)
+	{
+		return;
+	}
+
+	FText Name;
+	if (bConsumable)
+	{
+		FDCCConsumableDef Def;
+		if (!Vendor->SellableConsumableIds.Contains(ItemId) || !Inventory->FindConsumable(ItemId, Def) || !Stats->SpendGold(Def.GoldValue))
+		{
+			return;
+		}
+		Inventory->AddConsumable(ItemId, 1);
+		Name = Def.DisplayName;
+	}
+	else
+	{
+		FDCCEquipmentDef Def;
+		if (!Vendor->SellableEquipmentIds.Contains(ItemId) || !Equipment || !Equipment->FindItem(ItemId, Def))
+		{
+			return;
+		}
+		if (Inventory->IsFull())
+		{
+			ShowLocalNotice(NSLOCTEXT("DCC", "ShopBagFull", "Your bag is full. Sell something first."));
+			return;
+		}
+		if (!Stats->SpendGold(Def.GoldValue))
+		{
+			return;
+		}
+		if (!Inventory->AddItemRecord(ADCCPickup_Equipment::StaticClass(), Def.DisplayName, Def.MassKilograms, ItemId))
+		{
+			Stats->AddGold(Def.GoldValue); // refund: the bag said no after all
+			return;
+		}
+		Name = Def.DisplayName;
+	}
+
+	ADCCGameState::Log(this, EDCCLogCategory::Announcement, FText::Format(
+		NSLOCTEXT("DCC", "LogShopBuy", "{0} buys {1} from {2}. No refunds. There were never refunds."),
+		FText::FromString(GetActorNameOrLabel()), Name, Vendor->DisplayName));
+	DCCSave::Save(this);
+}
+
+void ADCCCharacterBase::Server_ShopSell_Implementation(AActor* VendorActor, int32 BagIndex)
+{
+	const ADCCVendorNPC* Vendor = Cast<ADCCVendorNPC>(VendorActor);
+	if (!Vendor || !Stats || !Inventory || !Inventory->Items.IsValidIndex(BagIndex) || !IsAlive() || IsDowned()
+		|| FVector::Dist(GetActorLocation(), Vendor->GetActorLocation()) > InteractionRange * 1.5f)
+	{
+		return;
+	}
+
+	const int32 Price = GetShopSellPrice(BagIndex);
+	const FText Name = Inventory->Items[BagIndex].DisplayName;
+	Inventory->Items.RemoveAt(BagIndex);
+	Inventory->OnInventoryChanged.Broadcast(Inventory);
+	Stats->AddGold(Price);
+
+	ADCCGameState::Log(this, EDCCLogCategory::Announcement, FText::Format(
+		NSLOCTEXT("DCC", "LogShopSell", "{0} sells {1} to {2} for {3} gold. It will be on the shelf again by morning, at three times the price."),
+		FText::FromString(GetActorNameOrLabel()), Name, Vendor->DisplayName, FText::AsNumber(Price)));
+	DCCSave::Save(this);
+}
+
 void ADCCCharacterBase::Server_PurchaseEquipment_Implementation(AActor* VendorActor, FName ItemId)
 {
 	const ADCCVendorNPC* Vendor = Cast<ADCCVendorNPC>(VendorActor);
@@ -3014,6 +3779,25 @@ void ADCCCharacterBase::Server_ConsumeStowedDrink_Implementation(int32 Index)
 	ADCCGameState::Log(this, EDCCLogCategory::Announcement, FText::Format(
 		NSLOCTEXT("DCC", "LogDrinkFromPack", "{0} finally gets around to that {1}."),
 		FText::FromString(GetActorNameOrLabel()), Def.DisplayName));
+
+	// A skilled item (a med kit and First Aid): an Int skill check; a success
+	// adds HealPerSkillRank per Rank on top of the item's own effects.
+	if (!Def.LinkedSkillId.IsNone() && Skills && Stats)
+	{
+		const int32 Rank = Skills->GetSkillRank(Def.LinkedSkillId);
+		const int32 Total = RollD20ForSkill(Rank <= 0) + Rank + Stats->GetAbilityModifier(EDCCAbility::Intelligence);
+		const int32 Bonus = Total >= 10 ? Rank * Def.HealPerSkillRank : 0;
+		if (Bonus > 0)
+		{
+			Stats->Heal(Bonus);
+		}
+		NoteSkillUse(Def.LinkedSkillId, Rank);
+		ADCCGameState::Log(this, EDCCLogCategory::Announcement, Bonus > 0
+			? FText::Format(NSLOCTEXT("DCC", "LogSkilledHeal", "{0} knows what they are doing with it: +{1} more from {2}."),
+				FText::FromString(GetActorNameOrLabel()), FText::AsNumber(Bonus), FText::FromName(Def.LinkedSkillId))
+			: FText::Format(NSLOCTEXT("DCC", "LogUnskilledHeal", "{0} applies it with more confidence than technique. {1} would have helped."),
+				FText::FromString(GetActorNameOrLabel()), FText::FromName(Def.LinkedSkillId)));
+	}
 }
 
 void ADCCCharacterBase::OpenLootBox(EDCCLootBoxTier Tier)
@@ -3240,6 +4024,424 @@ void ADCCCharacterBase::Server_ClaimAndOpenAllLootBoxes_Implementation()
 	ADCCGameState::Log(this, EDCCLogCategory::Announcement, FText::Format(
 		NSLOCTEXT("DCC", "LogLootBoxRevealStart", "{0} lines up {1} sealed box(es). The line stretches out ahead of them."),
 		GetLootSourceName(), FText::AsNumber(BoxCount)));
+}
+
+// ---------------------------------------------------------------------------
+// Weapon skills and explosives (2026-11-13), per the DCC books
+// ---------------------------------------------------------------------------
+
+namespace
+{
+	/** d20, or the lower of two when untrained (the books' Disadvantage). */
+	int32 RollD20(bool bDisadvantage)
+	{
+		const int32 First = FMath::RandRange(1, 20);
+		return bDisadvantage ? FMath::Min(First, FMath::RandRange(1, 20)) : First;
+	}
+
+	FText ItemName(const FDCCEquipmentDef& Def)
+	{
+		return Def.DisplayName.IsEmpty() ? FText::FromName(Def.ItemId) : Def.DisplayName;
+	}
+}
+
+bool ADCCCharacterBase::GetMainHandDef(FDCCEquipmentDef& Out) const
+{
+	if (!Equipment)
+	{
+		return false;
+	}
+	const FName Held = Equipment->GetEquippedId(EDCCEquipmentSlot::MainHand);
+	return !Held.IsNone() && Equipment->FindItem(Held, Out);
+}
+
+void ADCCCharacterBase::NoteSkillUse(FName SkillId, int32 Rank)
+{
+	if (SkillId.IsNone() || !Skills)
+	{
+		return;
+	}
+	// Known skills get their advancement mark; unknown ones count towards
+	// learning them, which is how the tutorial floors hand out new skills.
+	if (Rank > 0)
+	{
+		Skills->MarkSkillUsed(SkillId);
+	}
+	else
+	{
+		Skills->RecordUntrainedAttempt(SkillId);
+	}
+}
+
+FDCCAttackResult ADCCCharacterBase::ThrowExplosive(ADCCCharacterBase* Target, const FDCCEquipmentDef& Def)
+{
+	FDCCAttackResult Result;
+	UDCCRuleset* Ruleset = Stats ? Stats->GetRuleset() : nullptr;
+	if (!Ruleset || !Target || !Target->Stats)
+	{
+		return Result;
+	}
+
+	const FText Who = FText::FromString(GetActorNameOrLabel());
+	const FText What = ItemName(Def);
+
+	// 1. Handling. Before it leaves your hand, it has to not go off in it.
+	const int32 HandleRank = (!Def.HandlingSkillId.IsNone() && Skills) ? Skills->GetSkillRank(Def.HandlingSkillId) : 0;
+	const bool bUntrainedHandling = !Def.HandlingSkillId.IsNone() && HandleRank <= 0;
+	const int32 Natural = RollD20(bUntrainedHandling);
+	int32 FumbleAt = Def.FumbleOnNatural;
+	if (Def.HandlingSkillId == TEXT("GoblinExplosives") && HandleRank >= 5)
+	{
+		FumbleAt = FMath::Min(FumbleAt, 3);
+	}
+	NoteSkillUse(Def.HandlingSkillId, HandleRank);
+
+	const int32 Die = FMath::Max(4, Def.WeaponDamageDie);
+	const int32 BaseDamage = FMath::RandRange(1, Die) + FMath::RandRange(1, Die) + HandleRank / 2;
+
+	if (Natural <= FumbleAt)
+	{
+		Result.Check.Roll = Natural;
+		Result.Check.bCriticalFailure = true;
+		ADCCGameState::Log(this, EDCCLogCategory::Combat, FText::Format(
+			NSLOCTEXT("DCC", "LogExplosiveFumble", "{0} fumbles the {1} (natural {2}). It goes off exactly where they are standing. Chat has clipped it already."),
+			Who, What, FText::AsNumber(Natural)));
+		Detonate(GetActorLocation(), Def, BaseDamage);
+		Multicast_PlayAttack(Target, false);
+		return Result;
+	}
+
+	const int32 HandleTotal = Natural + HandleRank + Stats->GetAbilityModifier(EDCCAbility::Intelligence);
+	if (HandleTotal < 8)
+	{
+		Result.Check.Roll = Natural;
+		ADCCGameState::Log(this, EDCCLogCategory::Combat, FText::Format(
+			NSLOCTEXT("DCC", "LogExplosiveDud", "{0}'s {1} is a dud. It lands with a sad little clunk. The audience boos the fuse."),
+			Who, What));
+		Multicast_PlayAttack(Target, false);
+		return Result;
+	}
+
+	// 2. The throw: an Attack Skill Check with Throwing (Str) against Evade.
+	const FName ThrowSkill = Def.WeaponSkillId.IsNone() ? FName(TEXT("Throwing")) : Def.WeaponSkillId;
+	const int32 ThrowRank = Skills ? Skills->GetSkillRank(ThrowSkill) : 0;
+	Result = Ruleset->ResolveAttack(Stats->GetEnhanced(), EDCCAbility::Strength, Die,
+		Target->Stats->GetEnhanced(), Target->Stats->Level, ThrowRank,
+		Target->Equipment ? Target->Equipment->GetEvadeBonus() : 0);
+	if (ThrowRank <= 0)
+	{
+		const FDCCAttackResult Second = Ruleset->ResolveAttack(Stats->GetEnhanced(), EDCCAbility::Strength, Die,
+			Target->Stats->GetEnhanced(), Target->Stats->Level, 0,
+			Target->Equipment ? Target->Equipment->GetEvadeBonus() : 0);
+		if (Second.Check.Total < Result.Check.Total)
+		{
+			Result = Second;
+		}
+	}
+	NoteSkillUse(ThrowSkill, ThrowRank);
+
+	// 3. Where it lands. A miss lands as many feet off as it missed by, in a
+	// random direction (the books' scatter rule), so near misses still hurt.
+	FVector Landing = Target->GetActorLocation();
+	int32 MissedByFeet = 0;
+	if (!Result.bHit)
+	{
+		MissedByFeet = FMath::Max(1, Result.Check.DifficultyClass - Result.Check.Total);
+		const float Angle = FMath::FRandRange(0.0f, 2.0f * PI);
+		Landing += FVector(FMath::Cos(Angle), FMath::Sin(Angle), 0.0f) * (MissedByFeet * 30.48f);
+	}
+
+	ADCCGameState::Log(this, EDCCLogCategory::Combat, Result.bHit
+		? FText::Format(NSLOCTEXT("DCC", "LogExplosiveHit", "{0} lobs the {1} right onto {2}."), Who, What, FText::FromString(Target->GetActorNameOrLabel()))
+		: FText::Format(NSLOCTEXT("DCC", "LogExplosiveMiss", "{0} lobs the {1}. It lands {2} feet wide."), Who, What, FText::AsNumber(MissedByFeet)));
+
+	Result.Damage = BaseDamage;
+	Detonate(Landing, Def, BaseDamage);
+	Multicast_PlayAttack(Target, Result.bHit);
+	return Result;
+}
+
+void ADCCCharacterBase::Detonate(const FVector& Where, const FDCCEquipmentDef& Def, int32 Damage)
+{
+	UWorld* World = GetWorld();
+	if (!World || !HasAuthority())
+	{
+		return;
+	}
+
+	const float Radius = FMath::Max(100.0f, Def.SplashRadius);
+	TArray<ADCCCharacterBase*> Victims;
+	for (TActorIterator<ADCCCharacterBase> It(World); It; ++It)
+	{
+		ADCCCharacterBase* Victim = *It;
+		if (Victim && Victim->IsAlive() && Victim->Stats && FVector::Dist(Victim->GetActorLocation(), Where) <= Radius)
+		{
+			Victims.Add(Victim);
+		}
+	}
+
+	// Everyone in the blast, friends and the thrower included. Explosives are
+	// not a precision instrument and the audience would not have it otherwise.
+	int32 Total = 0;
+	for (ADCCCharacterBase* Victim : Victims)
+	{
+		const float Falloff = 1.0f - 0.5f * FMath::Clamp(FVector::Dist(Victim->GetActorLocation(), Where) / Radius, 0.0f, 1.0f);
+		const int32 Dealt = FMath::Max(1, FMath::RoundToInt(Damage * Falloff));
+		Victim->Stats->ApplyDamage(Dealt, Def.WeaponDamageType);
+		NoteDamageDealtTo(Victim, Dealt);
+		Victim->ReactToHitFrom(Where);
+		Total += Dealt;
+		if (!Victim->Stats->IsAlive() && Victim != this && IsHostileTo(Victim))
+		{
+			AwardKillExperience(Victim);
+		}
+	}
+	UDCCAchievementComponent::RecordFor(this, EDCCAchievementStat::DamageDealt, Total);
+
+	Multicast_Explosion(Where, Radius, Def.WeaponDamageType == EDCCDamageType::Fire);
+}
+
+void ADCCCharacterBase::Multicast_Explosion_Implementation(FVector Where, float Radius, bool bFire)
+{
+	UWorld* World = GetWorld();
+	if (!World || GetNetMode() == NM_DedicatedServer)
+	{
+		return;
+	}
+
+	static const TCHAR* Sparks = TEXT("/Game/Legendary_Forge/Fx/Sparks/NS_sparks.NS_sparks");
+	static const TCHAR* Smoke = TEXT("/Game/Legendary_Forge/Fx/Smoke/NS_smoke.NS_smoke");
+	static const TCHAR* Fire = TEXT("/Game/Legendary_Forge/Fx/Fire/NS_fire.NS_fire");
+	const float Scale = FMath::Clamp(Radius / 250.0f, 0.6f, 3.0f);
+	for (const TCHAR* Path : { Sparks, Smoke, bFire ? Fire : nullptr })
+	{
+		if (!Path)
+		{
+			continue;
+		}
+		if (UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, Path))
+		{
+			UNiagaraFunctionLibrary::SpawnSystemAtLocation(World, System, Where, FRotator::ZeroRotator, FVector(Scale));
+		}
+	}
+
+	// A hard, short flash: reads as a bang even where the particles are thin.
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	if (APointLight* Flash = World->SpawnActor<APointLight>(Where + FVector(0.0f, 0.0f, 80.0f), FRotator::ZeroRotator, Params))
+	{
+		Flash->SetReplicates(false);
+		if (UPointLightComponent* Light = Cast<UPointLightComponent>(Flash->GetLightComponent()))
+		{
+			Light->SetMobility(EComponentMobility::Movable);
+			Light->SetIntensity(60000.0f);
+			Light->SetAttenuationRadius(Radius * 3.0f);
+			Light->SetLightColor(bFire ? FLinearColor(1.0f, 0.45f, 0.15f) : FLinearColor(1.0f, 0.8f, 0.55f));
+			Light->SetCastShadows(false);
+		}
+		Flash->SetLifeSpan(0.18f);
+	}
+
+	// Shake whoever is close enough to feel it.
+	if (APlayerController* PC = World->GetFirstPlayerController())
+	{
+		const APawn* Viewer = PC->GetPawn();
+		if (Viewer && FVector::Dist(Viewer->GetActorLocation(), Where) < Radius * 4.0f && HurtCameraShake)
+		{
+			PC->ClientStartCameraShake(HurtCameraShake, 1.5f);
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Loot box screen (2026-11-12): open one box or a batch, reveal the contents
+// ---------------------------------------------------------------------------
+
+bool ADCCCharacterBase::CanOpenLootBoxesHere(FText& OutWhyNot) const
+{
+	if (!IsAlive() || IsDowned())
+	{
+		OutWhyNot = NSLOCTEXT("DCC", "LootBoxDown", "Sponsors do not deliver to the deceased.");
+		return false;
+	}
+	if (IsInSafeRoom())
+	{
+		return true;
+	}
+
+	// The books keep boxes to Safe Rooms. The World Dungeon has none, so a
+	// cleared room counts: nothing hostile within shouting distance.
+	constexpr float ThreatRadius = 2500.0f;
+	for (TActorIterator<ADCCCharacterBase> It(GetWorld()); It; ++It)
+	{
+		const ADCCCharacterBase* Other = *It;
+		if (Other && Other != this && Other->IsAlive() && IsHostileTo(Other)
+			&& FVector::DistSquared(Other->GetActorLocation(), GetActorLocation()) < FMath::Square(ThreatRadius))
+		{
+			OutWhyNot = NSLOCTEXT("DCC", "LootBoxHot",
+				"Boxes do not open while something nearby wants you dead. Clear the room, or find a Safe Room.");
+			return false;
+		}
+	}
+	return true;
+}
+
+void ADCCCharacterBase::RequestOpenLootBoxes(EDCCLootBoxTier Tier, int32 Count)
+{
+	if (HasAuthority())
+	{
+		Server_OpenLootBoxBatch_Implementation(Tier, Count);
+	}
+	else
+	{
+		Server_OpenLootBoxBatch(Tier, Count);
+	}
+}
+
+void ADCCCharacterBase::Server_OpenLootBoxBatch_Implementation(EDCCLootBoxTier Tier, int32 Count)
+{
+	FDCCLootBoxReveal Reveal;
+	Reveal.Tier = Tier;
+
+	FText WhyNot;
+	if (!Inventory || !CanOpenLootBoxesHere(WhyNot))
+	{
+		Reveal.Message = WhyNot;
+		Client_LootBoxReveal(Reveal);
+		return;
+	}
+
+	// Which boxes, in order. None means every box owned, best last so the
+	// batch ends on its biggest moment.
+	TArray<EDCCLootBoxTier> Boxes;
+	if (Tier == EDCCLootBoxTier::None)
+	{
+		for (uint8 TierIndex = 1; TierIndex < (uint8)EDCCLootBoxTier::MAX; ++TierIndex)
+		{
+			for (int32 i = 0; i < Inventory->GetLootBoxCount((EDCCLootBoxTier)TierIndex); ++i)
+			{
+				Boxes.Add((EDCCLootBoxTier)TierIndex);
+			}
+		}
+	}
+	else
+	{
+		for (int32 i = 0; i < FMath::Min(Count, Inventory->GetLootBoxCount(Tier)); ++i)
+		{
+			Boxes.Add(Tier);
+		}
+	}
+
+	// A sanity cap on one request, not a gameplay rule.
+	if (Boxes.Num() > 60)
+	{
+		Boxes.SetNum(60);
+	}
+
+	for (const EDCCLootBoxTier BoxTier : Boxes)
+	{
+		FDCCOpenedLootBoxResult Result;
+		if (!Inventory->TryOpenLootBox(BoxTier, GetActorLocation(), Result, this))
+		{
+			continue;
+		}
+
+		++Reveal.BoxCount;
+		Reveal.Tier = FMath::Max(Reveal.Tier, BoxTier);
+
+		for (const FDCCRolledLoot& Rolled : Result.Items)
+		{
+			FDCCLootRevealEntry Entry;
+			if (!Rolled.EquipmentItemId.IsNone())
+			{
+				Entry.Kind = EDCCLootRevealKind::Item;
+				Entry.ItemId = Rolled.EquipmentItemId;
+			}
+			else if (Rolled.Gold > 0)
+			{
+				Entry.Kind = EDCCLootRevealKind::Gold;
+				Entry.Amount = Rolled.Gold;
+			}
+			else
+			{
+				Entry.Kind = EDCCLootRevealKind::Item;
+				const ADCCPickup* Defaults = Rolled.PickupClass ? Rolled.PickupClass.GetDefaultObject() : nullptr;
+				Entry.Name = Defaults && !Defaults->DisplayName.IsEmpty()
+					? Defaults->DisplayName
+					: FText::FromString(GetNameSafe(Rolled.PickupClass.Get()));
+				Entry.Detail = NSLOCTEXT("DCC", "LootRevealOnFloor", "Too big for the bag. It is at your feet.");
+			}
+			Reveal.Entries.Add(Entry);
+		}
+
+		for (const FDCCBoonDef& Boon : Result.Boons)
+		{
+			ApplyConsumableEffects(Boon.Effects);
+
+			FDCCLootRevealEntry Entry;
+			Entry.Kind = EDCCLootRevealKind::Boon;
+			Entry.Name = Boon.DisplayName;
+			Entry.Detail = Boon.Description;
+			Reveal.Entries.Add(Entry);
+		}
+	}
+
+	if (Reveal.BoxCount == 0)
+	{
+		Reveal.Message = NSLOCTEXT("DCC", "LootBoxNone", "Nothing sealed to open.");
+	}
+	else
+	{
+		ADCCGameState::Log(this, EDCCLogCategory::Achievement, FText::Format(
+			NSLOCTEXT("DCC", "LogLootBoxBatch", "{0} opens {1} {1}|plural(one=box,other=boxes) on camera. {2} {2}|plural(one=thing,other=things) inside."),
+			GetLootSourceName(), FText::AsNumber(Reveal.BoxCount), FText::AsNumber(Reveal.Entries.Num())));
+	}
+
+	Client_LootBoxReveal(Reveal);
+}
+
+void ADCCCharacterBase::Client_LootBoxReveal_Implementation(const FDCCLootBoxReveal& Reveal)
+{
+	const APlayerController* PC = Cast<APlayerController>(GetController());
+	if (ADCCHUD* DCCHUD = PC ? Cast<ADCCHUD>(PC->GetHUD()) : nullptr)
+	{
+		DCCHUD->ReceiveLootBoxReveal(Reveal);
+	}
+}
+
+void ADCCCharacterBase::ToggleRecording()
+{
+	if (HasAuthority())
+	{
+		Server_SetRecording_Implementation(!bRecordingFootage);
+	}
+	else
+	{
+		Server_SetRecording(!bRecordingFootage);
+	}
+}
+
+void ADCCCharacterBase::Server_SetRecording_Implementation(bool bRecording)
+{
+	bRecordingFootage = bRecording && IsAlive() && !IsDowned();
+}
+
+void ADCCCharacterBase::ToggleGearBench()
+{
+	const APlayerController* PC = Cast<APlayerController>(GetController());
+	if (ADCCHUD* DCCHUD = PC ? Cast<ADCCHUD>(PC->GetHUD()) : nullptr)
+	{
+		DCCHUD->ToggleGearBench();
+	}
+}
+
+void ADCCCharacterBase::ToggleLootBoxScreen()
+{
+	const APlayerController* PC = Cast<APlayerController>(GetController());
+	if (ADCCHUD* DCCHUD = PC ? Cast<ADCCHUD>(PC->GetHUD()) : nullptr)
+	{
+		DCCHUD->ToggleLootBoxScreen();
+	}
 }
 
 void ADCCCharacterBase::Server_LootOne_Implementation(AActor* Source, int32 Index)
@@ -3671,6 +4873,15 @@ void ADCCCharacterBase::ToggleAdminPanel()
 	}
 }
 
+void ADCCCharacterBase::ToggleSessionMenu()
+{
+	const APlayerController* PC = Cast<APlayerController>(GetController());
+	if (ADCCHUD* DCCHUD = PC ? Cast<ADCCHUD>(PC->GetHUD()) : nullptr)
+	{
+		DCCHUD->ToggleSessionMenu();
+	}
+}
+
 void ADCCCharacterBase::Server_AdminSpawn_Implementation(TSubclassOf<AActor> ActorClass, bool bAsAlly)
 {
 	UWorld* World = GetWorld();
@@ -3885,7 +5096,14 @@ bool ADCCCharacterBase::IsAttackReady() const
 		return false;
 	}
 
-	return (World->GetTimeSeconds() - LastAttackTime) >= AttackCooldownSeconds;
+	// A slow item (an explosive) can ask for a longer breather than the wielder's own.
+	float Cooldown = AttackCooldownSeconds;
+	FDCCEquipmentDef Weapon;
+	if (GetMainHandDef(Weapon))
+	{
+		Cooldown = FMath::Max(Cooldown, Weapon.AttackCooldownOverride);
+	}
+	return (World->GetTimeSeconds() - LastAttackTime) >= Cooldown;
 }
 
 float ADCCCharacterBase::GetEffectiveAttackRange() const
@@ -3979,17 +5197,51 @@ FDCCAttackResult ADCCCharacterBase::PerformAttack(ADCCCharacterBase* Target, boo
 		LastAttackTime = World->GetTimeSeconds();
 	}
 
+	// Explosives take their own path: handle, throw, scatter, blast.
+	FDCCEquipmentDef Weapon;
+	const bool bHasWeapon = GetMainHandDef(Weapon);
+	if (bHasWeapon && Weapon.SplashRadius > 0.0f)
+	{
+		return ThrowExplosive(Target, Weapon);
+	}
+
+	// The weapon names its Attack Skill (2026-11-13). Rank adds to the roll;
+	// untrained is Disadvantage (roll twice, keep the worse) and counts
+	// towards learning it.
+	const FName WeaponSkill = bHasWeapon ? Weapon.WeaponSkillId : NAME_None;
+	const int32 WeaponRank = (!WeaponSkill.IsNone() && Skills) ? Skills->GetSkillRank(WeaponSkill) : 0;
+
 	Result = Ruleset->ResolveAttack(
 		Stats->GetEnhanced(),
 		AttackAbility,
 		GetEffectiveWeaponDamageDie(),
 		TargetStats->GetEnhanced(),
 		TargetStats->Level,
-		/*SituationalBonus=*/0,
+		/*SituationalBonus=*/WeaponRank,
 		// A shield (or anything else with EvadeBonus) makes the TARGET harder
 		// to hit - this was previously summed by GetEvadeBonus() and never
 		// read anywhere, so equipping one did nothing to combat outcomes.
 		Target->Equipment ? Target->Equipment->GetEvadeBonus() : 0);
+
+	if (!WeaponSkill.IsNone())
+	{
+		if (WeaponRank <= 0)
+		{
+			const FDCCAttackResult Second = Ruleset->ResolveAttack(Stats->GetEnhanced(), AttackAbility,
+				GetEffectiveWeaponDamageDie(), TargetStats->GetEnhanced(), TargetStats->Level, 0,
+				Target->Equipment ? Target->Equipment->GetEvadeBonus() : 0);
+			if (Second.Check.Total < Result.Check.Total)
+			{
+				Result = Second;
+			}
+		}
+		// Rank 5 Upgrade on every weapon skill in the books: +1 base damage die.
+		if (Result.bHit && WeaponRank >= 5 && Weapon.WeaponDamageDie > 0)
+		{
+			Result.Damage += FMath::RandRange(1, Weapon.WeaponDamageDie);
+		}
+		NoteSkillUse(WeaponSkill, WeaponRank);
+	}
 
 	if (Result.bHit)
 	{
@@ -4025,6 +5277,7 @@ FDCCAttackResult ADCCCharacterBase::PerformAttack(ADCCCharacterBase* Target, boo
 		}
 
 		TargetStats->ApplyDamage(FinalDamage, AttackDamageType);
+		NoteDamageDealtTo(Target, FinalDamage);
 		Target->PlayCharacterSound(Target->HurtSound);
 
 		// Staggered away from whoever swung, so the direction of the blow is
@@ -4213,6 +5466,8 @@ void ADCCCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	// F stows what is in hand; Tab opens the character menu. Tab is the near
 	// universal convention for an inventory screen, so it costs no explaining.
 	PlayerInputComponent->BindKey(EKeys::F, IE_Pressed, this, &ADCCCharacterBase::AttemptStow);
+	PlayerInputComponent->BindKey(EKeys::Q, IE_Pressed, this, &ADCCCharacterBase::UseClimbTool);
+	PlayerInputComponent->BindKey(EKeys::T, IE_Pressed, this, &ADCCCharacterBase::NextClimbTool);
 	PlayerInputComponent->BindKey(EKeys::C, IE_Pressed, this, &ADCCCharacterBase::ToggleSelfieMode);
 	PlayerInputComponent->BindKey(EKeys::Tab, IE_Pressed, this, &ADCCCharacterBase::ToggleCharacterMenu);
 	PlayerInputComponent->BindKey(EKeys::L, IE_Pressed, this, &ADCCCharacterBase::CycleLogFilter);
@@ -4227,6 +5482,18 @@ void ADCCCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	// a game action - it should not compete with anything a player might press
 	// mid-fight, and it stays out of the way of the movement hand entirely.
 	PlayerInputComponent->BindKey(EKeys::F1, IE_Pressed, this, &ADCCCharacterBase::ToggleAdminPanel);
+
+	// F2 for the party menu: host, invite, join, who's here.
+	PlayerInputComponent->BindKey(EKeys::F2, IE_Pressed, this, &ADCCCharacterBase::ToggleSessionMenu);
+
+	// O for the loot box screen: every sealed box in a row, hold to open.
+	PlayerInputComponent->BindKey(EKeys::O, IE_Pressed, this, &ADCCCharacterBase::ToggleLootBoxScreen);
+
+	// F3 for the gear bench: nudge grips, sockets and bones while an animation plays.
+	PlayerInputComponent->BindKey(EKeys::F3, IE_Pressed, this, &ADCCCharacterBase::ToggleGearBench);
+
+	// V for the body cam (Dead Air): start or stop recording.
+	PlayerInputComponent->BindKey(EKeys::V, IE_Pressed, this, &ADCCCharacterBase::ToggleRecording);
 
 	// Menu pages. Bracket keys rather than Q/E, because E is the interact key and
 	// Q is free but reads as a movement key to anyone who has played a shooter.
@@ -4770,6 +6037,12 @@ void ADCCCharacterBase::UpdateLocomotionAnimation()
 		return;
 	}
 
+	// The gear bench is driving the animation by hand.
+	if (bBenchPosing)
+	{
+		return;
+	}
+
 	// A one-shot owns the mesh until it finishes.
 	if (World->GetTimeSeconds() < OneShotAnimationUntil)
 	{
@@ -4795,9 +6068,323 @@ void ADCCCharacterBase::UpdateLocomotionAnimation()
 	ActiveLoopAnimation = Desired;
 }
 
+float ADCCCharacterBase::GetClimbSpeedNow() const
+{
+	const UDCCRuleset* Rules = Stats ? Stats->GetRuleset() : nullptr;
+	if (!Rules)
+	{
+		return ClimbAnimNaturalSpeed;
+	}
+	const int32 Rank = Skills ? Skills->GetSkillRank(ActiveClimbPoint ? ActiveClimbPoint->ClimbSkillId : FName(TEXT("Climbing"))) : 0;
+	return Rules->GetClimbSpeed(Stats->GetEnhanced(), Rank);
+}
+
+void ADCCCharacterBase::TickClimbAnimRate(float DeltaSeconds)
+{
+	USkeletalMeshComponent* Body = GetMesh();
+	const float Z = GetActorLocation().Z;
+	const bool bOnWall = IsClimbing() && ClimbAnimation && ActiveLoopAnimation == ClimbAnimation && Body
+		&& Body->GetAnimationMode() == EAnimationMode::AnimationSingleNode && !bBenchPosing
+		&& GetWorld() && GetWorld()->GetTimeSeconds() >= OneShotAnimationUntil;
+	if (!bOnWall || DeltaSeconds <= 0.0f)
+	{
+		SmoothedClimbSpeed = 0.0f;
+		LastClimbAnimZ = Z;
+		return;
+	}
+	float Rate;
+	if (bCrawling)
+	{
+		Rate = 1.6f; // scrambling over the lip: brisk, whatever the path's direction
+	}
+	else
+	{
+		const float Vz = (Z - LastClimbAnimZ) / DeltaSeconds;
+		// Smoothed over ~0.2 s: network updates arrive in steps on other machines.
+		SmoothedClimbSpeed = FMath::FInterpTo(SmoothedClimbSpeed, FMath::Clamp(Vz, -600.0f, 600.0f), DeltaSeconds, 10.0f);
+		Rate = FMath::Abs(SmoothedClimbSpeed) < 4.0f ? 0.0f : SmoothedClimbSpeed / ClimbAnimNaturalSpeed;
+	}
+	LastClimbAnimZ = Z;
+	Body->SetPlayRate(FMath::Clamp(Rate, -3.0f, 3.0f));
+}
+
+void ADCCCharacterBase::OfferQuickItem(FName ItemId)
+{
+	if (!HasAuthority() || ItemId.IsNone())
+	{
+		return;
+	}
+	if (QuickSlots.Num() < 2)
+	{
+		QuickSlots.SetNum(2);
+	}
+	if (QuickSlots.Contains(ItemId))
+	{
+		return;
+	}
+	const int32 Free = QuickSlots.IndexOfByKey(NAME_None);
+	if (Free != INDEX_NONE)
+	{
+		QuickSlots[Free] = ItemId;
+	}
+}
+
+int32 ADCCCharacterBase::QuickItemCount(FName ItemId) const
+{
+	if (ItemId.IsNone())
+	{
+		return 0;
+	}
+	if (DCCClimbItems::Find(ItemId))
+	{
+		int32 Count = 0;
+		if (Wallet)
+		{
+			for (const FName& Tool : Wallet->ClimbTools)
+			{
+				Count += Tool == ItemId ? 1 : 0;
+			}
+		}
+		return Count;
+	}
+	if (Inventory)
+	{
+		for (const FDCCStowedConsumable& Stowed : Inventory->StowedConsumables)
+		{
+			if (Stowed.ItemId == ItemId)
+			{
+				return Stowed.Quantity;
+			}
+		}
+	}
+	return 0;
+}
+
+void ADCCCharacterBase::UseQuickSlot(int32 Index)
+{
+	if (HasAuthority())
+	{
+		Server_UseQuickSlot_Implementation(Index);
+	}
+	else
+	{
+		Server_UseQuickSlot(Index);
+	}
+}
+
+void ADCCCharacterBase::Server_UseQuickSlot_Implementation(int32 Index)
+{
+	if (!QuickSlots.IsValidIndex(Index) || QuickSlots[Index].IsNone() || !IsAlive())
+	{
+		return;
+	}
+	const FName ItemId = QuickSlots[Index];
+	if (DCCClimbItems::Find(ItemId))
+	{
+		for (TActorIterator<ADCCArcadeClimb> It(GetWorld()); It; ++It)
+		{
+			It->UseToolId(this, ItemId);
+			break;
+		}
+	}
+	else if (Inventory)
+	{
+		for (int32 i = 0; i < Inventory->StowedConsumables.Num(); ++i)
+		{
+			if (Inventory->StowedConsumables[i].ItemId == ItemId)
+			{
+				Server_ConsumeStowedDrink_Implementation(i);
+				break;
+			}
+		}
+	}
+	if (QuickItemCount(ItemId) <= 0)
+	{
+		QuickSlots[Index] = NAME_None;
+	}
+}
+
+void ADCCCharacterBase::AddScreenShake(float Strength, float Seconds)
+{
+	const double Now = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0;
+	if (Now >= ShakeUntil || Strength >= ShakeStrength)
+	{
+		ShakeStarted = Now;
+		ShakeStrength = Strength;
+	}
+	ShakeUntil = FMath::Max(ShakeUntil, Now + Seconds);
+}
+
+void ADCCCharacterBase::TickScreenShake()
+{
+	AController* PC = IsLocallyControlled() ? GetController() : nullptr;
+	if (!PC || (ShakeApplied.IsNearlyZero() && GetWorld()->GetTimeSeconds() >= ShakeUntil))
+	{
+		return;
+	}
+	const double Now = GetWorld()->GetTimeSeconds();
+	FRotator Want = FRotator::ZeroRotator;
+	if (Now < ShakeUntil)
+	{
+		const float Fade = static_cast<float>((ShakeUntil - Now) / FMath::Max(0.05, ShakeUntil - ShakeStarted));
+		const float T = static_cast<float>(Now);
+		Want.Pitch = ShakeStrength * Fade * (FMath::Sin(T * 37.0f) + 0.5f * FMath::Sin(T * 71.0f));
+		Want.Yaw = ShakeStrength * Fade * 0.7f * (FMath::Sin(T * 29.0f + 1.7f) + 0.5f * FMath::Sin(T * 83.0f));
+	}
+	// Apply only the change since last frame, so the wobble never drifts the view.
+	PC->SetControlRotation(PC->GetControlRotation() + (Want - ShakeApplied));
+	ShakeApplied = Want;
+}
+
+void ADCCCharacterBase::TickClimbTilt(float DeltaSeconds)
+{
+	USkeletalMeshComponent* Body = GetMesh();
+	if (!Body)
+	{
+		return;
+	}
+	if (!bBaseMeshRelativeSet)
+	{
+		BaseMeshRelative = Body->GetRelativeTransform();
+		bBaseMeshRelativeSet = true;
+	}
+
+	// Crawling over a ledge: the body's head-to-toe axis follows the path, belly to
+	// the rock - out along the underside, round the lip, flat over the top. Capped
+	// at 80 degrees so it never quite lies flat on its back.
+	FQuat Target = FQuat::Identity;
+	if (bCrawling && !CrawlDirection.IsNearlyZero())
+	{
+		const FVector Up(0, 0, 1);
+		const float Angle = FMath::Min(FMath::Acos(FMath::Clamp(FVector::DotProduct(Up, CrawlDirection), -1.0f, 1.0f)), FMath::DegreesToRadians(80.0f));
+		const FVector Axis = FVector::CrossProduct(Up, CrawlDirection).GetSafeNormal();
+		if (!Axis.IsNearlyZero())
+		{
+			Target = FQuat(Axis, Angle);
+		}
+	}
+	else if (!bCrawling)
+	{
+		CrawlDirection = FVector::ZeroVector;
+	}
+	ClimbTilt = FQuat::Slerp(ClimbTilt, Target, FMath::Clamp(DeltaSeconds * 9.0f, 0.0f, 1.0f));
+
+	if (ClimbTilt.Equals(FQuat::Identity, 0.0005f) && Target.Equals(FQuat::Identity))
+	{
+		if (!Body->GetRelativeTransform().Equals(BaseMeshRelative, 0.01f))
+		{
+			Body->SetRelativeLocationAndRotation(BaseMeshRelative.GetLocation(), BaseMeshRelative.GetRotation());
+		}
+		return;
+	}
+	// The tilt is in world space, about the capsule's centre; turn it into the
+	// actor's own frame and apply it to the mesh's resting offset.
+	const FQuat Actor = GetActorQuat();
+	const FQuat Local = Actor.Inverse() * ClimbTilt * Actor;
+	Body->SetRelativeLocationAndRotation(Local.RotateVector(BaseMeshRelative.GetLocation()), Local * BaseMeshRelative.GetRotation());
+}
+
 void ADCCCharacterBase::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+
+	TickHoldToClimb(DeltaSeconds);
+	TickClimbCamera(DeltaSeconds);
+	TickClimbTilt(DeltaSeconds);
+	TickClimbAnimRate(DeltaSeconds);
+
+	// On the wall the climber is in flying mode, whose default top speed (6 m/s) made A/D a free float
+	// sideways (Zoe, 2026-11-14). Sideways is ~70% of the climb speed, and stops when you let go.
+	if (UCharacterMovementComponent* Move = GetCharacterMovement())
+	{
+		if (IsClimbing() && !bCrawling)
+		{
+			Move->MaxFlySpeed = FMath::Max(25.0f, GetClimbSpeedNow() * 0.7f);
+			Move->BrakingDecelerationFlying = 2400.0f;
+			bClimbFlyTuned = true;
+		}
+		else if (bClimbFlyTuned)
+		{
+			const UCharacterMovementComponent* Defaults = GetDefault<UCharacterMovementComponent>();
+			Move->MaxFlySpeed = Defaults->MaxFlySpeed;
+			Move->BrakingDecelerationFlying = Defaults->BrakingDecelerationFlying;
+			bClimbFlyTuned = false;
+		}
+	}
+	TickScreenShake();
+
+	// Fall damage: the highest point of the current fall, server-side. Anything
+	// but falling (walking, climbing, swimming, riding) resets it to where we are.
+	if (HasAuthority())
+	{
+		const UCharacterMovementComponent* Movement = GetCharacterMovement();
+		const float Z = GetActorLocation().Z;
+		FallPeakZ = Movement && Movement->IsFalling() ? FMath::Max(FallPeakZ, Z) : Z;
+	}
+
+	// Worn ticket-booth gear that has to do something every frame: the hobby jetpack,
+	// and the miner's lamp. The plates, the cape, the pack and the auras are read
+	// where the hit, the fall, the climb and the walk speed already live.
+	if (Wallet)
+	{
+		struct FWornTick
+		{
+			float Fuel = 1.8f;
+			bool bWasDown = false;
+			TWeakObjectPtr<USpotLightComponent> Lamp;
+		};
+		static TMap<TWeakObjectPtr<ADCCCharacterBase>, FWornTick> Worn;
+		FWornTick& State = Worn.FindOrAdd(this);
+
+		const bool bLamp = Wallet->WornIn(DCCCosmetics::Head) == FName(TEXT("MinersHelmet"));
+		if (bLamp && !State.Lamp.IsValid())
+		{
+			USpotLightComponent* Light = NewObject<USpotLightComponent>(this);
+			Light->SetupAttachment(GetRootComponent());
+			Light->SetRelativeLocation(FVector(28.0f, 0.0f, 72.0f));
+			Light->SetRelativeRotation(FRotator(-8.0f, 0.0f, 0.0f));
+			Light->SetIntensity(14000.0f);
+			Light->SetAttenuationRadius(2400.0f);
+			Light->SetInnerConeAngle(16.0f);
+			Light->SetOuterConeAngle(36.0f);
+			Light->SetLightColor(FLinearColor(1.0f, 0.93f, 0.78f));
+			Light->SetCastShadows(false);
+			Light->RegisterComponent();
+			State.Lamp = Light;
+		}
+		else if (!bLamp && State.Lamp.IsValid())
+		{
+			State.Lamp->DestroyComponent();
+			State.Lamp = nullptr;
+		}
+
+		const bool bJet = Wallet->WornIn(DCCCosmetics::Back) == FName(TEXT("HobbyJetpack"));
+		UCharacterMovementComponent* Move = GetCharacterMovement();
+		const bool bDrive = bJet && Move && !IsClimbing() && (HasAuthority() || IsLocallyControlled());
+		const APlayerController* PC = (bDrive && IsLocallyControlled()) ? Cast<APlayerController>(GetController()) : nullptr;
+		// bPressedJump is what the server actually has for a remote jumper. The key is what the owner has.
+		const bool bDown = bPressedJump || (PC && PC->IsInputKeyDown(EKeys::SpaceBar));
+		if (bDrive && Move->IsMovingOnGround())
+		{
+			State.Fuel = FMath::Min(1.8f, State.Fuel + DeltaSeconds * 0.45f);
+		}
+		if (bDrive && bDown && State.Fuel > 0.0f)
+		{
+			State.Fuel = FMath::Max(0.0f, State.Fuel - DeltaSeconds);
+			if (Move->IsMovingOnGround())
+			{
+				if (!State.bWasDown)
+				{
+					LaunchCharacter(FVector(0.0f, 0.0f, 520.0f), false, true);
+				}
+			}
+			else
+			{
+				Move->Velocity.Z = FMath::Max(Move->Velocity.Z, 360.0f);
+			}
+		}
+		State.bWasDown = bDown;
+	}
 
 	// Safety net for Selfie Mode's own exit chain - see
 	// SelfieModeEnteredRealTimeSeconds's comment for why this is necessary and
@@ -5151,6 +6738,13 @@ void ADCCCharacterBase::RollDeathSave()
 
 	if (DeathSaveFailures >= DeathSavesToExpire)
 	{
+		// On the tale floor the System rewrites the ending (a narrator save) or,
+		// once those are spent, sends the crawler home. Nobody dies for good there.
+		if (ADCCTaleFloor::InterceptDeath(this))
+		{
+			return;
+		}
+
 		GetWorldTimerManager().ClearTimer(DeathSaveTimer);
 		bIsDowned = false;
 		FinishDying();
@@ -5316,6 +6910,25 @@ void ADCCCharacterBase::Revive(ADCCCharacterBase* Rescuer)
 		Rescuer->Favor->AwardFavor(4, EDCCFavorEvent::DirectorCall,
 			NSLOCTEXT("DCC", "FavorRevive", "A rescue, live on air."));
 	}
+}
+
+void ADCCCharacterBase::ReviveQuietly(float HealthFraction)
+{
+	if (!HasAuthority() || !bIsDowned || bHasDied || !Stats)
+	{
+		return;
+	}
+
+	GetWorldTimerManager().ClearTimer(DeathSaveTimer);
+	GetWorldTimerManager().ClearTimer(ReviveTimer);
+	DeathSaveSuccesses = 0;
+	DeathSaveFailures = 0;
+
+	bIsDowned = false;
+	RestoreStandingBody();
+	PlayCharacterSound(ReviveSound);
+
+	Stats->Heal(FMath::Max(1, FMath::RoundToInt(Stats->MaxHitPoints * FMath::Clamp(HealthFraction, 0.0f, 1.0f))));
 }
 
 float ADCCCharacterBase::GetTimeUntilNextDeathSave() const
@@ -5767,4 +7380,38 @@ bool ADCCCharacterBase::HasNearbyLivingHostile(float Range) const
 	}
 
 	return false;
+}
+
+namespace
+{
+	/**
+	 * True for world pieces each machine builds for itself (the arcade games' floors, rocks and props: Block, Shape,
+	 * Prop, HISM holders). They are not replicated and have no stable network name, so the other machine cannot
+	 * find them. Standing on one used to make a client send "my position relative to <a thing you do not have>":
+	 * the host could not resolve it and threw the moves away, so on the host that player stood still where they
+	 * first stepped on a prop while they walked on in their own game (found 2026-11-16, Fourteener with Anke).
+	 */
+	bool IsLocalOnlyBase(const UObject* Base)
+	{
+		const UActorComponent* Component = Cast<UActorComponent>(Base);
+		const AActor* Owner = Component ? Component->GetOwner() : nullptr;
+		const UWorld* World = Owner ? Owner->GetWorld() : nullptr;
+		return Owner && World && World->GetNetMode() != NM_Standalone
+			&& !Owner->GetIsReplicated() && !Owner->IsNameStableForNetworking();
+	}
+}
+
+void ADCCCharacterBase::SetBase(UPrimitiveComponent* NewBase, const FName BoneName, bool bNotifyActor)
+{
+	Super::SetBase(IsLocalOnlyBase(NewBase) ? nullptr : NewBase, BoneName, bNotifyActor);
+}
+
+void ADCCCharacterBase::SetBase(FMovementBaseInterfaceData* MovementBaseInterfaceData, const FName BoneName, bool bNotifyActor)
+{
+	if (MovementBaseInterfaceData && IsLocalOnlyBase(MovementBaseInterfaceData->GetMovementBaseObject()))
+	{
+		Super::SetBase(static_cast<UPrimitiveComponent*>(nullptr), BoneName, bNotifyActor);
+		return;
+	}
+	Super::SetBase(MovementBaseInterfaceData, BoneName, bNotifyActor);
 }

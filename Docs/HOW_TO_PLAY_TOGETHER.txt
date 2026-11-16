@@ -1,0 +1,45 @@
+DUNGEON CRAWLER DENVER - HOW TO PLAY TOGETHER
+==============================================
+
+INSTALL (everyone)
+  1. Unzip the folder anywhere. (It is big. Somewhere with space is fine.)
+  2. Run DungeonCrawlerDenver.exe.
+     - First launch may install the Microsoft Visual C++ runtime. Say yes.
+     - Windows may say "Windows protected your PC" because the game is not signed.
+       Click "More info", then "Run anyway".
+  3. The game opens on the PARTY menu. (F2 opens it again at any time.)
+
+PICK YOUR CRAWLER
+  Click your name at the top of the party menu: CJ, Scott, Marcel, Vaughn, Kyle, or Zoe.
+  The game remembers it.
+
+THE HOST (one person, usually Zoe)
+  1. Press F2 -> "Host this game".
+  2. Windows will ask about the firewall. Tick Private networks and click Allow.
+     (If you miss it, nobody can connect. Fix it in Windows Security ->
+      Firewall -> Allow an app, and tick DungeonCrawlerDenver.)
+  3. Click "Copy invite" next to a code and paste it in the group chat:
+     - "Tailscale" code: works from anywhere, if everyone has Tailscale.
+     - "Same Wi-Fi" code: only works for people in the same house.
+  4. When everyone is in, press F2 -> "Start the run (everyone)".
+
+EVERYONE ELSE
+  1. Press F2, paste the host's code into the Join box, press Enter.
+  2. If it fails, the party menu comes back and says why.
+
+NOT IN THE SAME HOUSE? Use Tailscale (free, takes 2 minutes)
+  1. Everyone installs Tailscale from tailscale.com and signs in.
+  2. The host shares their tailnet with the others (or everyone joins one tailnet).
+  3. Use the host's "Tailscale" invite code.
+  (The other option is the host forwarding UDP port 7777 on their router.
+   Tailscale is easier and safer.)
+
+CONTROLS (the basics)
+  WASD move, mouse look, Left click attack, E interact / loot, Tab menu,
+  P pause (everyone plans a move), F2 party menu, ~ console.
+
+IN THE WORLD DUNGEON
+  Three floors. Clear the blue room at the far end to unlock the stairs.
+  Each floor pays gold and XP. If you go down and nobody helps, the System
+  "rewrites" your death twice per run. After that you are sent home, alive,
+  with your stuff.

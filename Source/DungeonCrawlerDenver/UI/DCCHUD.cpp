@@ -1,4 +1,10 @@
 #include "UI/DCCHUD.h"
+#include "Arcade/DCCChopShop.h"
+#include "Engine/TextureRenderTarget2D.h"
+#include "CanvasItem.h"
+#include "Arcade/DCCRallyThug.h"
+#include "GlobalRenderResources.h"
+#include "CanvasItem.h"
 #include "Onboarding/DCCOnboardingComponent.h"
 
 #include "Characters/DCCCharacterBase.h"
@@ -32,14 +38,42 @@
 #include "UI/DCCEventLogTypes.h"
 #include "UI/DCCChatterTypes.h"
 #include "UI/DCCChatInputWidget.h"
+#include "UI/DCCSessionMenuWidget.h"
+#include "UI/DCCCharacterSelectWidget.h"
+#include "Dialogue/DCCDialogueNPC.h"
+#include "UI/DCCCosmeticShopWidget.h"
+#include "UI/DCCRoundOverWidget.h"
+#include "Arcade/DCCArcadeArena.h"
+#include "Arcade/DCCWalletComponent.h"
+#include "Arcade/DCCClimbItems.h"
+#include "Arcade/DCCRallyItems.h"
+#include "Arcade/DCCArcadeGames.h"
+#include "Engine/GameViewportClient.h"
+#include "GameFramework/GameStateBase.h"
+#include "UI/DCCLootScreenInput.h"
+#include "Bench/DCCGearBenchWidget.h"
+#include "UI/DCCShopWidget.h"
+#include "Arcade/DCCArcadeArena.h"
+#include "Arcade/DCCArcadeHaunt.h"
+#include "GameFramework/PlayerState.h"
+#include "Arcade/DCCArcade.h"
+#include "EngineUtils.h"
+#include "Session/DCCSession.h"
+#include "Blueprint/WidgetBlueprintLibrary.h"
+#include "TimerManager.h"
+#include "HAL/IConsoleManager.h"
 #include "Blueprint/UserWidget.h"
 #include "Rooms/DCCClimbPoint.h"
 #include "Vehicles/DCCRover.h"
 #include "Engine/Canvas.h"
+#include "CanvasItem.h"
+#include "Engine/Font.h"
+#include "Engine/Engine.h"
 #include "Engine/Texture2D.h"
 #include "Engine/Engine.h"
 #include "EngineUtils.h"
 #include "Components/CapsuleComponent.h"
+#include "Arcade/DCCFireworks.h"
 #include "GameFramework/PlayerController.h"
 
 namespace
@@ -130,26 +164,9 @@ void ADCCHUD::ToggleMenu()
 
 	// A Canvas HUD has no cursor and no click routing of its own - both have to
 	// be switched on for AddHitBox regions to receive anything at all.
-	PlayerOwner->bShowMouseCursor = bShowMenu;
-	PlayerOwner->bEnableClickEvents = bShowMenu;
-	PlayerOwner->bEnableMouseOverEvents = bShowMenu;
-
-	if (bShowMenu)
-	{
-		// GameAndUI rather than plain "show the cursor": without it the mouse
-		// still drives the camera, so reaching for an achievement row would spin
-		// the character on the spot. DoNotLock keeps the cursor free of the
-		// viewport edge, and movement keys keep working, which is deliberate -
-		// this is an overlay, not a modal screen that pauses the dungeon.
-		FInputModeGameAndUI InputMode;
-		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-		InputMode.SetHideCursorDuringCapture(false);
-		PlayerOwner->SetInputMode(InputMode);
-	}
-	else
-	{
-		PlayerOwner->SetInputMode(FInputModeGameOnly());
-	}
+	// Shared with the DM panel and the party menu, so closing one never takes
+	// the cursor away from another that is still open.
+	ApplyCursorForOpenPanels();
 }
 
 void ADCCHUD::NotifyHitBoxClick(FName BoxName)
@@ -343,6 +360,28 @@ namespace
 
 void ADCCHUD::DrawHUD()
 {
+	if (IsGearBenchOpen() && GetWorld())
+	{
+		GearBench->TickBench(GetWorld()->DeltaRealTimeSeconds);
+	}
+	UpdateRoundOver();
+
+	// The front door is a menu over a stage, and the bench tool is only the
+	// bench: no vitals, feed or prompts on either.
+	if (CharacterSelect || bBenchTool)
+	{
+		Super::DrawHUD();
+		return;
+	}
+	if (bTrailerMinimal)
+	{
+		// A trailer is rolling: only the feed and the extraction, nothing of the hidden player's own HUD.
+		Super::DrawHUD();
+		DrawMineReel();
+		return;
+	}
+	SyncShop(GetOwningCrawler());
+
 	DrawHUDContents();
 
 	if (Canvas)
@@ -363,6 +402,7 @@ void ADCCHUD::DrawHUDContents()
 	CachedViewportHeight = Canvas->SizeY;
 
 	ADCCCharacterBase* Crawler = GetOwningCrawler();
+	WatchForNewItems(Crawler);
 
 	// A true takeover, unlike the death screen - nothing plays on underneath
 	// it, because there is nowhere further for this crawler to go right now.
@@ -378,7 +418,12 @@ void ADCCHUD::DrawHUDContents()
 	// behind a menu would defeat the point. Minimized/Hidden (2026-08-23, [K]
 	// to cycle) are an explicit opt-out for exactly that reason - Pinned stays
 	// the default and DrawFeed itself is unchanged.
-	if (!IsHudFeatureUnlocked(EDCCHudFeature::EventFeed))
+	// The minigames show only what players need (2026-11-13): no log, no mana or
+	// level, no quests, no character-menu hint; the hotbar and stamina only where
+	// there is climbing.
+	const ADCCArcadeArena* Arena = GetArcadeArena();
+
+	if (!IsHudFeatureUnlocked(EDCCHudFeature::EventFeed) || Arena)
 	{
 		// Not issued yet - nothing at all, not even the minimized stub.
 	}
@@ -395,7 +440,7 @@ void ADCCHUD::DrawHUDContents()
 	// Drawn before the death check, so the bars are still on screen underneath the
 	// GAME OVER overlay showing exactly zero. Watching it sit empty is the point -
 	// a bar that vanishes at the moment it matters teaches the player nothing.
-	if (IsHudFeatureUnlocked(EDCCHudFeature::Vitals))
+	if (IsHudFeatureUnlocked(EDCCHudFeature::Vitals) && (!Arena || Arena->ShowsHealth()))
 	{
 		DrawVitals(Crawler);
 		DrawNearbyHealthBars(Crawler);
@@ -406,9 +451,18 @@ void ADCCHUD::DrawHUDContents()
 	DrawSelfieViewfinder(Crawler);
 	DrawBossBanner();
 	DrawQuestCompleteBanner();
+	DrawItemToasts();
+	DrawNPCSubtitle();
+	DrawArcadeStatus();
+	ADCCFireworks::DrawBanners(GetWorld(), Canvas);
+	DrawBodyCam();
+	DrawMineNote();
+	DrawMineReel();
+	DrawLootBoxScreen();
 	DrawGauntletProgress();
 	DrawRoverControlsOverlay();
 	DrawSpeedGauge();
+	DrawSkillProgress();
 	DrawCastingIndicator(Crawler);
 	DrawRangedCrosshair(Crawler);
 
@@ -439,19 +493,29 @@ void ADCCHUD::DrawHUDContents()
 		}
 	}
 
-	if (IsHudFeatureUnlocked(EDCCHudFeature::QuestTracker))
+	if (IsHudFeatureUnlocked(EDCCHudFeature::QuestTracker) && !Arena)
 	{
 		DrawQuestTracker();
 	}
 	DrawInteractionPrompt(Crawler);
-	if (IsHudFeatureUnlocked(EDCCHudFeature::Vitals))
+	if (IsHudFeatureUnlocked(EDCCHudFeature::Vitals) && (!Arena || Arena->ShowsClimbHud()))
 	{
 		DrawStaminaBar(Crawler);
+	}
+	if (Arena && Arena->ShowsClimbHud())
+	{
+		DrawClimbKit(Crawler);
+	}
+	if (Arena && Arena->GetGameId() == TEXT("Kart"))
+	{
+		DrawRallyKit(GetOwningRover());
+		if (!Arena->bRoundOver) { DrawRepoMinimap(GetOwningRover()); } // the shift report has the screen
+		DrawHookReticle(GetOwningRover());
 	}
 
 	// Always on, both of them: the hotbar is useless if it only appears in a menu,
 	// and a conversation has to be readable while the world is still visible.
-	if (IsHudFeatureUnlocked(EDCCHudFeature::Hotbar))
+	if (IsHudFeatureUnlocked(EDCCHudFeature::Hotbar) && (!Arena || Arena->ShowsClimbHud()))
 	{
 		DrawHotbar(Crawler);
 	}
@@ -468,7 +532,7 @@ void ADCCHUD::DrawHUDContents()
 
 	if (!bShowMenu || !Crawler)
 	{
-		if (!bShowMenu && IsHudFeatureUnlocked(EDCCHudFeature::MenuCharacter))
+		if (!bShowMenu && IsHudFeatureUnlocked(EDCCHudFeature::MenuCharacter) && !Arena)
 		{
 			DrawText(TEXT("[Tab] Character"), DimColour, 24.0f, 24.0f);
 		}
@@ -819,17 +883,24 @@ void ADCCHUD::DrawNotice()
 
 	const FString Line = NoticeText.ToString();
 
+	// 2026-11-14 polish: a card with a shadow and an amber edge, in crisp text. In Repo Rally it sits under the
+	// shift clock instead of over the road ahead.
+	const float US = FMath::Clamp(Canvas->SizeY / 1080.0f, 0.6f, 2.0f);
+	UFont* Font = GEngine->GetSmallFont();
 	float W = 0.0f, H = 0.0f;
-	GetTextSize(Line, W, H, GEngine->GetMediumFont(), 1.0f);
+	RallyTextSize(Line, W, H, Font, 1.3f * US);
 
 	const float X = (Canvas->SizeX - W) * 0.5f;
-
-	// Above centre, clear of the crosshair and the hotbar. Low enough to be in
-	// the same glance as whatever the player was aiming at.
-	const float Y = Canvas->SizeY * 0.38f;
-
-	DrawRect(FLinearColor(0.02f, 0.03f, 0.06f, 0.78f), X - 16.0f, Y - 7.0f, W + 32.0f, H + 14.0f);
-	DrawText(Line, FLinearColor(1.0f, 0.82f, 0.45f), X, Y, GEngine->GetMediumFont(), 1.0f);
+	const ADCCArcadeArena* NoticeArena = GetArcadeArena();
+	const bool bRally = NoticeArena && NoticeArena->GetGameId() == TEXT("Kart");
+	// Above centre, clear of the crosshair and the hotbar.
+	const float Y = bRally ? 172.0f * US : Canvas->SizeY * 0.38f;
+	const float PX = 18.0f * US, PY = 9.0f * US;
+	const float Fade = FMath::Clamp(float(NoticeExpiryTime - GetWorld()->GetTimeSeconds()) / 0.4f, 0.0f, 1.0f);
+	DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.3f * Fade), X - PX + 4.0f, Y - PY + 5.0f, W + PX * 2.0f, H + PY * 2.0f);
+	DrawRect(FLinearColor(0.035f, 0.018f, 0.065f, 0.9f * Fade), X - PX, Y - PY, W + PX * 2.0f, H + PY * 2.0f);
+	DrawRect(FLinearColor(1.0f, 0.76f, 0.32f, Fade), X - PX, Y - PY, 4.0f * US, H + PY * 2.0f);
+	RallyText(Line, FLinearColor(1.0f, 0.9f, 0.7f, Fade), X, Y, Font, 1.3f * US);
 }
 
 
@@ -845,23 +916,7 @@ void ADCCHUD::ToggleAdminPanel()
 	// Same cursor handling as the character menu. Both can be open at once, so
 	// the condition is "is anything that needs clicking open" rather than the
 	// state of this one panel.
-	const bool bWantsCursor = bShowAdminPanel || bShowMenu;
-
-	PlayerOwner->bShowMouseCursor = bWantsCursor;
-	PlayerOwner->bEnableClickEvents = bWantsCursor;
-	PlayerOwner->bEnableMouseOverEvents = bWantsCursor;
-
-	if (bWantsCursor)
-	{
-		FInputModeGameAndUI InputMode;
-		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-		InputMode.SetHideCursorDuringCapture(false);
-		PlayerOwner->SetInputMode(InputMode);
-	}
-	else
-	{
-		PlayerOwner->SetInputMode(FInputModeGameOnly());
-	}
+	ApplyCursorForOpenPanels();
 }
 
 float ADCCHUD::DrawAdminButton(float X, float Y, float Width, const FString& Label,
@@ -1664,6 +1719,10 @@ void ADCCHUD::DrawVitals(ADCCCharacterBase* Crawler)
 	constexpr float BarH = 16.0f;
 
 	const float X = 24.0f;
+	if (GetArcadeArena())
+	{
+		return; // the minigames show health only: no mana, no level
+	}
 	float Y = Canvas->SizeY - 132.0f;
 
 	if (Stats->MaxManaPoints > 0)
@@ -1894,6 +1953,25 @@ void ADCCHUD::DrawRoverControlsOverlay()
 	{
 		return;
 	}
+	// Repo Rally draws its own kit in this corner, and the status panel already says how to drive.
+	if (const ADCCArcadeArena* Arena = GetArcadeArena())
+	{
+		if (Arena->GetGameId() == TEXT("Kart"))
+		{
+			return;
+		}
+	}
+
+	// A guide, so it shows once per player (2026-11-14): through their first 25 seconds of driving, then never.
+	if (IsGuideSeen(TEXT("RoverControls")))
+	{
+		return;
+	}
+	RoverGuideSeconds += GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.0f;
+	if (RoverGuideSeconds > 25.0f)
+	{
+		MarkGuideSeen(TEXT("RoverControls"));
+	}
 
 	static const TCHAR* Rows[] = {
 		TEXT("W / S       Throttle"),
@@ -1903,6 +1981,7 @@ void ADCCHUD::DrawRoverControlsOverlay()
 		TEXT("Left Click  Boost"),
 		TEXT("R           Windows"),
 		TEXT("T           Radio"),
+		TEXT("C           Next song"),
 		TEXT("E           Exit"),
 	};
 	constexpr int32 RowCount = UE_ARRAY_COUNT(Rows);
@@ -1938,78 +2017,7 @@ void ADCCHUD::DrawRoverControlsOverlay()
 		X, Y, (PanelW - 16.0f) * BoostFraction, 8.0f);
 }
 
-void ADCCHUD::DrawSpeedGauge()
-{
-	const ADCCRover* Rover = GetOwningRover();
-	if (!Canvas || !Rover || !Rover->IsOccupied())
-	{
-		return;
-	}
-
-	const float Speed = Rover->GetVelocity().Size();
-	// BoostSpeed is the real ceiling this gauge can reach (boosting or
-	// flying both run faster than MaxCruiseSpeed), so it has somewhere to
-	// go instead of pegging at "full" the moment boost kicks in.
-	const float Fraction = FMath::Clamp(Speed / FMath::Max(1.0f, Rover->BoostSpeed), 0.0f, 1.0f);
-
-	// A radial tick dial rather than a flat bar - Zoe, 2026-09-04: "A
-	// stylized / colorized curve meter like the kingdom hearts health /
-	// mana bar or some racing games have." Canvas has no native arc
-	// primitive to draw a true curved fill, so this approximates one with
-	// DrawLine ticks fanned out from a pivot below the screen, colour-graded
-	// cool-to-hot the way a KH gauge shifts tone as it fills toward urgent.
-	// Enlarged 2026-09-05 alongside the speed raise - the same dial reading a
-	// bigger number needs more tick resolution to still show a difference
-	// between "fast" and "boosting", and a bigger arc to be readable at a
-	// glance while actually driving that fast.
-	constexpr int32 TickCount = 36;
-	constexpr float ArcStartDegrees = -164.0f;
-	constexpr float ArcEndDegrees = -16.0f;
-	constexpr float InnerRadius = 88.0f;
-	constexpr float OuterRadius = 132.0f;
-	constexpr float TickThickness = 6.0f;
-
-	const float PivotX = Canvas->SizeX * 0.5f;
-	const float PivotY = Canvas->SizeY - 54.0f;
-
-	const int32 LitCount = FMath::RoundToInt(Fraction * TickCount);
-
-	// Boosting/flying reads hot (lit ticks reach further, a small surge)
-	// rather than the calm boost-charge green used elsewhere - a full speed
-	// gauge and a full boost-charge gauge mean opposite things (going fast
-	// vs. ready to go fast) and should not share a colour language.
-	const bool bSurging = Rover->IsBoosting() || Rover->IsFlying();
-
-	for (int32 Index = 0; Index < TickCount; ++Index)
-	{
-		const float T = TickCount > 1 ? static_cast<float>(Index) / (TickCount - 1) : 0.0f;
-		const float AngleRad = FMath::DegreesToRadians(FMath::Lerp(ArcStartDegrees, ArcEndDegrees, T));
-		const float CosA = FMath::Cos(AngleRad);
-		const float SinA = FMath::Sin(AngleRad);
-		const bool bLit = Index < LitCount;
-
-		// Cool blue -> amber -> hot red across the dial's own length, same
-		// colour language as a KH gauge shifting from calm to urgent - here,
-		// from idle to redline.
-		FLinearColor Colour = T < 0.5f
-			? FLinearColor::LerpUsingHSV(FLinearColor(0.25f, 0.55f, 1.0f), FLinearColor(1.0f, 0.82f, 0.15f), T * 2.0f)
-			: FLinearColor::LerpUsingHSV(FLinearColor(1.0f, 0.82f, 0.15f), FLinearColor(1.0f, 0.2f, 0.15f), (T - 0.5f) * 2.0f);
-		Colour.A = bLit ? 1.0f : 0.16f;
-
-		const float Outer = (bLit && bSurging) ? OuterRadius + 12.0f : OuterRadius;
-		DrawLine(PivotX + CosA * InnerRadius, PivotY + SinA * InnerRadius,
-			PivotX + CosA * Outer, PivotY + SinA * Outer, Colour, TickThickness);
-	}
-
-	// Whole-number units/sec rather than an invented "mph"/"km/h" - this is
-	// an arcade rover with no real-world speed model behind it, and a made
-	// up unit would be a lie dressed as a stat.
-	const FString Label = FString::Printf(TEXT("%d"), FMath::RoundToInt(Speed));
-	float LabelW = 0.0f, LabelH = 0.0f;
-	GetTextSize(Label, LabelW, LabelH, GEngine->GetLargeFont(), 1.0f);
-	DrawText(Label, HeadingColour, PivotX - LabelW * 0.5f, PivotY - InnerRadius - LabelH - 2.0f,
-		GEngine->GetLargeFont(), 1.0f);
-}
+// DrawSpeedGauge (the speedometer and altimeter) lives in UI/DCCHUD_VehicleGauges.cpp.
 
 void ADCCHUD::DrawQuestCompleteBanner()
 {
@@ -2679,8 +2687,13 @@ void ADCCHUD::DrawInteractionPrompt(ADCCCharacterBase* Crawler)
 
 	if (Crawler->IsClimbing())
 	{
-		Prompt = TEXT("Hold [LMB] to climb up, [RMB] to descend.  [Space] to let go.");
+		Prompt = TEXT("Keep holding [LMB] to climb.  Let go to drop.  [RMB] climbs down.");
 		Colour = BodyColour;
+	}
+	else if (Crawler->IsClimbingEquipped())
+	{
+		Prompt = TEXT("Climbing ready: hold [LMB] and walk into a wall.");
+		Colour = DimColour;
 	}
 	else if (const ADCCClimbPoint* Pending = Crawler->GetPendingClimbPoint())
 	{
@@ -2717,10 +2730,18 @@ void ADCCHUD::DrawStaminaBar(ADCCCharacterBase* Crawler)
 	}
 
 	const float Fraction = Stats->GetStaminaFraction();
+	// Fourteener's hunger (2026-11-15, Zoe: "have the hunger bar just steadily growing on the same bar as the stamina.
+	// It just eats into the stamina"): hunger caps max stamina, so it is drawn as a dark band eating in from the right
+	// end of this bar instead of a bar of its own. Cap is the share of the bar stamina can still fill.
+	const UDCCWalletComponent* Wallet = Crawler->Wallet.Get();
+	const bool bHunger = Wallet && Wallet->ClimbHunger >= 0.0f;
+	const float Fed = bHunger ? FMath::Clamp(Wallet->ClimbHunger / 100.0f, 0.0f, 1.0f) : 1.0f;
+	const float Cap = bHunger ? 0.35f + 0.65f * Fed : 1.0f;
 
 	// Hidden at full stamina unless it is actively being spent. A bar that is
 	// always there while nothing is draining it just teaches players to ignore it.
-	if (Fraction >= 0.999f && !Crawler->IsSprinting() && !Crawler->IsClimbing())
+	// (Once hunger has bitten off a visible piece, it stays up, so you can see it coming.)
+	if (Fraction >= 0.999f && !Crawler->IsSprinting() && !Crawler->IsClimbing() && Cap > 0.97f)
 	{
 		return;
 	}
@@ -2741,6 +2762,24 @@ void ADCCHUD::DrawStaminaBar(ADCCCharacterBase* Crawler)
 		FMath::Clamp(Fraction, 0.0f, 1.0f));
 
 	DrawRect(Fill, BarX, BarY, BarW * FMath::Clamp(Fraction, 0.0f, 1.0f), BarH);
+	if (bHunger && Cap < 0.999f)
+	{
+		// The bitten-off end: dark amber, with a bright edge where hunger meets what you can still use, and notches
+		// so it reads as eaten rather than empty.
+		const float HX = BarX + BarW * Cap;
+		const float HW = BarW * (1.0f - Cap);
+		const FLinearColor Hungry = Fed > 0.1f ? FLinearColor(0.55f, 0.32f, 0.08f, 0.95f) : FLinearColor(0.55f, 0.1f, 0.06f, 0.95f);
+		DrawRect(Hungry, HX, BarY, HW, BarH);
+		for (float N = HX + 6.0f; N < BarX + BarW - 2.0f; N += 9.0f)
+		{
+			DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.35f), N, BarY, 3.0f, BarH);
+		}
+		DrawRect(Fed > 0.1f ? FLinearColor(1.0f, 0.7f, 0.25f) : FLinearColor(1.0f, 0.3f, 0.2f), HX - 1.0f, BarY - 2.0f, 2.0f, BarH + 4.0f);
+		const FString Note = Fed <= 0.1f ? TEXT("STARVING - eat something") : Fed < 0.45f ? TEXT("hungry") : TEXT("peckish");
+		float NW = 0.0f, NH = 0.0f;
+		GetTextSize(Note, NW, NH, GEngine->GetSmallFont(), 1.0f);
+		DrawText(Note, Fed > 0.1f ? FLinearColor(1.0f, 0.72f, 0.3f) : FLinearColor(1.0f, 0.35f, 0.25f), BarX + BarW - NW, BarY - LineHeight);
+	}
 	DrawText(TEXT("Stamina"), DimColour, BarX, BarY - LineHeight);
 }
 
@@ -3001,9 +3040,19 @@ void ADCCHUD::DrawHotbar(ADCCCharacterBase* Crawler)
 		return;
 	}
 
-	// Five, because that is how many keys are bound. Showing a sixth skill in a
-	// bar whose key does not exist would be a lie.
-	const int32 SlotCount = FMath::Min(Known.Num(), 5);
+	// Five keys (2026-11-13): 1 is the first skill, 2 and 3 are quick items (empty
+	// until something useful is picked up), 4 and 5 are the next two skills.
+	struct FCell { int32 Skill; int32 Quick; };
+	TArray<FCell> Cells;
+	Cells.Add({ 0, -1 });
+	Cells.Add({ -1, 0 });
+	Cells.Add({ -1, 1 });
+	// Arcade games stop at 3 (Zoe: "they will be overwhelmed otherwise"); the main game keeps 4 and 5.
+	for (int32 s = 1; s <= 2 && s < Known.Num() && !GetArcadeArena(); ++s)
+	{
+		Cells.Add({ s, -1 });
+	}
+	const int32 SlotCount = Cells.Num();
 
 	constexpr float SlotW = 108.0f;
 	constexpr float SlotH = 46.0f;
@@ -3017,8 +3066,35 @@ void ADCCHUD::DrawHotbar(ADCCCharacterBase* Crawler)
 
 	for (int32 Index = 0; Index < SlotCount; ++Index)
 	{
-		const FDCCKnownSkill& Slot = Known[Index];
 		const float SlotX = StartX + Index * (SlotW + Gap);
+		if (Cells[Index].Quick >= 0)
+		{
+			// A quick item: its name and how many are left, or an empty, dim slot.
+			const int32 Q = Cells[Index].Quick;
+			const FName ItemId = Crawler->QuickSlots.IsValidIndex(Q) ? Crawler->QuickSlots[Q] : NAME_None;
+			FString ItemName;
+			if (const DCCClimbItems::FItem* Tool = DCCClimbItems::Find(ItemId))
+			{
+				ItemName = Tool->Name;
+			}
+			else if (!ItemId.IsNone() && Crawler->Inventory)
+			{
+				FDCCConsumableDef Drink;
+				ItemName = Crawler->Inventory->FindConsumable(ItemId, Drink) && !Drink.DisplayName.IsEmpty() ? Drink.DisplayName.ToString() : ItemId.ToString();
+			}
+			const bool bFilled = !ItemId.IsNone();
+			DrawRect(bFilled ? FLinearColor(0.35f, 0.75f, 0.55f, 0.75f) : FLinearColor(0.42f, 0.44f, 0.52f, 0.3f),
+				SlotX - 2.0f, Y - 2.0f, SlotW + 4.0f, SlotH + 4.0f);
+			DrawRect(FLinearColor(0.02f, 0.03f, 0.06f, bFilled ? 0.85f : 0.5f), SlotX, Y, SlotW, SlotH);
+			DrawText(FString::Printf(TEXT("%d"), Index + 1), bFilled ? HeadingColour : DimColour, SlotX + 5.0f, Y + 3.0f);
+			DrawText(bFilled ? ItemName.Left(13) : FString(TEXT("empty")), bFilled ? BodyColour : DimColour, SlotX + 19.0f, Y + 3.0f);
+			if (bFilled)
+			{
+				DrawText(FString::Printf(TEXT("x%d"), Crawler->QuickItemCount(ItemId)), DimColour, SlotX + 6.0f, Y + SlotH - 18.0f);
+			}
+			continue;
+		}
+		const FDCCKnownSkill& Slot = Known[Cells[Index].Skill];
 
 		FDCCSkillDef Def;
 		const bool bFound = SkillComp->FindSkill(Slot.SkillId, Def);
@@ -3572,6 +3648,12 @@ void ADCCHUD::DrawOathgateMenu(ADCCCharacterBase* Crawler)
 
 void ADCCHUD::DrawVendorMenu(ADCCCharacterBase* Crawler)
 {
+	// The shop screen (UDCCShopWidget) replaced this list on 2026-11-13.
+	if (IsShopOpen())
+	{
+		return;
+	}
+
 	if (!Crawler || !Canvas)
 	{
 		return;
@@ -4457,4 +4539,1505 @@ void ADCCHUD::DrawSystemWindow(ADCCCharacterBase* Crawler)
 	FLinearColor FooterColour = Accent;
 	FooterColour.A = TextAlpha * Pulse;
 	DrawText(Footer, FooterColour, X + PanelW - Pad - FW, Y + PanelH - Pad * 0.5f - FH - 6.0f, BodyFont, 1.0f);
+}
+// ---------------------------------------------------------------------------
+// Party menu (2026-11-12)
+// ---------------------------------------------------------------------------
+
+void ADCCHUD::BeginPlay()
+{
+	Super::BeginPlay();
+
+	DCCSession::EnsureFailureHandlers();
+
+	// The pose bench as its own program: open the bench as soon as there is a
+	// body on the stage, and keep it open (closing it quits the program).
+	bBenchTool = DCCArcade::IsBenchTool(GetWorld());
+	if (bBenchTool)
+	{
+		GetWorldTimerManager().SetTimer(BenchToolTimer, FTimerDelegate::CreateWeakLambda(this, [this]()
+		{
+			if (IsGearBenchOpen())
+			{
+				GetWorldTimerManager().ClearTimer(BenchToolTimer);
+			}
+			else if (GetOwningCrawler())
+			{
+				ToggleGearBench();
+			}
+		}), 0.25f, true);
+		return;
+	}
+
+	// A launched game starts at the front door (character select), then the Den.
+	if (DCCArcade::IsFrontDoor(GetWorld()))
+	{
+		FTimerHandle Handle;
+		GetWorldTimerManager().SetTimer(Handle, FTimerDelegate::CreateWeakLambda(this, [this]()
+		{
+			OpenCharacterSelect();
+		}), 0.1f, false);
+		return;
+	}
+
+	// PLAY travels with seamless travel. That swaps in a new controller and
+	// destroys this HUD's predecessor only after the local player has already
+	// moved, so the old EndPlay's SetInputMode never reaches the viewport.
+	// The front door's menu leaves that viewport on SetIgnoreInput(true)
+	// (UI-only). The Den then draws and ticks, and every key is dropped.
+	if (PlayerOwner)
+	{
+		PlayerOwner->SetInputMode(FInputModeGameOnly());
+		PlayerOwner->bShowMouseCursor = false;
+	}
+	if (UGameViewportClient* Viewport = GetWorld() ? GetWorld()->GetGameViewport() : nullptr)
+	{
+		Viewport->SetIgnoreInput(false);
+	}
+
+	DCCArcade::MaybeStartInLobby(GetWorld());
+
+	// The party menu opens on its own only when there is something to read in
+	// it: why a join failed, or (once per hosting) the invite for a host who just
+	// clicked HOST A PARTY and has nobody yet. It used to open on every level
+	// load of a launched game, which meant at the start of every minigame; the
+	// main menu (front door) now does the "what do you want to do" job.
+	const UWorld* World = GetWorld();
+	static bool bShownInviteForThisHosting = false;
+	const bool bHosting = World && World->GetNetMode() == NM_ListenServer;
+	const bool bLonelyHost = bHosting && !bShownInviteForThisHosting && World->GetGameState()
+		&& World->GetGameState()->PlayerArray.Num() <= 1;
+	if (!bHosting)
+	{
+		bShownInviteForThisHosting = false; // the next HOST A PARTY shows it again
+	}
+	if (bLonelyHost)
+	{
+		bShownInviteForThisHosting = true;
+	}
+	if (bLonelyHost || DCCSession::HasPendingError())
+	{
+		FTimerHandle Handle;
+		GetWorldTimerManager().SetTimer(Handle, FTimerDelegate::CreateWeakLambda(this, [this]()
+		{
+			if (!IsSessionMenuOpen())
+			{
+				ToggleSessionMenu();
+			}
+		}), 0.75f, false);
+	}
+}
+
+bool ADCCHUD::IsSessionMenuOpen() const
+{
+	return SessionMenu && SessionMenu->IsInViewport();
+}
+
+void ADCCHUD::ToggleSessionMenu()
+{
+	if (!PlayerOwner)
+	{
+		return;
+	}
+
+	if (IsSessionMenuOpen())
+	{
+		SessionMenu->RemoveFromParent();
+		ApplyCursorForOpenPanels();
+		return;
+	}
+
+	if (!SessionMenu)
+	{
+		SessionMenu = CreateWidget<UDCCSessionMenuWidget>(PlayerOwner, UDCCSessionMenuWidget::StaticClass());
+		if (!SessionMenu)
+		{
+			return;
+		}
+		TWeakObjectPtr<ADCCHUD> WeakHud(this);
+		SessionMenu->OnCloseRequested = [WeakHud]()
+		{
+			if (WeakHud.IsValid() && WeakHud->IsSessionMenuOpen())
+			{
+				WeakHud->ToggleSessionMenu();
+			}
+		};
+	}
+
+	SessionMenu->AddToViewport(50);
+	SessionMenu->Refresh();
+	ApplyCursorForOpenPanels();
+}
+
+bool ADCCHUD::IsCosmeticShopOpen() const
+{
+	return CosmeticShop && CosmeticShop->IsInViewport();
+}
+
+void ADCCHUD::OpenCosmeticShop(int32 Tab)
+{
+	if (!PlayerOwner || IsCosmeticShopOpen())
+	{
+		return;
+	}
+	if (!CosmeticShop)
+	{
+		CosmeticShop = CreateWidget<UDCCCosmeticShopWidget>(PlayerOwner, UDCCCosmeticShopWidget::StaticClass());
+		if (!CosmeticShop)
+		{
+			return;
+		}
+		TWeakObjectPtr<ADCCHUD> WeakHud(this);
+		CosmeticShop->OnCloseRequested = [WeakHud]()
+		{
+			if (WeakHud.IsValid())
+			{
+				WeakHud->CloseCosmeticShop();
+			}
+		};
+	}
+	CosmeticShop->Tab = FMath::Clamp(Tab, 0, 4);
+	CosmeticShop->AddToViewport(62);
+	ApplyCursorForOpenPanels();
+}
+
+void ADCCHUD::CloseCosmeticShop()
+{
+	if (IsCosmeticShopOpen())
+	{
+		CosmeticShop->RemoveFromParent();
+		ApplyCursorForOpenPanels();
+	}
+}
+
+void ADCCHUD::UpdateRoundOver()
+{
+	const ADCCArcadeArena* Arena = nullptr;
+	if (UWorld* World = GetWorld())
+	{
+		for (TActorIterator<ADCCArcadeArena> It(World); It; ++It)
+		{
+			Arena = *It;
+			break;
+		}
+	}
+	const bool bWant = Arena && Arena->bRoundOver && PlayerOwner;
+	const bool bShowing = RoundOver && RoundOver->IsInViewport();
+	if (bWant && !bShowing)
+	{
+		if (!RoundOver)
+		{
+			RoundOver = CreateWidget<UDCCRoundOverWidget>(PlayerOwner, UDCCRoundOverWidget::StaticClass());
+		}
+		if (RoundOver)
+		{
+			RoundOver->Arena = const_cast<ADCCArcadeArena*>(Arena);
+			RoundOver->AddToViewport(55);
+			ApplyCursorForOpenPanels();
+		}
+	}
+	else if (!bWant && bShowing)
+	{
+		RoundOver->RemoveFromParent();
+		ApplyCursorForOpenPanels();
+	}
+}
+
+void ADCCHUD::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	// Like the select screen, these belong to this level, not the next one.
+	if (CosmeticShop)
+	{
+		CosmeticShop->RemoveFromParent();
+	}
+	if (RoundOver)
+	{
+		RoundOver->RemoveFromParent();
+	}
+
+	// The select screen must not follow into the Den. SetInputMode here only
+	// works when this controller still owns the local player. Seamless travel
+	// moves the player first and then destroys us, so the call no-ops and the
+	// viewport stays on "ignore input" until the new HUD's BeginPlay.
+	if (CharacterSelect)
+	{
+		CharacterSelect->RemoveFromParent();
+		CharacterSelect = nullptr;
+		if (PlayerOwner && PlayerOwner->Player)
+		{
+			PlayerOwner->SetInputMode(FInputModeGameOnly());
+			PlayerOwner->bShowMouseCursor = false;
+		}
+	}
+	Super::EndPlay(EndPlayReason);
+}
+
+void ADCCHUD::OpenCharacterSelect()
+{
+	if (!PlayerOwner || CharacterSelect)
+	{
+		return;
+	}
+	CharacterSelect = CreateWidget<UDCCCharacterSelectWidget>(PlayerOwner, UDCCCharacterSelectWidget::StaticClass());
+	if (!CharacterSelect)
+	{
+		return;
+	}
+	CharacterSelect->AddToViewport(60);
+	CharacterSelect->Refresh();
+	ApplyCursorForOpenPanels();
+}
+
+void ADCCHUD::ApplyCursorForOpenPanels()
+{
+	if (!PlayerOwner)
+	{
+		return;
+	}
+
+	// The shop is modal: clicks buy things.
+	if (IsCosmeticShopOpen())
+	{
+		PlayerOwner->bShowMouseCursor = true;
+		PlayerOwner->bEnableClickEvents = true;
+		FInputModeUIOnly InputMode;
+		InputMode.SetWidgetToFocus(CosmeticShop->TakeWidget());
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		PlayerOwner->SetInputMode(InputMode);
+		if (CharacterSelect)
+		{
+			CharacterSelect->SetVisibility(ESlateVisibility::Collapsed);
+		}
+		return;
+	}
+
+	// The main menu owns everything until it travels to the Den, except the
+	// pose bench opened from it, which hides the menu while it is up.
+	if (CharacterSelect)
+	{
+		CharacterSelect->SetVisibility(IsGearBenchOpen() ? ESlateVisibility::Collapsed : ESlateVisibility::Visible);
+	}
+	if (CharacterSelect && CharacterSelect->IsInViewport() && !IsGearBenchOpen())
+	{
+		PlayerOwner->bShowMouseCursor = true;
+		PlayerOwner->bEnableClickEvents = true;
+		FInputModeUIOnly InputMode;
+		InputMode.SetWidgetToFocus(CharacterSelect->TakeWidget());
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		PlayerOwner->SetInputMode(InputMode);
+		return;
+	}
+
+	const bool bParty = IsSessionMenuOpen();
+	const bool bVoting = RoundOver && RoundOver->IsInViewport();
+	const bool bWantsCursor = bParty || bShowMenu || bShowAdminPanel || bLootScreenOpen || bVoting;
+
+	PlayerOwner->bShowMouseCursor = bWantsCursor;
+	PlayerOwner->bEnableClickEvents = bWantsCursor;
+	PlayerOwner->bEnableMouseOverEvents = bWantsCursor;
+
+	// The shop is modal: clicks buy things, they do not swing a sword.
+	if (IsShopOpen())
+	{
+		PlayerOwner->bShowMouseCursor = true;
+		FInputModeUIOnly InputMode;
+		InputMode.SetWidgetToFocus(ShopWidget->TakeWidget());
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		PlayerOwner->SetInputMode(InputMode);
+		return;
+	}
+
+	// The gear bench owns the mouse (orbit) and the keyboard (play, step).
+	if (IsGearBenchOpen())
+	{
+		PlayerOwner->bShowMouseCursor = true;
+		FInputModeUIOnly InputMode;
+		InputMode.SetWidgetToFocus(GearBench->TakeWidget());
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		PlayerOwner->SetInputMode(InputMode);
+		return;
+	}
+
+	// The loot box screen is modal: Space opens boxes rather than jumping.
+	if (bLootScreenOpen && LootScreenInput)
+	{
+		FInputModeUIOnly InputMode;
+		InputMode.SetWidgetToFocus(LootScreenInput->TakeWidget());
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		PlayerOwner->SetInputMode(InputMode);
+		return;
+	}
+
+	if (bWantsCursor)
+	{
+		// GameAndUI, as the other panels do: F2 still reaches the game to close it.
+		FInputModeGameAndUI InputMode;
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		InputMode.SetHideCursorDuringCapture(false);
+		if (bParty)
+		{
+			InputMode.SetWidgetToFocus(SessionMenu->TakeWidget());
+		}
+		PlayerOwner->SetInputMode(InputMode);
+	}
+	else
+	{
+		PlayerOwner->SetInputMode(FInputModeGameOnly());
+	}
+}
+
+static void DCCPartyCommand(UWorld* World)
+{
+	if (!World)
+	{
+		return;
+	}
+	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+	{
+		APlayerController* PC = It->Get();
+		if (PC && PC->IsLocalController())
+		{
+			if (ADCCHUD* Hud = Cast<ADCCHUD>(PC->GetHUD()))
+			{
+				Hud->ToggleSessionMenu();
+			}
+			return;
+		}
+	}
+}
+
+static FAutoConsoleCommandWithWorld GPartyCmd(
+	TEXT("DCC.Party"),
+	TEXT("Open or close the party menu (host, invite, join). Same as F2."),
+	FConsoleCommandWithWorldDelegate::CreateStatic(&DCCPartyCommand));
+
+// ---------------------------------------------------------------------------
+// Gear bench (2026-11-13)
+// ---------------------------------------------------------------------------
+
+bool ADCCHUD::IsGearBenchOpen() const
+{
+	return GearBench && GearBench->IsInViewport();
+}
+
+void ADCCHUD::ToggleGearBench()
+{
+	if (!PlayerOwner)
+	{
+		return;
+	}
+
+	if (IsGearBenchOpen())
+	{
+		GearBench->End();
+		GearBench->RemoveFromParent();
+		ApplyCursorForOpenPanels();
+		return;
+	}
+
+	ADCCCharacterBase* Crawler = GetOwningCrawler();
+	if (!Crawler)
+	{
+		return;
+	}
+	if (!GearBench)
+	{
+		GearBench = CreateWidget<UDCCGearBenchWidget>(PlayerOwner, UDCCGearBenchWidget::StaticClass());
+		if (!GearBench)
+		{
+			return;
+		}
+		GearBench->Hud = this;
+	}
+
+	GearBench->AddToViewport(58);
+	GearBench->Begin(Crawler);
+	ApplyCursorForOpenPanels();
+}
+
+static void DCCBenchCommand(UWorld* World)
+{
+	if (!World)
+	{
+		return;
+	}
+	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+	{
+		APlayerController* PC = It->Get();
+		if (PC && PC->IsLocalController())
+		{
+			if (ADCCHUD* Hud = Cast<ADCCHUD>(PC->GetHUD()))
+			{
+				Hud->ToggleGearBench();
+			}
+			return;
+		}
+	}
+}
+
+static FAutoConsoleCommandWithWorld GBenchCmd(
+	TEXT("DCC.Bench"),
+	TEXT("Open or close the gear bench: nudge item grips, sockets and bones, and step through animations. Same as F3."),
+	FConsoleCommandWithWorldDelegate::CreateStatic(&DCCBenchCommand));
+
+// ---------------------------------------------------------------------------
+// Shop screen (2026-11-13)
+// ---------------------------------------------------------------------------
+
+bool ADCCHUD::IsShopOpen() const
+{
+	return ShopWidget && ShopWidget->IsInViewport();
+}
+
+void ADCCHUD::CloseShop()
+{
+	if (IsShopOpen())
+	{
+		ShopWidget->RemoveFromParent();
+		ApplyCursorForOpenPanels();
+	}
+}
+
+void ADCCHUD::SyncShop(ADCCCharacterBase* Crawler)
+{
+	ADCCVendorNPC* Vendor = Crawler ? Cast<ADCCVendorNPC>(Crawler->GetVendorTarget()) : nullptr;
+	if (!Vendor)
+	{
+		CloseShop();
+		return;
+	}
+	if (IsShopOpen())
+	{
+		ShopWidget->TickShop();
+		return;
+	}
+	if (!PlayerOwner)
+	{
+		return;
+	}
+	if (!ShopWidget)
+	{
+		ShopWidget = CreateWidget<UDCCShopWidget>(PlayerOwner, UDCCShopWidget::StaticClass());
+		if (!ShopWidget)
+		{
+			return;
+		}
+		ShopWidget->Hud = this;
+	}
+	ShopWidget->AddToViewport(56);
+	ShopWidget->Open(Vendor);
+	ApplyCursorForOpenPanels();
+}
+
+// ---------------------------------------------------------------------------
+// Arcade status (2026-11-13)
+// ---------------------------------------------------------------------------
+
+const ADCCArcadeArena* ADCCHUD::GetArcadeArena() const
+{
+	if (UWorld* World = GetWorld())
+	{
+		for (TActorIterator<ADCCArcadeArena> It(World); It; ++It)
+		{
+			return *It;
+		}
+	}
+	return nullptr;
+}
+
+void ADCCHUD::DrawClimbKit(ADCCCharacterBase* Crawler)
+{
+	const UDCCWalletComponent* Wallet = Crawler ? Crawler->Wallet.Get() : nullptr;
+	// Hunger lives on the stamina bar now (DrawStaminaBar), eating into it from the right (2026-11-15).
+	if (!Canvas || !Wallet || (Wallet->ClimbTools.IsEmpty() && Wallet->ClimbBoosts.IsEmpty() && Wallet->CarriedArtifacts.IsEmpty()))
+	{
+		return;
+	}
+	UFont* Font = GEngine->GetSmallFont();
+	TArray<TPair<FString, FLinearColor>> Lines;
+	if (!Wallet->ClimbTools.IsEmpty())
+	{
+		const int32 i = FMath::Clamp(Wallet->ClimbToolIndex, 0, Wallet->ClimbTools.Num() - 1);
+		const DCCClimbItems::FItem* Tool = DCCClimbItems::Find(Wallet->ClimbTools[i]);
+		Lines.Add({ FString::Printf(TEXT("[Q] %s"), Tool ? Tool->Name : TEXT("?")), FLinearColor(1.0f, 0.86f, 0.55f) });
+		if (Wallet->ClimbTools.Num() > 1)
+		{
+			TArray<FString> Others;
+			for (int32 k = 1; k < Wallet->ClimbTools.Num(); ++k)
+			{
+				const DCCClimbItems::FItem* Other = DCCClimbItems::Find(Wallet->ClimbTools[(i + k) % Wallet->ClimbTools.Num()]);
+				Others.Add(Other ? Other->Name : TEXT("?"));
+			}
+			Lines.Add({ FString::Printf(TEXT("[T] next: %s"), *FString::Join(Others, TEXT(", "))), DimColour });
+		}
+	}
+	if (!Wallet->ClimbBoosts.IsEmpty())
+	{
+		Lines.Add({ Wallet->ClimbBoosts, FLinearColor(0.6f, 0.9f, 1.0f) });
+	}
+	for (const FName& Id : Wallet->CarriedArtifacts)
+	{
+		const DCCClimbItems::FItem* Artifact = DCCClimbItems::Find(Id);
+		Lines.Add({ FString::Printf(TEXT("Carrying: %s"), Artifact ? Artifact->Name : TEXT("?")), FLinearColor(1.0f, 0.78f, 0.3f) });
+	}
+
+	float W = 0.0f, H = 0.0f;
+	for (const TPair<FString, FLinearColor>& Line : Lines)
+	{
+		float LW = 0.0f;
+		GetTextSize(Line.Key, LW, H, Font, 1.0f);
+		W = FMath::Max(W, LW);
+	}
+	const float PanelW = W + 24.0f, PanelH = Lines.Num() * (H + 3.0f) + 14.0f;
+	const float X = Canvas->SizeX - PanelW - 24.0f, Y = Canvas->SizeY - PanelH - 120.0f;
+	DrawRect(FLinearColor(0.02f, 0.015f, 0.04f, 0.7f), X, Y, PanelW, PanelH);
+	float LY = Y + 7.0f;
+	for (const TPair<FString, FLinearColor>& Line : Lines)
+	{
+		DrawText(Line.Key, Line.Value, X + 12.0f, LY, Font, 1.0f);
+		LY += H + 3.0f;
+	}
+}
+
+void ADCCHUD::DrawRallyKit(const ADCCRover* Rover)
+{
+	const ADCCArcadeKart* Kart = Cast<ADCCArcadeKart>(GetArcadeArena());
+	const float Scale = Canvas ? Canvas->ClipY / 1080.0f : 1.0f;
+	UFont* Medium = GEngine ? GEngine->GetMediumFont() : nullptr;
+	const float T = GetWorld() ? float(GetWorld()->GetTimeSeconds()) : 0.0f;
+	// Marks in the world (2026-11-14 polish): each one carries the same number and colour as its row on THE BOARD.
+	// On screen: a pulsing diamond with a numbered tag. Off screen: a solid chevron on the edge with the number and
+	// distance only, so several off-screen marks no longer pile their names on top of each other.
+	const float US = Canvas ? FMath::Clamp(Canvas->SizeY / 1080.0f, 0.6f, 2.0f) : 1.0f;
+	UFont* SmallF = GEngine ? GEngine->GetSmallFont() : nullptr;
+	auto Chevron = [this](const FVector2D& At, const FVector2D& Dir, float Size, const FLinearColor& C)
+	{
+		const FVector2D Side(-Dir.Y, Dir.X);
+		const FVector2D Tip = At + Dir * Size, L = At - Dir * Size * 0.4f + Side * Size * 0.8f, R = At - Dir * Size * 0.4f - Side * Size * 0.8f;
+		FCanvasTriangleItem Tri(Tip, L, R, GWhiteTexture);
+		Tri.SetColor(C);
+		Tri.BlendMode = SE_BLEND_Translucent;
+		Canvas->DrawItem(Tri);
+	};
+	auto NumberTile = [this, SmallF, US](float X, float Y, int32 Number, const FLinearColor& C)
+	{
+		const float T = 22.0f * US;
+		DrawRect(FLinearColor(0.03f, 0.015f, 0.05f, 0.85f), X, Y, T, T);
+		DrawRect(FLinearColor(C.R, C.G, C.B, 0.35f), X, Y, T, T);
+		DrawRect(C, X, Y + T - 2.0f * US, T, 2.0f * US);
+		const FString N = Number > 0 ? FString::FromInt(Number) : FString(TEXT("?"));
+		float W = 0.0f, H = 0.0f;
+		RallyTextSize(N, W, H, SmallF, 1.3f * US);
+		RallyText(N, FLinearColor::White, X + (T - W) * 0.5f, Y + (T - H) * 0.5f, SmallF, 1.3f * US);
+		return T;
+	};
+	auto Place = [this](const FVector& World, FVector2D& OutP, FVector2D& OutDir)
+	{
+		const FVector Screen = Canvas->Project(World);
+		const float CX = Canvas->ClipX * 0.5f, CY = Canvas->ClipY * 0.5f;
+		const float M = 70.0f;
+		const bool bOn = Screen.Z > 0.0f && Screen.X > M && Screen.X < Canvas->ClipX - M && Screen.Y > M && Screen.Y < Canvas->ClipY - M;
+		OutP = FVector2D(Screen.X, Screen.Y);
+		if (bOn)
+		{
+			return true;
+		}
+		FVector2D D(Screen.X - CX, Screen.Y - CY);
+		if (Screen.Z <= 0.0f) { D = -D; }
+		D.Normalize();
+		const float K = FMath::Min((CX - M) / FMath::Max(0.001f, FMath::Abs(D.X)), (CY - M) / FMath::Max(0.001f, FMath::Abs(D.Y)));
+		OutP = FVector2D(CX, CY) + D * K;
+		OutDir = D;
+		return false;
+	};
+	(void)Scale;
+	(void)Medium;
+
+	if (Canvas && Kart && Rover && Kart->IsShiftOn() && !Kart->bRoundOver)
+	{
+		TArray<FBox2D> PlacedTags;
+		for (TActorIterator<ADCCRover> It(GetWorld()); It; ++It)
+		{
+			if (It->RallyDuty != 1)
+			{
+				continue;
+			}
+			int32 Number = 0;
+			for (int32 b = 0; b < Kart->Board.Num(); ++b)
+			{
+				if (Kart->Board[b].Plate == It->RallyPlate) { Number = b + 1; break; }
+			}
+			if (Number > 0 && Kart->Board[Number - 1].State == 6)
+			{
+				continue; // already on somebody's bumper: no marker over the tow
+			}
+			FLinearColor C = ADCCArcadeKart::MarkColour(It->RallyPlate);
+			const float Metres = FVector::Dist(It->GetActorLocation(), Rover->GetActorLocation()) / 100.0f;
+			FVector2D P, Dir;
+			if (Place(It->GetActorLocation() + FVector(0, 0, 220), P, Dir))
+			{
+				const float Pulse = 0.5f + 0.5f * FMath::Sin(T * 5.0f);
+				const float R = (14.0f + 5.0f * Pulse) * US;
+				const FLinearColor Ring(C.R, C.G, C.B, 0.95f);
+				DrawLine(P.X, P.Y - R, P.X + R, P.Y, Ring, 2.5f * US);
+				DrawLine(P.X + R, P.Y, P.X, P.Y + R, Ring, 2.5f * US);
+				DrawLine(P.X, P.Y + R, P.X - R, P.Y, Ring, 2.5f * US);
+				DrawLine(P.X - R, P.Y, P.X, P.Y - R, Ring, 2.5f * US);
+				const float TX = P.X + 26.0f * US;
+				float TY = P.Y - 11.0f * US;
+				// Two marks near each other on screen (often, at the horizon): push the later tag down until it is clear.
+				const float TagW = 240.0f * US, TagH = 25.0f * US;
+				for (int32 Guard = 0; Guard < 6; ++Guard)
+				{
+					const FBox2D Mine(FVector2D(TX, TY), FVector2D(TX + TagW, TY + TagH));
+					const FBox2D* Hit = PlacedTags.FindByPredicate([&Mine](const FBox2D& B) { return B.Intersect(Mine); });
+					if (!Hit) { break; }
+					TY = Hit->Max.Y + 2.0f * US;
+				}
+				PlacedTags.Add(FBox2D(FVector2D(TX, TY), FVector2D(TX + TagW, TY + TagH)));
+				const float TileW = NumberTile(TX, TY, Number, C);
+				RallyPill(TX + TileW + 3.0f * US, TY + 1.0f * US, FString::Printf(TEXT("%s  %.0f m"), *It->RallyPlate, Metres), C, US);
+			}
+			else
+			{
+				Chevron(P, Dir, 16.0f * US, FLinearColor(C.R, C.G, C.B, 0.95f));
+				const FVector2D Back = P - Dir * 34.0f * US;
+				const float Tile = NumberTile(Back.X - 11.0f * US, Back.Y - 11.0f * US, Number, C);
+				const FString D = FString::Printf(TEXT("%.0fm"), Metres);
+				float DW = 0.0f, DH = 0.0f;
+				RallyTextSize(D, DW, DH, SmallF, 1.0f * US);
+				RallyText(D, FLinearColor(1, 1, 1, 0.9f), Back.X - DW * 0.5f, Back.Y + Tile * 0.5f + 2.0f * US, SmallF, 1.0f * US);
+			}
+		}
+	}
+
+	// Low fuel: a green chevron to the nearest station (the stations also light up, FDCCRallyAmbience).
+	if (Canvas && Kart && Rover && Rover->RallyFuel >= 0.0f && Rover->RallyFuel < 35.0f)
+	{
+		FVector Best = FVector::ZeroVector;
+		float BestD = TNumericLimits<float>::Max();
+		for (int32 g = 0; g < 2; ++g)
+		{
+			const FVector2D Off = ADCCArcadeKart::GasOffset(g);
+			const FVector At = Kart->GetActorLocation() + FVector(Off.X, Off.Y, 300.0f);
+			const float D = FVector::Dist(At, Rover->GetActorLocation());
+			if (D < BestD) { BestD = D; Best = At; }
+		}
+		const FLinearColor Green(0.3f, 1.0f, 0.45f, 0.55f + 0.45f * FMath::Abs(FMath::Sin(T * 4.0f)));
+		FVector2D P, Dir;
+		const bool bOn = Place(Best, P, Dir);
+		if (!bOn)
+		{
+			Chevron(P, Dir, 16.0f * US, Green);
+			P -= Dir * 40.0f * US;
+		}
+		const FString Label = FString::Printf(TEXT("GAS  %.0f m"), BestD / 100.0f);
+		float LW = 0.0f, LH = 0.0f;
+		RallyTextSize(Label, LW, LH, SmallF, 1.05f * US);
+		RallyPill(P.X - LW * 0.5f - 7.0f * US, P.Y - LH * 0.5f, Label, Green, US);
+	}
+
+	// While a car is on the line: one clear card, the key and what it does (2026-11-13, restyled 2026-11-14).
+	if (Canvas && Rover && Rover->RallyTow)
+	{
+		const bool bPays = Rover->bRallyTowDocked && Rover->bRallyInYard;
+		const FString Main = bPays ? TEXT("DROP IT") : Rover->bRallyTowDocked ? TEXT("BRING IT TO THE YARD") : TEXT("MAGNET LOCKED");
+		const FString Sub = bPays ? TEXT("In the yard - it pays.") : TEXT("Q cuts it loose. No pay outside the yard.");
+		const FLinearColor Accent = bPays ? FLinearColor(0.45f, 1.0f, 0.6f) : FLinearColor(1.0f, 0.78f, 0.32f);
+		UFont* Big = GEngine->GetLargeFont();
+		float MW = 0.0f, MH = 0.0f, SW = 0.0f, SH = 0.0f;
+		RallyTextSize(Main, MW, MH, Big, 1.7f * US);
+		RallyTextSize(Sub, SW, SH, SmallF, 1.1f * US);
+		const float KeyW = bPays ? 40.0f * US : 0.0f;
+		const float W = FMath::Max(MW + KeyW, SW) + 40.0f * US;
+		const float H = MH + SH + 24.0f * US;
+		const float X = (Canvas->ClipX - W) * 0.5f, Y = Canvas->ClipY * 0.64f;
+		RallyPanel(X, Y, W, H, Accent);
+		float MX = X + (W - MW - KeyW) * 0.5f;
+		if (bPays)
+		{
+			MX += RallyKey(MX, Y + 10.0f * US + (MH - 26.0f * US) * 0.5f, TEXT("Q"), US) + 10.0f * US;
+		}
+		RallyText(Main, Accent, MX, Y + 8.0f * US, Big, 1.7f * US);
+		RallyText(Sub, FLinearColor(0.85f, 0.83f, 0.92f), X + (W - SW) * 0.5f, Y + 12.0f * US + MH, SmallF, 1.1f * US);
+	}
+	// The kit text that used to sit here is the YOUR TRUCK panel now (DrawRallyTruck, 2026-11-14).
+	if (Canvas)
+	{
+		return;
+	}
+	UFont* Font = GEngine->GetSmallFont();
+	TArray<TPair<FString, FLinearColor>> Lines;
+	if (const FString Radio = Rover->GetRadioLine(); !Radio.IsEmpty())
+	{
+		Lines.Add({ Radio, FLinearColor(1.0f, 0.55f, 0.85f) });
+	}
+	if (!Rover->RallyTools.IsEmpty())
+	{
+		const int32 i = FMath::Clamp(Rover->RallyToolIndex, 0, Rover->RallyTools.Num() - 1);
+		const DCCRallyItems::FItem* Tool = DCCRallyItems::Find(Rover->RallyTools[i]);
+		Lines.Add({ FString::Printf(TEXT("[Q] %s"), Tool ? Tool->Name : TEXT("?")), FLinearColor(1.0f, 0.86f, 0.55f) });
+		if (Rover->RallyTools.Num() > 1)
+		{
+			TArray<FString> Others;
+			for (int32 k = 1; k < Rover->RallyTools.Num(); ++k)
+			{
+				const DCCRallyItems::FItem* Other = DCCRallyItems::Find(Rover->RallyTools[(i + k) % Rover->RallyTools.Num()]);
+				Others.Add(Other ? Other->Name : TEXT("?"));
+			}
+			Lines.Add({ FString::Printf(TEXT("[F] next: %s"), *FString::Join(Others, TEXT(", "))), DimColour });
+		}
+	}
+	if (!Rover->RallyStatus.IsEmpty())
+	{
+		Lines.Add({ Rover->RallyStatus, FLinearColor(0.55f, 0.85f, 1.0f) });
+	}
+	for (const FName& Id : Rover->RallyCargo)
+	{
+		const DCCRallyItems::FItem* Seized = DCCRallyItems::Find(Id);
+		Lines.Add({ FString::Printf(TEXT("Carrying: %s"), Seized ? Seized->Name : TEXT("?")), FLinearColor(1.0f, 0.78f, 0.3f) });
+	}
+
+	float W = 0.0f, H = 0.0f;
+	for (const TPair<FString, FLinearColor>& Line : Lines)
+	{
+		float LW = 0.0f;
+		GetTextSize(Line.Key, LW, H, Font, 1.0f);
+		W = FMath::Max(W, LW);
+	}
+	const float PanelW = W + 24.0f, PanelH = Lines.Num() * (H + 3.0f) + 14.0f;
+	const float X = Canvas->SizeX - PanelW - 24.0f, Y = Canvas->SizeY - PanelH - 120.0f;
+	DrawRect(FLinearColor(0.04f, 0.02f, 0.015f, 0.72f), X, Y, PanelW, PanelH);
+	float LY = Y + 7.0f;
+	for (const TPair<FString, FLinearColor>& Line : Lines)
+	{
+		DrawText(Line.Key, Line.Value, X + 12.0f, LY, Font, 1.0f);
+		LY += H + 3.0f;
+	}
+}
+
+void ADCCHUD::DrawRepoMinimap(const ADCCRover* Self)
+{
+	// The city map (2026-11-14 polish): dark city blocks between neon streets, the yard in green, gas stations,
+	// the marks as diamonds in their board colour and number, rival crews in red, angry owners as red dots,
+	// and you as an arrow that points the way the truck faces. A legend inside the panel.
+	const ADCCArcadeKart* Kart = Cast<ADCCArcadeKart>(GetArcadeArena());
+	if (!Canvas || !Kart || !GetWorld())
+	{
+		return;
+	}
+	const float US = FMath::Clamp(Canvas->SizeY / 1080.0f, 0.6f, 2.0f);
+	UFont* Small = GEngine->GetSmallFont();
+	const FLinearColor Pink(1.0f, 0.32f, 0.82f), Cyan(0.3f, 0.9f, 1.0f), Green(0.4f, 1.0f, 0.55f), Red(1.0f, 0.3f, 0.3f);
+	const FLinearColor Dim(0.66f, 0.62f, 0.76f);
+
+	const float MS = 236.0f * US;                // the square map
+	const float Head = 38.0f * US, Foot = 30.0f * US, Pad = 10.0f * US;
+	const float W = MS + Pad * 2.0f, H = Head + MS + Foot;
+	const float X = 24.0f, Y = Canvas->SizeY - H - 24.0f;
+	RallyPanel(X, Y, W, H, Pink);
+	RallyText(TEXT("CITY"), Pink, X + 14.0f * US, Y + 8.0f * US, GEngine->GetLargeFont(), 1.5f * US);
+	const float MX = X + Pad, MY = Y + Head;
+	DrawRect(FLinearColor(0.012f, 0.006f, 0.025f, 0.9f), MX, MY, MS, MS);
+
+	const FVector O = Kart->GetActorLocation();
+	const float Half = ADCCArcadeKart::MapHalf;
+	auto ToMap = [&](float Wx, float Wy)
+	{
+		const float U = (Wx - O.X) / (Half * 2.0f) + 0.5f;
+		const float V = (Wy - O.Y) / (Half * 2.0f) + 0.5f;
+		return FVector2D(MX + FMath::Clamp(U, 0.0f, 1.0f) * MS, MY + (1.0f - FMath::Clamp(V, 0.0f, 1.0f)) * MS);
+	};
+	const float Sp = ADCCArcadeKart::StreetSpacing;
+	const int32 R = ADCCArcadeKart::StreetRadius;
+
+	// Blocks, then the streets between them.
+	const float Inset = 2600.0f;
+	for (int32 Ix = -R; Ix < R; ++Ix)
+	{
+		for (int32 Iy = -R; Iy < R; ++Iy)
+		{
+			const bool bYard = Ix == -R && Iy == -R;
+			const FVector2D A = ToMap(O.X + Ix * Sp + Inset * 0.5f, O.Y + (Iy + 1) * Sp - Inset * 0.5f);
+			const FVector2D B = ToMap(O.X + (Ix + 1) * Sp - Inset * 0.5f, O.Y + Iy * Sp + Inset * 0.5f);
+			DrawRect(bYard ? FLinearColor(0.1f, 0.35f, 0.18f, 0.75f) : FLinearColor(0.16f, 0.08f, 0.24f, 0.9f), A.X, A.Y, B.X - A.X, B.Y - A.Y);
+			if (bYard)
+			{
+				float TW = 0.0f, TH = 0.0f;
+				RallyTextSize(TEXT("YARD"), TW, TH, Small, 0.9f * US);
+				RallyText(TEXT("YARD"), Green, (A.X + B.X - TW) * 0.5f, (A.Y + B.Y - TH) * 0.5f, Small, 0.9f * US, false);
+			}
+		}
+	}
+	const float Span = R * Sp;
+	for (int32 i = -R; i <= R; ++i)
+	{
+		const FLinearColor Line = (i % 2 == 0) ? FLinearColor(Pink.R, Pink.G, Pink.B, 0.45f) : FLinearColor(Cyan.R, Cyan.G, Cyan.B, 0.45f);
+		const FVector2D A = ToMap(O.X - Span, O.Y + i * Sp), B = ToMap(O.X + Span, O.Y + i * Sp);
+		DrawRect(Line, FMath::Min(A.X, B.X), A.Y - 0.5f * US, FMath::Abs(B.X - A.X), 1.0f * US);
+		const FVector2D C = ToMap(O.X + i * Sp, O.Y - Span), D = ToMap(O.X + i * Sp, O.Y + Span);
+		DrawRect(Line, C.X - 0.5f * US, FMath::Min(C.Y, D.Y), 1.0f * US, FMath::Abs(D.Y - C.Y));
+	}
+
+	auto Square = [&](const FVector2D& P, float Size, const FLinearColor& C)
+	{
+		DrawRect(C, P.X - Size * 0.5f, P.Y - Size * 0.5f, Size, Size);
+	};
+	auto Diamond = [&](const FVector2D& P, float Size, const FLinearColor& C)
+	{
+		for (float k = 0.0f; k <= Size; k += 1.0f)
+		{
+			const float Wd = (Size - k) * 2.0f;
+			DrawRect(C, P.X - Wd * 0.5f, P.Y - k, Wd, 1.0f);
+			DrawRect(C, P.X - Wd * 0.5f, P.Y + k, Wd, 1.0f);
+		}
+	};
+
+	// Gas stations.
+	for (int32 g = 0; g < 2; ++g)
+	{
+		const FVector2D Off = ADCCArcadeKart::GasOffset(g);
+		const FVector2D P = ToMap(O.X + Off.X, O.Y + Off.Y);
+		Square(P, 13.0f * US, FLinearColor(0.05f, 0.25f, 0.1f, 1.0f));
+		Square(P, 11.0f * US, Green * 0.8f);
+		float TW = 0.0f, TH = 0.0f;
+		RallyTextSize(TEXT("G"), TW, TH, Small, 0.85f * US);
+		RallyText(TEXT("G"), FLinearColor(0.02f, 0.1f, 0.04f), P.X - TW * 0.5f, P.Y - TH * 0.5f, Small, 0.85f * US, false);
+	}
+
+	// Traffic first (under everything), then crews, marks, owners and other players.
+	for (TActorIterator<ADCCRover> It(GetWorld()); It; ++It)
+	{
+		const FVector2D P = ToMap(It->GetActorLocation().X, It->GetActorLocation().Y);
+		if (It->RallyDuty == 2 || It->RallyDuty == 4)
+		{
+			Square(P, 2.5f * US, FLinearColor(0.6f, 0.55f, 0.7f, 0.45f));
+		}
+	}
+	for (TActorIterator<ADCCRover> It(GetWorld()); It; ++It)
+	{
+		const FVector2D P = ToMap(It->GetActorLocation().X, It->GetActorLocation().Y);
+		if (It->RallyDuty == 3)
+		{
+			Square(P, 7.0f * US, FLinearColor(0.2f, 0.0f, 0.0f, 1.0f));
+			Square(P, 5.0f * US, Red);
+		}
+		else if (It->RallyDuty == 1)
+		{
+			int32 Number = 0;
+			for (int32 b = 0; b < Kart->Board.Num(); ++b)
+			{
+				if (Kart->Board[b].Plate == It->RallyPlate) { Number = b + 1; break; }
+			}
+			const FLinearColor C = ADCCArcadeKart::MarkColour(It->RallyPlate);
+			Diamond(P, 6.0f * US, FLinearColor(0.0f, 0.0f, 0.0f, 0.8f));
+			Diamond(P, 5.0f * US, C);
+			if (Number > 0)
+			{
+				RallyText(FString::FromInt(Number), FLinearColor::White, P.X + 6.0f * US, P.Y - 9.0f * US, Small, 0.85f * US);
+			}
+		}
+		else if (It->RallyDuty == 0 && *It != Self && It->IsOccupied())
+		{
+			Square(P, 7.0f * US, Cyan);
+		}
+	}
+	for (TActorIterator<ADCCRallyThug> It(GetWorld()); It; ++It)
+	{
+		if (It->Mood != ADCCRallyThug::Down)
+		{
+			Square(ToMap(It->GetActorLocation().X, It->GetActorLocation().Y), 4.0f * US, Red);
+		}
+	}
+	if (Self)
+	{
+		const FVector2D P = ToMap(Self->GetActorLocation().X, Self->GetActorLocation().Y);
+		const float Yaw = Self->GetActorRotation().Yaw;
+		Square(P, 12.0f * US, FLinearColor(1.0f, 1.0f, 1.0f, 0.12f));
+		RallyArrow(P.X, P.Y, 6.5f * US, 90.0f - Yaw, FLinearColor::White);
+	}
+
+	// Legend, in one row along the bottom of the panel.
+	float LX = X + 12.0f * US;
+	const float LY = Y + Head + MS + 8.0f * US;
+	auto Key = [&](const FLinearColor& C, const TCHAR* Label, bool bDiamond)
+	{
+		const FVector2D P(LX + 5.0f * US, LY + 7.0f * US);
+		if (bDiamond) { Diamond(P, 5.0f * US, C); } else { Square(P, 8.0f * US, C); }
+		float TW = 0.0f, TH = 0.0f;
+		RallyTextSize(Label, TW, TH, Small, 0.95f * US);
+		RallyText(Label, Dim, LX + 14.0f * US, LY, Small, 0.95f * US, false);
+		LX += 14.0f * US + TW + 12.0f * US;
+	};
+	Key(FLinearColor(1.0f, 0.75f, 0.3f), TEXT("mark"), true);
+	Key(Red, TEXT("danger"), false);
+	Key(Green, TEXT("gas"), false);
+	Key(Cyan, TEXT("crew"), false);
+}
+
+void ADCCHUD::DrawHookReticle(const ADCCRover* Rover)
+{
+	if (!Canvas || !Rover || !Rover->bHookAim)
+	{
+		return;
+	}
+	const float CX = Canvas->SizeX * 0.5f;
+	const float CY = Canvas->SizeY * 0.5f;
+	const float T = GetWorld() ? static_cast<float>(GetWorld()->GetTimeSeconds()) : 0.0f;
+	auto Ring = [this](float X, float Y, float Radius, const FLinearColor& C, float Thick)
+	{
+		const int32 Segments = 32;
+		for (int32 i = 0; i < Segments; ++i)
+		{
+			const float A0 = 2.0f * PI * i / Segments, A1 = 2.0f * PI * (i + 1) / Segments;
+			DrawLine(X + FMath::Cos(A0) * Radius, Y + FMath::Sin(A0) * Radius, X + FMath::Cos(A1) * Radius, Y + FMath::Sin(A1) * Radius, C, Thick);
+		}
+	};
+
+	// The lock (2026-11-13: "a pulsing target indicator"): a marked car within a few degrees of the aim
+	// and in range gets a pulsing ring, its plate and distance; Q now fires straight at it.
+	FVector LockDir;
+	if (const ADCCRover* Locked = Rover->FindHookLock(LockDir))
+	{
+		const FVector Screen = Canvas->Project(Locked->GetActorLocation() + FVector(0, 0, 60));
+		if (Screen.Z > 0.0f)
+		{
+			const float Pulse = 0.5f + 0.5f * FMath::Sin(T * 7.0f);
+			FLinearColor Lock = ADCCArcadeKart::MarkColour(Locked->RallyPlate);
+			Lock.A = 0.95f;
+			Ring(Screen.X, Screen.Y, 38.0f + 10.0f * Pulse, Lock, 3.0f);
+			Ring(Screen.X, Screen.Y, 22.0f, FLinearColor(0.35f, 1.0f, 0.55f, 0.35f + 0.5f * Pulse), 2.0f);
+			for (int32 k = 0; k < 4; ++k) // corner ticks closing in
+			{
+				const float A = PI * 0.25f + k * PI * 0.5f;
+				const float R0 = 54.0f + 8.0f * (1.0f - Pulse), R1 = R0 + 14.0f;
+				DrawLine(Screen.X + FMath::Cos(A) * R0, Screen.Y + FMath::Sin(A) * R0, Screen.X + FMath::Cos(A) * R1, Screen.Y + FMath::Sin(A) * R1, Lock, 3.0f);
+			}
+			const float Metres = FVector::Dist(Locked->GetActorLocation(), Rover->GetActorLocation()) / 100.0f;
+			RallyPill(Screen.X + 66.0f, Screen.Y - 12.0f, FString::Printf(TEXT("LOCKED  %s  %.0f m   -   Q  HOOK"), *Locked->RallyPlate, Metres), Lock,
+				FMath::Clamp(Canvas->SizeY / 1080.0f, 0.6f, 2.0f) * 1.15f);
+			DrawLine(CX, CY, Screen.X, Screen.Y, FLinearColor(0.35f, 1.0f, 0.55f, 0.25f), 1.0f);
+		}
+	}
+	const FLinearColor Colour(1.0f, 0.78f, 0.38f, 0.95f);
+	Ring(CX, CY, 26.0f, FLinearColor(1.0f, 0.78f, 0.38f, 0.35f), 1.5f);
+	DrawRect(Colour, CX - 16.0f, CY - 1.0f, 8.0f, 2.0f);
+	DrawRect(Colour, CX + 8.0f, CY - 1.0f, 8.0f, 2.0f);
+	DrawRect(Colour, CX - 1.0f, CY - 16.0f, 2.0f, 8.0f);
+	DrawRect(Colour, CX - 1.0f, CY + 8.0f, 2.0f, 8.0f);
+	DrawRect(Colour, CX - 1.5f, CY - 1.5f, 3.0f, 3.0f);
+	DrawText(TEXT("HOOK"), Colour, CX + 18.0f, CY - 20.0f, GEngine->GetSmallFont(), 1.0f);
+}
+
+void ADCCHUD::DrawNPCSubtitle()
+{
+	const APawn* Pawn = PlayerOwner ? PlayerOwner->GetPawn() : nullptr;
+	if (!Canvas || !Pawn || !GetWorld())
+	{
+		return;
+	}
+	const ADCCDialogueNPC* Speaker = nullptr;
+	float Best = 1500.0f * 1500.0f;
+	for (TActorIterator<ADCCDialogueNPC> It(GetWorld()); It; ++It)
+	{
+		const float D = FVector::DistSquared(It->GetActorLocation(), Pawn->GetActorLocation());
+		if (!It->GetCurrentLine().IsEmpty() && D < Best)
+		{
+			Best = D;
+			Speaker = *It;
+		}
+	}
+	if (!Speaker)
+	{
+		return;
+	}
+
+	// "Name: line", wrapped to fit, in a dark band just above the hotbar.
+	UFont* Font = GEngine->GetMediumFont();
+	const FString Name = Speaker->DisplayName.IsEmpty() ? FString() : Speaker->DisplayName.ToString() + TEXT(":  ");
+	TArray<FString> Words;
+	Speaker->GetCurrentLine().ToString().ParseIntoArrayWS(Words);
+	TArray<FString> Rows;
+	FString Row = Name;
+	const float MaxW = FMath::Min(900.0f, Canvas->SizeX * 0.6f);
+	for (const FString& Word : Words)
+	{
+		const FString Try = Row.IsEmpty() ? Word : Row + TEXT(" ") + Word;
+		float W = 0.0f, H = 0.0f;
+		GetTextSize(Try, W, H, Font, 1.0f);
+		if (W > MaxW && !Row.IsEmpty())
+		{
+			Rows.Add(Row);
+			Row = Word;
+		}
+		else
+		{
+			Row = Try;
+		}
+	}
+	Rows.Add(Row);
+
+	float LineW = 0.0f, LineH = 0.0f;
+	for (const FString& R : Rows)
+	{
+		float W = 0.0f;
+		GetTextSize(R, W, LineH, Font, 1.0f);
+		LineW = FMath::Max(LineW, W);
+	}
+	const float PanelH = Rows.Num() * (LineH + 2.0f) + 16.0f;
+	const float X = (Canvas->SizeX - LineW - 32.0f) * 0.5f;
+	const float Y = Canvas->SizeY - 150.0f - PanelH;
+	DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.6f), X, Y, LineW + 32.0f, PanelH);
+	float TY = Y + 8.0f;
+	for (int32 i = 0; i < Rows.Num(); ++i)
+	{
+		float W = 0.0f, H = 0.0f;
+		GetTextSize(Rows[i], W, H, Font, 1.0f);
+		DrawText(Rows[i], i == 0 ? FLinearColor(1.0f, 0.86f, 0.6f) : FLinearColor(0.96f, 0.94f, 0.9f), (Canvas->SizeX - W) * 0.5f, TY, Font, 1.0f);
+		TY += LineH + 2.0f;
+	}
+}
+
+void ADCCHUD::DrawArcadeStatus()
+{
+	if (!Canvas || !GetWorld())
+	{
+		return;
+	}
+	const ADCCArcadeArena* Arena = nullptr;
+	for (TActorIterator<ADCCArcadeArena> It(GetWorld()); It; ++It)
+	{
+		Arena = *It;
+		break;
+	}
+	if (!Arena || Arena->Title.IsEmpty())
+	{
+		return;
+	}
+	// The boss bar: a long segmented bar low in the middle of the screen, the boss's name over it.
+	if (!Arena->BossName.IsEmpty() && Arena->BossHealth >= 0.0f)
+	{
+		const float BarW = FMath::Min(720.0f, Canvas->SizeX * 0.5f), BarH = 16.0f;
+		const float BX = (Canvas->SizeX - BarW) * 0.5f, BY = Canvas->SizeY * 0.86f - 78.0f;
+		const float Fill = FMath::Clamp(Arena->BossHealth, 0.0f, 1.0f);
+		DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.7f), BX - 3.0f, BY - 3.0f, BarW + 6.0f, BarH + 6.0f);
+		DrawRect(FLinearColor(0.25f, 0.08f, 0.35f, 0.9f), BX, BY, BarW, BarH);
+		DrawRect(FMath::Lerp(FLinearColor(1.0f, 0.25f, 0.35f), FLinearColor(0.7f, 0.35f, 1.0f), Fill), BX, BY, BarW * Fill, BarH);
+		for (const float Mark : { 0.33f, 0.66f })
+		{
+			DrawRect(FLinearColor(1.0f, 1.0f, 1.0f, 0.55f), BX + BarW * Mark - 1.0f, BY - 3.0f, 2.0f, BarH + 6.0f);
+		}
+		float NW = 0.0f, NH = 0.0f;
+		UFont* Medium = GEngine->GetMediumFont();
+		GetTextSize(Arena->BossName, NW, NH, Medium, 1.0f);
+		DrawText(Arena->BossName, FLinearColor(0.92f, 0.82f, 1.0f), (Canvas->SizeX - NW) * 0.5f, BY - NH - 6.0f, Medium, 1.0f);
+	}
+	if (const ADCCArcadeKart* Kart = Cast<ADCCArcadeKart>(Arena))
+	{
+		DrawRallyScreens(Kart); // its own work order, board, crew, truck and report (DCCHUD_RallyMenus.cpp)
+		return;
+	}
+
+	UFont* Large = GEngine->GetLargeFont();
+	UFont* Small = GEngine->GetSmallFont();
+
+	// The full box for the first minute of a game (2026-11-13: it was distracting
+	// to keep). After that only alert lines - ones the arena starts with "!", like
+	// rockfall and gust warnings - show, in a slim banner while they last.
+	const bool bFull = Arena->KeepsStatusPanel() || GetWorld()->GetTimeSeconds() < 60.0f;
+	TArray<FString> Lines;
+	TArray<bool> IsAlert;
+	for (const FString& Line : Arena->StatusLines)
+	{
+		const bool bAlert = Line.StartsWith(TEXT("!"));
+		if (bFull || bAlert)
+		{
+			Lines.Add(bAlert ? Line.RightChop(1).TrimStart() : Line);
+			IsAlert.Add(bAlert);
+		}
+	}
+	if (!bFull)
+	{
+		if (Lines.IsEmpty())
+		{
+			return;
+		}
+		UFont* Medium = GEngine->GetMediumFont();
+		float BW = 0.0f, BH = 0.0f;
+		for (const FString& Line : Lines)
+		{
+			float LW = 0.0f;
+			GetTextSize(Line, LW, BH, Medium, 1.0f);
+			BW = FMath::Max(BW, LW);
+		}
+		const float Pulse = 0.75f + 0.25f * FMath::Sin(GetWorld()->GetRealTimeSeconds() * 5.0f);
+		const float BX = (Canvas->SizeX - BW - 36.0f) * 0.5f, BY = 84.0f; // just under the health bar (2026-11-15)
+		DrawRect(FLinearColor(0.02f, 0.015f, 0.04f, 0.78f), BX, BY, BW + 36.0f, Lines.Num() * (BH + 4.0f) + 14.0f);
+		DrawRect(Arena->Accent * Pulse, BX, BY, BW + 36.0f, 3.0f);
+		float LY = BY + 8.0f;
+		for (const FString& Line : Lines)
+		{
+			float LW = 0.0f, LH = 0.0f;
+			GetTextSize(Line, LW, LH, Medium, 1.0f);
+			DrawText(Line, FLinearColor(1.0f, 0.85f, 0.55f), (Canvas->SizeX - LW) * 0.5f, LY, Medium, 1.0f);
+			LY += LH + 4.0f;
+		}
+		return;
+	}
+
+	float W = 0.0f, H = 0.0f;
+	GetTextSize(Arena->Title, W, H, Large, 1.0f);
+	float PanelW = W;
+	float LineH = 0.0f;
+	for (const FString& Line : Lines)
+	{
+		float LW = 0.0f;
+		GetTextSize(Line, LW, LineH, Small, 1.0f);
+		PanelW = FMath::Max(PanelW, LW);
+	}
+	PanelW += 40.0f;
+	const float PanelH = H + 16.0f + Lines.Num() * (LineH + 3.0f) + 12.0f;
+	const float X = (Canvas->SizeX - PanelW) * 0.5f;
+	const float Y = 84.0f; // just under the health bar and its number, not over them (2026-11-15)
+
+	DrawRect(FLinearColor(0.02f, 0.015f, 0.04f, 0.82f), X, Y, PanelW, PanelH);
+	DrawRect(Arena->Accent, X, Y, PanelW, 3.0f);
+	DrawText(Arena->Title, Arena->Accent, (Canvas->SizeX - W) * 0.5f, Y + 8.0f, Large, 1.0f);
+	float TY = Y + H + 14.0f;
+	for (int32 i = 0; i < Lines.Num(); ++i)
+	{
+		float LW = 0.0f, LH = 0.0f;
+		GetTextSize(Lines[i], LW, LH, Small, 1.0f);
+		DrawText(Lines[i], IsAlert[i] ? FLinearColor(1.0f, 0.8f, 0.45f) : FLinearColor(0.93f, 0.9f, 0.86f), (Canvas->SizeX - LW) * 0.5f, TY, Small, 1.0f);
+		TY += LH + 3.0f;
+	}
+}
+
+void ADCCHUD::DrawMineReel()
+{
+	if (!Canvas || !GetWorld())
+	{
+		return;
+	}
+	const ADCCArcadeHaunt* Haunt = nullptr;
+	for (TActorIterator<ADCCArcadeHaunt> It(GetWorld()); It; ++It)
+	{
+		Haunt = *It;
+		break;
+	}
+	if (!Haunt || Haunt->ReelPhase == 0 || Haunt->ReelPhase == 3)
+	{
+		return;
+	}
+	UFont* Big = GEngine->GetMediumFont();
+	UFont* Small = GEngine->GetSmallFont();
+	const float W = Canvas->SizeX, H = Canvas->SizeY;
+	const double Now = Haunt->NowServer();
+
+	if (Haunt->ReelPhase == 1)
+	{
+		// DATA EXTRACTION: a bar over each head in the cage; TAPE LOST over anyone who did not make it.
+		const float P = FMath::Clamp(float((Now - Haunt->ExtractStart) / ADCCArcadeHaunt::ExtractSeconds), 0.0f, 1.0f);
+		float TW = 0, TH = 0;
+		const FString Banner = TEXT("DATA EXTRACTION");
+		GetTextSize(Banner, TW, TH, Big, 1.4f);
+		DrawText(Banner, FLinearColor(0.4f, 1.0f, 0.55f), (W - TW) * 0.5f, H * 0.16f, Big, 1.4f);
+		for (TActorIterator<ADCCCharacterBase> It(GetWorld()); It; ++It)
+		{
+			const ADCCCharacterBase* C = *It;
+			const APlayerState* State = C->GetPlayerState();
+			const FString Who = State ? State->GetPlayerName() : (bTrailerMinimal ? C->DisplayName.ToString() : FString());
+			if (Who.IsEmpty() || C->IsA<ADCCEnemyCharacter>() || C->IsHidden())
+			{
+				continue;
+			}
+			const FVector Screen = Project(C->GetActorLocation() + FVector(0, 0, 150));
+			if (Screen.Z <= 0.0f)
+			{
+				continue;
+			}
+			const bool bUp = Haunt->Uploaders.Contains(Who);
+			const float BW = 150.0f, BX = Screen.X - BW * 0.5f, BY = Screen.Y - 30.0f;
+			if (bUp)
+			{
+				DrawRect(FLinearColor(0, 0, 0, 0.7f), BX - 2, BY - 2, BW + 4, 14);
+				DrawRect(FLinearColor(0.35f, 1.0f, 0.5f), BX, BY, BW * P, 10);
+				DrawText(P >= 1.0f ? TEXT("UPLOADED") : FString::Printf(TEXT("EXTRACTING  %d%%"), FMath::RoundToInt(P * 100.0f)),
+					FLinearColor(0.8f, 1.0f, 0.85f), BX, BY - 20.0f, Small, 1.0f);
+			}
+			else
+			{
+				DrawText(TEXT("TAPE LOST"), FLinearColor(1.0f, 0.3f, 0.25f), BX + 30.0f, BY - 10.0f, Small, 1.0f);
+			}
+		}
+		return;
+	}
+
+	// THE SCROLLER: a phone in the middle of the screen, the post's video filling it, the feed's furniture over it.
+	int32 Index = 0;
+	double PlayTime = 0.0, Into = 0.0;
+	DrawRect(FLinearColor(0.02f, 0.02f, 0.03f, 0.92f), 0, 0, W, H);
+	if (!Haunt->CurrentClip(Index, PlayTime, Into))
+	{
+		return;
+	}
+	const FDCCReelClip& Post = Haunt->Reel[Index];
+	const float PH = H * 0.9f, PW = PH * 9.0f / 16.0f;
+	const float PX = (W - PW) * 0.5f, PY = (H - PH) * 0.5f;
+	// The phone: a bezel, then the video.
+	DrawRect(FLinearColor(0.08f, 0.08f, 0.1f), PX - 12, PY - 12, PW + 24, PH + 24);
+	if (Haunt->ReelTargets.Num() > 0 && Haunt->ReelTargets[0] && Haunt->ReelTargets[0]->GetResource())
+	{
+		FCanvasTileItem Tile(FVector2D(PX, PY), Haunt->ReelTargets[0]->GetResource(), FVector2D(PW, PH), FLinearColor::White);
+		Tile.BlendMode = SE_BLEND_Opaque;
+		Canvas->DrawItem(Tile);
+	}
+	// Top: the app, the tabs.
+	DrawRect(FLinearColor(0, 0, 0, 0.35f), PX, PY, PW, 54);
+	DrawText(TEXT("Scroller"), FLinearColor(1, 1, 1), PX + 16, PY + 14, Big, 1.0f);
+	DrawText(TEXT("Following   |   For You"), FLinearColor(1, 1, 1, 0.8f), PX + PW - 190, PY + 20, Small, 1.0f);
+	// Trending badge.
+	const FLinearColor RankColour = Post.Rank == 1 ? FLinearColor(1.0f, 0.8f, 0.2f) : Post.Rank == 2 ? FLinearColor(0.8f, 0.85f, 0.9f) : Post.Rank == 3 ? FLinearColor(0.85f, 0.55f, 0.3f) : FLinearColor(0.6f, 0.6f, 0.7f);
+	DrawRect(RankColour * 0.9f, PX + 16, PY + 66, 150, 26);
+	DrawText(Post.Rank == 1 ? TEXT("#1  TRENDING") : FString::Printf(TEXT("#%d  ON THE FEED"), Post.Rank), FLinearColor(0.05f, 0.05f, 0.08f), PX + 24, PY + 70, Small, 1.0f);
+	// Right rail: the counts, ticking up while you watch.
+	const float Grow = FMath::Clamp(float(Into / 3.0), 0.25f, 1.0f);
+	auto Count = [&](const TCHAR* Label, int32 Value, float Y)
+	{
+		DrawRect(FLinearColor(0, 0, 0, 0.35f), PX + PW - 82, Y, 70, 58);
+		DrawText(ADCCArcadeHaunt::CompactCount(FMath::RoundToInt(Value * Grow)), FLinearColor(1, 1, 1), PX + PW - 74, Y + 6, Big, 0.8f);
+		DrawText(Label, FLinearColor(1, 1, 1, 0.7f), PX + PW - 74, Y + 36, Small, 0.9f);
+	};
+	Count(TEXT("likes"), Post.Likes, PY + PH * 0.42f);
+	Count(TEXT("comments"), Post.Comments, PY + PH * 0.42f + 68);
+	Count(TEXT("shares"), Post.Shares, PY + PH * 0.42f + 136);
+	// A comment drifting up, now and then.
+	static const TCHAR* Chatter[] = {
+		TEXT("the way the lamp went BLUE"), TEXT("Mount Fourteener is NOT normal"), TEXT("ok who else heard three knocks"),
+		TEXT("he's standing RIGHT THERE"), TEXT("the planks. the PLANKS"), TEXT("this is the most haunted hole in Colorado"),
+		TEXT("Pip is my emotional support canary now"), TEXT("why is nobody talking about the cart"), TEXT("ratio'd by a ghost miner"),
+		TEXT("not the Spookseekers flashback"), TEXT("someone get this crew better tanks"), TEXT("I paused at 0:03 and I'm not ok"),
+	};
+	// Comments load in one after another and stack up, newest at the bottom, older ones fading as they climb.
+	{
+		const float OnPost = float(FMath::Max(0.0, Now - Haunt->FeedSince));
+		const float Every = 1.1f;
+		const int32 Loaded = 1 + FMath::FloorToInt(OnPost / Every);
+		const float Slide = FMath::Clamp(FMath::Fmod(OnPost, Every) / 0.25f, 0.0f, 1.0f);
+		const int32 Shown = FMath::Min(Loaded, 5);
+		for (int32 k = 0; k < Shown; ++k)
+		{
+			const int32 Nth = Loaded - 1 - k; // k = 0 is the newest
+			const int32 Pick = (Index * 7 + Nth * 5) % UE_ARRAY_COUNT(Chatter);
+			const float Y = PY + PH * 0.70f - k * 34.0f + (k == 0 ? (1.0f - Slide) * 24.0f : 0.0f);
+			const float Alpha = (k == 0 ? Slide : 1.0f) * (1.0f - k * 0.17f);
+			const FString Line = FString::Printf(TEXT("@viewer%d  %s"), 100 + (Pick * 37 + Nth * 11) % 900, Chatter[Pick]);
+			float LW = 0, LH = 0;
+			GetTextSize(Line, LW, LH, Small, 1.0f);
+			DrawRect(FLinearColor(0, 0, 0, 0.45f * Alpha), PX + 12, Y - 3, FMath::Min(LW + 12, PW - 110), LH + 6);
+			DrawText(Line, FLinearColor(1, 1, 1, 0.95f * Alpha), PX + 18, Y, Small, 1.0f);
+		}
+	}
+	// Bottom: who posted it, the caption, the tags, and what the rank paid.
+	DrawRect(FLinearColor(0, 0, 0, 0.45f), PX, PY + PH - 150, PW, 150);
+	DrawText(FString::Printf(TEXT("@%s"), *Post.Cams[0]), FLinearColor(1, 1, 1), PX + 16, PY + PH - 140, Big, 1.0f);
+	DrawText(Post.Title, FLinearColor(1.0f, 0.95f, 0.8f), PX + 16, PY + PH - 106, Small, 1.1f);
+	DrawText(TEXT("#deadair  #mountfourteener  #luckytuesday  #found"), FLinearColor(0.6f, 0.85f, 1.0f), PX + 16, PY + PH - 80, Small, 1.0f);
+	DrawText(FString::Printf(TEXT("+%d tickets   +%d credits for #%d"), Post.Tickets, Post.Credits, Post.Rank), FLinearColor(0.5f, 1.0f, 0.6f), PX + 16, PY + PH - 50, Small, 1.0f);
+	// The progress of this post, like the thin bar on a phone video.
+	const float Len = FMath::Max(0.5f, float(Post.To - Post.From));
+	DrawRect(FLinearColor(1, 1, 1, 0.25f), PX, PY + PH - 4, PW, 4);
+	DrawRect(FLinearColor(1, 1, 1, 0.9f), PX, PY + PH - 4, PW * FMath::Fmod(float(Into), Len) / Len, 4);
+	// Beside the phone: where you are in the feed, and how to flick.
+	DrawText(FString::Printf(TEXT("%d / %d"), Index + 1, Haunt->Reel.Num()), FLinearColor(1, 1, 1, 0.8f), PX + PW + 40, PY + PH * 0.5f - 20, Big, 1.0f);
+	DrawText(TEXT("scroll or arrows to flick"), FLinearColor(1, 1, 1, 0.55f), PX + PW + 40, PY + PH * 0.5f + 16, Small, 1.0f);
+}
+
+void ADCCHUD::DrawMineNote()
+{
+	if (!Canvas || !GetWorld() || !GetWorld()->GetGameState())
+	{
+		return;
+	}
+	const ADCCArcadeHaunt* Haunt = nullptr;
+	for (TActorIterator<ADCCArcadeHaunt> It(GetWorld()); It; ++It)
+	{
+		Haunt = *It;
+		break;
+	}
+	const APlayerState* Me = PlayerOwner ? PlayerOwner->PlayerState : nullptr;
+	const FDCCFootageEntry* Entry = Haunt && Me ? Haunt->FindEntry(Me->GetPlayerName()) : nullptr;
+	const double Now = GetWorld()->GetGameState()->GetServerWorldTimeSeconds();
+
+	// The mine's small HUD (2026-11-15): the lamp, the canary, bad air, and the knockers' ledge.
+	if (Haunt && Me)
+	{
+		const APawn* Pawn = PlayerOwner ? PlayerOwner->GetPawn() : nullptr;
+		UFont* Tiny = GEngine->GetSmallFont();
+		const bool bLampOff = Haunt->IsLampOff(Me->GetPlayerName());
+		const float BX = 40.0f, BY = Canvas->SizeY - 170.0f;
+		DrawText(bLampOff ? TEXT("LAMP OFF  [L]") : TEXT("LAMP ON  [L]"), bLampOff ? FLinearColor(0.6f, 0.6f, 0.65f) : FLinearColor(1.0f, 0.85f, 0.55f), BX, BY, Tiny, 1.0f);
+		if (Pawn && Haunt->IsInFiredamp(Pawn->GetActorLocation()) && !bLampOff)
+		{
+			DrawText(TEXT("Your lamp is burning BLUE. Firedamp. Lamp off (L), or get through fast."), FLinearColor(0.5f, 0.7f, 1.0f), BX, BY - 22.0f, Tiny, 1.0f);
+		}
+		// Depth, air and the kit you carry.
+		const FDCCFootageEntry* Kit = Haunt->FindEntry(Me->GetPlayerName());
+		if (Kit && Pawn)
+		{
+			const float Depth = Haunt->DepthAt(Pawn->GetActorLocation());
+			const float Reach = DCCChopShop::AirReach(Kit->KitAir);
+			const bool bDeep = Depth > Reach;
+			DrawText(FString::Printf(TEXT("DEPTH %d%%   your tanks reach %d%%"), FMath::RoundToInt(Depth * 100.0f), FMath::Min(100, FMath::RoundToInt(Reach * 100.0f))),
+				bDeep ? FLinearColor(1.0f, 0.55f, 0.4f) : FLinearColor(0.75f, 0.85f, 0.95f), BX, BY - 92.0f, Tiny, 1.0f);
+			// The air gauge.
+			const float GW = 180.0f;
+			DrawRect(FLinearColor(0, 0, 0, 0.5f), BX, BY - 70.0f, GW, 10.0f);
+			DrawRect(Kit->Air > 0.3f ? FLinearColor(0.4f, 0.8f, 1.0f) : FLinearColor(1.0f, 0.35f, 0.25f), BX, BY - 70.0f, GW * Kit->Air, 10.0f);
+			DrawText(TEXT("AIR"), FLinearColor(0.8f, 0.9f, 1.0f), BX + GW + 8.0f, BY - 74.0f, Tiny, 1.0f);
+			DrawText(FString::Printf(TEXT("LIGHTSTICKS %d  [G]"), Kit->Sticks), FLinearColor(0.5f, 1.0f, 0.55f), BX + 160.0f, BY, Tiny, 1.0f);
+			if (Kit->KitGas >= 1)
+			{
+				const float Gas = Haunt->NearestGas(Pawn->GetActorLocation());
+				DrawText(Gas <= 0.0f ? TEXT("GAS METER: FIREDAMP HERE") : Gas < 1200.0f ? FString::Printf(TEXT("GAS METER: firedamp %d m"), FMath::RoundToInt(Gas / 100.0f)) : FString(TEXT("GAS METER: clear")),
+					Gas < 1200.0f ? FLinearColor(0.5f, 0.7f, 1.0f) : FLinearColor(0.6f, 0.7f, 0.8f), BX + 160.0f, BY + 20.0f, Tiny, 1.0f);
+			}
+		}
+		const float Bad = Haunt->LocalBadAirSeconds;
+		DrawText(Bad > 0.0f ? (Bad > 8.0f ? TEXT("CANARY: silent. Bad air is hurting you. Get out.") : TEXT("CANARY: gone quiet. Bad air."))
+			: TEXT("CANARY: singing"), Bad > 0.0f ? FLinearColor(1.0f, 0.5f, 0.35f) : FLinearColor(1.0f, 0.9f, 0.4f), BX, BY + 20.0f, Tiny, 1.0f);
+		if (Bad > 0.0f)
+		{
+			// The edges of the world going dark.
+			const float A = FMath::Clamp(Bad / 10.0f, 0.15f, 0.55f);
+			const float W = Canvas->SizeX, H = Canvas->SizeY;
+			DrawRect(FLinearColor(0, 0, 0, A), 0, 0, W, H * 0.12f);
+			DrawRect(FLinearColor(0, 0, 0, A), 0, H * 0.88f, W, H * 0.12f);
+			DrawRect(FLinearColor(0, 0, 0, A), 0, 0, W * 0.1f, H);
+			DrawRect(FLinearColor(0, 0, 0, A), W * 0.9f, 0, W * 0.1f, H);
+		}
+		if (Pawn && !Haunt->bCrustLeft && !Haunt->LedgeAt.IsZero() && FVector::Dist2D(Pawn->GetActorLocation(), Haunt->LedgeAt) < 260.0f)
+		{
+			DrawText(TEXT("A tin plate on a ledge, \"for the knockers\". Stand here a moment to leave something."), FLinearColor(0.9f, 0.85f, 0.7f), BX, BY - 44.0f, Tiny, 1.0f);
+		}
+	}
+
+	if (!Entry || Entry->NoteText.IsEmpty() || Now > Entry->NoteUntil)
+	{
+		return;
+	}
+	// Fades in over the first half second and out over the last.
+	const float Left = static_cast<float>(Entry->NoteUntil - Now);
+	const float Alpha = FMath::Clamp(FMath::Min(Left, (10.0f - Left)) * 2.0f, 0.0f, 1.0f);
+
+	UFont* Title = GEngine->GetMediumFont();
+	UFont* Body = GEngine->GetSmallFont();
+	const float W = FMath::Min(620.0f, Canvas->SizeX - 80.0f);
+	const float Pad = 22.0f;
+
+	// Word-wrap the note to the card.
+	TArray<FString> Lines;
+	{
+		TArray<FString> Words;
+		Entry->NoteText.ParseIntoArray(Words, TEXT(" "), true);
+		FString Line;
+		for (const FString& Word : Words)
+		{
+			const FString Try = Line.IsEmpty() ? Word : Line + TEXT(" ") + Word;
+			float TW = 0, TH = 0;
+			GetTextSize(Try, TW, TH, Body, 1.15f);
+			if (TW > W - Pad * 2.0f && !Line.IsEmpty())
+			{
+				Lines.Add(Line);
+				Line = Word;
+			}
+			else
+			{
+				Line = Try;
+			}
+		}
+		if (!Line.IsEmpty())
+		{
+			Lines.Add(Line);
+		}
+	}
+	const float LineH = 22.0f;
+	const float H = Pad * 2.0f + 30.0f + Lines.Num() * LineH + 18.0f;
+	const float X = (Canvas->SizeX - W) * 0.5f;
+	const float Y = Canvas->SizeY - H - 150.0f;
+
+	// Old paper: a warm card with a darker edge, slightly uneven.
+	DrawRect(FLinearColor(0.12f, 0.09f, 0.05f, 0.85f * Alpha), X - 4, Y - 4, W + 8, H + 8);
+	DrawRect(FLinearColor(0.78f, 0.7f, 0.52f, 0.96f * Alpha), X, Y, W, H);
+	DrawRect(FLinearColor(0.68f, 0.6f, 0.43f, 0.6f * Alpha), X, Y + H - 10, W, 10);
+	DrawText(Entry->NoteTitle.ToUpper(), FLinearColor(0.35f, 0.18f, 0.08f, Alpha), X + Pad, Y + Pad - 4, Title, 0.9f);
+	for (int32 i = 0; i < Lines.Num(); ++i)
+	{
+		DrawText(Lines[i], FLinearColor(0.16f, 0.11f, 0.06f, Alpha), X + Pad, Y + Pad + 30.0f + i * LineH, Body, 1.15f);
+	}
+	DrawText(Entry->bRecording ? TEXT("read on camera  +footage") : TEXT("(not recording: V to film the next one)"),
+		FLinearColor(0.35f, 0.25f, 0.15f, 0.8f * Alpha), X + Pad, Y + H - Pad - 4, Body, 0.9f);
+}
+
+void ADCCHUD::DrawBodyCam()
+{
+	const ADCCCharacterBase* Crawler = GetOwningCrawler();
+	if (!Canvas || !GetWorld() || !Crawler || !Crawler->bRecordingFootage)
+	{
+		return;
+	}
+	const ADCCArcadeHaunt* Haunt = nullptr;
+	for (TActorIterator<ADCCArcadeHaunt> It(GetWorld()); It; ++It)
+	{
+		Haunt = *It;
+		break;
+	}
+	if (!Haunt)
+	{
+		return;
+	}
+	const APlayerState* Me = PlayerOwner ? PlayerOwner->PlayerState : nullptr;
+	const FDCCFootageEntry* Entry = Me ? Haunt->FindEntry(Me->GetPlayerName()) : nullptr;
+
+	const float SW = Canvas->SizeX, SH = Canvas->SizeY;
+	const float Inset = 60.0f, Arm = 70.0f, Thick = 4.0f;
+	const FLinearColor White(1.0f, 1.0f, 1.0f, 0.85f);
+
+	// A faint green cast and the viewfinder corners.
+	DrawRect(FLinearColor(0.1f, 0.3f, 0.12f, 0.08f), 0, 0, SW, SH);
+	for (const FVector2D& Corner : { FVector2D(Inset, Inset), FVector2D(SW - Inset, Inset), FVector2D(Inset, SH - Inset), FVector2D(SW - Inset, SH - Inset) })
+	{
+		const float DX = Corner.X < SW * 0.5f ? 1.0f : -1.0f;
+		const float DY = Corner.Y < SH * 0.5f ? 1.0f : -1.0f;
+		DrawRect(White, DX > 0 ? Corner.X : Corner.X - Arm, Corner.Y - (DY > 0 ? 0 : Thick), Arm, Thick);
+		DrawRect(White, Corner.X - (DX > 0 ? 0 : Thick), DY > 0 ? Corner.Y : Corner.Y - Arm, Thick, Arm);
+	}
+	// Centre cross.
+	DrawRect(White, SW * 0.5f - 12, SH * 0.5f - 1, 24, 2);
+	DrawRect(White, SW * 0.5f - 1, SH * 0.5f - 12, 2, 24);
+
+	UFont* Medium = GEngine->GetMediumFont();
+	UFont* Small = GEngine->GetSmallFont();
+	const bool bBlink = FMath::Fmod(GetWorld()->GetRealTimeSeconds(), 1.0) < 0.6;
+	if (bBlink)
+	{
+		DrawRect(FLinearColor(1.0f, 0.1f, 0.1f), Inset + 20, Inset + 22, 16, 16);
+	}
+	DrawText(TEXT("REC"), FLinearColor(1.0f, 0.2f, 0.2f), Inset + 44, Inset + 18, Medium, 1.0f);
+
+	if (Entry)
+	{
+		const int32 Tape = FMath::CeilToInt(Entry->Tape);
+		DrawText(FString::Printf(TEXT("TAPE %d:%02d"), Tape / 60, Tape % 60), White, SW - Inset - 150, Inset + 18, Medium, 1.0f);
+
+		// How good this shot is, right now.
+		const float Quality = FMath::Clamp(Entry->LiveShot / 40.0f, 0.0f, 1.0f);
+		const float BarW = 260.0f, BarX = (SW - BarW) * 0.5f, BarY = SH - Inset - 40;
+		DrawText(Quality > 0.6f ? TEXT("INCREDIBLE FOOTAGE") : Quality > 0.25f ? TEXT("GOOD SHOT") : Quality > 0.02f ? TEXT("something there...") : TEXT("nothing in frame"),
+			White, BarX, BarY - 22, Small, 1.0f);
+		DrawRect(FLinearColor(1, 1, 1, 0.15f), BarX, BarY, BarW, 10);
+		DrawRect(FLinearColor::LerpUsingHSV(FLinearColor(1.0f, 0.8f, 0.2f), FLinearColor(0.3f, 1.0f, 0.4f), Quality), BarX, BarY, BarW * Quality, 10);
+		DrawText(FString::Printf(TEXT("%s views on tape"), *FText::AsNumber(FMath::RoundToInt(Entry->Footage * ADCCArcadeHaunt::ViewsPerPoint)).ToString()),
+			White, Inset + 20, SH - Inset - 40, Small, 1.0f);
+	}
 }

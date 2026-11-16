@@ -1,65 +1,171 @@
 [
-	{
-		"Name": "TapWater",
-		"ItemId": "TapWater",
-		"DisplayName": "Tap Water, Complimentary",
-		"Description": "Nobody orders this on purpose. Somebody always ends up needing it.",
-		"GoldValue": 0,
-		"Tags": ["Item.Consumable", "Item.Liquid", "Item.Organic"],
-		"Mesh": "/Game/Modern_villa_kit/Meshes/Bottle/SM_glass_01.SM_glass_01",
-		"Effects": [
-			{ "InstantHealthChange": 1 }
-		]
-	},
-	{
-		"Name": "HouseAle",
-		"ItemId": "HouseAle",
-		"DisplayName": "House Ale",
-		"Description": "Brewed on-site, in a sense. The sense is that it is wet.",
-		"GoldValue": 8,
-		"Tags": ["Item.Consumable", "Item.Liquid", "Item.Alcohol"],
-		"Mesh": "/Game/Legendary_Forge/Meshes/Mug/Sm_mug.Sm_mug",
-		"Effects": [
-			{ "ModifiedAbility": "Charisma", "ModifierAmount": 1, "ModifierDurationSeconds": 120.0 }
-		]
-	},
-	{
-		"Name": "WellWhiskey",
-		"ItemId": "WellWhiskey",
-		"DisplayName": "Well Whiskey",
-		"Description": "The same pour the bartender keeps handy for throwing. This one you're drinking on purpose.",
-		"GoldValue": 12,
-		"Tags": ["Item.Consumable", "Item.Liquid", "Item.Alcohol", "Item.Flammable"],
-		"Mesh": "/Game/Cave_Camp/Meshes/SM_bottle.SM_bottle",
-		"Effects": [
-			{ "ModifiedAbility": "Charisma", "ModifierAmount": 2, "ModifierDurationSeconds": 90.0 },
-			{ "ModifiedAbility": "Dexterity", "ModifierAmount": -1, "ModifierDurationSeconds": 90.0 }
-		]
-	},
-	{
-		"Name": "RotgutSpecial",
-		"ItemId": "RotgutSpecial",
-		"DisplayName": "Rotgut Special",
-		"Description": "Off the books, off the menu, and off-brand. Popular anyway.",
-		"GoldValue": 4,
-		"Tags": ["Item.Consumable", "Item.Liquid", "Item.Alcohol", "Item.Flammable", "Item.Craftable"],
-		"Mesh": "/Game/Modern_villa_kit/Meshes/Bottle/SM_bottle_02.SM_bottle_02",
-		"Effects": [
-			{ "InstantHealthChange": -2 },
-			{ "ModifiedAbility": "Charisma", "ModifierAmount": 3, "ModifierDurationSeconds": 60.0 },
-			{ "ModifiedAbility": "Dexterity", "ModifierAmount": -3, "ModifierDurationSeconds": 60.0 }
-		]
-	},
-	{
-		"Name": "EnergyTonic",
-		"ItemId": "EnergyTonic",
-		"DisplayName": "Energy Tonic, Sponsored Flavor",
-		"Description": "Tastes like a brand deal. Works like one too - short-term, and somebody else profits.",
-		"GoldValue": 15,
-		"Tags": ["Item.Consumable", "Item.Liquid", "Item.Craftable"],
-		"Mesh": "/Game/Legendary_Forge/Meshes/Mug/Sm_mug_02.Sm_mug_02",
-		"Effects": [
-			{ "InstantHealthChange": 6 }
-		]
-	}
+ {
+  "Name": "TapWater",
+  "ItemId": "TapWater",
+  "DisplayName": "Tap Water, Complimentary",
+  "Description": "Nobody orders this on purpose. Somebody always ends up needing it.",
+  "GoldValue": 0,
+  "Tags": [
+   "Item.Consumable",
+   "Item.Liquid",
+   "Item.Organic"
+  ],
+  "Mesh": "/Game/Modern_villa_kit/Meshes/Bottle/SM_glass_01.SM_glass_01",
+  "Effects": [
+   {
+    "InstantHealthChange": 1
+   }
+  ]
+ },
+ {
+  "Name": "HouseAle",
+  "ItemId": "HouseAle",
+  "DisplayName": "House Ale",
+  "Description": "Brewed on-site, in a sense. The sense is that it is wet.",
+  "GoldValue": 8,
+  "Tags": [
+   "Item.Consumable",
+   "Item.Liquid",
+   "Item.Alcohol"
+  ],
+  "Mesh": "/Game/Legendary_Forge/Meshes/Mug/Sm_mug.Sm_mug",
+  "Effects": [
+   {
+    "ModifiedAbility": "Charisma",
+    "ModifierAmount": 1,
+    "ModifierDurationSeconds": 120.0
+   }
+  ]
+ },
+ {
+  "Name": "WellWhiskey",
+  "ItemId": "WellWhiskey",
+  "DisplayName": "Well Whiskey",
+  "Description": "The same pour the bartender keeps handy for throwing. This one you're drinking on purpose.",
+  "GoldValue": 12,
+  "Tags": [
+   "Item.Consumable",
+   "Item.Liquid",
+   "Item.Alcohol",
+   "Item.Flammable"
+  ],
+  "Mesh": "/Game/Cave_Camp/Meshes/SM_bottle.SM_bottle",
+  "Effects": [
+   {
+    "ModifiedAbility": "Charisma",
+    "ModifierAmount": 2,
+    "ModifierDurationSeconds": 90.0
+   },
+   {
+    "ModifiedAbility": "Dexterity",
+    "ModifierAmount": -1,
+    "ModifierDurationSeconds": 90.0
+   }
+  ]
+ },
+ {
+  "Name": "RotgutSpecial",
+  "ItemId": "RotgutSpecial",
+  "DisplayName": "Rotgut Special",
+  "Description": "Off the books, off the menu, and off-brand. Popular anyway.",
+  "GoldValue": 4,
+  "Tags": [
+   "Item.Consumable",
+   "Item.Liquid",
+   "Item.Alcohol",
+   "Item.Flammable",
+   "Item.Craftable"
+  ],
+  "Mesh": "/Game/Modern_villa_kit/Meshes/Bottle/SM_bottle_02.SM_bottle_02",
+  "Effects": [
+   {
+    "InstantHealthChange": -2
+   },
+   {
+    "ModifiedAbility": "Charisma",
+    "ModifierAmount": 3,
+    "ModifierDurationSeconds": 60.0
+   },
+   {
+    "ModifiedAbility": "Dexterity",
+    "ModifierAmount": -3,
+    "ModifierDurationSeconds": 60.0
+   }
+  ]
+ },
+ {
+  "Name": "EnergyTonic",
+  "ItemId": "EnergyTonic",
+  "DisplayName": "Energy Tonic, Sponsored Flavor",
+  "Description": "Tastes like a brand deal. Works like one too - short-term, and somebody else profits.",
+  "GoldValue": 15,
+  "Tags": [
+   "Item.Consumable",
+   "Item.Liquid",
+   "Item.Craftable"
+  ],
+  "Mesh": "/Game/Legendary_Forge/Meshes/Mug/Sm_mug_02.Sm_mug_02",
+  "Effects": [
+   {
+    "InstantHealthChange": 6
+   }
+  ]
+ },
+ {
+  "Name": "BandageRollMostlySterile",
+  "ItemId": "BandageRollMostlySterile",
+  "DisplayName": "Bandage Roll, Mostly Sterile",
+  "Description": "Mostly. The rest is a mystery the bandage is keeping to itself.",
+  "GoldValue": 15,
+  "Tags": [
+   "Item.Consumable",
+   "Item.Medical"
+  ],
+  "Mesh": "/Game/Beach_house/Meshes/Book/SM_book_02.SM_book_02",
+  "Effects": [
+   {
+    "InstantHealthChange": 6
+   }
+  ],
+  "LinkedSkillId": "FirstAid",
+  "HealPerSkillRank": 3
+ },
+ {
+  "Name": "FirstAidKitCompliant",
+  "ItemId": "FirstAidKitCompliant",
+  "DisplayName": "First Aid Kit, Workplace Compliant",
+  "Description": "Inspected every year by someone who ticked the box without opening it. Fortunately, it is full.",
+  "GoldValue": 40,
+  "Tags": [
+   "Item.Consumable",
+   "Item.Medical"
+  ],
+  "Mesh": "/Game/Beach_house/Meshes/Book/SM_book_02.SM_book_02",
+  "Effects": [
+   {
+    "InstantHealthChange": 12
+   }
+  ],
+  "LinkedSkillId": "FirstAid",
+  "HealPerSkillRank": 4
+ },
+ {
+  "Name": "TraumaKitParamedic",
+  "ItemId": "TraumaKitParamedic",
+  "DisplayName": "Trauma Kit, Paramedic's Personal",
+  "Description": "Belonged to a paramedic who was very good at her job. Use it like she would have. Then use it again.",
+  "GoldValue": 120,
+  "Tags": [
+   "Item.Consumable",
+   "Item.Medical"
+  ],
+  "Mesh": "/Game/Beach_house/Meshes/Book/SM_book_02.SM_book_02",
+  "Effects": [
+   {
+    "InstantHealthChange": 25
+   }
+  ],
+  "LinkedSkillId": "FirstAid",
+  "HealPerSkillRank": 6
+ }
 ]

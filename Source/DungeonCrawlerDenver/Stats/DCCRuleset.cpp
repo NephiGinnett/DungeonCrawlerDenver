@@ -170,7 +170,7 @@ float UDCCRuleset::GetClingStaminaCost(int32 ClimbSkillRank) const
 {
 	// Hanging still is cheap but never free, so a climber cannot park on a wall
 	// indefinitely and wait out a fight below them.
-	return FMath::Max(0.5f, 3.0f - (ClimbSkillRank * 0.15f));
+	return FMath::Max(0.8f, 3.0f - (ClimbSkillRank * 0.15f));
 }
 
 float UDCCRuleset::GetClimbStaminaCost(int32 ClimbSkillRank) const
@@ -178,7 +178,14 @@ float UDCCRuleset::GetClimbStaminaCost(int32 ClimbSkillRank) const
 	// Rank makes climbing cheaper rather than making it succeed. That is the
 	// whole point of dropping the pass/fail roll: a novice can attempt anything,
 	// they just run out of arms sooner.
-	return FMath::Max(3.0f, 12.0f - (ClimbSkillRank * 0.6f));
+	// Tuned 2026-11-13 (Zoe: ledge to ledge should take a lot of stamina): a
+	// Rank 1 climber spends about 70% of a Con 4 bar on a 6 m pitch; Rank 10
+	// about a quarter; Rank 15 an eighth, since they are both cheaper AND faster.
+	// Halved with the speed (2026-11-13, second pass): the climb is now twice as slow,
+	// so per-second cost halves to keep a pitch costing about the same share of a bar.
+	// Fourth pass (2026-11-13, Zoe: "one bar should last one or two ledges max"): a Rank 1 climber's
+	// bar (Con 4, ~120) is gone in about one 8 m pitch; Rank 10 gets about two.
+	return FMath::Max(3.5f, 7.8f - (ClimbSkillRank * 0.25f));
 }
 
 float UDCCRuleset::GetClimbSpeed(const FDCCAbilityScoreSet& AbilityScores, int32 ClimbSkillRank) const
@@ -187,7 +194,15 @@ float UDCCRuleset::GetClimbSpeed(const FDCCAbilityScoreSet& AbilityScores, int32
 
 	// Strength sets the baseline, Rank refines it - a strong novice hauls
 	// themselves up, a practised climber moves efficiently.
-	return 90.0f + (StrengthScore * 12.0f) + (ClimbSkillRank * 6.0f);
+	// Rank is the bigger term (2026-11-13): an experienced climber should
+	// reach the summit clearly faster than a strong novice. Rank 1 with Str 4
+	// is ~1.2 m/s; Rank 10 ~2.4 m/s; Rank 15 ~3.1 m/s.
+	// Halved (2026-11-13, second pass: "players climb too quickly"). Rank 1 with
+	// Str 4 is ~60 cm/s, which is the climb animation's natural pace at 1x
+	// (ADCCCharacterBase::ClimbAnimNaturalSpeed); Rank 10 ~1.4 m/s, Rank 15 ~1.9.
+	// Third pass (2026-11-13): the climb clip's natural pace is ~29 cm/s, so a
+	// Rank 1, Str 4 climber (~46 cm/s) plays it at ~1.6x; Rank 10 ~91 cm/s, Rank 15 ~116.
+	return 25.0f + (StrengthScore * 4.0f) + (ClimbSkillRank * 5.0f);
 }
 
 float UDCCRuleset::GetStaminaRegenRate(const FDCCAbilityScoreSet& AbilityScores, int32 AthleticsRank, float EquippedMassKg) const

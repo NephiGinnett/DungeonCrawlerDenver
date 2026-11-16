@@ -1,9 +1,15 @@
 #include "Onboarding/DCCOnboardingActors.h"
 
 #include "Onboarding/DCCOnboardingComponent.h"
+#include "Rooms/DCCTaleFloor.h"
 #include "Characters/DCCCharacterBase.h"
 #include "Characters/DCCEnemyCharacter.h"
 #include "Equipment/DCCEquipmentComponent.h"
+#include "Equipment/DCCEquipmentTypes.h"
+#include "Items/DCCInventoryComponent.h"
+#include "Items/DCCPickup_Equipment.h"
+#include "Combat/DCCGameState.h"
+#include "UI/DCCEventLogTypes.h"
 #include "Stats/DCCStatsComponent.h"
 #include "Components/ArrowComponent.h"
 #include "Components/BoxComponent.h"
@@ -12,8 +18,11 @@
 #include "Components/StaticMeshComponent.h"
 #include "Components/TextRenderComponent.h"
 #include "Engine/DataTable.h"
+#include "Engine/PointLight.h"
 #include "Engine/StaticMesh.h"
+#include "Engine/StaticMeshActor.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
 #include "GameFramework/PlayerController.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Net/UnrealNetwork.h"
@@ -69,6 +78,152 @@ ADCCOnboardingSettings::ADCCOnboardingSettings()
 	SetRootComponent(CreateDefaultSubobject<USceneComponent>(TEXT("Root")));
 
 	SetActorHiddenInGame(true);
+}
+
+namespace
+{
+	// Same origin as Tools/build_onboarding_wing.py. The bedrooms open south onto this street.
+	constexpr float HomeX = -30000.0f;
+	constexpr float HomeY = 30000.0f;
+
+	void DimOpeningLights(UWorld* World)
+	{
+		// The placed bulbs were left at the engine default (5000, unitless) inside white
+		// boxes. Auto exposure then blows the room out. A small warm lamp is enough.
+		const FBox Home(FVector(-33000.0f, 27000.0f, -500.0f), FVector(-19000.0f, 34000.0f, 2500.0f));
+		for (TActorIterator<APointLight> It(World); It; ++It)
+		{
+			if (!Home.IsInside(It->GetActorLocation()))
+			{
+				continue;
+			}
+
+			UPointLightComponent* Comp = Cast<UPointLightComponent>(It->GetLightComponent());
+			if (!Comp)
+			{
+				continue;
+			}
+
+			// Unitless, not lumens: a lumens value this small is a different unit and goes
+			// the other direction. 500 is a tenth of the engine default, which blew the
+			// white bedrooms out under auto exposure.
+			const bool bRoom = It->GetActorLocation().Z < 500.0f;
+			Comp->SetMobility(EComponentMobility::Movable);
+			Comp->SetIntensityUnits(ELightUnits::Unitless);
+			Comp->SetIntensity(bRoom ? 500.0f : 250.0f);
+			Comp->SetAttenuationRadius(bRoom ? 480.0f : 2000.0f);
+			Comp->SetIndirectLightingIntensity(bRoom ? 0.25f : 0.4f);
+			Comp->SetLightColor(FLinearColor(1.0f, 0.84f, 0.62f));
+			Comp->SetCastShadows(false);
+		}
+	}
+
+	void SpawnStreetBlock(UWorld* World, UStaticMesh* Cube, UMaterialInstanceDynamic* Mat,
+		const FVector& Center, const FVector& Size)
+	{
+		const FBoxSphereBounds Bounds = Cube->GetBounds();
+		const FVector MeshSize = Bounds.BoxExtent * 2.0f;
+		if (MeshSize.GetMin() < 1.0f)
+		{
+			return;
+		}
+
+		const FVector Scale(Size.X / MeshSize.X, Size.Y / MeshSize.Y, Size.Z / MeshSize.Z);
+		const FVector Location = Center - Bounds.Origin * Scale;
+		const FTransform Transform(FRotator::ZeroRotator, Location, Scale);
+
+		FActorSpawnParameters Params;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		AStaticMeshActor* Block = World->SpawnActorDeferred<AStaticMeshActor>(AStaticMeshActor::StaticClass(), Transform);
+		if (!Block)
+		{
+			return;
+		}
+
+		Block->SetReplicates(true);
+		Block->bAlwaysRelevant = true;
+		if (UStaticMeshComponent* Mesh = Block->GetStaticMeshComponent())
+		{
+			Mesh->SetMobility(EComponentMobility::Movable);
+			Mesh->SetStaticMesh(Cube);
+			Mesh->SetCollisionProfileName(TEXT("BlockAll"));
+			Mesh->SetCastShadow(false);
+			if (Mat)
+			{
+				Mesh->SetMaterial(0, Mat);
+			}
+		}
+		Block->FinishSpawning(Transform);
+		Block->Tags.Add(TEXT("DCCHomeStreet"));
+	}
+
+	void RaiseStreetWalls(UWorld* World)
+	{
+		for (TActorIterator<AStaticMeshActor> It(World); It; ++It)
+		{
+			if (It->Tags.Contains(TEXT("DCCHomeStreet")))
+			{
+				return;
+			}
+		}
+
+		UStaticMesh* Cube = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cube.Cube"));
+		UMaterialInterface* Base = LoadObject<UMaterialInterface>(nullptr, TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"));
+		if (!Cube)
+		{
+			return;
+		}
+
+		UMaterialInstanceDynamic* Mat = Base ? UMaterialInstanceDynamic::Create(Base, World) : nullptr;
+		if (Mat)
+		{
+			const FLinearColor Wall(0.045f, 0.045f, 0.05f);
+			Mat->SetVectorParameterValue(TEXT("Color"), Wall);
+			Mat->SetVectorParameterValue(TEXT("BaseColor"), Wall);
+		}
+
+		// A canyon around Home Street. The third-person camera was looking over the
+		// 3 m bedroom boxes at the whole city, which is the stutter. The gate and
+		// the arrow stay inside the open sky at the east end.
+		const float West = HomeX - 900.0f;
+		const float East = HomeX + 8360.0f;
+		const float South = HomeY - 1000.0f;
+		const float North = HomeY + 1450.0f;
+		const float WallH = 1800.0f;
+		const float Thick = 80.0f;
+		const float MidZ = WallH * 0.5f;
+
+		// Tops out at z=-2, under the placed slabs (those top out at z=0). Two blocking
+		// surfaces at the same height make the pawn jitter. This is the ground only
+		// in the gaps beside those slabs.
+		SpawnStreetBlock(World, Cube, Mat,
+			FVector((West + East) * 0.5f, (South + HomeY + 480.0f) * 0.5f, -10.0f),
+			FVector(East - West, (HomeY + 480.0f) - South, 16.0f));
+
+		SpawnStreetBlock(World, Cube, Mat, FVector((West + East) * 0.5f, South, MidZ), FVector(East - West, Thick, WallH));
+		SpawnStreetBlock(World, Cube, Mat, FVector(West, (South + North) * 0.5f, MidZ), FVector(Thick, North - South, WallH));
+		SpawnStreetBlock(World, Cube, Mat, FVector((West + East) * 0.5f, North, MidZ), FVector(East - West, Thick, WallH));
+		// Backdrop just past the entrance volume, so the arch is the end of the road
+		// and the city behind it is not on screen.
+		SpawnStreetBlock(World, Cube, Mat, FVector(East, (South + North) * 0.5f, MidZ), FVector(Thick, North - South, WallH));
+	}
+}
+
+void ADCCOnboardingSettings::BeginPlay()
+{
+	Super::BeginPlay();
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	DimOpeningLights(World);
+	if (HasAuthority())
+	{
+		RaiseStreetWalls(World);
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -156,10 +311,29 @@ void ADCCPersonalItem::HandleOverlap(UPrimitiveComponent* OverlappedComponent, A
 	bTaken = true;
 	OnRep_Taken();
 
-	if (Crawler->Equipment && !EquipmentItemId.IsNone() && !Crawler->Equipment->Equip(EquipmentItemId))
+	// Into the bag, like every other piece of gear: picked-up gear never equips
+	// itself, the Inventory page does that (DCCInventoryComponent.h). This used to
+	// equip straight away, which left the bag empty and nothing in the event log,
+	// so it looked as if the pickup had not counted (Zoe, 2026-11-13). The bag
+	// record also gets the item pop-up ("Stowed in your bag").
+	if (!EquipmentItemId.IsNone())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[DCC Onboarding] %s: could not equip '%s' - is it in DT_DCCEquipment?"),
-			*GetName(), *EquipmentItemId.ToString());
+		FDCCEquipmentDef Def;
+		const bool bKnown = Crawler->Equipment && Crawler->Equipment->FindItem(EquipmentItemId, Def);
+		const FText ItemName = bKnown && !Def.DisplayName.IsEmpty() ? Def.DisplayName : FText::FromName(EquipmentItemId);
+		if (Crawler->Inventory && Crawler->Inventory->AddItemRecord(ADCCPickup_Equipment::StaticClass(), ItemName,
+			bKnown ? Def.MassKilograms : 0.0f, EquipmentItemId))
+		{
+			ADCCGameState::Log(Crawler, EDCCLogCategory::Experience, FText::Format(
+				NSLOCTEXT("DCC", "LogPersonalItem", "{0} picks up {1}. It's in their bag."),
+				Crawler->DisplayName.IsEmpty() ? FText::FromName(Onboarding->CrawlerId) : Crawler->DisplayName, ItemName));
+		}
+		else if (!Crawler->Equipment || !Crawler->Equipment->Equip(EquipmentItemId))
+		{
+			// A full bag falls back to wearing it, so a personal item is never lost.
+			UE_LOG(LogTemp, Warning, TEXT("[DCC Onboarding] %s: '%s' fitted neither the bag nor a slot - is it in DT_DCCEquipment?"),
+				*GetName(), *EquipmentItemId.ToString());
+		}
 	}
 
 	Onboarding->AdvanceTo(EDCCOnboardingStage::ItemFound);
@@ -223,8 +397,8 @@ ADCCSkyBeacon::ADCCSkyBeacon()
 
 	Light = CreateDefaultSubobject<UPointLightComponent>(TEXT("Light"));
 	Light->SetupAttachment(ArrowRoot);
-	Light->SetIntensity(80000.0f);
-	Light->SetAttenuationRadius(6000.0f);
+	Light->SetIntensity(1800.0f);
+	Light->SetAttenuationRadius(1800.0f);
 	Light->SetCastShadows(false);
 }
 
@@ -248,6 +422,13 @@ void ADCCSkyBeacon::BeginPlay()
 	}
 
 	Light->SetLightColor(Colour);
+	Light->SetCastShadows(false);
+	// The placed actor was saved when this defaulted to Announced, so the arrow
+	// stayed hidden until the speech finished. It is the end of the street.
+	if (RevealAtStage == EDCCOnboardingStage::Announced)
+	{
+		RevealAtStage = EDCCOnboardingStage::Waking;
+	}
 	RevealAlpha = 0.0f;
 	ArrowRoot->SetVisibility(false, /*bPropagateToChildren=*/true);
 }
@@ -295,7 +476,7 @@ void ADCCSkyBeacon::Tick(float DeltaSeconds)
 	ArrowRoot->SetRelativeLocation(FVector(0.0f, 0.0f, Bob));
 	ArrowRoot->SetRelativeScale3D(FVector(20.0f * Eased));
 	ArrowRoot->AddRelativeRotation(FRotator(0.0f, SpinDegreesPerSecond * DeltaSeconds, 0.0f));
-	Light->SetIntensity(80000.0f * Eased);
+	Light->SetIntensity(1800.0f * Eased);
 }
 
 // ---------------------------------------------------------------------------
@@ -637,12 +818,12 @@ void ADCCSoloTrial::OpenExits()
 
 void ADCCSoloTrial::OnRep_ExitsOpen()
 {
-	const bool bContinueAvailable = ContinueDestination != nullptr;
-
 	SafeRoomExitVisual->SetVisibility(bExitsOpen);
 	SafeRoomExitLabel->SetVisibility(bExitsOpen);
-	ContinueExitVisual->SetVisibility(bExitsOpen && bContinueAvailable);
-	ContinueExitLabel->SetVisibility(bExitsOpen && bContinueAvailable);
+	// ONWARD always opens with the room. It enters the generated floor, so it
+	// does not depend on a placed destination existing.
+	ContinueExitVisual->SetVisibility(bExitsOpen);
+	ContinueExitLabel->SetVisibility(bExitsOpen);
 }
 
 void ADCCSoloTrial::LeaveTo(ADCCCharacterBase* Crawler, AActor* Destination)
@@ -681,7 +862,7 @@ void ADCCSoloTrial::HandleContinueExit(UPrimitiveComponent* OverlappedComponent,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	ADCCCharacterBase* Crawler = PlayerCrawlerFrom(OtherActor);
-	if (!HasAuthority() || !bExitsOpen || !Crawler || Crawler != Occupant || !ContinueDestination)
+	if (!HasAuthority() || !bExitsOpen || !Crawler || Crawler != Occupant)
 	{
 		return;
 	}
@@ -692,6 +873,15 @@ void ADCCSoloTrial::HandleContinueExit(UPrimitiveComponent* OverlappedComponent,
 	{
 		Onboarding->ShowWindowRow(ContinueWindowRow);
 		Onboarding->AdvanceTo(EDCCOnboardingStage::Complete);
+	}
+
+	if (ADCCTaleFloor* Floor = ADCCTaleFloor::GetOrCreate(GetWorld()))
+	{
+		if (Floor->Enter(Crawler, SafeRoomDestination))
+		{
+			Release();
+			return;
+		}
 	}
 
 	LeaveTo(Crawler, ContinueDestination);
@@ -743,7 +933,18 @@ void ADCCDungeonEntrance::HandleOverlap(UPrimitiveComponent* OverlappedComponent
 		return;
 	}
 
-	// Past the trial already (a respawn, or onboarding switched off): not our business.
+	// The trial is done. The archway is the way back down, including after a
+	// respawn and after surfacing from a floor.
+	if (Onboarding->GetStage() >= EDCCOnboardingStage::FirstFightWon)
+	{
+		if (ADCCTaleFloor* Floor = ADCCTaleFloor::GetOrCreate(GetWorld()))
+		{
+			Floor->Enter(Crawler, OverflowDestination);
+		}
+		return;
+	}
+
+	// Already inside a solo trial. Don't pull them back out through the arch.
 	if (Onboarding->GetStage() >= EDCCOnboardingStage::InDungeon)
 	{
 		return;

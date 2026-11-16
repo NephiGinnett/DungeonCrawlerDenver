@@ -1,6 +1,6 @@
 #include "Characters/DCCEnemyCharacter_NuclearFamily.h"
 
-#include "Characters/DCCCrawlerAnimSet.h"
+#include "Characters/DCCForgeBody.h"
 #include "Combat/DCCRadiationAura.h"
 #include "Combat/DCCGameState.h"
 #include "Stats/DCCStatsComponent.h"
@@ -91,18 +91,8 @@ ADCCEnemy_NuclearDad::ADCCEnemy_NuclearDad()
 
 	// Reskinned onto a shared-skeleton crawler until real art exists, so he at
 	// least walks and swings rather than T-posing through the fight.
-	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FamilyMesh(
-		TEXT("/Game/DCC/Characters/OfficeAirplane/SK_OfficeAirplane_Rebound.SK_OfficeAirplane_Rebound"));
-	if (USkeletalMeshComponent* MeshComponent = GetMesh())
-	{
-		if (FamilyMesh.Succeeded())
-		{
-			MeshComponent->SetSkeletalMesh(FamilyMesh.Object);
-		}
-		MeshComponent->SetRelativeScale3D(FVector(1.08f));
-	}
-
-	DCCCrawlerAnimSet::Apply(*this, /*EmoteChanceOnKill=*/0.0f);
+	// An NPC Forge person (2026-11-15). The family used to wear three of the crawlers' bodies.
+	DCCForgeBody::Apply(*this, DCCForgeBody::Body(0), 1.08f);
 
 	if (Stats)
 	{
@@ -130,17 +120,8 @@ ADCCEnemy_NuclearMom::ADCCEnemy_NuclearMom()
 {
 	DisplayName = NSLOCTEXT("DCC", "NuclearMomName", "Mom, Insisting You Eat");
 
-	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FamilyMesh(
-		TEXT("/Game/DCC/Characters/ArmsOut/SK_ArmsOut_Rebound.SK_ArmsOut_Rebound"));
-	if (USkeletalMeshComponent* MeshComponent = GetMesh())
-	{
-		if (FamilyMesh.Succeeded())
-		{
-			MeshComponent->SetSkeletalMesh(FamilyMesh.Object);
-		}
-	}
-
-	DCCCrawlerAnimSet::Apply(*this, /*EmoteChanceOnKill=*/0.0f);
+	// An NPC Forge person (2026-11-15). The family used to wear three of the crawlers' bodies.
+	DCCForgeBody::Apply(*this, DCCForgeBody::Body(3), 1.0f);
 
 	if (Stats)
 	{
@@ -166,18 +147,8 @@ ADCCEnemy_NuclearKid::ADCCEnemy_NuclearKid()
 {
 	DisplayName = NSLOCTEXT("DCC", "NuclearKidName", "The Kid, Showing You Something");
 
-	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FamilyMesh(
-		TEXT("/Game/DCC/Characters/DiceWinged/SK_DiceWinged_Rebound.SK_DiceWinged_Rebound"));
-	if (USkeletalMeshComponent* MeshComponent = GetMesh())
-	{
-		if (FamilyMesh.Succeeded())
-		{
-			MeshComponent->SetSkeletalMesh(FamilyMesh.Object);
-		}
-		MeshComponent->SetRelativeScale3D(FVector(0.72f));
-	}
-
-	DCCCrawlerAnimSet::Apply(*this, /*EmoteChanceOnKill=*/0.0f);
+	// An NPC Forge person (2026-11-15). The family used to wear three of the crawlers' bodies.
+	DCCForgeBody::Apply(*this, DCCForgeBody::Body(6), 0.72f);
 
 	if (Stats)
 	{
