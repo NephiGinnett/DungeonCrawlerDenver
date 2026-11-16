@@ -1,0 +1,5 @@
+{
+  "_how": "Who reads which KMHR character. Key = the reader, value = character ids. Anyone not listed gets a sheet of their own named after the character. Re-run: python Tools/radio_sides.py",
+  "Zoe": ["Dale", "Announcer", "Marjorie"],
+  "AI voice": ["Terry"]
+}

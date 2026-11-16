@@ -1,0 +1,336 @@
+{
+	"note": "Written by the gear bench (F3). grips: item id, or mesh|item id. sockets and bones: per body.",
+	"grips":
+	{
+		"Boombox":
+		{
+			"loc": [
+				1,
+				17.75,
+				-34.5
+			],
+			"rot": [
+				0,
+				0,
+				0
+			],
+			"scale": [
+				1,
+				1,
+				1
+			]
+		},
+		"CastIronSkillet":
+		{
+			"loc": [
+				-2,
+				33.75,
+				30.5
+			],
+			"rot": [
+				22,
+				-24.5,
+				-56
+			],
+			"scale": [
+				1,
+				1,
+				1
+			]
+		},
+		"ChefsKnife":
+		{
+			"loc": [
+				0,
+				0,
+				0.25
+			],
+			"rot": [
+				357.5,
+				44.5,
+				0
+			],
+			"scale": [
+				1,
+				1,
+				1
+			]
+		},
+		"ComplaintFolderOverstuffed":
+		{
+			"loc": [
+				9.75,
+				34.25,
+				-31.75
+			],
+			"rot": [
+				9.5,
+				5.5,
+				-408.5
+			],
+			"scale": [
+				1,
+				1,
+				1
+			]
+		},
+		"Cosmetic.FloorBossCrown":
+		{
+			"loc": [
+				-4.25,
+				-1.5,
+				-15.25
+			],
+			"rot": [
+				12,
+				0.5,
+				0
+			],
+			"scale": [
+				1,
+				1,
+				1
+			]
+		},
+		"Cosmetic.TenGallon":
+		{
+			"loc": [
+				-4.5,
+				-0.75,
+				-19.25
+			],
+			"rot": [
+				14,
+				19,
+				2
+			],
+			"scale": [
+				1,
+				1,
+				1
+			]
+		},
+		"Cosmetic.UsedHalo":
+		{
+			"loc": [
+				-16.5,
+				-2.75,
+				-15.75
+			],
+			"rot": [
+				5.5,
+				7.5,
+				-0.5
+			],
+			"scale": [
+				1,
+				1,
+				1
+			]
+		},
+		"Cosmetic.PartyHat":
+		{
+			"loc": [
+				-5.25,
+				-1,
+				-14.75
+			],
+			"rot": [
+				12,
+				0,
+				0
+			],
+			"scale": [
+				1,
+				1,
+				1
+			]
+		},
+		"Cosmetic.Cape":
+		{
+			"loc": [
+				11.25,
+				1.25,
+				15.5
+			],
+			"rot": [
+				-4.5,
+				0,
+				0
+			],
+			"scale": [
+				1,
+				1,
+				1
+			]
+		},
+		"Cosmetic.HobbyJetpack":
+		{
+			"loc": [
+				16,
+				0.75,
+				2.25
+			],
+			"rot": [
+				-13.5,
+				0.5,
+				0
+			],
+			"scale": [
+				1,
+				1,
+				1
+			]
+		},
+		"Cosmetic.MinersHelmet":
+		{
+			"loc": [
+				-6.5,
+				-2,
+				-15.5
+			],
+			"rot": [
+				7.5,
+				1.5,
+				0
+			],
+			"scale": [
+				1,
+				1,
+				1
+			]
+		},
+		"Cosmetic.PitBossPlate":
+		{
+			"loc": [
+				25.25,
+				0.5,
+				12.5
+			],
+			"rot": [
+				0,
+				0,
+				0
+			],
+			"scale": [
+				1,
+				1,
+				1
+			]
+		},
+		"Cosmetic.TrafficCone":
+		{
+			"loc": [
+				-4.25,
+				-0.75,
+				-18.5
+			],
+			"rot": [
+				27.5,
+				1,
+				3.5
+			],
+			"scale": [
+				1,
+				1,
+				1
+			]
+		},
+		"Cosmetic.SpikedPauldrons":
+		{
+			"loc": [
+				18.5,
+				0.5,
+				11.25
+			],
+			"rot": [
+				12.5,
+				2.5,
+				0
+			],
+			"scale": [
+				1,
+				1,
+				1
+			]
+		},
+		"Cosmetic.TrailPack":
+		{
+			"loc": [
+				14.75,
+				-1.25,
+				1.5
+			],
+			"rot": [
+				0,
+				0,
+				0
+			],
+			"scale": [
+				1,
+				1,
+				1
+			]
+		},
+		"SodaGun":
+		{
+			"loc": [
+				0,
+				-0.25,
+				-5
+			],
+			"rot": [
+				73.5,
+				273.5,
+				8.5
+			],
+			"scale": [
+				1,
+				1,
+				1
+			]
+		},
+		"PokemonMasterTrainer":
+		{
+			"loc": [
+				0,
+				2.75,
+				3.75
+			],
+			"rot": [
+				2,
+				176,
+				88.5
+			],
+			"scale": [
+				1,
+				1,
+				1
+			]
+		},
+		"ScottLacrosseStick":
+		{
+			"loc": [
+				-2.5,
+				-5.75,
+				0
+			],
+			"rot": [
+				-1,
+				8.5,
+				20.5
+			],
+			"scale": [
+				1,
+				1,
+				1
+			]
+		}
+	},
+	"sockets":
+	{
+	},
+	"bones":
+	{
+	}
+}

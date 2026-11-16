@@ -1,0 +1,253 @@
+{
+  "speakers": [
+    {
+      "id": "Rhee",
+      "name": "Lot Boss Rhee",
+      "body": "Quinn",
+      "hat": "TrafficCone"
+    },
+    {
+      "id": "Jan",
+      "name": "Clerk Jan",
+      "body": "Manny",
+      "hat": ""
+    },
+    {
+      "id": "Diaz",
+      "name": "Flagger Diaz",
+      "body": "Manny",
+      "hat": ""
+    },
+    {
+      "id": "Dispatch",
+      "name": "Dispatch (Vonda)",
+      "body": "Quinn",
+      "hat": ""
+    },
+    {
+      "id": "Pryce",
+      "name": "Pryce (car owner)",
+      "body": "Manny",
+      "hat": ""
+    },
+    {
+      "id": "Nia",
+      "name": "Nia (car owner)",
+      "body": "Quinn",
+      "hat": ""
+    },
+    {
+      "id": "Holt",
+      "name": "Holt (car owner)",
+      "body": "Manny",
+      "hat": ""
+    }
+  ],
+  "lines": [
+    {
+      "speaker": "Rhee",
+      "row": "RR_Rhee_01",
+      "text": "This is a shift, not a parade. Marked cars are loose in the city. Right mouse aims the hook. Q fires it. Pull the car onto your bumper and bring it here."
+    },
+    {
+      "speaker": "Rhee",
+      "row": "RR_Rhee_02",
+      "text": "The first ones are parked. Then they sit boxed in, and yanking one out scars it. Then they run. Some of them spook and leave the ground when you get close. A clean car pays. A scarred one does not."
+    },
+    {
+      "speaker": "Rhee",
+      "row": "RR_Rhee_03",
+      "text": "One truck tows one car. A second truck can throw a net, or block a runner, or take a different mark. Split up and you cover more of the city. The shift pays whoever banks the most."
+    },
+    {
+      "speaker": "Rhee",
+      "row": "RR_Rhee_04",
+      "text": "Go into debt and you are a mark too. Night Shift and the other crew will come find you, and Jan will not open the yard pump."
+    },
+    {
+      "speaker": "Jan",
+      "row": "RR_Jan_01",
+      "text": "Right mouse aims. Q fires the hook, or drops the car once it is on your bumper and you are in this yard. F switches, if your truck has a net. T is the radio. Leave it."
+    },
+    {
+      "speaker": "Jan",
+      "row": "RR_Jan_02",
+      "text": "The bays are the roles. Runner is faster and a shorter hook. Net throws a net. Winch reaches further and reels harder. Tank drinks less fuel. The tab covers it, and the tab can go red."
+    },
+    {
+      "speaker": "Jan",
+      "row": "RR_Jan_03",
+      "text": "Street gas always pumps, and it goes on your tab. The yard pump is free until you owe us. Then it is closed, and I will not pretend otherwise."
+    },
+    {
+      "speaker": "Jan",
+      "row": "RR_Jan_04",
+      "text": "A drop pays the tab. Clear it, or the other crews will treat your truck like a skip. Hook the wrong car and I fine you."
+    },
+    {
+      "speaker": "Jan",
+      "row": "RR_Jan_05",
+      "text": "Amber columns are the marks. The map in the corner shows the same cars, the gas, and anyone hunting you."
+    },
+    {
+      "speaker": "Diaz",
+      "row": "RR_Diaz_01",
+      "text": "Heavy traffic. It is not decoration, and it is not a ghost anymore. Hit it and you stop. Go around."
+    },
+    {
+      "speaker": "Diaz",
+      "row": "RR_Diaz_02",
+      "text": "I keep the beacons lit. If you cannot see the column, trust the map. Parked cars sit off the street. The ones that spook climb."
+    },
+    {
+      "speaker": "Diaz",
+      "row": "RR_Diaz_03",
+      "text": "A net on the road slows whatever drives through it. Slow is easier to reel onto the bumper. Then you still have to drive it home."
+    },
+    {
+      "speaker": "Diaz",
+      "row": "RR_Diaz_04",
+      "text": "W and S drive. A and D steer. Click boosts. Shift slides. Right mouse aims the hook. The flag drops when the flag drops."
+    },
+    {
+      "speaker": "Rhee",
+      "row": "RR_Rhee_05",
+      "text": "Night shift pays double because nobody wants it. The city looks like a postcard from 1986 and drives like a pinball machine. Bring my cars back clean."
+    },
+    {
+      "speaker": "Rhee",
+      "row": "RR_Rhee_06",
+      "text": "Hold right mouse on a mark until the ring locks green. Then fire. A locked hook does not miss. A guessed one buys you a fine."
+    },
+    {
+      "speaker": "Rhee",
+      "row": "RR_Rhee_07",
+      "text": "Every one of those cars was a promise somebody made to a lender. Tonight we collect on promises. Do not get sentimental about the fuzzy dice."
+    },
+    {
+      "speaker": "Jan",
+      "row": "RR_Jan_06",
+      "text": "Cyan chevrons on the road are boost pads. The skyways have them all the way down the far side. Downhill and boosted is how you beat a runner home."
+    },
+    {
+      "speaker": "Jan",
+      "row": "RR_Jan_07",
+      "text": "The ramps are on the street because the city planner lost a bet. You can jump them with a car on your bumper. I would not. Paperwork."
+    },
+    {
+      "speaker": "Jan",
+      "row": "RR_Jan_08",
+      "text": "When the music comes up, the shift is almost over. Whatever is on your hook when it ends is not a drop. Get it home."
+    },
+    {
+      "speaker": "Diaz",
+      "row": "RR_Diaz_05",
+      "text": "Two skyways, nine metres up. Up the ramp, along the deck over the crossings, and down the long side with the pads. The rails keep you on. Mostly."
+    },
+    {
+      "speaker": "Diaz",
+      "row": "RR_Diaz_06",
+      "text": "Parked cars sit right in the lanes tonight. Somebody double-parked the whole city. Weave."
+    },
+    {
+      "speaker": "Diaz",
+      "row": "RR_Diaz_07",
+      "text": "Sirens out there are not for you. Yet. The horns are, usually."
+    },
+    {
+      "speaker": "Dispatch",
+      "row": "RR_Disp_Go",
+      "text": "Dispatch to all trucks. Flag is down. Marks are on the board, amber columns. Go get them."
+    },
+    {
+      "speaker": "Dispatch",
+      "row": "RR_Disp_Hooked",
+      "text": "Line's on. Reel it in. Keep it off the parked cars."
+    },
+    {
+      "speaker": "Dispatch",
+      "row": "RR_Disp_Bumper",
+      "text": "It's on your bumper. Bring it home to the yard."
+    },
+    {
+      "speaker": "Dispatch",
+      "row": "RR_Disp_Drop",
+      "text": "Drop logged. Clean work. Rhee might even nod."
+    },
+    {
+      "speaker": "Dispatch",
+      "row": "RR_Disp_DropWreck",
+      "text": "Drop logged. That car came in looking like modern art. Pay's docked."
+    },
+    {
+      "speaker": "Dispatch",
+      "row": "RR_Disp_Wrong",
+      "text": "That was not a mark. That was a citizen. Fine's on your tab."
+    },
+    {
+      "speaker": "Dispatch",
+      "row": "RR_Disp_Cut",
+      "text": "Line cut. No car, no pay."
+    },
+    {
+      "speaker": "Dispatch",
+      "row": "RR_Disp_Debt",
+      "text": "Your tab just went red, driver. Every crew in the city can hear that on the scanner."
+    },
+    {
+      "speaker": "Dispatch",
+      "row": "RR_Disp_Wave1",
+      "text": "Heads up. The easy ones are gone. Next marks are boxed in."
+    },
+    {
+      "speaker": "Dispatch",
+      "row": "RR_Disp_Wave2",
+      "text": "They're moving now. Runners on the grid. Hook and hold."
+    },
+    {
+      "speaker": "Dispatch",
+      "row": "RR_Disp_Wave3",
+      "text": "Some of these spook. Get too close and they lift off. Lock before they know you're there."
+    },
+    {
+      "speaker": "Dispatch",
+      "row": "RR_Disp_Last30",
+      "text": "Thirty seconds on the shift. Whatever's on your hook, get it home."
+    },
+    {
+      "speaker": "Dispatch",
+      "row": "RR_Disp_Brief",
+      "text": "Evening, night shift. Tonight's list is on your screens: four cars that stopped paying. Hook them, reel them onto your bumper, tow them home to the yard, drop them. Quick and clean pays. Wrong car is a fine. Flag drops in fifteen."
+    },
+    {
+      "speaker": "Pryce",
+      "row": "RR_Pryce_01",
+      "text": "Hey! That is my car, you son of a bitch! I am paid through Friday!"
+    },
+    {
+      "speaker": "Pryce",
+      "row": "RR_Pryce_02",
+      "text": "Put the hook down! That is how I get to work, and I have a shift at six!"
+    },
+    {
+      "speaker": "Nia",
+      "row": "RR_Nia_01",
+      "text": "Get off my car! My kid's seat is in the back, you asshole!"
+    },
+    {
+      "speaker": "Nia",
+      "row": "RR_Nia_02",
+      "text": "I am not a skip! The notice went to the old address! You don't get to take it!"
+    },
+    {
+      "speaker": "Holt",
+      "row": "RR_Holt_01",
+      "text": "I paid that note! The receipt is in the glove box you're dragging down the street!"
+    },
+    {
+      "speaker": "Holt",
+      "row": "RR_Holt_02",
+      "text": "Mile High can kiss my ass! Touch that bumper and I am not moving!"
+    }
+  ]
+}

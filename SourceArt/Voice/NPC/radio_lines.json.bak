@@ -1,0 +1,591 @@
+{
+  "speakers": [
+    {
+      "id": "Dale",
+      "name": "Dale Brandvold",
+      "body": "",
+      "hat": "",
+      "voice": {
+        "pitch": -1.5,
+        "body": 4,
+        "air": -2
+      }
+    },
+    {
+      "id": "Terry",
+      "name": "Terry (producer)",
+      "body": "",
+      "hat": "",
+      "voice": {
+        "nasal": 0.35,
+        "body": -1.5
+      }
+    },
+    {
+      "id": "Announcer",
+      "name": "The Announcer",
+      "body": "",
+      "hat": "",
+      "voice": {
+        "body": 2,
+        "air": 3
+      }
+    },
+    {
+      "id": "Brad",
+      "name": "Brad from LIQUIDATOR",
+      "body": "",
+      "hat": "",
+      "voice": {
+        "pitch": 0.5,
+        "nasal": 0.2,
+        "air": 2
+      }
+    },
+    {
+      "id": "Marjorie",
+      "name": "Marjorie from Aurora",
+      "body": "",
+      "hat": "",
+      "voice": {
+        "pitch": 1.5,
+        "nasal": 0.25,
+        "body": -3
+      }
+    },
+    {
+      "id": "NotGary",
+      "name": "Not Gary",
+      "body": "",
+      "hat": "",
+      "voice": {
+        "pitch": -0.5,
+        "body": -2,
+        "air": 5
+      }
+    },
+    {
+      "id": "VantageCaller",
+      "name": "Vantage Wellness (on the phone)",
+      "body": "",
+      "hat": "",
+      "voice": {
+        "pitch": 1,
+        "body": -1,
+        "air": 3.5
+      }
+    }
+  ],
+  "lines": [
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S01_01",
+      "text": "It's 2:17 in the morning, the air up here is thin and so is the official story. This is Altitude Sickness, I'm Dale Brandvold, and I want you to do something for me. Go to your window. Look east. Look at the airport."
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S01_02",
+      "text": "Now tell me why it's closer than it was last week."
+    },
+    {
+      "speaker": "Terry",
+      "row": "KMHR_S01_03",
+      "text": "[mouth full] It's not closer, Dale."
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S01_04",
+      "text": "Terry measured it. Terry measured it with his car."
+    },
+    {
+      "speaker": "Terry",
+      "row": "KMHR_S01_05",
+      "text": "I measured my commute."
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S01_06",
+      "text": "Which got shorter, Terry. Ground doesn't shrink. Unless somebody is folding it."
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S01_07",
+      "text": "We'll get to the folding. We'll get to the horse. We'll get to why every pigeon on Colfax is now facing the same direction. But first —"
+    },
+    {
+      "speaker": "Announcer",
+      "row": "KMHR_S01_08",
+      "text": "[instant, too warm] — but first, a word from Summit Compliance Group."
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S01_09",
+      "text": "I didn't say that. Terry, did I say that?"
+    },
+    {
+      "speaker": "Announcer",
+      "row": "KMHR_S02_01",
+      "text": "Do you ever lie awake wondering who's watching? At Summit Compliance Group, we have great news. Everyone is. And they love what you're doing."
+    },
+    {
+      "speaker": "Announcer",
+      "row": "KMHR_S02_02",
+      "text": "Summit Compliance Group helps Denver residents get ahead of their obligations. Whether you owe money, time, or a debt you can't quite remember signing for, our friendly Recovery Partners will meet you wherever you are. We already know where you are."
+    },
+    {
+      "speaker": "Announcer",
+      "row": "KMHR_S02_03",
+      "text": "Summit Compliance Group. Your cooperation is being recorded for quality and entertainment purposes."
+    },
+    {
+      "speaker": "Announcer",
+      "row": "KMHR_S02_04",
+      "text": "[very fast] Summit Compliance Group is a subsidiary of Mile High Recovery Solutions. Compliance is not optional. Participation may result in relocation to a lower level. Offer void where the ground is still yours."
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S03_01",
+      "text": "We're back, and I have been informed I did not read that ad, which is exactly what someone who read that ad would be told. Let's talk about the horse."
+    },
+    {
+      "speaker": "Terry",
+      "row": "KMHR_S03_02",
+      "text": "Here we go."
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S03_03",
+      "text": "Thirty-two feet of blue fiberglass. Glowing red eyes. Killed its own sculptor. And the official explanation is \"public art.\" Public art, Terry. You know what else is public art? A beacon."
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S03_04",
+      "text": "Last Tuesday, 3:40 AM, the eyes went from red to green. For nine seconds. I have a caller who saw it. Terry, put her through."
+    },
+    {
+      "speaker": "Terry",
+      "row": "KMHR_S03_05",
+      "text": "Line two, Dale. It's Marjorie from Aurora."
+    },
+    {
+      "speaker": "Marjorie",
+      "row": "KMHR_S03_06",
+      "text": "[elderly, very calm] Hi Dale, long-time listener. I saw the green eyes."
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S03_07",
+      "text": "Thank you, Marjorie. Thank you. Tell them what happened next."
+    },
+    {
+      "speaker": "Marjorie",
+      "row": "KMHR_S03_08",
+      "text": "The horse turned its head and looked at my Buick."
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S03_09",
+      "text": "It turned its head."
+    },
+    {
+      "speaker": "Marjorie",
+      "row": "KMHR_S03_10",
+      "text": "And then a man in a polo shirt came out of nowhere and put a little sticker on my windshield. It said \"Asset Tagged.\" And a smiley face."
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S03_11",
+      "text": "And what did you do, Marjorie?"
+    },
+    {
+      "speaker": "Marjorie",
+      "row": "KMHR_S03_12",
+      "text": "I went home, Dale. And when I got there, my house had a little \"Asset Tagged\" sticker on it too."
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S03_13",
+      "text": "[slow] They're inventorying us."
+    },
+    {
+      "speaker": "Terry",
+      "row": "KMHR_S03_14",
+      "text": "Or the HOA got new stickers."
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S03_15",
+      "text": "The HOA has never once smiled, Terry."
+    },
+    {
+      "speaker": "Marjorie",
+      "row": "KMHR_S03_16",
+      "text": "Also my grandson got a job offer. It says \"Crawler, entry level, no experience necessary, benefits include continued existence.\""
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S03_17",
+      "text": "Tell him not to sign it, Marjorie."
+    },
+    {
+      "speaker": "Marjorie",
+      "row": "KMHR_S03_18",
+      "text": "He already signed it, Dale. It signed itself. It was very convenient."
+    },
+    {
+      "speaker": "Brad",
+      "row": "KMHR_S04_01",
+      "text": "[maximum volume] ARE YOU TIRED OF BEING ALIVE AT A NORMAL SPEED?"
+    },
+    {
+      "speaker": "Brad",
+      "row": "KMHR_S04_02",
+      "text": "LIQUIDATOR ENERGY. FORTY-ONE TIMES THE CAFFEINE OF A REGULAR SCREAM. FLAVORS INCLUDE: BLUE. ANGRY BLUE. AND FINAL NOTICE, NOW WITH REAL BERRY FLAVOR!"
+    },
+    {
+      "speaker": "Brad",
+      "row": "KMHR_S04_03",
+      "text": "I DRANK FOUR LIQUIDATORS AND OUTRAN A REPOSSESSION. [beat] I'M STILL RUNNING. I CAN'T STOP. THIS IS A RECORDING. I'M IN NEBRASKA."
+    },
+    {
+      "speaker": "Announcer",
+      "row": "KMHR_S04_04",
+      "text": "[calm, normal speed] LIQUIDATOR. Liquidate your fatigue. Liquidate your sleep. Liquidate your assets for convenient in-can credit. Do not consume more than one LIQUIDATOR per heartbeat."
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S05_01",
+      "text": "Phones are on fire tonight. Terry, who's next?"
+    },
+    {
+      "speaker": "Terry",
+      "row": "KMHR_S05_02",
+      "text": "Line four. Says his name is \"Not Gary.\""
+    },
+    {
+      "speaker": "NotGary",
+      "row": "KMHR_S05_03",
+      "text": "[whispering, wind noise] Dale. Dale, I work night maintenance at the airport."
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S05_04",
+      "text": "Go ahead, friend. You're safe here."
+    },
+    {
+      "speaker": "NotGary",
+      "row": "KMHR_S05_05",
+      "text": "I'm not, actually, but I appreciate it. Dale, there's a level under the baggage claim. And a level under that one. I went down eleven floors before I found a vending machine."
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S05_06",
+      "text": "What was in the vending machine?"
+    },
+    {
+      "speaker": "NotGary",
+      "row": "KMHR_S05_07",
+      "text": "Health potions, Dale. Dollar-fifty. And a sign that said \"Floor 1, Tutorial, Have Fun!\" with the \"Fun\" in quotation marks."
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S05_08",
+      "text": "[to the audience] The quotation marks, people."
+    },
+    {
+      "speaker": "NotGary",
+      "row": "KMHR_S05_09",
+      "text": "And Dale, there was a camera on the ceiling. And it waved at me."
+    },
+    {
+      "speaker": "Terry",
+      "row": "KMHR_S05_10",
+      "text": "Cameras don't have hands."
+    },
+    {
+      "speaker": "NotGary",
+      "row": "KMHR_S05_11",
+      "text": "This one does now. I have to go. Something's offering me a sponsorship."
+    },
+    {
+      "speaker": "Terry",
+      "row": "KMHR_S05_12",
+      "text": "Line one. It's, uh — it says \"Vantage Wellness.\""
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S05_13",
+      "text": "That's a sponsor, Terry, don't —"
+    },
+    {
+      "speaker": "VantageCaller",
+      "row": "KMHR_S05_14",
+      "text": "Hi Dale! Big fan."
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S05_15",
+      "text": "Get off my phone line."
+    },
+    {
+      "speaker": "VantageCaller",
+      "row": "KMHR_S05_16",
+      "text": "We noticed you're stressed, Dale. Your heart rate spiked forty beats when Not Gary said \"eleven floors.\" Have you considered not knowing things?"
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S05_17",
+      "text": "How do you know my heart rate?"
+    },
+    {
+      "speaker": "VantageCaller",
+      "row": "KMHR_S05_18",
+      "text": "Vantage Wellness offers a full line of soothing products to help you stop noticing. Try our new Unbothered Tea, steeped in the warm feeling that someone else is handling it."
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S05_19",
+      "text": "[shaking] Terry, kill the line."
+    },
+    {
+      "speaker": "Terry",
+      "row": "KMHR_S05_20",
+      "text": "I can't. The button's sponsored."
+    },
+    {
+      "speaker": "Announcer",
+      "row": "KMHR_S05_21",
+      "text": "Vantage Wellness. Peace of mind is a subscription."
+    },
+    {
+      "speaker": "Announcer",
+      "row": "KMHR_S06_01",
+      "text": "At Bright Path Solutions, we believe every Denver family deserves a fresh start."
+    },
+    {
+      "speaker": "Announcer",
+      "row": "KMHR_S06_02",
+      "text": "That's why we're offering every resident a free, no-obligation Life Restructuring. Our experts will review your home, your car, your savings and your skeleton, and find the hidden value inside."
+    },
+    {
+      "speaker": "Announcer",
+      "row": "KMHR_S06_03",
+      "text": "Many families are surprised to learn they qualify for Down-sizing. One level down. Then another. Families who go all the way down report the most exciting results of all."
+    },
+    {
+      "speaker": "Announcer",
+      "row": "KMHR_S06_04",
+      "text": "Bright Path Solutions. The light at the end of the tunnel is our logo."
+    },
+    {
+      "speaker": "Announcer",
+      "row": "KMHR_S06_05",
+      "text": "[fast] Results not typical. Most families are not surprised, they are screaming. Bright Path does not guarantee a path, or that it will be bright, or that it goes anywhere but down."
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S07_01",
+      "text": "All right. Board's up. Terry, read me the strings."
+    },
+    {
+      "speaker": "Terry",
+      "row": "KMHR_S07_02",
+      "text": "[flat] Red string: the horse. Red string: the airport getting closer. Red string: the stickers. Blue string: your ex-wife."
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S07_03",
+      "text": "The blue string is a separate investigation."
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S07_04",
+      "text": "Here's what I know, people. Somebody bought this city. Not the land, the show rights. The ground is being folded, like Terry's commute, so it'll fit on a set. Every pigeon on Colfax faces the same way because pigeons face the camera. And every time I get close —"
+    },
+    {
+      "speaker": "Announcer",
+      "row": "KMHR_S07_05",
+      "text": "— every time you get close to a great deal —"
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S07_06",
+      "text": "NO. Not this time. Every time I get close, a sponsor —"
+    },
+    {
+      "speaker": "Announcer",
+      "row": "KMHR_S07_07",
+      "text": "— a sponsor like Mile High Recovery Solutions —"
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S07_08",
+      "text": "— who?"
+    },
+    {
+      "speaker": "Terry",
+      "row": "KMHR_S07_09",
+      "text": "[quietly, after three seconds of silence] Dale. That's on the paycheck."
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S07_10",
+      "text": "What's on the paycheck?"
+    },
+    {
+      "speaker": "Terry",
+      "row": "KMHR_S07_11",
+      "text": "Mile High Recovery Solutions. They own the station. They've owned the station since March."
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S07_12",
+      "text": "[long pause] Since March?"
+    },
+    {
+      "speaker": "Terry",
+      "row": "KMHR_S07_13",
+      "text": "They bought the station, the tower, the parking lot, and the concept of AM radio."
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S07_14",
+      "text": "Then why would they let me say any of this?"
+    },
+    {
+      "speaker": "Terry",
+      "row": "KMHR_S07_15",
+      "text": "[eating again] 'Cause you rate, Dale. People love you. Your numbers are through the roof. Off-planet, mostly."
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S07_16",
+      "text": "[barely a whisper] I have an audience."
+    },
+    {
+      "speaker": "Terry",
+      "row": "KMHR_S07_17",
+      "text": "You have a huge audience."
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S08_01",
+      "text": "Folks. Listeners. [beat] Viewers."
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S08_02",
+      "text": "I've spent twenty years telling you they were watching. Tonight I found out they're watching me. And they're enjoying it. And I don't — Terry, I don't know how to feel about that."
+    },
+    {
+      "speaker": "Terry",
+      "row": "KMHR_S08_03",
+      "text": "You could feel good about it. They sent a gift basket."
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S08_04",
+      "text": "There's a gift basket?"
+    },
+    {
+      "speaker": "Terry",
+      "row": "KMHR_S08_05",
+      "text": "Came in around midnight. There's LIQUIDATOR in it. And a sticker."
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S08_06",
+      "text": "What does the sticker say, Terry."
+    },
+    {
+      "speaker": "Terry",
+      "row": "KMHR_S08_07",
+      "text": "\"Asset Tagged.\" Smiley face."
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S08_08",
+      "text": "[resigned, then rallying] Then here's my message to the folks in the polo shirts. To the people who folded my city. To whoever is up there with the popcorn. I see you. I know you. And I will not be —"
+    },
+    {
+      "speaker": "Announcer",
+      "row": "KMHR_S08_09",
+      "text": "[gentle] Dale, your segment's over."
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S08_10",
+      "text": "I'm not done."
+    },
+    {
+      "speaker": "Announcer",
+      "row": "KMHR_S08_11",
+      "text": "Your contract says you're done."
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S08_12",
+      "text": "Terry. Terry, cut the feed."
+    },
+    {
+      "speaker": "Terry",
+      "row": "KMHR_S08_13",
+      "text": "Button's sponsored, Dale."
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S08_14",
+      "text": "[final, into the mic] Stay paranoid, Denver. Check under your floors. And if somebody offers you a sponsorship —"
+    },
+    {
+      "speaker": "Announcer",
+      "row": "KMHR_S08_15",
+      "text": "— say yes! Altitude Sickness was brought to you by Summit Compliance Group, Vantage Wellness, Bright Path Solutions, and LIQUIDATOR. KMHR 5280 AM is a Mile High Recovery Solutions property. Dale Brandvold is a Mile High Recovery Solutions property. You are listening on a Mile High Recovery Solutions property."
+    },
+    {
+      "speaker": "Announcer",
+      "row": "KMHR_S08_16",
+      "text": "Goodnight, Denver. Don't change the dial. [beat] You can't."
+    },
+    {
+      "speaker": "Announcer",
+      "row": "KMHR_S09_01",
+      "text": "You're listening to KMHR 5280 AM. Five thousand two hundred and eighty feet above sea level, and sinking."
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S09_02",
+      "text": "This is Dale Brandvold. If you're hearing this, they haven't gotten to the transmitter yet. [beat] Wait."
+    },
+    {
+      "speaker": "Terry",
+      "row": "KMHR_S09_03",
+      "text": "KMHR. It's on."
+    },
+    {
+      "speaker": "Announcer",
+      "row": "KMHR_S09_04",
+      "text": "Traffic update: I-25 is now three feet shorter than it was this morning. Please merge accordingly."
+    },
+    {
+      "speaker": "Announcer",
+      "row": "KMHR_S09_05",
+      "text": "Weather: clear skies, light ash, a seventy percent chance of a floor opening up beneath you. Back to Dale."
+    },
+    {
+      "speaker": "Brad",
+      "row": "KMHR_S09_06",
+      "text": "[distant, out of breath] STILL RUNNING. ENTERING KANSAS. LIQUIDATOR."
+    },
+    {
+      "speaker": "Dale",
+      "row": "KMHR_S09_07",
+      "text": "Remember, folks: the horse sees everything. The horse is not your friend. [beat] The horse might be a friend."
+    },
+    {
+      "speaker": "Announcer",
+      "row": "KMHR_S09_08",
+      "text": "This silence was sponsored. [two seconds of silence] Thank you."
+    }
+  ]
+}

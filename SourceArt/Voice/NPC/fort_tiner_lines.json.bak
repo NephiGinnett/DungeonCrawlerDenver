@@ -1,0 +1,110 @@
+{
+  "speakers": [
+    {
+      "id": "Dusty",
+      "name": "Sheriff Dusty",
+      "body": "Manny",
+      "hat": "TenGallon"
+    },
+    {
+      "id": "MaOre",
+      "name": "Ma Ore",
+      "body": "Quinn",
+      "hat": "MinersHelmet"
+    },
+    {
+      "id": "Gus",
+      "name": "Old Gus",
+      "body": "Manny",
+      "hat": "MinersHelmet"
+    },
+    {
+      "id": "Bea",
+      "name": "Banjo Bea",
+      "body": "Quinn",
+      "hat": "TenGallon"
+    }
+  ],
+  "lines": [
+    {
+      "speaker": "Dusty",
+      "row": "FT_Dusty_01",
+      "text": "Well howdy, crawler. Welcome to Fort Tiner. Population six, and one goat that thinks it's the mayor."
+    },
+    {
+      "speaker": "Dusty",
+      "row": "FT_Dusty_02",
+      "text": "Rule one of Fort Tiner: no climbin' on the fort. Rule two: climb everything else. That's what you're here for."
+    },
+    {
+      "speaker": "Dusty",
+      "row": "FT_Dusty_03",
+      "text": "The summit sits at fourteen thousand one hundred and fifteen feet. I've been up there twice. Came down the fast way once."
+    },
+    {
+      "speaker": "Dusty",
+      "row": "FT_Dusty_04",
+      "text": "If a crawler don't come back down by sundown, we ring the bell. Then we eat their beans. Out of respect."
+    },
+    {
+      "speaker": "MaOre",
+      "row": "FT_MaOre_01",
+      "text": "Prize counter's back in the Den, sugar. Win yourself some tickets up that rock and go treat yourself."
+    },
+    {
+      "speaker": "MaOre",
+      "row": "FT_MaOre_02",
+      "text": "That helmet? Lamp works fine. Battery don't. We're workin' on it. We've been workin' on it since eighteen fifty-nine."
+    },
+    {
+      "speaker": "MaOre",
+      "row": "FT_MaOre_03",
+      "text": "My late husband went down a mineshaft lookin' for silver. Found the System instead. Now he's a floor boss. We still write."
+    },
+    {
+      "speaker": "MaOre",
+      "row": "FT_MaOre_04",
+      "text": "Every inch you climb earns you points. Get to the top with everybody and the whole crew gets a bonus. Teamwork, darlin'."
+    },
+    {
+      "speaker": "Gus",
+      "row": "FT_Gus_01",
+      "text": "Folks think the treasure's up top. Heh. The treasure's DOWN, partner. Deep down. The mountain's just the lid."
+    },
+    {
+      "speaker": "Gus",
+      "row": "FT_Gus_02",
+      "text": "I dug a hole so deep last spring, somethin' down there dug back. Polite fella. Wanted to know if we was hirin'."
+    },
+    {
+      "speaker": "Gus",
+      "row": "FT_Gus_03",
+      "text": "Hear that rumblin'? That's the dungeon, stretchin' its legs under the Rockies. One day it's gonna come up for air."
+    },
+    {
+      "speaker": "Gus",
+      "row": "FT_Gus_04",
+      "text": "You want my advice? Rest on them ledges. The rock don't care how tired you are. The rock never cares."
+    },
+    {
+      "speaker": "Bea",
+      "row": "FT_Bea_01",
+      "text": "Equip your Climbin', then hold the left mouse to haul yourself up. Let go and you drop, so only let go over a ledge, hon."
+    },
+    {
+      "speaker": "Bea",
+      "row": "FT_Bea_02",
+      "text": "Climbin' burns stamina. When your arms start singin', find a ledge and let 'em rest a spell."
+    },
+    {
+      "speaker": "Bea",
+      "row": "FT_Bea_03",
+      "text": "I wrote a song about the last fella who skipped the ledges. It's a short song. Real short."
+    },
+    {
+      "speaker": "Bea",
+      "row": "FT_Bea_04",
+      "text": "Beat the clock to the summit and there's extra tickets in it for ya. Daylight's wastin', crawler!"
+    }
+  ]
+}
