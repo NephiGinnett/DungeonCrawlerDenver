@@ -1217,6 +1217,13 @@ A city shift, not laps. Players drive wreckers. Right mouse aims the hook, Q fir
 Traffic is solid to trucks through `ADCCRover::TrafficShell` (WorldDynamic, blocks only Pawn), so it never jams itself. While a car is hooked, the
 rover replicates `RallyTow`/`bRallyTowDocked`/`bRallyInYard`; the chase camera frames both cars, and the HUD shows the [Q] drop prompt.
 
+### Controls: the belt, not a key per thing (2026-11-16)
+Zoe asked for fewer keys. On foot it is WASD, Space, Shift, Ctrl, E, Tab, Esc, B, the mouse, and **1-9 = the belt**
+(`ADCCCharacterBase::GetBelt`). A new usable thing gets a **belt slot** (a `EDCCBelt` kind, an entry in `GetBelt`, a
+case in `UseBeltEntry`), never a new key. Aimed things arm and use on the next left click; the rest use on their
+number. All food and drink share one slot; the middle mouse button picks which (2026-11-17). Rare actions are buttons (the Tab menu's row under the tabs, the B menu). Never add a `BindKey` or a
+`WasInputKeyJustPressed` for a gameplay action without asking her. Test runs: `python Tools/run_test.py` (see its header).
+
 ### Gotcha: runtime-spawned rovers need a controller to move (2026-11-13)
 `ADCCRover` moves with `UFloatingPawnMovement`, which only applies input when a *local controller* possesses the pawn.
 Rovers spawned at runtime get none, so autopilot cars (Repo Rally traffic, crews, running marks) sat still at full

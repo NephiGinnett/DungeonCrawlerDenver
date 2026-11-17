@@ -1,5 +1,7 @@
 # grok to do
 
+**Tonight (2026-11-16): follow `Docs/grok-overnight-2026-11-16.md`, not this list.**
+
 Future plans only. Nothing on this list is started. Zoe asked for the list on 2026-11-14 and said not to begin new work from it.
 
 ## After the next round

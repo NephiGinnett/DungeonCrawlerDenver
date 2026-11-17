@@ -21,3 +21,6 @@ Setback,Setback,Setback,"A crawler has died. This has been logged as content. Yo
 Persistent,Persistent,Persistent,"Five deaths. The audience has grown fond of the sound. We have isolated it for the remix.",Deaths,5,0,-50,True
 EstateSale,EstateSale,Estate Sale,"Five bodies and boxes emptied out. Everything in this dungeon used to belong to someone. Now it belongs to you.",ContainersLooted,5,100,10,False
 AssetRecovery,AssetRecovery,Asset Recovery Specialist,"Thirty containers cleared out. Repossession is, when you get right down to it, a two-way arrangement.",ContainersLooted,30,600,30,False
+WelcomeAboard,WelcomeAboard,Welcome Aboard,"You have entered the World Dungeon. Your consent was implied by your feet.",EnteredWorldDungeon,1,25,5,False
+PropertyDefacement,PropertyDefacement,Property Defacement,"Your tag is on the cage. The Lucky Tuesday has not been vandalized by a living person since 1893. The chat would like to thank you personally.",TaggedTheCage,1,50,10,False
+ProofOfSummit,ProofOfSummit,Proof of Summit,"Your tag is on the top of Fourteener. The mountain has been informed. It does not care. Everyone else does.",TaggedTheSummit,1,100,15,False
