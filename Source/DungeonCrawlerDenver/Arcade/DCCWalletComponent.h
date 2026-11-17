@@ -61,9 +61,6 @@ public:
 	UPROPERTY(Replicated)
 	TArray<FName> ClimbTools;
 
-	UPROPERTY(Replicated)
-	int32 ClimbToolIndex = 0;
-
 	/** "Chalk Bag 45 s   Crampons   Hard Hat" */
 	UPROPERTY(Replicated)
 	FString ClimbBoosts;
@@ -109,6 +106,21 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_BuySupply(FName ItemId);
 
+	/** Spray tags (DCCSpray): paint this crawler's picture where they are looking. The picture travels with the
+	 *  request because it lives on the painter's own PC. From the truck, ADCCRover::Server_Spray does the same. */
+	UFUNCTION(Server, Reliable)
+	void Server_Spray(FVector At, FVector Normal, FVector ViewDir, const TArray<uint8>& RGB);
+
+	/** Dead Air: send the cage up early (everyone still standing must agree). */
+	UFUNCTION(Server, Reliable)
+	void Server_CageVote(bool bUp);
+
+	/** Starter kits (Session/DCCStarterKits): the host offers the choice once, the player picks one. */
+	UFUNCTION(Client, Reliable)
+	void Client_OfferStarterKit();
+	UFUNCTION(Server, Reliable)
+	void Server_ChooseStarterKit(int32 Index);
+
 	/** Server: pay a player scrap (the driving games), keep the profile and wallet in step, and tell them. */
 	static void AwardScrap(APlayerState* PlayerState, int32 Amount, const FString& Why);
 
@@ -118,7 +130,7 @@ public:
 
 	static void AwardCredits(APlayerState* PlayerState, int32 Amount, const FString& Why);
 
-	/** Dead Air: throw a lightstick from Eye along Dir (G). The server checks you have one left. */
+	/** Dead Air: throw a lightstick from Eye along Dir. The lightstick is a belt slot. The server checks you have one left. */
 	UFUNCTION(Server, Reliable)
 	void Server_ThrowLightstick(FVector Eye, FVector Dir);
 
@@ -131,12 +143,14 @@ public:
 	FString PasswordMessage;
 	bool bPasswordChanged = false;
 
-	/** [Q]: use the selected Fourteener tool. [T]: select the next one. */
+	/** The belt grappling hook (Fourteener). */
 	UFUNCTION(Server, Reliable)
-	void Server_UseClimbTool();
-
-	UFUNCTION(Server, Reliable)
-	void Server_NextClimbTool();
+	void Server_Grapple();
+	/** The server threw your hook: it is back in Seconds. The HUD counts down from here, on this PC's own clock. */
+	UFUNCTION(Client, Reliable)
+	void Client_GrappleThrown(float Seconds);
+	/** This PC's clock: when the hook is ready again. */
+	float GrappleReadyLocal = 0.0f;
 
 	/** Sell one artifact at the Prize Counter (those with a ticket value). */
 	UFUNCTION(Server, Reliable)
@@ -144,6 +158,19 @@ public:
 
 	/** Server: re-read the trophy vault into TrophyIds/TrophyCounts. */
 	void RefreshTrophies();
+
+	/** Bounties (DCCBounties), one bit each in DCCBounties::All() order: finished, and paid. Yours only. */
+	UPROPERTY(Replicated)
+	int32 BountiesDone = 0;
+	UPROPERTY(Replicated)
+	int32 BountiesPaid = 0;
+	bool BountyDone(FName Id) const;
+	bool BountyPaid(FName Id) const;
+	/** Server: re-read the bounties; tells the player about any that just finished. */
+	void RefreshBounties();
+	/** Pay a finished bounty (the BOUNTIES tab's CLAIM). */
+	UFUNCTION(Server, Reliable)
+	void Server_ClaimBounty(FName BountyId);
 
 	bool Owns(FName Id) const { return Owned.Contains(Id); }
 	FName WornIn(FName Slot) const;
@@ -230,4 +257,7 @@ private:
 	bool bProfileSent = false;
 	int32 LoadAttempts = 0;
 	FString LoadedKey;
+private:
+	FTimerHandle BountyTimer;
+	bool bBountiesRead = false;
 };

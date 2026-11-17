@@ -35,7 +35,21 @@ public:
 	void SetOrigin(const FVector& InOrigin, float InTileSize);
 
 	/** start, then FightRooms of "fight", ChestRooms of "chest", then "stairs". */
-	bool Build(int32 InSize, int32 InSeed, int32 FightRooms, int32 ChestRooms);
+	/**
+	 * How a layout is shaped. The defaults are the World Dungeon's: big rooms joined to their nearest neighbour, a couple
+	 * of loops, and a shortcut. Dead Air's mine (2026-11-16, Zoe: "make the mine shaft in dead air much more linear.
+	 * Many spaces now felt like a big square") uses small rooms strung on one winding drift.
+	 */
+	struct FStyle
+	{
+		int32 RoomMin = 5, RoomMax = 7;
+		int32 GrandMin = 7, GrandMax = 9;
+		/** Join each room to the one before it (a chain) rather than to the nearest joined room. */
+		bool bChain = false;
+		int32 Loops = 2;
+		bool bShortcut = true;
+	};
+	bool Build(int32 InSize, int32 InSeed, int32 FightRooms, int32 ChestRooms, const FStyle& Style = FStyle());
 
 	int32 GetSize() const { return Size; }
 	float GetTileSize() const { return TileSize; }

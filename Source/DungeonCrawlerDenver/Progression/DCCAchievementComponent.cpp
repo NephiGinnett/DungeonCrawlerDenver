@@ -1,4 +1,5 @@
 #include "Progression/DCCAchievementComponent.h"
+#include "Characters/DCCReactions.h"
 
 #include "Characters/DCCCharacterBase.h"
 #include "Stats/DCCStatsComponent.h"
@@ -175,6 +176,10 @@ void UDCCAchievementComponent::Unlock(const FDCCAchievementDef& Achievement)
 	// a session that unlocks six achievements mid-fight gets six things to open
 	// afterward rather than six numbers that ticked up somewhere off-screen.
 	OnAchievementUnlocked.Broadcast(this, Achievement);
+	if (ADCCCharacterBase* Achiever = Cast<ADCCCharacterBase>(GetOwner()))
+	{
+		Achiever->ReactTo(DCCReactions::MomentWin, false);
+	}
 
 	UE_LOG(LogTemp, Log, TEXT("DCCAchievement: %s unlocked '%s'."),
 		*GetNameSafe(Owner), *Achievement.AchievementId.ToString());

@@ -314,7 +314,7 @@ void UDCCInventoryComponent::AddConsumable(FName ItemId, int32 Quantity)
 
 	if (ADCCCharacterBase* Holder = Cast<ADCCCharacterBase>(GetOwner()))
 	{
-		Holder->OfferQuickItem(ItemId); // hotbar slot 2 or 3, if one is free (2026-11-13)
+		Holder->OfferQuickItem(ItemId);
 	}
 	for (FDCCStowedConsumable& Existing : StowedConsumables)
 	{

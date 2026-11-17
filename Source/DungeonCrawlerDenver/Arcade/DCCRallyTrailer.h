@@ -34,9 +34,9 @@ public:
 	bool bCapture = false;
 	FString CaptureDir;
 
-	static constexpr float Length = 52.0f;
+	static constexpr float Length = 51.0f;
 	/** 34-42 s: the owner comes for Kyle's truck. The drop follows. */
-	static constexpr float DropStart = 42.0f;
+	static constexpr float DropStart = 41.0f; // a second sooner off the rifleman (2026-11-16)
 	static constexpr float PreRoll = 8.0f;
 
 private:
@@ -65,6 +65,13 @@ private:
 	TWeakObjectPtr<class ATextRenderActor> ShoutCard;
 	TSet<int32> ShotsFired;
 	void OwnerBeat(float T);
+
+	/** The tag beat (24-34 s, 2026-11-16): Marcel sprays the dispatch wall twice, Vaughn tags a rival crew's truck. */
+	void SprayBeat(float T);
+	TArray<uint8> TagPixels;
+	TWeakObjectPtr<ADCCRover> RivalTruck;
+	struct FTagShot { float At; int32 Who; FVector From; FVector Dir; TWeakObjectPtr<class ADCCSprayTag> Tag; float Painted = -1.0f; };
+	TArray<FTagShot> TagShots;
 	void SetClip(ADCCCharacterBase* Crawler, const TCHAR* Path);
 	TWeakObjectPtr<ADCCRover> BayScott, BayCJ, BayMarcel, BayVaughn, HookTruck, HookMark, SkyTruck, DropMark;
 	FVector Origin = FVector::ZeroVector;

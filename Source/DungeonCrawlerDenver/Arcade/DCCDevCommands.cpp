@@ -5,6 +5,9 @@
 //   DCC.SkillTick <Skill> [delay]   one practice tick on a skill of the local crawler (grants it if unknown)
 //   DCC.Scrap <amount> [delay]      give the local player scrap
 
+#include "Arcade/DCCSpray.h"
+#include "Session/DCCProfile.h"
+#include "Arcade/DCCWalletComponent.h"
 #include "CoreMinimal.h"
 #include "HAL/IConsoleManager.h"
 #include "Engine/World.h"
@@ -16,10 +19,13 @@
 #include "Vehicles/DCCRover.h"
 #include "UI/DCCHUD.h"
 #include "Arcade/DCCArcadeArena.h"
+#include "Arcade/DCCArcadeGames.h"
 #include "Arcade/DCCArcadeGate.h"
 #include "Arcade/DCCArcadeHaunt.h"
+#include "Items/DCCPickupVariants.h"
 #include "Camera/CameraActor.h"
 #include "EngineUtils.h"
+#include "Characters/DCCEnemyCharacter.h"
 
 namespace
 {
@@ -230,5 +236,240 @@ static FAutoConsoleCommandWithWorldAndArgs GDevTp(TEXT("DCC.Tp"),
 			}
 			Pawn->TeleportTo(Origin + Rel, FRotator(0.0f, Yaw, 0.0f));
 			PC->SetControlRotation(FRotator(-15.0f, Yaw, 0.0f));
+		});
+	}));
+
+// Spray tags without the picture dialog, for testing (2026-11-16): DCC.Spray <picture> <yaw> <pitch> [delay]. Grants the
+// can on this (host) profile, uses the picture, turns the view, and sprays.
+static FAutoConsoleCommandWithWorldAndArgs GDevSpray(TEXT("DCC.Spray"), TEXT("DCC.Spray <picture path> <yaw> <pitch> [delay]: (dev) spray a tag from a file."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		if (Args.Num() < 3)
+		{
+			return;
+		}
+		const FString Path = Args[0];
+		const float Yaw = FCString::Atof(*Args[1]);
+		const float Pitch = FCString::Atof(*Args[2]);
+		After(World, Args.Num() > 3 ? FCString::Atof(*Args[3]) : 0.0f, [Path, Yaw, Pitch](UWorld* W)
+		{
+			APlayerController* PC = W ? W->GetFirstPlayerController() : nullptr;
+			if (!PC || !PC->PlayerState)
+			{
+				return;
+			}
+			const FString Key = DCCProfile::KeyFor(PC->PlayerState);
+			DCCProfile::GrantCosmetic(Key, DCCSpray::CanId);
+			if (ADCCCharacterBase* Crawler = Cast<ADCCCharacterBase>(PC->GetPawn()))
+			{
+				if (Crawler->Wallet) { Crawler->Wallet->Owned = DCCProfile::GetCosmetics(Key); }
+			}
+			FString Error;
+			if (!DCCSpray::UsePicture(Key, Path, Error))
+			{
+				UE_LOG(LogTemp, Warning, TEXT("[DCC Spray] %s"), *Error);
+				return;
+			}
+			PC->SetControlRotation(FRotator(Pitch, Yaw, 0.0f));
+			After(W, 0.5f, [PC](UWorld*) { DCCSpray::TryLocalSpray(PC); UE_LOG(LogTemp, Log, TEXT("[DCC Spray] sprayed (dev)")); });
+		});
+	}));
+
+// Reactions and the belt grapple without the keys, for testing (2026-11-16).
+//   DCC.React <1-8> [delay]   the local crawler reacts (1 cheer, 2 alert, 3 ?, 4 heart, 5 sweat, 6 skull, 7 note, 8 cold)
+//   DCC.Grapple [delay]       throw the belt grappling hook (Fourteener, while climbing)
+static FAutoConsoleCommandWithWorldAndArgs GDevReact(TEXT("DCC.React"), TEXT("DCC.React <1-8> [delay]: (dev) the local crawler reacts."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		const int32 Reaction = Args.Num() > 0 ? FCString::Atoi(*Args[0]) : 1;
+		After(World, Args.Num() > 1 ? FCString::Atof(*Args[1]) : 0.0f, [Reaction](UWorld* W)
+		{
+			if (ADCCCharacterBase* Crawler = LocalCrawler(W)) { Crawler->React(uint8(Reaction), false); }
+		});
+	}));
+
+static FAutoConsoleCommandWithWorldAndArgs GDevGrapple(TEXT("DCC.Grapple"), TEXT("DCC.Grapple [delay]: (dev) throw the belt grappling hook."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		After(World, Args.Num() > 0 ? FCString::Atof(*Args[0]) : 0.0f, [](UWorld* W)
+		{
+			if (ADCCCharacterBase* Crawler = LocalCrawler(W))
+			{
+				const float Before = Crawler->GetActorLocation().Z;
+				Crawler->ThrowGrapple();
+				UE_LOG(LogTemp, Log, TEXT("[DCC Grapple] thrown from z=%.0f"), Before);
+			}
+		});
+	}));
+
+// DCC.MenuTab <index> [delay]: (dev) open the Tab menu on a page (10 is SETTINGS).
+static FAutoConsoleCommandWithWorldAndArgs GDevMenuTab(TEXT("DCC.MenuTab"), TEXT("DCC.MenuTab <index> [delay]: (dev) open the Tab menu on a page."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		const int32 Tab = Args.Num() > 0 ? FCString::Atoi(*Args[0]) : 0;
+		After(World, Args.Num() > 1 ? FCString::Atof(*Args[1]) : 0.0f, [Tab](UWorld* W)
+		{
+			APlayerController* PC = W ? W->GetFirstPlayerController() : nullptr;
+			if (ADCCHUD* Hud = PC ? Cast<ADCCHUD>(PC->GetHUD()) : nullptr)
+			{
+				Hud->OpenMenuTab(static_cast<EDCCMenuTab>(FMath::Clamp(Tab, 0, int32(EDCCMenuTab::MAX) - 1)));
+			}
+		});
+	}));
+
+// DCC.Belt <slot 1-9> [delay]: (dev) press a belt number key. DCC.Click [delay]: (dev) a left click.
+// DCC.Emotes [delay]: (dev) open the B menu. For checking the belt (2026-11-16) in automated runs.
+static FAutoConsoleCommandWithWorldAndArgs GDevBelt(TEXT("DCC.Belt"), TEXT("DCC.Belt <1-9> [delay]: (dev) press a belt number key."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		const int32 Slot = Args.Num() > 0 ? FCString::Atoi(*Args[0]) : 1;
+		After(World, Args.Num() > 1 ? FCString::Atof(*Args[1]) : 0.0f, [Slot](UWorld* W)
+		{
+			if (ADCCCharacterBase* Crawler = LocalCrawler(W)) { Crawler->BeltKey(Slot - 1); }
+		});
+	}));
+
+static FAutoConsoleCommandWithWorldAndArgs GDevWheel(TEXT("DCC.Wheel"), TEXT("DCC.Wheel <1|-1> [delay]: (dev) scroll the wheel. 1 is wheel-down."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		const int32 Delta = Args.Num() > 0 ? FCString::Atoi(*Args[0]) : 1;
+		After(World, Args.Num() > 1 ? FCString::Atof(*Args[1]) : 0.0f, [Delta](UWorld* W)
+		{
+			if (ADCCCharacterBase* Crawler = LocalCrawler(W)) { Crawler->DevWheel(Delta); }
+		});
+	}));
+
+static FAutoConsoleCommandWithWorldAndArgs GDevClick(TEXT("DCC.Click"), TEXT("DCC.Click [delay]: (dev) a left click."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		After(World, Args.Num() > 0 ? FCString::Atof(*Args[0]) : 0.0f, [](UWorld* W)
+		{
+			if (ADCCCharacterBase* Crawler = LocalCrawler(W)) { Crawler->DevClick(); }
+		});
+	}));
+
+static FAutoConsoleCommandWithWorldAndArgs GDevOutfit(TEXT("DCC.Outfit"), TEXT("DCC.Outfit [delay]: (dev) in Fourteener, give one of every tool and boost."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		After(World, Args.Num() > 0 ? FCString::Atof(*Args[0]) : 0.0f, [](UWorld* W)
+		{
+			ADCCCharacterBase* Crawler = LocalCrawler(W);
+			ADCCArcadeClimb* Climb = nullptr;
+			for (TActorIterator<ADCCArcadeClimb> It(W); It; ++It) { Climb = *It; break; }
+			if (!Crawler || !Climb)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("[DCC Outfit] Fourteener is not running."));
+				return;
+			}
+			Climb->GiveFullKit(Crawler);
+			TArray<FDCCBeltEntry> Belt;
+			Crawler->GetBelt(Belt);
+			for (int32 i = 0; i < Belt.Num(); ++i)
+			{
+				UE_LOG(LogTemp, Log, TEXT("[DCC Outfit] slot %d: %s x%d"), i + 1, *Belt[i].Name, Belt[i].Count);
+			}
+		});
+	}));
+
+static FAutoConsoleCommandWithWorldAndArgs GDevInteract(TEXT("DCC.Interact"), TEXT("DCC.Interact [delay]: (dev) press E for the local crawler."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		After(World, Args.Num() > 0 ? FCString::Atof(*Args[0]) : 0.0f, [](UWorld* W)
+		{
+			if (ADCCCharacterBase* Crawler = LocalCrawler(W)) { Crawler->HandleInteractPressed(); }
+		});
+	}));
+
+// The only pickup Gate Run places is the keg, at 70 kg. A Strength 4 crawler lifts 60 kg, so the
+// throw and stow check uses a bottle instead. Dev only. It does not pay gold.
+static FAutoConsoleCommandWithWorldAndArgs GDevBottle(TEXT("DCC.Bottle"), TEXT("DCC.Bottle [delay]: (dev) put a bottle on the ground in front of the local crawler."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		After(World, Args.Num() > 0 ? FCString::Atof(*Args[0]) : 0.0f, [](UWorld* W)
+		{
+			ADCCCharacterBase* Crawler = LocalCrawler(W);
+			if (!Crawler)
+			{
+				return;
+			}
+			const FVector At = Crawler->GetActorLocation() + Crawler->GetActorForwardVector() * 120.0f + FVector(0.0f, 0.0f, 40.0f);
+			W->SpawnActor<ADCCPickup_Bottle>(ADCCPickup_Bottle::StaticClass(), FTransform(At));
+			UE_LOG(LogTemp, Log, TEXT("[DCC Bottle] on the ground at %s"), *At.ToString());
+		});
+	}));
+
+static FAutoConsoleCommandWithWorldAndArgs GDevEmotes(TEXT("DCC.Emotes"), TEXT("DCC.Emotes [delay]: (dev) open the B menu."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		After(World, Args.Num() > 0 ? FCString::Atof(*Args[0]) : 0.0f, [](UWorld* W)
+		{
+			if (ADCCCharacterBase* Crawler = LocalCrawler(W)) { Crawler->ToggleEmoteMenu(); }
+		});
+	}));
+
+// DCC.NextFood [delay]: (dev) the middle mouse button: the belt's food slot moves on to the next food.
+static FAutoConsoleCommandWithWorldAndArgs GDevNextFood(TEXT("DCC.NextFood"), TEXT("DCC.NextFood [delay]: (dev) pick the next food on the belt."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		After(World, Args.Num() > 0 ? FCString::Atof(*Args[0]) : 0.0f, [](UWorld* W)
+		{
+			if (ADCCCharacterBase* Crawler = LocalCrawler(W)) { Crawler->CycleFood(); }
+		});
+	}));
+
+// DCC.Fight <seconds> [delay]: (dev) for automated fight checks (2026-11-17). For <seconds>, the local crawler keeps
+// turning to the nearest living enemy, walks up to it, and attacks about twice a second, as a player would. Scripted
+// clicks alone fired a ranged weapon at nothing, because a gun shoots where the camera points.
+static FAutoConsoleCommandWithWorldAndArgs GDevFight(TEXT("DCC.Fight"), TEXT("DCC.Fight <seconds> [delay]: (dev) fight the nearest enemies."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		const float Seconds = Args.Num() > 0 ? FCString::Atof(*Args[0]) : 30.0f;
+		After(World, Args.Num() > 1 ? FCString::Atof(*Args[1]) : 0.0f, [Seconds](UWorld* W)
+		{
+			struct FState { double Until = 0.0; double NextSwing = 0.0; };
+			TSharedRef<FState> State = MakeShared<FState>();
+			State->Until = W->GetTimeSeconds() + Seconds;
+			TWeakObjectPtr<UWorld> Weak(W);
+			TSharedRef<FTimerHandle> Handle = MakeShared<FTimerHandle>();
+			W->GetTimerManager().SetTimer(*Handle, FTimerDelegate::CreateLambda([Weak, State, Handle]()
+			{
+				UWorld* World = Weak.Get();
+				if (!World)
+				{
+					return;
+				}
+				ADCCCharacterBase* Me = LocalCrawler(World);
+				APlayerController* PC = World->GetFirstPlayerController();
+				if (!Me || !PC || !Me->IsAlive() || World->GetTimeSeconds() >= State->Until)
+				{
+					World->GetTimerManager().ClearTimer(*Handle);
+					return;
+				}
+				ADCCEnemyCharacter* Target = nullptr;
+				float Best = 6000.0f;
+				for (TActorIterator<ADCCEnemyCharacter> It(World); It; ++It)
+				{
+					if (It->IsAlive() && !It->bIsAlly)
+					{
+						const float D = FVector::Dist(It->GetActorLocation(), Me->GetActorLocation());
+						if (D < Best) { Best = D; Target = *It; }
+					}
+				}
+				if (!Target)
+				{
+					return;
+				}
+				const FVector To = Target->GetActorLocation() + FVector(0, 0, 40) - Me->GetActorLocation();
+				PC->SetControlRotation(To.Rotation());
+				if (Best > 200.0f)
+				{
+					Me->AddMovementInput(To.GetSafeNormal2D(), 1.0f);
+				}
+				if (World->GetTimeSeconds() >= State->NextSwing)
+				{
+					State->NextSwing = World->GetTimeSeconds() + 0.5;
+					Me->DevClick();
+				}
+			}), 0.03f, true);
 		});
 	}));

@@ -21,6 +21,24 @@ protected:
 	virtual FSky GetSky() const override;
 public:
 	virtual bool ShowsHealth() const override { return false; } // nothing can hurt you in the Den
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	/** The vote strip (2026-11-16, Zoe: "just add a small logo for each game and the number of players underneath"):
+	 *  players standing on each game's pad, in DCCArcade::Games() order. */
+	UPROPERTY(Replicated)
+	TArray<uint8> PadVotes;
+	/** Each game's record ("Zoe 5,480 views"), shown on its pad's board rather than in a long list on screen. */
+	UPROPERTY(Replicated)
+	TArray<FString> PadRecords;
+	/** "Starting Dead Air in 12 s (3 of 4 voted)", or empty. */
+	UPROPERTY(Replicated)
+	FString CountdownLine;
+	/** The game with the most players on its pad, or -1 when nobody is on one. */
+	UPROPERTY(Replicated)
+	int32 LeadingPad = -1;
+	/** Someone is standing on a game's pad right now (this machine's own view, so it is instant): the HUD's vote
+	 *  strip comes down while this is true and rolls back up when it is not. */
+	bool IsSomeoneOnAPad() const { return bSomeoneOnPad; }
 private:
 	FVector PadCenter(int32 Index) const;
 	/** The prize counter: stand on it and the Den shop opens (on your machine only). */
@@ -28,11 +46,25 @@ private:
 	/** The Chop Shop (2026-11-14): the same counter screen, opened on its upgrades tab. */
 	FVector ChopPadCenter() const { return GetActorLocation() + FVector(-2000.0f, -1050.0f, 0.0f); }
 	bool bWasOnShopPad = false;
+	/** The Den's music (2026-11-16): our songs in turn, low, until the Den has its own track. Local. */
+	TWeakObjectPtr<class UAudioComponent> DenSong;
+	double NextDenSong = 0.0;
+	int32 DenSongIndex = -1;
 	bool bWasOnChopPad = false;
 	double CountdownEndsAt = -1.0;
 	bool bAllVotedCountdown = false;
 	bool bLeaving = false;
 	float RefreshTimer = 0.0f;
+	/** The pads press down under whoever stands on them (2026-11-16, Zoe: "make it so that the platforms depress when
+	 *  you stand on them"). Each pad and the dressing lying on it, with where each started; how far each is pressed. */
+	TArray<TWeakObjectPtr<AActor>> PadTops;
+	TArray<TArray<TPair<TWeakObjectPtr<AActor>, FVector>>> PadRiders;
+	TArray<float> PadSink;
+	bool bSomeoneOnPad = false;
+	void TickPads(float DeltaSeconds);
+	/** The record line on each pad's board (local), and what it last said. */
+	TArray<TWeakObjectPtr<class ATextRenderActor>> RecordSigns;
+	TArray<FString> RecordShown;
 };
 
 /** A falling rock in Fourteener. Replicated as where and when, so every machine draws the same fall. */
@@ -88,13 +120,22 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void OnRespawned(APlayerController* PC) override;
 	virtual bool ShowsClimbHud() const override { return true; }
+	/** A tag in the top tenth of the mountain: an achievement, once a round each. */
+	virtual void OnTagged(class ADCCCharacterBase* Painter, const FVector& At) override;
+	TSet<FString> SummitTaggers;
 
 	/** Server: hand a Fourteener item (DCCClimbItems) to a crawler. */
 	void GiveItem(class ADCCCharacterBase* Crawler, FName ItemId, bool bQuiet);
-	/** Server: [Q] and [T] from UDCCWalletComponent. */
+	/** Server: the outfitter's crate. One of every tool and boost, then the same notice the crate shows. */
+	void GiveFullKit(class ADCCCharacterBase* Crawler);
+	/** Server: use the tool the belt selected (UseToolId sets which one first). */
 	void UseTool(class ADCCCharacterBase* Crawler);
-	void NextTool(class ADCCCharacterBase* Crawler);
-	/** A hotbar quick slot: use this particular tool, whichever one [T] has selected. */
+	/** Server: the belt grappling hook (DCCChopShop::Grapple). Always there; winds back in after use. */
+	void BeltGrapple(class ADCCCharacterBase* Crawler);
+	/** Server: yank a climbing crawler up the wall by Reach (stops at a ledge). False if they are not on a wall. */
+	bool GrappleUp(class ADCCCharacterBase* Crawler, float Reach);
+	TMap<TWeakObjectPtr<APlayerState>, double> GrappleReadyAt;
+	/** Server: use this particular tool. The belt calls this. */
 	void UseToolId(class ADCCCharacterBase* Crawler, FName ToolId);
 	/** Fort Tiner's Trading Post (2026-11-15): stand on its pad to buy climbing kit with tickets. */
 	FVector TradingPostPad() const { return FortCenter() + FVector(250.0f, 1200.0f - 330.0f - 420.0f, 0.0f); }

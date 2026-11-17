@@ -129,7 +129,8 @@ void ADCCMountainBird::BeginPlay()
 	if (UMaterialInterface* Base = LoadObject<UMaterialInterface>(nullptr, TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial")))
 	{
 		UMaterialInstanceDynamic* Red = UMaterialInstanceDynamic::Create(Base, this);
-		Red->SetVectorParameterValue(TEXT("Color"), FLinearColor(1.0f, 0.05f, 0.05f));
+		// Not red any more (2026-11-16): the tell is the bird's shadow on the rock, so it is near black.
+		Red->SetVectorParameterValue(TEXT("Color"), FLinearColor(0.01f, 0.01f, 0.012f));
 		AimLine->SetMaterial(0, Red);
 		UMaterialInstanceDynamic* Stone = UMaterialInstanceDynamic::Create(Base, this);
 		Stone->SetVectorParameterValue(TEXT("Color"), FLinearColor(0.32f, 0.28f, 0.25f));
@@ -155,6 +156,7 @@ void ADCCMountainBird::OnRep_State()
 void ADCCMountainBird::OnStateChanged()
 {
 	HeldRock->SetVisibility(State == Carry);
+	StateStart = Age;
 	if (State == WindUp && GetNetMode() != NM_DedicatedServer)
 	{
 		Play(GetWorld(), ScreamPcm(), GetActorLocation());
@@ -174,20 +176,23 @@ void ADCCMountainBird::Tick(float DeltaSeconds)
 	Body->SetRelativeRotation(BodyRest + FRotator(0.0f, 0.0f, Rock));
 	Body->SetRelativeLocation(FVector(0.0f, 0.0f, (State == WindUp ? 35.0f : 18.0f) * FMath::Sin(Age * (State == WindUp ? 11.0f : 2.3f))));
 
-	// The tell: a thin red line from the bird to where it will strike, pulsing faster as the dive comes.
+	// The tell (2026-11-16, Zoe: "instead of the red line where they're coming how about a shadow passing by?"): the
+	// bird's shadow on the rock. Through the wind-up it sweeps down the face toward where it will strike, growing as
+	// the bird closes; through the dive it sits on the spot. Look up when a shadow crosses you.
 	const bool bAim = State == WindUp || State == Dive;
 	AimLine->SetVisibility(bAim);
 	if (bAim)
 	{
-		const FVector From = GetActorLocation();
-		const FVector To = FVector(DiveTarget);
-		const FVector D = To - From;
-		const float Len = D.Size();
-		if (Len > 1.0f)
-		{
-			const float Thick = (State == Dive ? 7.0f : 4.0f) + 2.0f * FMath::Abs(FMath::Sin(Age * 14.0f));
-			AimLine->SetWorldTransform(FTransform(FRotationMatrix::MakeFromZ(D / Len).Rotator(), (From + To) * 0.5f,
-				FVector(Thick / 100.0f, Thick / 100.0f, Len / 100.0f)));
-		}
+		const FVector Target = FVector(DiveTarget);
+		FVector Out = (GetActorLocation() - Target).GetSafeNormal2D(); // away from the rock, toward the bird
+		if (Out.IsNearlyZero()) { Out = FVector(1, 0, 0); }
+		const FVector Side = FVector::CrossProduct(Out, FVector::UpVector);
+		const float T = State == Dive ? 1.0f : FMath::Clamp((Age - StateStart) / 1.6f, 0.0f, 1.0f);
+		const float Ease = FMath::SmoothStep(0.0f, 1.0f, T);
+		// From high and to one side, down across the rock, onto the target. The disc lies flat on the face.
+		const FVector Start = Target + FVector(0, 0, 650.0f) + Side * 420.0f;
+		const FVector At = FMath::Lerp(Start, Target, Ease) - Out * 48.0f;
+		const float Span = FMath::Lerp(180.0f, 360.0f, Ease) * (State == Dive ? 1.1f : 1.0f);
+		AimLine->SetWorldTransform(FTransform(FRotationMatrix::MakeFromZ(Out).Rotator(), At, FVector(Span / 100.0f, Span * 0.55f / 100.0f, 0.02f)));
 	}
 }

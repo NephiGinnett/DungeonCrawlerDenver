@@ -367,8 +367,11 @@ void ADCCHauntTrailerDirector::Pose(float T)
 			if (ADCCCharacterBase* C = Crew[i])
 			{
 				const FVector Spot = Cage + FVector(-120.0f + (i % 2) * 140.0f, (i - 2) * 150.0f, 120.0f);
-				const FVector From = Cage + FVector(900.0f + i * 80.0f, (i - 2) * 220.0f, 120.0f);
-				C->SetActorLocationAndRotation(bBack ? FMath::Lerp(From, Spot, In) : Spot, FRotator(0.0f, bBack && In < 1.0f ? 180.0f : 180.0f + (i - 2) * 6.0f, 0.0f));
+				// In through the cage's gate (2026-11-16), not through the bars.
+				const FVector GateSide(-H->GateDir.Y, H->GateDir.X, 0.0f);
+				const FVector From = Cage + H->GateDir * (900.0f + i * 80.0f) + GateSide * ((i - 2) * 110.0f) + FVector(0, 0, 120.0f);
+				const float RunYaw = (Spot - From).Rotation().Yaw;
+				C->SetActorLocationAndRotation(bBack ? FMath::Lerp(From, Spot, In) : Spot, FRotator(0.0f, bBack && In < 1.0f ? RunYaw : 180.0f + (i - 2) * 6.0f, 0.0f));
 				SetClip(C, bBack && In < 1.0f ? ClipRun : (bBack ? ClipCheer : (i % 2 ? ClipSquat : ClipAlert)));
 			}
 		}

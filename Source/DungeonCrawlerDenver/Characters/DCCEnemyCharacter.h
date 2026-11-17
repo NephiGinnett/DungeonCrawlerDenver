@@ -430,6 +430,10 @@ protected:
 	 */
 	ADCCCharacterBase* FindNearestHostileTarget() const;
 
+	/** Whether this enemy will hunt (or keep hunting) Candidate at all. Default yes. Dead Air's lamp-eater says no to
+	 *  anyone whose lamp is off (2026-11-16). */
+	virtual bool AcceptsTarget(const ADCCCharacterBase* Candidate) const { return true; }
+
 	/**
 	 * One line per enemy at spawn: Intelligence, mana pool, skill table, and the
 	 * cost of everything it knows. Exists because a caster that cannot afford its

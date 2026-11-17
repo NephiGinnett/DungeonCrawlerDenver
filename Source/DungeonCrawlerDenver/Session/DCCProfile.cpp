@@ -5,6 +5,7 @@
 #include "GameFramework/PlayerState.h"
 #include "Kismet/GameplayStatics.h"
 #include "Misc/SecureHash.h"
+#include "HAL/IConsoleManager.h"
 
 namespace
 {
@@ -446,3 +447,46 @@ namespace DCCProfile
 		return !Key.IsEmpty() && Dirty().Remove(Key) > 0;
 	}
 }
+
+// Dev only (2026-11-16): look at a profile and fix one record, for undoing what test runs wrote into a real crawler.
+//   DCC.Profile <Key>                         list every record, the tickets, owned items and trophies
+//   DCC.ProfileFix <Key> <Game.Stat> <Value>  set a record ("-" removes it; Arcade.Tickets is the ticket balance)
+static FAutoConsoleCommand GProfileDump(TEXT("DCC.Profile"), TEXT("DCC.Profile <Key>: (dev) list a profile's records."),
+	FConsoleCommandWithArgsDelegate::CreateLambda([](const TArray<FString>& Args)
+	{
+		UDCCProfileSave* Profile = Args.Num() > 0 ? Open(Args[0]) : nullptr;
+		if (!Profile)
+		{
+			return;
+		}
+		TArray<FString> Keys;
+		Profile->Stats.GetKeys(Keys);
+		Keys.Sort();
+		for (const FString& K : Keys)
+		{
+			UE_LOG(LogTemp, Display, TEXT("[DCC Profile] %s %s = %g"), *Args[0], *K, Profile->Stats[K]);
+		}
+		for (const FName& Id : Profile->Cosmetics) { UE_LOG(LogTemp, Display, TEXT("[DCC Profile] %s owns %s"), *Args[0], *Id.ToString()); }
+		for (const TPair<FName, int32>& T : Profile->Trophies) { UE_LOG(LogTemp, Display, TEXT("[DCC Profile] %s trophy %s x%d"), *Args[0], *T.Key.ToString(), T.Value); }
+		UE_LOG(LogTemp, Display, TEXT("[DCC Profile] %s revision %d, done"), *Args[0], Profile->Revision);
+	}));
+
+static FAutoConsoleCommand GProfileFix(TEXT("DCC.ProfileFix"), TEXT("DCC.ProfileFix <Key> <Game.Stat> <Value|->: (dev) set or remove one record."),
+	FConsoleCommandWithArgsDelegate::CreateLambda([](const TArray<FString>& Args)
+	{
+		UDCCProfileSave* Profile = Args.Num() > 2 ? Open(Args[0]) : nullptr;
+		if (!Profile)
+		{
+			return;
+		}
+		if (Args[2] == TEXT("-"))
+		{
+			Profile->Stats.Remove(Args[1]);
+		}
+		else
+		{
+			Profile->Stats.Add(Args[1], FCString::Atof(*Args[2]));
+		}
+		Write(Profile);
+		UE_LOG(LogTemp, Display, TEXT("[DCC Profile] %s %s -> %s"), *Args[0], *Args[1], *Args[2]);
+	}));

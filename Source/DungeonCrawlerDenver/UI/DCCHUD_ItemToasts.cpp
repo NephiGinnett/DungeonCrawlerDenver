@@ -331,7 +331,7 @@ void ADCCHUD::WatchForNewItems(ADCCCharacterBase* Crawler)
 				Card.Colour = RarityColour(AsTier);
 				Card.Name = FString::Printf(TEXT("%s Box"), *RarityName(AsTier));
 				Card.Subtitle = FString::Printf(TEXT("You have %d"), Boxes[Tier]);
-				Card.Lines.Add(TEXT("Sponsored. Press O to open your boxes."));
+				Card.Lines.Add(TEXT("Sponsored. Tab, then LOOT BOXES, to open them."));
 				PushItemToast(MoveTemp(Card));
 			}
 		}

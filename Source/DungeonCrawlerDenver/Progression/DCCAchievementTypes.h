@@ -81,6 +81,15 @@ enum class EDCCAchievementStat : uint8
 	/** This crawler's first room entry ever happened with the Body equipment slot still empty. */
 	ArrivedBodySlotEmpty UMETA(DisplayName = "Arrived Body Slot Empty"),
 
+	/** Entered a World Dungeon run (2026-11-16: an achievement every crawler gets on the way in). */
+	EnteredWorldDungeon UMETA(DisplayName = "Entered the World Dungeon"),
+
+	/** Dead Air: sprayed your tag on the cage (2026-11-16). */
+	TaggedTheCage       UMETA(DisplayName = "Tagged the Cage"),
+
+	/** Fourteener: sprayed your tag in the top tenth of the mountain (2026-11-16). */
+	TaggedTheSummit     UMETA(DisplayName = "Tagged the Summit"),
+
 	MAX                 UMETA(Hidden)
 };
 

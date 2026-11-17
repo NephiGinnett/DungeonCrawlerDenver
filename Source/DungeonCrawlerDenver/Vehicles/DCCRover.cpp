@@ -1,4 +1,5 @@
 #include "Vehicles/DCCRover.h"
+#include "Arcade/DCCSpray.h"
 #include "Components/PointLightComponent.h"
 #include "Components/SpotLightComponent.h"
 
@@ -2394,4 +2395,9 @@ void ADCCRover::Client_ForceTransform_Implementation(FVector_NetQuantize10 Locat
 	{
 		Movement->StopMovementImmediately();
 	}
+}
+
+void ADCCRover::Server_Spray_Implementation(FVector At, FVector Normal, FVector ViewDir, const TArray<uint8>& RGB)
+{
+	DCCSpray::ServerSpray(this, GetPlayerState(), At, Normal, ViewDir, RGB);
 }

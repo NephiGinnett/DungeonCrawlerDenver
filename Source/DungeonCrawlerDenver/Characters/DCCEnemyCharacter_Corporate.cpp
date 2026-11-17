@@ -13,6 +13,7 @@
 #include "EngineUtils.h"
 #include "TimerManager.h"
 #include "UObject/ConstructorHelpers.h"
+#include "Characters/DCCForgeBody.h"
 
 // =========================================================================
 // THE INTERN POOL
@@ -22,15 +23,8 @@ ADCCEnemyCharacter_InternManager::ADCCEnemyCharacter_InternManager()
 {
 	DisplayName = NSLOCTEXT("DCC", "InternManagerName", "Regional Intake Manager");
 
-	static ConstructorHelpers::FObjectFinder<USkeletalMesh> ManagerMesh(
-		TEXT("/Game/DCC/Characters/Minions/SK_DonMinion.SK_DonMinion"));
-	if (USkeletalMeshComponent* MeshComponent = GetMesh())
-	{
-		if (ManagerMesh.Succeeded())
-		{
-			MeshComponent->SetSkeletalMesh(ManagerMesh.Object);
-		}
-	}
+	// An NPC Forge person (2026-11-16): the old cartoon minion body looked like someone else's character.
+	DCCForgeBody::Apply(*this, DCCForgeBody::Body(2), 1.05f);
 
 	if (Stats)
 	{
@@ -182,15 +176,8 @@ ADCCEnemyCharacter_Notary::ADCCEnemyCharacter_Notary()
 {
 	DisplayName = NSLOCTEXT("DCC", "NotaryName", "The Notary");
 
-	static ConstructorHelpers::FObjectFinder<USkeletalMesh> NotaryMesh(
-		TEXT("/Game/DCC/Characters/Minions/SK_BuffMinion.SK_BuffMinion"));
-	if (USkeletalMeshComponent* MeshComponent = GetMesh())
-	{
-		if (NotaryMesh.Succeeded())
-		{
-			MeshComponent->SetSkeletalMesh(NotaryMesh.Object);
-		}
-	}
+	// An NPC Forge person (2026-11-16): the old cartoon minion body looked like someone else's character.
+	DCCForgeBody::Apply(*this, DCCForgeBody::Body(8), 1.0f);
 
 	if (Stats)
 	{

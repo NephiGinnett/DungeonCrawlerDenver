@@ -1,10 +1,14 @@
 #include "Characters/DCCCharacterBase.h"
+#include "Characters/DCCReactions.h"
 #include "Interfaces/MovementBaseInterface.h"
 #include "Items/DCCChestSound.h"
 #include "Items/DCCLootContainer.h"
 #include "Engine/OverlapResult.h"
 #include "Arcade/DCCClimbItems.h"
 #include "Arcade/DCCArcadeGames.h"
+#include "Arcade/DCCArcadeHaunt.h"
+#include "Arcade/DCCSpray.h"
+#include "GameFramework/PlayerState.h"
 #include "Arcade/DCCCosmetics.h"
 #include "Arcade/DCCWalletComponent.h"
 #include "Components/SpotLightComponent.h"
@@ -591,11 +595,27 @@ void ADCCCharacterBase::OnPrimaryPressed()
 		return;
 	}
 
-	// A pending question owns the click too, so the player cannot attack past a
-	// prompt they have not answered.
+	// A waiting question: a click says yes (right click says no), so it can be answered without the Y and N keys.
 	if (PendingClimbPoint)
 	{
+		AcceptPrompt();
 		return;
+	}
+
+	// An aimed belt slot waiting for its click: use it once, then it goes back on the belt.
+	if (HasBeltArmed())
+	{
+		TArray<FDCCBeltEntry> Belt;
+		GetBelt(Belt);
+		const FDCCBeltEntry* Armed = Belt.FindByPredicate([this](const FDCCBeltEntry& E) { return IsBeltArmed(E); });
+		const FDCCBeltEntry Use = Armed ? *Armed : FDCCBeltEntry();
+		const bool bFound = Armed != nullptr;
+		DisarmBelt();
+		if (bFound)
+		{
+			UseBeltEntry(Use);
+			return;
+		}
 	}
 
 	// Hold-to-climb: with Climbing equipped the button is "grab and climb", held.
@@ -673,6 +693,17 @@ void ADCCCharacterBase::OnPrimaryReleased()
 
 void ADCCCharacterBase::OnSecondaryPressed()
 {
+	// Right click answers a waiting question with no, and puts an armed belt slot away.
+	if (PendingClimbPoint && !IsClimbing())
+	{
+		DeclinePrompt();
+		return;
+	}
+	if (HasBeltArmed() && !IsClimbing())
+	{
+		DisarmBelt();
+		return;
+	}
 	if (IsClimbing())
 	{
 		bDescendHeld = true;
@@ -1376,19 +1407,11 @@ void ADCCCharacterBase::ReleaseClimb()
 	Server_ReleaseClimb();
 }
 
-void ADCCCharacterBase::UseClimbTool()
+void ADCCCharacterBase::ThrowGrapple()
 {
-	if (Wallet && !Wallet->ClimbTools.IsEmpty())
+	if (Wallet)
 	{
-		Wallet->Server_UseClimbTool();
-	}
-}
-
-void ADCCCharacterBase::NextClimbTool()
-{
-	if (Wallet && Wallet->ClimbTools.Num() > 1)
-	{
-		Wallet->Server_NextClimbTool();
+		Wallet->Server_Grapple();
 	}
 }
 
@@ -1611,6 +1634,10 @@ void ADCCCharacterBase::Landed(const FHitResult& Hit)
 	const float Fraction = FMath::Clamp((Metres - SafeFallMetres) / FMath::Max(1.0f, FatalFallMetres - SafeFallMetres), 0.0f, 1.0f);
 	const int32 Damage = FMath::Max(1, FMath::CeilToInt(Stats->MaxHitPoints * Fraction));
 	Stats->ApplyDamage(Damage);
+	if (IsAlive())
+	{
+		ReactTo(DCCReactions::MomentHurt, false); // that one hurt
+	}
 	Client_ShowClimbNotice(FText::Format(NSLOCTEXT("DCC", "FallDamage", "You fell {0} m. That's going to leave a mark (-{1})."),
 		FText::AsNumber(FMath::RoundToInt(Metres)), FText::AsNumber(Damage)));
 	ADCCGameState::Log(this, EDCCLogCategory::Combat, FText::Format(
@@ -4531,6 +4558,68 @@ void ADCCCharacterBase::OpenChat(ADCCCharacterBase* Target)
 	BuildInteractionOptions();
 }
 
+void ADCCCharacterBase::HandleScroll(int32 Delta)
+{
+	if (bInSelfieMode) { CycleSelfiePose(Delta); return; }
+	if (bEmoteMenuOpen) { CycleEmoteMenu(Delta); return; }
+	if (VendorTargetActor) { CycleVendorMenu(Delta); return; }
+	if (LootTargetActor) { CycleLootMenu(Delta); return; }
+	if (OathgateTargetActor) { CycleOathgateMenu(Delta); return; }
+	if (NPCInteractionTarget) { CycleNPCInteractionMenu(Delta); return; }
+	// The interaction list still owns the wheel when it has rows. With nothing
+	// open it used to return immediately, so the belt step only runs then.
+	if (!InteractionOptions.IsEmpty())
+	{
+		CycleInteractionOption(Delta);
+		return;
+	}
+	CycleBeltAim(Delta);
+}
+
+void ADCCCharacterBase::CycleBeltAim(int32 Delta)
+{
+	// A skill owns the next click. The wheel must not take it or change it.
+	if (Delta == 0 || bHasDied || !SelectedSkillId.IsNone())
+	{
+		return;
+	}
+	TArray<FDCCBeltEntry> Belt;
+	GetBelt(Belt);
+	TArray<int32> Aimed;
+	for (int32 i = 0; i < Belt.Num(); ++i)
+	{
+		if (Belt[i].bAimed)
+		{
+			Aimed.Add(i);
+		}
+	}
+	if (Aimed.IsEmpty())
+	{
+		return;
+	}
+	int32 Current = INDEX_NONE;
+	for (int32 i = 0; i < Aimed.Num(); ++i)
+	{
+		if (IsBeltArmed(Belt[Aimed[i]]))
+		{
+			Current = i;
+			break;
+		}
+	}
+	// The disarmed state sits after the last aimed slot, so the wheel is a loop.
+	const int32 Steps = Aimed.Num() + 1;
+	const int32 Ring = Current == INDEX_NONE ? Aimed.Num() : Current;
+	const int32 Next = ((Ring + Delta) % Steps + Steps) % Steps;
+	if (Next == Aimed.Num())
+	{
+		DisarmBelt();
+		return;
+	}
+	const FDCCBeltEntry& Entry = Belt[Aimed[Next]];
+	ArmedBeltKind = int32(Entry.Kind);
+	ArmedBeltItem = Entry.ItemId;
+}
+
 void ADCCCharacterBase::CycleInteractionOption(int32 Delta)
 {
 	if (!InteractionTarget || InteractionOptions.IsEmpty())
@@ -4547,6 +4636,12 @@ void ADCCCharacterBase::CycleInteractionOption(int32 Delta)
 
 void ADCCCharacterBase::CloseInteraction()
 {
+	// Esc puts the phone down (the photo pose used to be cancelled with C).
+	if (bInSelfieMode)
+	{
+		ToggleSelfieMode();
+		return;
+	}
 	InteractionTarget = nullptr;
 	InspectedCharacter = nullptr;
 	InteractionOptions.Reset();
@@ -5308,6 +5403,10 @@ FDCCAttackResult ADCCCharacterBase::PerformAttack(ADCCCharacterBase* Target, boo
 		if (!TargetStats->IsAlive())
 		{
 			AwardKillExperience(Target);
+			if (IsPlayerControlled())
+			{
+				ReactTo(DCCReactions::MomentKill);
+			}
 
 			if (EmoteChanceOnKill > 0.0f && !EmoteAnimations.IsEmpty() && FMath::FRand() <= EmoteChanceOnKill)
 			{
@@ -5447,36 +5546,32 @@ void ADCCCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 
 	// Space is the template's jump; P keeps the pause off anything the third
 	// person template already claims.
-	PlayerInputComponent->BindKey(EKeys::P, IE_Pressed, this, &ADCCCharacterBase::RequestTogglePause);
+	PlayerInputComponent->BindKey(EKeys::P, IE_Pressed, this, &ADCCCharacterBase::PausePressed);
 
-	// E lifts and drops, R throws. Two keys rather than one because "put this
-	// down carefully" and "hurl this at the thing trying to eat me" are different
-	// intentions, and a single key would guess wrong at the worst moment.
-	// Contextual: an ally under the crosshair opens a conversation, otherwise this
-	// falls through to the pickup/drop it has always been.
+	// E picks up or sets down. Throw and stow are belt slots, so one key never has to guess.
+	// An ally under the crosshair opens a conversation; otherwise this is the pickup it has always been.
 	PlayerInputComponent->BindKey(EKeys::E, IE_Pressed, this, &ADCCCharacterBase::HandleInteractPressed);
 
-	// The wheel only does anything while a conversation is open, so it stays free
-	// for the hotbar or camera zoom later.
+	// Menus take the wheel first. With none open it steps through aimed belt slots.
 	PlayerInputComponent->BindKey(EKeys::MouseScrollUp, IE_Pressed, this, &ADCCCharacterBase::InteractionScrollUp);
 	PlayerInputComponent->BindKey(EKeys::MouseScrollDown, IE_Pressed, this, &ADCCCharacterBase::InteractionScrollDown);
 	PlayerInputComponent->BindKey(EKeys::Escape, IE_Pressed, this, &ADCCCharacterBase::CloseInteraction);
-	PlayerInputComponent->BindKey(EKeys::R, IE_Pressed, this, &ADCCCharacterBase::AttemptThrow);
+	// Throw, stow, Fourteener tools, the hook, lightsticks, the lamp and the body cam are belt slots
+	// (2026-11-16): the number keys pick them, see BeltKey.
+	// B, the reactions menu, is remappable: the HUD reads it (UI/DCCControls).
 
-	// F stows what is in hand; Tab opens the character menu. Tab is the near
+	// Tab opens the character menu. Tab is the near
 	// universal convention for an inventory screen, so it costs no explaining.
-	PlayerInputComponent->BindKey(EKeys::F, IE_Pressed, this, &ADCCCharacterBase::AttemptStow);
-	PlayerInputComponent->BindKey(EKeys::Q, IE_Pressed, this, &ADCCCharacterBase::UseClimbTool);
-	PlayerInputComponent->BindKey(EKeys::T, IE_Pressed, this, &ADCCCharacterBase::NextClimbTool);
-	PlayerInputComponent->BindKey(EKeys::C, IE_Pressed, this, &ADCCCharacterBase::ToggleSelfieMode);
+	// C (photo pose) and X (selfie camera) are in the B menu; K (feed), L (log filter) and O (loot boxes) are buttons
+	// in the Tab menu.
 	PlayerInputComponent->BindKey(EKeys::Tab, IE_Pressed, this, &ADCCCharacterBase::ToggleCharacterMenu);
-	PlayerInputComponent->BindKey(EKeys::L, IE_Pressed, this, &ADCCCharacterBase::CycleLogFilter);
-	PlayerInputComponent->BindKey(EKeys::K, IE_Pressed, this, &ADCCCharacterBase::CycleFeedVisibility);
-	PlayerInputComponent->BindKey(EKeys::M, IE_Pressed, this, &ADCCCharacterBase::ToggleMount);
+	// The middle mouse button picks which food the belt's food slot eats (2026-11-17).
+	PlayerInputComponent->BindKey(EKeys::MiddleMouseButton, IE_Pressed, this, &ADCCCharacterBase::CycleFood);
+	PlayerInputComponent->BindKey(EKeys::M, IE_Pressed, this, &ADCCCharacterBase::MountPressed);
 
 	// B for the emote picker - free, and reads fine either as "bust a move" or
 	// as the game's own stand-in for whatever mnemonic sticks.
-	PlayerInputComponent->BindKey(EKeys::B, IE_Pressed, this, &ADCCCharacterBase::ToggleEmoteMenu);
+	// B, the reactions menu, is remappable: the HUD reads it (UI/DCCControls).
 
 	// F1 for the DM panel. A function key rather than a letter because it is not
 	// a game action - it should not compete with anything a player might press
@@ -5486,14 +5581,9 @@ void ADCCCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	// F2 for the party menu: host, invite, join, who's here.
 	PlayerInputComponent->BindKey(EKeys::F2, IE_Pressed, this, &ADCCCharacterBase::ToggleSessionMenu);
 
-	// O for the loot box screen: every sealed box in a row, hold to open.
-	PlayerInputComponent->BindKey(EKeys::O, IE_Pressed, this, &ADCCCharacterBase::ToggleLootBoxScreen);
-
 	// F3 for the gear bench: nudge grips, sockets and bones while an animation plays.
 	PlayerInputComponent->BindKey(EKeys::F3, IE_Pressed, this, &ADCCCharacterBase::ToggleGearBench);
 
-	// V for the body cam (Dead Air): start or stop recording.
-	PlayerInputComponent->BindKey(EKeys::V, IE_Pressed, this, &ADCCCharacterBase::ToggleRecording);
 
 	// Menu pages. Bracket keys rather than Q/E, because E is the interact key and
 	// Q is free but reads as a movement key to anyone who has played a shooter.
@@ -5523,11 +5613,15 @@ void ADCCCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	// Number keys arm a skill from the menu list. Bound one at a time because
 	// BindKey takes no payload, and a lambda per key would not survive a
 	// UFUNCTION binding.
-	PlayerInputComponent->BindKey(EKeys::One, IE_Pressed, this, &ADCCCharacterBase::SelectSkillSlot1);
-	PlayerInputComponent->BindKey(EKeys::Two, IE_Pressed, this, &ADCCCharacterBase::SelectSkillSlot2);
-	PlayerInputComponent->BindKey(EKeys::Three, IE_Pressed, this, &ADCCCharacterBase::SelectSkillSlot3);
-	PlayerInputComponent->BindKey(EKeys::Four, IE_Pressed, this, &ADCCCharacterBase::SelectSkillSlot4);
-	PlayerInputComponent->BindKey(EKeys::Five, IE_Pressed, this, &ADCCCharacterBase::SelectSkillSlot5);
+	PlayerInputComponent->BindKey(EKeys::One, IE_Pressed, this, &ADCCCharacterBase::BeltKey1);
+	PlayerInputComponent->BindKey(EKeys::Two, IE_Pressed, this, &ADCCCharacterBase::BeltKey2);
+	PlayerInputComponent->BindKey(EKeys::Three, IE_Pressed, this, &ADCCCharacterBase::BeltKey3);
+	PlayerInputComponent->BindKey(EKeys::Four, IE_Pressed, this, &ADCCCharacterBase::BeltKey4);
+	PlayerInputComponent->BindKey(EKeys::Five, IE_Pressed, this, &ADCCCharacterBase::BeltKey5);
+	PlayerInputComponent->BindKey(EKeys::Six, IE_Pressed, this, &ADCCCharacterBase::BeltKey6);
+	PlayerInputComponent->BindKey(EKeys::Seven, IE_Pressed, this, &ADCCCharacterBase::BeltKey7);
+	PlayerInputComponent->BindKey(EKeys::Eight, IE_Pressed, this, &ADCCCharacterBase::BeltKey8);
+	PlayerInputComponent->BindKey(EKeys::Nine, IE_Pressed, this, &ADCCCharacterBase::BeltKey9);
 }
 
 void ADCCCharacterBase::AttemptAttackNearest()
@@ -5921,37 +6015,40 @@ void ADCCCharacterBase::ToggleEmoteMenu()
 		return;
 	}
 
-	if (EmoteAnimations.IsEmpty())
-	{
-		ShowLocalNotice(NSLOCTEXT("DCC", "NoEmotes", "Nothing to perform yet."));
-		return;
-	}
-
+	// Reactions are always there, so the menu always opens (2026-11-16).
 	bEmoteMenuOpen = true;
 	EmoteMenuIndex = 0;
 }
 
 void ADCCCharacterBase::CycleEmoteMenu(int32 Delta)
 {
-	if (EmoteAnimations.IsEmpty())
-	{
-		return;
-	}
-
-	const int32 Count = EmoteAnimations.Num();
+	// Reactions first, then the two cameras, then the moves.
+	const int32 Count = (DCCReactions::Count - 1) + EmoteCameraRows + EmoteAnimations.Num();
 	EmoteMenuIndex = ((EmoteMenuIndex + Delta) % Count + Count) % Count;
 }
 
 void ADCCCharacterBase::ConfirmEmote()
 {
-	if (!EmoteAnimations.IsValidIndex(EmoteMenuIndex))
-	{
-		bEmoteMenuOpen = false;
-		return;
-	}
-
-	Server_RequestEmoteAtIndex(EmoteMenuIndex);
+	const int32 ReactionRows = DCCReactions::Count - 1;
+	const int32 Picked = EmoteMenuIndex;
 	bEmoteMenuOpen = false;
+	if (Picked < ReactionRows)
+	{
+		Server_RequestReaction(uint8(Picked + 1));
+	}
+	// The cameras (2026-11-16: they had their own keys, C and X).
+	else if (Picked == ReactionRows)
+	{
+		ToggleSelfieMode();
+	}
+	else if (Picked == ReactionRows + 1)
+	{
+		ToggleFacingCamera();
+	}
+	else if (EmoteAnimations.IsValidIndex(Picked - ReactionRows - EmoteCameraRows))
+	{
+		Server_RequestEmoteAtIndex(Picked - ReactionRows - EmoteCameraRows);
+	}
 }
 
 void ADCCCharacterBase::Server_RequestEmoteAtIndex_Implementation(int32 Index)
@@ -5972,6 +6069,12 @@ void ADCCCharacterBase::Multicast_PlayEmoteAtIndex_Implementation(int32 Index)
 	}
 
 	PlayOneShotAnimation(EmoteAnimations[Index]);
+	// A note over the head while they dance.
+	if (GetWorld())
+	{
+		ActiveReaction = DCCReactions::Party;
+		ReactionStartTime = GetWorld()->GetTimeSeconds();
+	}
 
 	// "Custom" per DCCQuestTypes.h's own convention - a dev-goal quest
 	// ("perform for the crowd a few times") is exactly the kind of thing
@@ -6204,6 +6307,330 @@ void ADCCCharacterBase::Server_UseQuickSlot_Implementation(int32 Index)
 	}
 }
 
+bool ADCCCharacterBase::IsInArcade() const
+{
+	UWorld* World = GetWorld();
+	return World && TActorIterator<ADCCArcadeArena>(World);
+}
+
+void ADCCCharacterBase::GetBelt(TArray<FDCCBeltEntry>& Out) const
+{
+	Out.Reset();
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+	const ADCCArcadeClimb* Climb = nullptr;
+	for (TActorIterator<ADCCArcadeClimb> It(World); It; ++It) { Climb = *It; break; }
+	const ADCCArcadeHaunt* Haunt = nullptr;
+	for (TActorIterator<ADCCArcadeHaunt> It(World); It; ++It) { Haunt = *It; break; }
+	const ADCCArcadeArena* Arena = nullptr;
+	for (TActorIterator<ADCCArcadeArena> It(World); It; ++It) { Arena = *It; break; }
+	const bool bArcade = Arena != nullptr;
+	const FString Me = GetPlayerState() ? GetPlayerState()->GetPlayerName() : FString();
+
+	// Skills: three in the runs; in the arcade only the first, and only in games that use it (Fourteener's
+	// Climbing), so slot 1 in Dead Air is the body cam rather than a skill that does nothing there.
+	if (Skills && (!bArcade || Arena->ShowsClimbHud()))
+	{
+		const int32 SkillSlots = bArcade ? 1 : 3;
+		for (int32 i = 0; i < Skills->KnownSkills.Num() && i < SkillSlots; ++i)
+		{
+			FDCCBeltEntry E;
+			E.Kind = EDCCBelt::Skill;
+			E.ItemId = Skills->KnownSkills[i].SkillId;
+			FDCCSkillDef Def;
+			E.Name = Skills->FindSkill(E.ItemId, Def) && !Def.DisplayName.IsEmpty() ? Def.DisplayName.ToString() : E.ItemId.ToString();
+			E.Cooldown = Skills->GetRemainingCooldown(E.ItemId);
+			Out.Add(E);
+		}
+	}
+	// Fourteener: the belt hook, then each tool you carry.
+	if (Climb && Wallet)
+	{
+		FDCCBeltEntry Hook;
+		Hook.Kind = EDCCBelt::Grapple;
+		Hook.Name = TEXT("Hook"); // "Grappling Hook" does not fit a slot
+		Hook.Cooldown = FMath::Max(0.0f, Wallet->GrappleReadyLocal - World->GetTimeSeconds());
+		Out.Add(Hook);
+		TArray<FName> Seen;
+		for (const FName& Tool : Wallet->ClimbTools)
+		{
+			const DCCClimbItems::FItem* Found = DCCClimbItems::Find(Tool);
+			if (Seen.Contains(Tool) || (Found && Found->Food > 0.0f))
+			{
+				continue; // food goes in the one food slot below
+			}
+			Seen.Add(Tool);
+			FDCCBeltEntry E;
+			E.Kind = EDCCBelt::Tool;
+			E.ItemId = Tool;
+			const DCCClimbItems::FItem* Item = DCCClimbItems::Find(Tool);
+			E.Name = Item ? FString(Item->Name) : Tool.ToString();
+			int32 Count = 0;
+			for (const FName& T : Wallet->ClimbTools)
+			{
+				Count += T == Tool ? 1 : 0;
+			}
+			E.Count = Count;
+			Out.Add(E);
+		}
+	}
+	// All food and drink in one slot: the one picked with the middle mouse button.
+	{
+		TArray<FName> Foods;
+		GetFoods(Foods);
+		if (!Foods.IsEmpty())
+		{
+			if (!Foods.Contains(SelectedFood))
+			{
+				SelectedFood = Foods[FMath::Clamp(SelectedFoodAt, 0, Foods.Num() - 1)];
+			}
+			SelectedFoodAt = Foods.IndexOfByKey(SelectedFood);
+			const FName Pick = SelectedFood;
+			FDCCBeltEntry E;
+			E.Kind = EDCCBelt::Quick;
+			E.ItemId = Pick;
+			FDCCConsumableDef Drink;
+			if (const DCCClimbItems::FItem* Item = DCCClimbItems::Find(Pick))
+			{
+				E.Name = Item->Name;
+			}
+			else
+			{
+				E.Name = Inventory && Inventory->FindConsumable(Pick, Drink) && !Drink.DisplayName.IsEmpty() ? Drink.DisplayName.ToString() : Pick.ToString();
+			}
+			E.Count = QuickItemCount(Pick);
+			E.Choices = Foods.Num();
+			Out.Add(E);
+		}
+	}
+	// Dead Air: the body cam, the lamp, lightsticks.
+	if (Haunt)
+	{
+		FDCCBeltEntry Cam;
+		Cam.Kind = EDCCBelt::BodyCam;
+		Cam.Name = TEXT("Body Cam");
+		Cam.bOn = bRecordingFootage;
+		Out.Add(Cam);
+		FDCCBeltEntry Lamp;
+		Lamp.Kind = EDCCBelt::Lamp;
+		Lamp.Name = TEXT("Lamp");
+		Lamp.bOn = !Haunt->IsLampOff(Me);
+		Out.Add(Lamp);
+		FDCCBeltEntry Stick;
+		Stick.Kind = EDCCBelt::Lightstick;
+		Stick.Name = TEXT("Lightstick");
+		Stick.bAimed = true;
+		if (const FDCCFootageEntry* Kit = Haunt->FindEntry(Me))
+		{
+			Stick.Count = Kit->Sticks;
+		}
+		Out.Add(Stick);
+	}
+	// Your spray can, anywhere.
+	if (Wallet && Wallet->Owns(DCCSpray::CanId))
+	{
+		FDCCBeltEntry Can;
+		Can.Kind = EDCCBelt::Spray;
+		Can.Name = TEXT("Spray Can");
+		Can.bAimed = true;
+		Out.Add(Can);
+	}
+	// Something in your hands: throw it, or put it in your bag.
+	if (Carry && Carry->IsCarrying())
+	{
+		FDCCBeltEntry Throw;
+		Throw.Kind = EDCCBelt::Throw;
+		Throw.Name = TEXT("Throw");
+		Throw.bAimed = true;
+		Out.Add(Throw);
+		FDCCBeltEntry Stow;
+		Stow.Kind = EDCCBelt::Stow;
+		Stow.Name = TEXT("Stow in bag");
+		Out.Add(Stow);
+	}
+	if (Out.Num() > 9)
+	{
+		Out.SetNum(9);
+	}
+}
+
+void ADCCCharacterBase::GetFoods(TArray<FName>& Out) const
+{
+	Out.Reset();
+	// Fourteener food you carry, in the order you got it.
+	if (Wallet)
+	{
+		for (const FName& Tool : Wallet->ClimbTools)
+		{
+			const DCCClimbItems::FItem* Item = DCCClimbItems::Find(Tool);
+			if (Item && Item->Food > 0.0f)
+			{
+				Out.AddUnique(Tool);
+			}
+		}
+	}
+	// Drinks and snacks in your pack (the quick slots fill with these as they are picked up).
+	for (const FName& Item : QuickSlots)
+	{
+		if (!Item.IsNone() && !DCCClimbItems::Find(Item) && QuickItemCount(Item) > 0)
+		{
+			Out.AddUnique(Item);
+		}
+	}
+}
+
+void ADCCCharacterBase::CycleFood()
+{
+	TArray<FName> Foods;
+	GetFoods(Foods);
+	if (Foods.Num() < 2)
+	{
+		return;
+	}
+	const int32 At = Foods.IndexOfByKey(SelectedFood);
+	SelectedFood = Foods[(At == INDEX_NONE ? 0 : At + 1) % Foods.Num()];
+}
+
+FString ADCCCharacterBase::GetArmedBeltName() const
+{
+	TArray<FDCCBeltEntry> Belt;
+	GetBelt(Belt);
+	for (const FDCCBeltEntry& E : Belt)
+	{
+		if (IsBeltArmed(E))
+		{
+			return E.Name;
+		}
+	}
+	return FString();
+}
+
+void ADCCCharacterBase::BeltKey(int32 Index)
+{
+	if (bHasDied || bInSelfieMode)
+	{
+		return;
+	}
+	TArray<FDCCBeltEntry> Belt;
+	GetBelt(Belt);
+	if (!Belt.IsValidIndex(Index))
+	{
+		return;
+	}
+	const FDCCBeltEntry Entry = Belt[Index];
+	if (Entry.Kind == EDCCBelt::Skill)
+	{
+		// As before: arm it, or put it away when it is already armed.
+		DisarmBelt();
+		SelectSkill(SelectedSkillId == Entry.ItemId ? NAME_None : Entry.ItemId);
+		return;
+	}
+	// On a wall your hands are busy, so everything works straight from its number; so does anything you do not aim.
+	if (!Entry.bAimed || IsClimbing())
+	{
+		DisarmBelt();
+		UseBeltEntry(Entry);
+		return;
+	}
+	if (IsBeltArmed(Entry))
+	{
+		DisarmBelt();
+		return;
+	}
+	ArmedBeltKind = int32(Entry.Kind);
+	ArmedBeltItem = Entry.ItemId;
+}
+
+void ADCCCharacterBase::UseBeltEntry(const FDCCBeltEntry& Entry)
+{
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	switch (Entry.Kind)
+	{
+	case EDCCBelt::Grapple:
+		ThrowGrapple();
+		break;
+	case EDCCBelt::Tool:
+	case EDCCBelt::Quick:
+		if (HasAuthority())
+		{
+			Server_UseBeltItem_Implementation(Entry.ItemId);
+		}
+		else
+		{
+			Server_UseBeltItem(Entry.ItemId);
+		}
+		break;
+	case EDCCBelt::Spray:
+		DCCSpray::TryLocalSpray(PC);
+		break;
+	case EDCCBelt::Lightstick:
+		if (Entry.Count == 0)
+		{
+			ShowLocalNotice(NSLOCTEXT("DCC", "NoSticks", "No lightsticks left this round."));
+		}
+		else if (Wallet && PC && PC->PlayerCameraManager)
+		{
+			Wallet->Server_ThrowLightstick(PC->PlayerCameraManager->GetCameraLocation(), PC->GetControlRotation().Vector());
+		}
+		break;
+	case EDCCBelt::Lamp:
+		if (Wallet)
+		{
+			Wallet->Server_SetMineLamp(!Entry.bOn);
+		}
+		break;
+	case EDCCBelt::BodyCam:
+		ToggleRecording();
+		break;
+	case EDCCBelt::Throw:
+		AttemptThrow();
+		break;
+	case EDCCBelt::Stow:
+		AttemptStow();
+		break;
+	default:
+		break;
+	}
+}
+
+void ADCCCharacterBase::Server_UseBeltItem_Implementation(FName ItemId)
+{
+	if (ItemId.IsNone() || !IsAlive())
+	{
+		return;
+	}
+	if (DCCClimbItems::Find(ItemId))
+	{
+		for (TActorIterator<ADCCArcadeClimb> It(GetWorld()); It; ++It)
+		{
+			It->UseToolId(this, ItemId);
+			break;
+		}
+	}
+	else if (Inventory)
+	{
+		for (int32 i = 0; i < Inventory->StowedConsumables.Num(); ++i)
+		{
+			if (Inventory->StowedConsumables[i].ItemId == ItemId)
+			{
+				Server_ConsumeStowedDrink_Implementation(i);
+				break;
+			}
+		}
+	}
+	// A quick slot whose item has run out empties again for the next useful thing picked up.
+	for (FName& Slot : QuickSlots)
+	{
+		if (Slot == ItemId && QuickItemCount(ItemId) <= 0)
+		{
+			Slot = NAME_None;
+		}
+	}
+}
+
 void ADCCCharacterBase::AddScreenShake(float Strength, float Seconds)
 {
 	const double Now = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0;
@@ -6288,7 +6715,29 @@ void ADCCCharacterBase::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
+	// This player's choice of bubble and move for each moment goes to the host once (SETTINGS tab sends changes).
+	if (!bReactionChoicesSent && IsLocallyControlled() && IsPlayerControlled())
+	{
+		bReactionChoicesSent = true;
+		Server_SetReactionChoices(DCCReactions::LoadChoices());
+	}
+
+	// Out of breath: a sweat drop the moment stamina runs dry, once, until it has come back up.
+	if (HasAuthority() && Stats && IsPlayerControlled())
+	{
+		if (!bOutOfBreath && Stats->CurrentStamina <= 0.5f)
+		{
+			bOutOfBreath = true;
+			ReactTo(DCCReactions::MomentHurt);
+		}
+		else if (bOutOfBreath && Stats->CurrentStamina > Stats->MaxStamina * 0.3f)
+		{
+			bOutOfBreath = false;
+		}
+	}
+
 	TickHoldToClimb(DeltaSeconds);
+	TickFacingCamera(DeltaSeconds);
 	TickClimbCamera(DeltaSeconds);
 	TickClimbTilt(DeltaSeconds);
 	TickClimbAnimRate(DeltaSeconds);
@@ -6410,7 +6859,7 @@ void ADCCCharacterBase::Tick(float DeltaSeconds)
 	// throw the camera back rather than only bounding how long a stuck one
 	// can last. ExitSelfieMode itself has no hostile gate and never has -
 	// exiting is and must stay unconditional - this just calls it proactively
-	// instead of waiting for the player to notice and press C.
+	// instead of waiting for the player to notice and press Esc.
 	if (bInSelfieMode && HasNearbyLivingHostile(SelfieHostileRefuseRadius))
 	{
 		ShowLocalNotice(NSLOCTEXT("DCC", "SelfieInterrupted", "Something's coming - selfie cut short."));
@@ -6517,6 +6966,16 @@ void ADCCCharacterBase::Multicast_PlayCast_Implementation(float HoldSeconds)
 
 void ADCCCharacterBase::Multicast_PlayHitReaction_Implementation()
 {
+	// The stutter: this character alone runs at near-zero time for a beat (its animation and its movement, so the
+	// shove waits too), then everything resumes. The timer is on world time, which this actor's dilation does not
+	// slow, so it always comes back.
+	if (HitStutterSeconds > 0.0f && GetWorld())
+	{
+		CustomTimeDilation = 0.03f;
+		GetWorldTimerManager().SetTimer(HitStutterTimer, FTimerDelegate::CreateWeakLambda(this, [this]() { CustomTimeDilation = 1.0f; }),
+			HitStutterSeconds, false);
+	}
+
 	// Squeezed into HitReactionSeconds. PlayOneShotAnimation already stretches or
 	// compresses a clip to fill a window, which is what makes a borrowed gesture
 	// usable as a flinch until a real reaction clip exists.
@@ -6673,6 +7132,7 @@ void ADCCCharacterBase::HandleDied(UDCCStatsComponent* InStats)
 	// is not a story beat.
 	if (IsCrawler() && bCanBeDowned)
 	{
+		ReactTo(DCCReactions::MomentDowned, false);
 		bIsDowned = true;
 		DeathSaveSuccesses = 0;
 		DeathSaveFailures = 0;
@@ -6894,6 +7354,7 @@ void ADCCCharacterBase::Revive(ADCCCharacterBase* Rescuer)
 	bIsDowned = false;
 	RestoreStandingBody();
 	PlayCharacterSound(ReviveSound);
+	ReactTo(DCCReactions::MomentRevived, false); // back on their feet
 
 	const int32 Restored = FMath::Max(1,
 		FMath::RoundToInt(Stats->MaxHitPoints * ReviveHealthFraction));
@@ -7414,4 +7875,133 @@ void ADCCCharacterBase::SetBase(FMovementBaseInterfaceData* MovementBaseInterfac
 		return;
 	}
 	Super::SetBase(MovementBaseInterfaceData, BoneName, bNotifyActor);
+}
+
+void ADCCCharacterBase::ToggleFacingCamera()
+{
+	USpringArmComponent* Boom = FindComponentByClass<USpringArmComponent>();
+	if (!Boom || !IsLocallyControlled())
+	{
+		return;
+	}
+	bFacingCamera = !bFacingCamera;
+	if (bFacingCamera)
+	{
+		bFacingCameraWasControlRotation = Boom->bUsePawnControlRotation;
+		Boom->bUsePawnControlRotation = false;
+		ShowLocalNotice(NSLOCTEXT("DCC", "FacingCamOn", "Selfie cam: filming your face. B, then Selfie camera, turns it back around."));
+	}
+	else
+	{
+		Boom->bUsePawnControlRotation = bFacingCameraWasControlRotation;
+	}
+}
+
+void ADCCCharacterBase::TickFacingCamera(float DeltaSeconds)
+{
+	if (!bFacingCamera || !IsLocallyControlled())
+	{
+		return;
+	}
+	if (!IsAlive() || IsClimbing() || bInSelfieMode)
+	{
+		ToggleFacingCamera(); // dying, climbing or posing puts the camera back behind you
+		return;
+	}
+	if (USpringArmComponent* Boom = FindComponentByClass<USpringArmComponent>())
+	{
+		// In front of you, a little above, looking back: eased so turning does not whip the picture around.
+		const FRotator Want(-12.0f, GetActorRotation().Yaw + 180.0f, 0.0f);
+		Boom->SetWorldRotation(FMath::RInterpTo(Boom->GetComponentRotation(), Want, DeltaSeconds, 6.0f));
+	}
+}
+
+// ---- Reactions (2026-11-16) ------------------------------------------------------------------------------------
+
+void ADCCCharacterBase::React(uint8 Reaction, bool bAuto)
+{
+	UWorld* World = GetWorld();
+	if (!HasAuthority() || !World || Reaction == DCCReactions::None || Reaction >= DCCReactions::Count || !IsCrawler())
+	{
+		return;
+	}
+	const float Now = World->GetTimeSeconds();
+	if (bAuto && Now < NextAutoReactionTime)
+	{
+		return;
+	}
+	NextAutoReactionTime = Now + 3.0f;
+	Multicast_React(Reaction, DCCReactions::DefaultMoveFor(Reaction));
+}
+
+void ADCCCharacterBase::ReactTo(uint8 Moment, bool bAuto)
+{
+	UWorld* World = GetWorld();
+	if (!HasAuthority() || !World || Moment >= DCCReactions::MomentCount || !IsCrawler())
+	{
+		return;
+	}
+	DCCReactions::FChoice Choice = DCCReactions::DefaultFor(Moment);
+	if (ReactionChoices.Num() == DCCReactions::MomentCount * 2)
+	{
+		Choice = { ReactionChoices[Moment * 2], ReactionChoices[Moment * 2 + 1] };
+	}
+	if (Choice.Bubble == DCCReactions::None && Choice.Move == 0)
+	{
+		return; // this player turned this moment off
+	}
+	const float Now = World->GetTimeSeconds();
+	if (bAuto && Now < NextAutoReactionTime)
+	{
+		return;
+	}
+	NextAutoReactionTime = Now + 3.0f;
+	Multicast_React(Choice.Bubble, Choice.Move);
+}
+
+void ADCCCharacterBase::Server_SetReactionChoices_Implementation(const TArray<uint8>& Choices)
+{
+	if (Choices.Num() != DCCReactions::MomentCount * 2)
+	{
+		return;
+	}
+	ReactionChoices = Choices;
+	for (int32 i = 0; i < ReactionChoices.Num(); ++i)
+	{
+		const int32 Limit = (i % 2 == 0) ? DCCReactions::Count - 1 : DCCReactions::Moves().Num() - 1;
+		ReactionChoices[i] = uint8(FMath::Clamp<int32>(ReactionChoices[i], 0, Limit));
+	}
+}
+
+void ADCCCharacterBase::Server_RequestReaction_Implementation(uint8 Reaction)
+{
+	const UWorld* World = GetWorld();
+	if (!World || bHasDied || World->GetTimeSeconds() < NextPickedReactionTime)
+	{
+		return;
+	}
+	NextPickedReactionTime = World->GetTimeSeconds() + 0.6f;
+	React(Reaction, false);
+}
+
+void ADCCCharacterBase::Multicast_React_Implementation(uint8 Reaction, uint8 Move)
+{
+	if (!GetWorld() || Reaction >= DCCReactions::Count)
+	{
+		return;
+	}
+	if (Reaction != DCCReactions::None)
+	{
+		ActiveReaction = Reaction;
+		ReactionStartTime = GetWorld()->GetTimeSeconds();
+	}
+	// The move, when the body is free to make it (not on a wall, not down, not in a truck).
+	const TArray<DCCReactions::FMove>& Moves = DCCReactions::Moves();
+	if (Moves.IsValidIndex(Move) && Moves[Move].Clip && IsAlive() && !bIsDowned && !IsClimbing() && !IsHidden())
+	{
+		if (UAnimationAsset* Clip = LoadObject<UAnimationAsset>(nullptr, Moves[Move].Clip))
+		{
+			PlayOneShotAnimation(Clip);
+		}
+	}
 }

@@ -1,4 +1,5 @@
 #include "UI/DCCHUD.h"
+#include "UObject/StrongObjectPtr.h"
 #include "Arcade/DCCChopShop.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "CanvasItem.h"
@@ -43,6 +44,9 @@
 #include "Dialogue/DCCDialogueNPC.h"
 #include "UI/DCCCosmeticShopWidget.h"
 #include "UI/DCCRoundOverWidget.h"
+#include "UI/DCCCageVoteWidget.h"
+#include "UI/DCCStarterKitWidget.h"
+#include "Equipment/DCCEquipmentTypes.h"
 #include "Arcade/DCCArcadeArena.h"
 #include "Arcade/DCCWalletComponent.h"
 #include "Arcade/DCCClimbItems.h"
@@ -75,6 +79,10 @@
 #include "Components/CapsuleComponent.h"
 #include "Arcade/DCCFireworks.h"
 #include "GameFramework/PlayerController.h"
+#include "Arcade/DCCSpray.h"
+#include "Characters/DCCReactions.h"
+#include "UI/DCCControls.h"
+#include "UI/DCCGameLogos.h"
 
 namespace
 {
@@ -174,6 +182,31 @@ void ADCCHUD::NotifyHitBoxClick(FName BoxName)
 	Super::NotifyHitBoxClick(BoxName);
 
 	const FString AsString = BoxName.ToString();
+
+	if (AsString.StartsWith(TEXT("Set|")))
+	{
+		HandleSettingsClick(AsString.RightChop(4));
+		return;
+	}
+
+	// The Tab menu's buttons for what used to have keys (2026-11-16).
+	if (AsString.StartsWith(TEXT("Quick|")))
+	{
+		const FString What = AsString.RightChop(6);
+		if (ADCCCharacterBase* Me = GetOwningCrawler())
+		{
+			if (What == TEXT("Loot") || What == TEXT("Party") || What == TEXT("Bench"))
+			{
+				Me->ToggleCharacterMenu(); // close the menu first: each of these opens its own screen
+			}
+			if (What == TEXT("Loot")) { Me->ToggleLootBoxScreen(); }
+			else if (What == TEXT("Party")) { Me->ToggleSessionMenu(); }
+			else if (What == TEXT("Bench")) { Me->ToggleGearBench(); }
+			else if (What == TEXT("Feed")) { Me->CycleFeedVisibility(); }
+			else if (What == TEXT("Log")) { Me->CycleLogFilter(); }
+		}
+		return;
+	}
 
 	// DM panel buttons are prefixed so they can never collide with achievement
 	// ids, which are raw row names.
@@ -365,6 +398,12 @@ void ADCCHUD::DrawHUD()
 		GearBench->TickBench(GetWorld()->DeltaRealTimeSeconds);
 	}
 	UpdateRoundOver();
+	// The remappable keys (spray, grapple, reactions), read here because the HUD is there whatever you are driving or
+	// standing in.
+	if (!CharacterSelect && !bBenchTool)
+	{
+		PollRemappableKeys();
+	}
 
 	// The front door is a menu over a stage, and the bench tool is only the
 	// bench: no vitals, feed or prompts on either.
@@ -387,6 +426,8 @@ void ADCCHUD::DrawHUD()
 	if (Canvas)
 	{
 		DrawSystemWindow(GetOwningCrawler());
+		// Last, so no panel covers a bubble (your own head sits right under the status panel).
+		DrawReactions();
 	}
 }
 
@@ -498,6 +539,7 @@ void ADCCHUD::DrawHUDContents()
 		DrawQuestTracker();
 	}
 	DrawInteractionPrompt(Crawler);
+	DrawNewPlayerGuide(Crawler);
 	if (IsHudFeatureUnlocked(EDCCHudFeature::Vitals) && (!Arena || Arena->ShowsClimbHud()))
 	{
 		DrawStaminaBar(Crawler);
@@ -515,7 +557,9 @@ void ADCCHUD::DrawHUDContents()
 
 	// Always on, both of them: the hotbar is useless if it only appears in a menu,
 	// and a conversation has to be readable while the world is still visible.
-	if (IsHudFeatureUnlocked(EDCCHudFeature::Hotbar) && (!Arena || Arena->ShowsClimbHud()))
+	// The belt is drawn wherever it has something on it (2026-11-16): GetBelt leaves skills off in the arcade games
+	// that do not use them, so an empty belt draws nothing.
+	if (IsHudFeatureUnlocked(EDCCHudFeature::Hotbar))
 	{
 		DrawHotbar(Crawler);
 	}
@@ -681,6 +725,10 @@ void ADCCHUD::DrawHUDContents()
 		Y = DrawWhispersTab(X, Y, Crawler);
 		break;
 
+	case EDCCMenuTab::Settings:
+		Y = DrawSettingsTab(X, Y, Crawler);
+		break;
+
 	default:
 		break;
 	}
@@ -818,8 +866,8 @@ void ADCCHUD::DrawSelfieViewfinder(ADCCCharacterBase* Crawler)
 	DrawText(TEXT("SELFIE MODE"), FLinearColor(1.0f, 0.35f, 0.35f), Left, Top - 26.0f, GEngine->GetSmallFont(), 1.0f);
 
 	const FString Hint = Crawler->SelfiePoseAnimations.Num() > 0
-		? TEXT("[Scroll] Change pose    [C] Cancel")
-		: TEXT("[C] Cancel");
+		? TEXT("[Scroll] Change pose    [Esc] Cancel")
+		: TEXT("[Esc] Cancel");
 
 	float HintW = 0.0f, HintH = 0.0f;
 	GetTextSize(Hint, HintW, HintH, GEngine->GetSmallFont(), 1.0f);
@@ -1290,6 +1338,7 @@ namespace
 		case EDCCMenuTab::Chatter:      return TEXT("CHATTER");
 		case EDCCMenuTab::Allies:       return TEXT("ALLIES");
 		case EDCCMenuTab::Whispers:     return TEXT("WHISPERS");
+		case EDCCMenuTab::Settings:     return TEXT("SETTINGS");
 		default:                        return TEXT("");
 		}
 	}
@@ -1342,6 +1391,11 @@ float ADCCHUD::DrawMenuTabs(float X, float Y)
 		}
 
 		DrawText(Label, bActive ? HeadingColour : DimColour, TabX + 9.0f, Y);
+		if (GuideStep == 2 && Tab == EDCCMenuTab::Inventory && GetWorld())
+		{
+			const float Pulse = 0.5f + 0.5f * FMath::Sin(GetWorld()->GetRealTimeSeconds() * 6.0f);
+			DrawRect(FLinearColor(1.0f, 0.15f, 0.1f, 0.6f + 0.4f * Pulse), TabX + BoxW - 7.0f, Y - 6.0f, 10.0f, 10.0f);
+		}
 		TabX += BoxW + 4.0f;
 	}
 
@@ -1349,6 +1403,35 @@ float ADCCHUD::DrawMenuTabs(float X, float Y)
 
 	// A rule under the tabs, so the page below reads as belonging to one of them.
 	DrawRect(FLinearColor(0.42f, 0.44f, 0.52f, 0.55f), X, Y, 420.0f, 1.0f);
+	Y += 6.0f;
+
+	// The rare things that used to have keys of their own (2026-11-16: O, F2, F3, K, L), as buttons.
+	{
+		const FString FeedLabel = FString::Printf(TEXT("FEED: %s"), FeedVisibility == EDCCFeedVisibility::Pinned ? TEXT("SHOWN")
+			: FeedVisibility == EDCCFeedVisibility::Minimized ? TEXT("SMALL") : TEXT("HIDDEN"));
+		const FString LogLabel = FString::Printf(TEXT("LOG: %s"), *GetFeedFilterLabel().ToUpper());
+		const TPair<FString, FString> Buttons[] = {
+			{ TEXT("LOOT BOXES"), TEXT("Loot") }, { TEXT("PARTY"), TEXT("Party") }, { TEXT("POSE BENCH"), TEXT("Bench") },
+			{ FeedLabel, TEXT("Feed") }, { LogLabel, TEXT("Log") } };
+		float BX = X;
+		for (const TPair<FString, FString>& B : Buttons)
+		{
+			float TW = 0.0f, TH = 0.0f;
+			GetTextSize(B.Key, TW, TH);
+			const float BW = TW + 14.0f;
+			if (BX != X && (BX - X) + BW > MaxRowWidth)
+			{
+				BX = X;
+				Y += LineHeight + 6.0f;
+			}
+			DrawRect(FLinearColor(0.30f, 0.32f, 0.42f, 0.7f), BX, Y - 1.0f, BW, LineHeight + 2.0f);
+			DrawRect(FLinearColor(0.05f, 0.06f, 0.10f, 0.95f), BX + 1.0f, Y, BW - 2.0f, LineHeight);
+			DrawText(B.Key, FLinearColor(0.85f, 0.88f, 1.0f), BX + 7.0f, Y);
+			AddHitBox(FVector2D(BX, Y - 1.0f), FVector2D(BW, LineHeight + 2.0f), FName(*(FString(TEXT("Quick|")) + B.Value)), true, 2);
+			BX += BW + 5.0f;
+		}
+		Y += LineHeight + 8.0f;
+	}
 
 	return Y + 6.0f;
 }
@@ -2699,7 +2782,12 @@ void ADCCHUD::DrawInteractionPrompt(ADCCCharacterBase* Crawler)
 	{
 		// The question itself is authored on the climb point, so a particular
 		// cliff can ask in its own voice.
-		Prompt = FString::Printf(TEXT("%s   [Y] yes   [N] no"), *Pending->PromptText.ToString());
+		Prompt = FString::Printf(TEXT("%s   Click: yes   Right click: no"), *Pending->PromptText.ToString());
+	}
+	else if (Crawler->HasBeltArmed())
+	{
+		Prompt = FString::Printf(TEXT("%s ready: click to use it.  Right click puts it away."), *Crawler->GetArmedBeltName());
+		Colour = FLinearColor(1.0f, 0.86f, 0.55f);
 	}
 	else if (!Crawler->GetSelectedSkillId().IsNone())
 	{
@@ -3021,6 +3109,68 @@ float ADCCHUD::DrawInventory(float X, float Y, ADCCCharacterBase* Crawler)
 	return Y;
 }
 
+namespace
+{
+	/**
+	 * A little pixel mouse with its middle button (the wheel) lit, the button-prompt symbol for "middle click"
+	 * (2026-11-17, Zoe: "instead of mmb can you just show a diagram type symbol of the mmb like other games might").
+	 * Drawn in code, 9 x 12 pixels; draw it at a whole multiple so it stays crisp.
+	 */
+	UTexture2D* MiddleMouseIcon()
+	{
+		static TStrongObjectPtr<UTexture2D> Cached;
+		if (Cached.IsValid())
+		{
+			return Cached.Get();
+		}
+		static const TCHAR* Rows[] = {
+			TEXT("..#####.."),
+			TEXT(".#..W..#."),
+			TEXT("#...W...#"),
+			TEXT("#...W...#"),
+			TEXT("#########"),
+			TEXT("#.......#"),
+			TEXT("#.......#"),
+			TEXT("#.......#"),
+			TEXT("#.......#"),
+			TEXT("#.......#"),
+			TEXT(".#.....#."),
+			TEXT("..#####.."),
+		};
+		constexpr int32 W = 9, H = 12;
+		UTexture2D* Texture = UTexture2D::CreateTransient(W, H, PF_B8G8R8A8);
+		if (!Texture || !Texture->GetPlatformData() || Texture->GetPlatformData()->Mips.IsEmpty())
+		{
+			return nullptr;
+		}
+		Texture->Filter = TF_Nearest;
+		Texture->SRGB = true;
+		const FColor Body(215, 220, 235, 255), Fill(30, 34, 48, 230), Wheel(255, 205, 90, 255);
+		TArray<FColor> Pixels;
+		Pixels.Init(FColor(0, 0, 0, 0), W * H);
+		for (int32 Y = 0; Y < H; ++Y)
+		{
+			// Inside the outline is a dark fill, so the shape reads on any background.
+			int32 First = -1, Last = -1;
+			for (int32 X = 0; X < W; ++X)
+			{
+				if (Rows[Y][X] != TEXT('.')) { First = First < 0 ? X : First; Last = X; }
+			}
+			for (int32 X = 0; X < W; ++X)
+			{
+				const TCHAR C = Rows[Y][X];
+				Pixels[Y * W + X] = C == TEXT('#') ? Body : C == TEXT('W') ? Wheel : (X > First && X < Last ? Fill : FColor(0, 0, 0, 0));
+			}
+		}
+		FTexture2DMipMap& Mip = Texture->GetPlatformData()->Mips[0];
+		FMemory::Memcpy(Mip.BulkData.Lock(LOCK_READ_WRITE), Pixels.GetData(), W * H * sizeof(FColor));
+		Mip.BulkData.Unlock();
+		Texture->UpdateResource();
+		Cached = TStrongObjectPtr<UTexture2D>(Texture);
+		return Texture;
+	}
+}
+
 void ADCCHUD::DrawHotbar(ADCCCharacterBase* Crawler)
 {
 	if (!Crawler || !Canvas)
@@ -3028,129 +3178,122 @@ void ADCCHUD::DrawHotbar(ADCCCharacterBase* Crawler)
 		return;
 	}
 
-	UDCCSkillComponent* SkillComp = Crawler->Skills;
-	if (!SkillComp)
+	// The belt (2026-11-16): every slot the number keys reach, built from what this crawler has right now.
+	TArray<FDCCBeltEntry> Belt;
+	Crawler->GetBelt(Belt);
+	if (Belt.IsEmpty())
 	{
 		return;
 	}
-
-	const TArray<FDCCKnownSkill>& Known = SkillComp->KnownSkills;
-	if (Known.IsEmpty())
-	{
-		return;
-	}
-
-	// Five keys (2026-11-13): 1 is the first skill, 2 and 3 are quick items (empty
-	// until something useful is picked up), 4 and 5 are the next two skills.
-	struct FCell { int32 Skill; int32 Quick; };
-	TArray<FCell> Cells;
-	Cells.Add({ 0, -1 });
-	Cells.Add({ -1, 0 });
-	Cells.Add({ -1, 1 });
-	// Arcade games stop at 3 (Zoe: "they will be overwhelmed otherwise"); the main game keeps 4 and 5.
-	for (int32 s = 1; s <= 2 && s < Known.Num() && !GetArcadeArena(); ++s)
-	{
-		Cells.Add({ s, -1 });
-	}
-	const int32 SlotCount = Cells.Num();
-
-	constexpr float SlotW = 108.0f;
+	const int32 SlotCount = Belt.Num();
+	const float Gap = 6.0f;
+	const float SlotW = FMath::Min(108.0f, (Canvas->SizeX - 40.0f - (SlotCount - 1) * Gap) / SlotCount);
 	constexpr float SlotH = 46.0f;
-	constexpr float Gap = 6.0f;
-
 	const float TotalW = SlotCount * SlotW + (SlotCount - 1) * Gap;
 	const float StartX = (Canvas->SizeX - TotalW) * 0.5f;
 	const float Y = Canvas->SizeY - SlotH - 22.0f;
-
-	const FName Armed = Crawler->GetSelectedSkillId();
+	const int32 Chars = FMath::Max(6, FMath::FloorToInt((SlotW - 24.0f) / 7.5f));
+	UDCCSkillComponent* SkillComp = Crawler->Skills;
+	const FName ArmedSkill = Crawler->GetSelectedSkillId();
 
 	for (int32 Index = 0; Index < SlotCount; ++Index)
 	{
+		const FDCCBeltEntry& E = Belt[Index];
 		const float SlotX = StartX + Index * (SlotW + Gap);
-		if (Cells[Index].Quick >= 0)
-		{
-			// A quick item: its name and how many are left, or an empty, dim slot.
-			const int32 Q = Cells[Index].Quick;
-			const FName ItemId = Crawler->QuickSlots.IsValidIndex(Q) ? Crawler->QuickSlots[Q] : NAME_None;
-			FString ItemName;
-			if (const DCCClimbItems::FItem* Tool = DCCClimbItems::Find(ItemId))
-			{
-				ItemName = Tool->Name;
-			}
-			else if (!ItemId.IsNone() && Crawler->Inventory)
-			{
-				FDCCConsumableDef Drink;
-				ItemName = Crawler->Inventory->FindConsumable(ItemId, Drink) && !Drink.DisplayName.IsEmpty() ? Drink.DisplayName.ToString() : ItemId.ToString();
-			}
-			const bool bFilled = !ItemId.IsNone();
-			DrawRect(bFilled ? FLinearColor(0.35f, 0.75f, 0.55f, 0.75f) : FLinearColor(0.42f, 0.44f, 0.52f, 0.3f),
-				SlotX - 2.0f, Y - 2.0f, SlotW + 4.0f, SlotH + 4.0f);
-			DrawRect(FLinearColor(0.02f, 0.03f, 0.06f, bFilled ? 0.85f : 0.5f), SlotX, Y, SlotW, SlotH);
-			DrawText(FString::Printf(TEXT("%d"), Index + 1), bFilled ? HeadingColour : DimColour, SlotX + 5.0f, Y + 3.0f);
-			DrawText(bFilled ? ItemName.Left(13) : FString(TEXT("empty")), bFilled ? BodyColour : DimColour, SlotX + 19.0f, Y + 3.0f);
-			if (bFilled)
-			{
-				DrawText(FString::Printf(TEXT("x%d"), Crawler->QuickItemCount(ItemId)), DimColour, SlotX + 6.0f, Y + SlotH - 18.0f);
-			}
-			continue;
-		}
-		const FDCCKnownSkill& Slot = Known[Cells[Index].Skill];
+		const bool bArmed = E.Kind == EDCCBelt::Skill ? (!ArmedSkill.IsNone() && ArmedSkill == E.ItemId) : Crawler->IsBeltArmed(E);
+		const bool bReady = E.Cooldown <= 0.0f && E.Count != 0;
 
-		FDCCSkillDef Def;
-		const bool bFound = SkillComp->FindSkill(Slot.SkillId, Def);
-
-		const bool bArmed = !Armed.IsNone() && Armed == Slot.SkillId;
-		const float Cooldown = SkillComp->GetRemainingCooldown(Slot.SkillId);
-		const bool bReady = Cooldown <= 0.0f;
-
-		// Border first, then fill, so the armed slot reads as raised rather than
-		// merely differently coloured.
-		DrawRect(bArmed ? FLinearColor(0.85f, 0.70f, 0.20f, 0.95f)
-						: FLinearColor(0.42f, 0.44f, 0.52f, 0.55f),
-			SlotX - 2.0f, Y - 2.0f, SlotW + 4.0f, SlotH + 4.0f);
-
+		// Border: gold when armed, green when a switch is on, grey otherwise. Then the dark fill.
+		const FLinearColor Border = bArmed ? FLinearColor(0.85f, 0.70f, 0.20f, 0.95f)
+			: E.bOn ? FLinearColor(0.35f, 0.80f, 0.50f, 0.85f)
+			: FLinearColor(0.42f, 0.44f, 0.52f, 0.55f);
+		DrawRect(Border, SlotX - 2.0f, Y - 2.0f, SlotW + 4.0f, SlotH + 4.0f);
 		DrawRect(FLinearColor(0.02f, 0.03f, 0.06f, 0.85f), SlotX, Y, SlotW, SlotH);
 
-		// Cooldown drains from the bottom up, so a glance at the bar height says
-		// how long is left without reading the number.
-		if (!bReady && Def.CooldownSeconds > 0.0f)
+		// A cooldown drains from the bottom up.
+		float CooldownMax = 0.0f;
+		if (E.Kind == EDCCBelt::Skill && SkillComp)
 		{
-			const float Fraction = FMath::Clamp(Cooldown / Def.CooldownSeconds, 0.0f, 1.0f);
-			DrawRect(FLinearColor(0.35f, 0.10f, 0.10f, 0.55f),
-				SlotX, Y + SlotH * (1.0f - Fraction), SlotW, SlotH * Fraction);
+			FDCCSkillDef Def;
+			CooldownMax = SkillComp->FindSkill(E.ItemId, Def) ? Def.CooldownSeconds : 0.0f;
+		}
+		else if (E.Kind == EDCCBelt::Grapple && Crawler->Wallet)
+		{
+			CooldownMax = DCCChopShop::GrappleCooldown(Crawler->Wallet->ChopLevel(DCCChopShop::Grapple));
+		}
+		if (E.Cooldown > 0.0f && CooldownMax > 0.0f)
+		{
+			const float Fraction = FMath::Clamp(E.Cooldown / CooldownMax, 0.0f, 1.0f);
+			DrawRect(FLinearColor(0.35f, 0.10f, 0.10f, 0.55f), SlotX, Y + SlotH * (1.0f - Fraction), SlotW, SlotH * Fraction);
 		}
 
 		DrawText(FString::Printf(TEXT("%d"), Index + 1), HeadingColour, SlotX + 5.0f, Y + 3.0f);
 
-		// Icon is optional per-row (see FDCCSkillDef::Icon) - draw it when the
-		// row has one, otherwise fall back to the text label exactly as every
-		// skill authored before this field existed already does.
-		UTexture2D* IconTexture = bFound ? Def.Icon.LoadSynchronous() : nullptr;
+		// The skill's icon when its row has one; otherwise the name.
+		UTexture2D* IconTexture = nullptr;
+		if (E.Kind == EDCCBelt::Skill && SkillComp)
+		{
+			FDCCSkillDef Def;
+			IconTexture = SkillComp->FindSkill(E.ItemId, Def) ? Def.Icon.LoadSynchronous() : nullptr;
+		}
 		if (IconTexture)
 		{
-			constexpr float IconSize = 28.0f;
-			DrawTexture(IconTexture, SlotX + 19.0f, Y + 2.0f, IconSize, IconSize,
-				0.0f, 0.0f, 1.0f, 1.0f, bReady ? FLinearColor::White : FLinearColor(0.5f, 0.5f, 0.5f, 1.0f));
+			DrawTexture(IconTexture, SlotX + 19.0f, Y + 2.0f, 28.0f, 28.0f, 0.0f, 0.0f, 1.0f, 1.0f, bReady ? FLinearColor::White : FLinearColor(0.5f, 0.5f, 0.5f, 1.0f));
 		}
 		else
 		{
-			const FString Name = bFound ? Def.DisplayName.ToString() : Slot.SkillId.ToString();
-			DrawText(Name.Left(13), bReady ? BodyColour : DimColour, SlotX + 19.0f, Y + 3.0f);
+			const FString Name = E.Name.Len() > Chars ? E.Name.Left(Chars - 1).TrimEnd() + TEXT(".") : E.Name;
+			DrawText(Name, bReady ? BodyColour : DimColour, SlotX + 19.0f, Y + 3.0f);
 		}
 
-		// Rank always; mana only when it costs any. A row of "0 mana" on melee
-		// skills is noise that makes the real costs harder to spot.
-		FString Detail = FString::Printf(TEXT("R%d"), Slot.Rank);
-		if (bFound && Def.ManaCost > 0)
+		// The second line: how long, how many, on or off, or how it is used.
+		FString Detail;
+		FLinearColor DetailColour = DimColour;
+		bool bMouseHint = false;
+		if (E.Cooldown > 0.0f)
 		{
-			Detail += FString::Printf(TEXT("  %d mana"), Def.ManaCost);
+			Detail = FString::Printf(TEXT("%.0fs"), E.Cooldown);
+			DetailColour = FLinearColor(0.90f, 0.55f, 0.45f);
 		}
-		if (!bReady)
+		else if (E.Kind == EDCCBelt::Lamp || E.Kind == EDCCBelt::BodyCam)
 		{
-			Detail = FString::Printf(TEXT("%.0fs"), Cooldown);
+			Detail = E.bOn ? (E.Kind == EDCCBelt::BodyCam ? TEXT("REC") : TEXT("on")) : TEXT("off");
+			DetailColour = E.bOn ? (E.Kind == EDCCBelt::BodyCam ? FLinearColor(1.0f, 0.35f, 0.3f) : FLinearColor(1.0f, 0.85f, 0.55f)) : DimColour;
 		}
-
-		DrawText(Detail, bReady ? DimColour : FLinearColor(0.90f, 0.55f, 0.45f), SlotX + 6.0f, Y + SlotH - 18.0f);
+		else if (E.Choices > 1)
+		{
+			// The food slot with more than one kind: the middle mouse button picks.
+			Detail = FString::Printf(TEXT("x%d   %d/%d"), E.Count, FMath::Max(1, Crawler->GetFoodIndex() + 1), E.Choices);
+			bMouseHint = true;
+		}
+		else if (E.Count >= 0)
+		{
+			Detail = FString::Printf(TEXT("x%d"), E.Count);
+		}
+		else if (E.Kind == EDCCBelt::Skill && SkillComp)
+		{
+			const FDCCKnownSkill* Known = SkillComp->KnownSkills.FindByPredicate([&E](const FDCCKnownSkill& K) { return K.SkillId == E.ItemId; });
+			Detail = Known ? FString::Printf(TEXT("R%d"), Known->Rank) : FString();
+		}
+		else if (E.bAimed)
+		{
+			Detail = bArmed ? TEXT("click!") : TEXT("aim");
+			DetailColour = bArmed ? FLinearColor(1.0f, 0.86f, 0.55f) : DimColour;
+		}
+		else if (E.Kind == EDCCBelt::Grapple)
+		{
+			Detail = TEXT("ready");
+			DetailColour = FLinearColor(0.75f, 0.9f, 1.0f);
+		}
+		DrawText(Detail, DetailColour, SlotX + 6.0f, Y + SlotH - 18.0f);
+		// The food slot: a little mouse with the middle button lit, in the bottom right corner (middle click: next food).
+		if (bMouseHint)
+		{
+			if (UTexture2D* Mouse = MiddleMouseIcon())
+			{
+				DrawTexture(Mouse, SlotX + SlotW - 22.0f, Y + SlotH - 27.0f, 18.0f, 24.0f, 0.0f, 0.0f, 1.0f, 1.0f, FLinearColor::White, BLEND_Translucent);
+			}
+		}
 	}
 }
 
@@ -3553,6 +3696,41 @@ void ADCCHUD::DrawLootMenu(ADCCCharacterBase* Crawler)
 	DrawText(TEXT("Wheel to choose  ·  E to confirm  ·  Esc to leave"), DimColour, X, Y);
 }
 
+void ADCCHUD::DrawReactions()
+{
+	UWorld* World = GetWorld();
+	if (!World || !Canvas)
+	{
+		return;
+	}
+	const float Now = World->GetTimeSeconds();
+	const FVector Eye = PlayerOwner && PlayerOwner->PlayerCameraManager ? PlayerOwner->PlayerCameraManager->GetCameraLocation() : FVector::ZeroVector;
+	for (TActorIterator<ADCCCharacterBase> It(World); It; ++It)
+	{
+		const ADCCCharacterBase* Who = *It;
+		const float Age = Now - Who->GetReactionStart();
+		if (Who->GetReaction() == DCCReactions::None || Age < 0.0f || Age > DCCReactions::Seconds || Who->IsHidden())
+		{
+			continue;
+		}
+		UTexture2D* Icon = DCCReactions::Icon(Who->GetReaction());
+		const float HalfHeight = Who->GetCapsuleComponent() ? Who->GetCapsuleComponent()->GetScaledCapsuleHalfHeight() : 90.0f;
+		const FVector Head = Who->GetActorLocation() + FVector(0.0f, 0.0f, HalfHeight + 12.0f + Age * 10.0f); // just over the head, rising a little
+		const FVector Screen = Project(Head);
+		if (!Icon || Screen.Z <= 0.0f)
+		{
+			continue; // behind the camera
+		}
+		// Pops in big, settles, and fades out at the end; smaller with distance, never too small to read.
+		const float Distance = FVector::Dist(Eye, Head);
+		const float Base = FMath::Clamp(70.0f * 1100.0f / FMath::Max(Distance, 1.0f), 30.0f, 78.0f);
+		const float Pop = Age < 0.12f ? FMath::Lerp(0.3f, 1.2f, Age / 0.12f) : Age < 0.24f ? FMath::Lerp(1.2f, 1.0f, (Age - 0.12f) / 0.12f) : 1.0f;
+		const float Alpha = FMath::Clamp((DCCReactions::Seconds - Age) / 0.4f, 0.0f, 1.0f);
+		const float Size = Base * Pop;
+		DrawTexture(Icon, Screen.X - Size * 0.5f, Screen.Y - Size, Size, Size, 0.0f, 0.0f, 1.0f, 1.0f, FLinearColor(1.0f, 1.0f, 1.0f, Alpha), BLEND_Translucent);
+	}
+}
+
 void ADCCHUD::DrawEmoteMenu(ADCCCharacterBase* Crawler)
 {
 	if (!Crawler || !Canvas || !Crawler->IsEmoteMenuOpen())
@@ -3560,14 +3738,34 @@ void ADCCHUD::DrawEmoteMenu(ADCCCharacterBase* Crawler)
 		return;
 	}
 
+	// Reactions first (a bubble, sometimes a move), then the moves themselves (2026-11-16).
 	const TArray<TObjectPtr<UAnimationAsset>>& Emotes = Crawler->EmoteAnimations;
-	if (Emotes.IsEmpty())
-	{
-		return;
-	}
-
+	const int32 ReactionRows = DCCReactions::Count - 1;
 	const int32 Selected = Crawler->GetEmoteMenuIndex();
-	const int32 RowCount = Emotes.Num();
+	const int32 CameraRows = ADCCCharacterBase::EmoteCameraRows;
+	const int32 RowCount = ReactionRows + CameraRows + Emotes.Num();
+	// "A_DCC_HW_BoomDance" reads as "Boom Dance".
+	auto MoveName = [](const UAnimationAsset* Asset) -> FString
+	{
+		if (!Asset)
+		{
+			return TEXT("(missing)");
+		}
+		FString Name = Asset->GetName();
+		TArray<FString> Parts;
+		Name.ParseIntoArray(Parts, TEXT("_"));
+		Name = Parts.Num() > 0 ? Parts.Last() : Name;
+		FString Spaced;
+		for (int32 i = 0; i < Name.Len(); ++i)
+		{
+			if (i > 0 && FChar::IsUpper(Name[i]) && !FChar::IsUpper(Name[i - 1]))
+			{
+				Spaced.AppendChar(TEXT(' '));
+			}
+			Spaced.AppendChar(Name[i]);
+		}
+		return Spaced;
+	};
 
 	constexpr float PanelW = 340.0f;
 	const float X = (Canvas->SizeX - PanelW) * 0.5f;
@@ -3589,11 +3787,29 @@ void ADCCHUD::DrawEmoteMenu(ADCCCharacterBase* Crawler)
 			DrawRect(FLinearColor(0.16f, 0.18f, 0.26f, 0.9f), X - 6.0f, Y - 1.0f, PanelW + 4.0f, LineHeight);
 		}
 
-		// EmoteAnimations carries no separate display-name field - the asset's
-		// own name is the only label available, so this is what shows.
-		const FString Label = Emotes[Index] ? Emotes[Index]->GetName() : TEXT("(missing)");
-		DrawText(FString::Printf(TEXT("%s %s"), bSelected ? TEXT(">") : TEXT(" "), *Label),
-			bSelected ? FLinearColor(1.0f, 0.92f, 0.70f) : BodyColour, X, Y);
+		if (Index < ReactionRows)
+		{
+			// A reaction: its bubble, then its name.
+			if (UTexture2D* Icon = DCCReactions::Icon(uint8(Index + 1)))
+			{
+				DrawTexture(Icon, X + 14.0f, Y - 3.0f, LineHeight + 4.0f, LineHeight + 4.0f, 0.0f, 0.0f, 1.0f, 1.0f, FLinearColor::White, BLEND_Translucent);
+			}
+			DrawText(FString::Printf(TEXT("%s"), bSelected ? TEXT(">") : TEXT(" ")), FLinearColor(1.0f, 0.92f, 0.70f), X, Y);
+			DrawText(DCCReactions::Info(uint8(Index + 1)).Name, bSelected ? FLinearColor(1.0f, 0.92f, 0.70f) : BodyColour, X + 44.0f, Y);
+		}
+		else if (Index < ReactionRows + CameraRows)
+		{
+			// The cameras (they had their own keys, C and X, until 2026-11-16).
+			const FString Label = Index == ReactionRows ? FString(TEXT("Photo pose (take a selfie)"))
+				: FString::Printf(TEXT("Selfie camera: %s"), Crawler->IsFacingCamera() ? TEXT("on") : TEXT("off"));
+			DrawText(FString::Printf(TEXT("%s %s"), bSelected ? TEXT(">") : TEXT(" "), *Label),
+				bSelected ? FLinearColor(1.0f, 0.92f, 0.70f) : FLinearColor(0.75f, 0.9f, 1.0f), X + 44.0f, Y);
+		}
+		else
+		{
+			DrawText(FString::Printf(TEXT("%s %s"), bSelected ? TEXT(">") : TEXT(" "), *MoveName(Emotes[Index - ReactionRows - CameraRows])),
+				bSelected ? FLinearColor(1.0f, 0.92f, 0.70f) : BodyColour, X + 44.0f, Y);
+		}
 		Y += LineHeight;
 	}
 
@@ -4367,6 +4583,7 @@ bool ADCCHUD::IsMenuTabUnlocked(EDCCMenuTab Tab) const
 	case EDCCMenuTab::Skills:       return IsHudFeatureUnlocked(EDCCHudFeature::MenuSkills);
 	case EDCCMenuTab::Inventory:    return IsHudFeatureUnlocked(EDCCHudFeature::MenuInventory);
 	case EDCCMenuTab::Feed:         return IsHudFeatureUnlocked(EDCCHudFeature::EventFeed);
+	case EDCCMenuTab::Settings:     return true; // your own keys are always yours to change
 	default:                        return IsHudFeatureUnlocked(EDCCHudFeature::MenuSocial);
 	}
 }
@@ -4696,7 +4913,7 @@ void ADCCHUD::OpenCosmeticShop(int32 Tab)
 			}
 		};
 	}
-	CosmeticShop->Tab = FMath::Clamp(Tab, 0, 4);
+	CosmeticShop->Tab = FMath::Clamp(Tab, 0, 5); // 5 is BOUNTIES
 	CosmeticShop->AddToViewport(62);
 	ApplyCursorForOpenPanels();
 }
@@ -4741,6 +4958,32 @@ void ADCCHUD::UpdateRoundOver()
 		RoundOver->RemoveFromParent();
 		ApplyCursorForOpenPanels();
 	}
+
+	// Dead Air's early ride up: shown while everyone standing is in the cage, to those standing in it.
+	const ADCCArcadeHaunt* Haunt = Cast<ADCCArcadeHaunt>(Arena);
+	const APawn* Me = PlayerOwner ? PlayerOwner->GetPawn() : nullptr;
+	const bool bCage = Haunt && PlayerOwner && Haunt->bAllInCage && Haunt->ReelPhase == 0 && !Haunt->bRoundOver
+		&& Me && Haunt->IsInCage(Me->GetActorLocation());
+	const bool bCageShowing = CageVote && CageVote->IsInViewport();
+	if (bCage && !bCageShowing)
+	{
+		if (!CageVote)
+		{
+			CageVote = CreateWidget<UDCCCageVoteWidget>(PlayerOwner, UDCCCageVoteWidget::StaticClass());
+		}
+		if (CageVote)
+		{
+			CageVote->Haunt = const_cast<ADCCArcadeHaunt*>(Haunt);
+			CageVote->bVoted = false;
+			CageVote->AddToViewport(54);
+			ApplyCursorForOpenPanels();
+		}
+	}
+	else if (!bCage && bCageShowing)
+	{
+		CageVote->RemoveFromParent();
+		ApplyCursorForOpenPanels();
+	}
 }
 
 void ADCCHUD::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -4753,6 +4996,14 @@ void ADCCHUD::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	if (RoundOver)
 	{
 		RoundOver->RemoveFromParent();
+	}
+	if (CageVote)
+	{
+		CageVote->RemoveFromParent();
+	}
+	if (StarterKit)
+	{
+		StarterKit->RemoveFromParent();
 	}
 
 	// The select screen must not follow into the Den. SetInputMode here only
@@ -4829,7 +5080,7 @@ void ADCCHUD::ApplyCursorForOpenPanels()
 	}
 
 	const bool bParty = IsSessionMenuOpen();
-	const bool bVoting = RoundOver && RoundOver->IsInViewport();
+	const bool bVoting = (RoundOver && RoundOver->IsInViewport()) || (CageVote && CageVote->IsInViewport()) || (StarterKit && StarterKit->IsInViewport());
 	const bool bWantsCursor = bParty || bShowMenu || bShowAdminPanel || bLootScreenOpen || bVoting;
 
 	PlayerOwner->bShowMouseCursor = bWantsCursor;
@@ -5049,28 +5300,13 @@ void ADCCHUD::DrawClimbKit(ADCCCharacterBase* Crawler)
 {
 	const UDCCWalletComponent* Wallet = Crawler ? Crawler->Wallet.Get() : nullptr;
 	// Hunger lives on the stamina bar now (DrawStaminaBar), eating into it from the right (2026-11-15).
-	if (!Canvas || !Wallet || (Wallet->ClimbTools.IsEmpty() && Wallet->ClimbBoosts.IsEmpty() && Wallet->CarriedArtifacts.IsEmpty()))
+	if (!Canvas || !Wallet)
 	{
 		return;
 	}
 	UFont* Font = GEngine->GetSmallFont();
 	TArray<TPair<FString, FLinearColor>> Lines;
-	if (!Wallet->ClimbTools.IsEmpty())
-	{
-		const int32 i = FMath::Clamp(Wallet->ClimbToolIndex, 0, Wallet->ClimbTools.Num() - 1);
-		const DCCClimbItems::FItem* Tool = DCCClimbItems::Find(Wallet->ClimbTools[i]);
-		Lines.Add({ FString::Printf(TEXT("[Q] %s"), Tool ? Tool->Name : TEXT("?")), FLinearColor(1.0f, 0.86f, 0.55f) });
-		if (Wallet->ClimbTools.Num() > 1)
-		{
-			TArray<FString> Others;
-			for (int32 k = 1; k < Wallet->ClimbTools.Num(); ++k)
-			{
-				const DCCClimbItems::FItem* Other = DCCClimbItems::Find(Wallet->ClimbTools[(i + k) % Wallet->ClimbTools.Num()]);
-				Others.Add(Other ? Other->Name : TEXT("?"));
-			}
-			Lines.Add({ FString::Printf(TEXT("[T] next: %s"), *FString::Join(Others, TEXT(", "))), DimColour });
-		}
-	}
+	// The grappling hook and the tools are slots on the belt now (2026-11-16, DrawHotbar); this panel keeps the rest.
 	if (!Wallet->ClimbBoosts.IsEmpty())
 	{
 		Lines.Add({ Wallet->ClimbBoosts, FLinearColor(0.6f, 0.9f, 1.0f) });
@@ -5637,6 +5873,11 @@ void ADCCHUD::DrawArcadeStatus()
 		DrawRallyScreens(Kart); // its own work order, board, crew, truck and report (DCCHUD_RallyMenus.cpp)
 		return;
 	}
+	if (const ADCCArcadeLobby* Lobby = Cast<ADCCArcadeLobby>(Arena))
+	{
+		DrawDenStrip(Lobby);
+		return;
+	}
 
 	UFont* Large = GEngine->GetLargeFont();
 	UFont* Small = GEngine->GetSmallFont();
@@ -5869,6 +6110,45 @@ void ADCCHUD::DrawMineNote()
 	const FDCCFootageEntry* Entry = Haunt && Me ? Haunt->FindEntry(Me->GetPlayerName()) : nullptr;
 	const double Now = GetWorld()->GetGameState()->GetServerWorldTimeSeconds();
 
+	// How filming works (2026-11-16, Zoe: "player's need an explanation of the camera system"): a card for the first
+	// minute of a round, until you start recording.
+	if (Haunt && Me && Haunt->ReelPhase == 0)
+	{
+		const ADCCCharacterBase* Self = PlayerOwner ? Cast<ADCCCharacterBase>(PlayerOwner->GetPawn()) : nullptr;
+		const float Elapsed = ADCCArcadeHaunt::RoundSeconds - Haunt->TimeLeft;
+		if (Self && !Self->bRecordingFootage && Elapsed < 60.0f && Haunt->TimeLeft > 0.0f)
+		{
+			const TCHAR* Lines[] = {
+				TEXT("YOUR BODY CAM"),
+				TEXT("Your belt (the number keys): BODY CAM starts and stops recording. A red light over your head means you are filming."),
+				TEXT("What you film is what rates: ghosts, monsters, traps going off, and each other's suffering."),
+				TEXT("Tape is limited, so film the good parts. Watch how much you have left."),
+				TEXT("Also on the belt: your LAMP, and LIGHTSTICKS (press the number, then click to throw)."),
+				TEXT("B: reactions, a photo pose, and the selfie camera that turns round to film your face."),
+				TEXT("Get back inside the cage before time runs out, or your tape stays down here. Nothing hurts you in the cage."),
+			};
+			UFont* Small = GEngine->GetSmallFont();
+			const float W = 640.0f, LH = 20.0f, X = (Canvas->SizeX - W) * 0.5f, Y = Canvas->SizeY * 0.58f;
+			DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.62f), X - 14.0f, Y - 10.0f, W + 28.0f, LH * UE_ARRAY_COUNT(Lines) + 22.0f);
+			for (int32 i = 0; i < UE_ARRAY_COUNT(Lines); ++i)
+			{
+				DrawText(Lines[i], i == 0 ? FLinearColor(1.0f, 0.35f, 0.3f) : FLinearColor(0.92f, 0.92f, 0.9f), X, Y + i * LH, Small, i == 0 ? 1.2f : 1.0f);
+			}
+		}
+	}
+
+	// Tape full: a banner that stays until the round ends, so nobody films on into nothing.
+	if (Haunt && Entry && Haunt->ReelPhase == 0 && Entry->Tape <= 0.0f && Haunt->TimeLeft > 0.0f)
+	{
+		UFont* Medium = GEngine->GetMediumFont();
+		const FString Banner = TEXT("TAPE FULL  -  get it back to the cage");
+		float BW = 0.0f, BH = 0.0f;
+		GetTextSize(Banner, BW, BH, Medium, 1.0f);
+		const float BX = (Canvas->SizeX - BW) * 0.5f, BY = Canvas->SizeY * 0.12f + 90.0f;
+		DrawRect(FLinearColor(0.35f, 0.02f, 0.02f, 0.75f), BX - 16.0f, BY - 6.0f, BW + 32.0f, BH + 12.0f);
+		DrawText(Banner, FLinearColor(1.0f, 0.85f, 0.8f), BX, BY, Medium, 1.0f);
+	}
+
 	// The mine's small HUD (2026-11-15): the lamp, the canary, bad air, and the knockers' ledge.
 	if (Haunt && Me)
 	{
@@ -5876,10 +6156,10 @@ void ADCCHUD::DrawMineNote()
 		UFont* Tiny = GEngine->GetSmallFont();
 		const bool bLampOff = Haunt->IsLampOff(Me->GetPlayerName());
 		const float BX = 40.0f, BY = Canvas->SizeY - 170.0f;
-		DrawText(bLampOff ? TEXT("LAMP OFF  [L]") : TEXT("LAMP ON  [L]"), bLampOff ? FLinearColor(0.6f, 0.6f, 0.65f) : FLinearColor(1.0f, 0.85f, 0.55f), BX, BY, Tiny, 1.0f);
+		DrawText(bLampOff ? TEXT("LAMP OFF") : TEXT("LAMP ON"), bLampOff ? FLinearColor(0.6f, 0.6f, 0.65f) : FLinearColor(1.0f, 0.85f, 0.55f), BX, BY, Tiny, 1.0f);
 		if (Pawn && Haunt->IsInFiredamp(Pawn->GetActorLocation()) && !bLampOff)
 		{
-			DrawText(TEXT("Your lamp is burning BLUE. Firedamp. Lamp off (L), or get through fast."), FLinearColor(0.5f, 0.7f, 1.0f), BX, BY - 22.0f, Tiny, 1.0f);
+			DrawText(TEXT("Your lamp is burning BLUE. Firedamp. Lamp off (on your belt), or get through fast."), FLinearColor(0.5f, 0.7f, 1.0f), BX, BY - 22.0f, Tiny, 1.0f);
 		}
 		// Depth, air and the kit you carry.
 		const FDCCFootageEntry* Kit = Haunt->FindEntry(Me->GetPlayerName());
@@ -5895,7 +6175,7 @@ void ADCCHUD::DrawMineNote()
 			DrawRect(FLinearColor(0, 0, 0, 0.5f), BX, BY - 70.0f, GW, 10.0f);
 			DrawRect(Kit->Air > 0.3f ? FLinearColor(0.4f, 0.8f, 1.0f) : FLinearColor(1.0f, 0.35f, 0.25f), BX, BY - 70.0f, GW * Kit->Air, 10.0f);
 			DrawText(TEXT("AIR"), FLinearColor(0.8f, 0.9f, 1.0f), BX + GW + 8.0f, BY - 74.0f, Tiny, 1.0f);
-			DrawText(FString::Printf(TEXT("LIGHTSTICKS %d  [G]"), Kit->Sticks), FLinearColor(0.5f, 1.0f, 0.55f), BX + 160.0f, BY, Tiny, 1.0f);
+			DrawText(FString::Printf(TEXT("LIGHTSTICKS %d"), Kit->Sticks), FLinearColor(0.5f, 1.0f, 0.55f), BX + 160.0f, BY, Tiny, 1.0f);
 			if (Kit->KitGas >= 1)
 			{
 				const float Gas = Haunt->NearestGas(Pawn->GetActorLocation());
@@ -6028,7 +6308,16 @@ void ADCCHUD::DrawBodyCam()
 	if (Entry)
 	{
 		const int32 Tape = FMath::CeilToInt(Entry->Tape);
-		DrawText(FString::Printf(TEXT("TAPE %d:%02d"), Tape / 60, Tape % 60), White, SW - Inset - 150, Inset + 18, Medium, 1.0f);
+		// Low tape turns the counter red and blinks it.
+		const bool bLow = Entry->Tape <= 30.0f;
+		if (!bLow || bBlink)
+		{
+			DrawText(FString::Printf(TEXT("TAPE %d:%02d"), Tape / 60, Tape % 60), bLow ? FLinearColor(1.0f, 0.3f, 0.25f) : White, SW - Inset - 150, Inset + 18, Medium, 1.0f);
+		}
+		if (bLow)
+		{
+			DrawText(TEXT("TAPE LOW"), FLinearColor(1.0f, 0.3f, 0.25f), SW - Inset - 150, Inset + 46, Small, 1.0f);
+		}
 
 		// How good this shot is, right now.
 		const float Quality = FMath::Clamp(Entry->LiveShot / 40.0f, 0.0f, 1.0f);
@@ -6039,5 +6328,373 @@ void ADCCHUD::DrawBodyCam()
 		DrawRect(FLinearColor::LerpUsingHSV(FLinearColor(1.0f, 0.8f, 0.2f), FLinearColor(0.3f, 1.0f, 0.4f), Quality), BarX, BarY, BarW * Quality, 10);
 		DrawText(FString::Printf(TEXT("%s views on tape"), *FText::AsNumber(FMath::RoundToInt(Entry->Footage * ADCCArcadeHaunt::ViewsPerPoint)).ToString()),
 			White, Inset + 20, SH - Inset - 40, Small, 1.0f);
+	}
+}
+
+void ADCCHUD::OpenStarterKit()
+{
+	if (!PlayerOwner || (StarterKit && StarterKit->IsInViewport()))
+	{
+		return;
+	}
+	if (!StarterKit)
+	{
+		StarterKit = CreateWidget<UDCCStarterKitWidget>(PlayerOwner, UDCCStarterKitWidget::StaticClass());
+	}
+	if (StarterKit)
+	{
+		TWeakObjectPtr<ADCCHUD> Self(this);
+		StarterKit->OnClosed = [Self]()
+		{
+			if (Self.IsValid() && Self->StarterKit)
+			{
+				Self->StarterKit->RemoveFromParent();
+				Self->ApplyCursorForOpenPanels();
+			}
+		};
+		StarterKit->AddToViewport(60);
+		ApplyCursorForOpenPanels();
+	}
+}
+
+void ADCCHUD::DrawNewPlayerGuide(ADCCCharacterBase* Crawler)
+{
+	// New players (2026-11-16, Zoe: "have them open their menu, loot boxes, and then equipment like with guided menu
+	// flashing or some other method. A red dot over the menu button"): one step at a time, a pulsing red dot and a
+	// card, until each is done. In the Den and the dungeon, never over a minigame.
+	if (!Canvas || !Crawler || !GetWorld() || CharacterSelect)
+	{
+		return;
+	}
+	const ADCCArcadeArena* Arena = GetArcadeArena();
+	if (Arena && !Arena->IsA<ADCCArcadeLobby>())
+	{
+		return;
+	}
+	const FString Key = Crawler->GetPlayerState() ? Crawler->GetPlayerState()->GetPlayerName() : FString();
+	if (Key.IsEmpty())
+	{
+		return;
+	}
+	if (Key != GuideKey)
+	{
+		GuideKey = Key;
+		GuideStep = 0;
+		GConfig->GetInt(TEXT("DCCGuide"), *Key, GuideStep, GGameUserSettingsIni);
+		GuideGear.Reset();
+	}
+	if (GuideStep >= 3)
+	{
+		return;
+	}
+	auto Advance = [this, &Key]()
+	{
+		++GuideStep;
+		GConfig->SetInt(TEXT("DCCGuide"), *Key, GuideStep, GGameUserSettingsIni);
+		GConfig->Flush(false, GGameUserSettingsIni);
+	};
+	// What is worn right now, as one string: the equipment step is done when it changes.
+	FString Gear;
+	if (Crawler->Equipment)
+	{
+		for (const EDCCEquipmentSlot Slot : { EDCCEquipmentSlot::MainHand, EDCCEquipmentSlot::OffHand, EDCCEquipmentSlot::Head, EDCCEquipmentSlot::Body, EDCCEquipmentSlot::Trinket })
+		{
+			Gear += Crawler->Equipment->GetEquippedId(Slot).ToString() + TEXT("|");
+		}
+	}
+	if (GuideStep == 0 && bShowMenu) { Advance(); }
+	else if (GuideStep == 1 && bLootScreenOpen) { Advance(); GuideGear = Gear; }
+	else if (GuideStep == 2)
+	{
+		if (GuideGear.IsEmpty()) { GuideGear = Gear; }
+		else if (Gear != GuideGear) { Advance(); }
+	}
+	if (GuideStep >= 3 || bLootScreenOpen || (bShowMenu && GuideStep != 2))
+	{
+		return;
+	}
+
+	static const TCHAR* Titles[] = { TEXT("Open your menu"), TEXT("Open your loot boxes"), TEXT("Equip something") };
+	static const TCHAR* Lines[] = {
+		TEXT("Press Tab. Everything about your crawler lives there."),
+		TEXT("Press Tab, then click LOOT BOXES. Every box you have earned is waiting."),
+		TEXT("Tab, then INVENTORY: click gear to wear it."),
+	};
+	UFont* Medium = GEngine->GetMediumFont();
+	UFont* Small = GEngine->GetSmallFont();
+	const float Pulse = 0.5f + 0.5f * FMath::Sin(GetWorld()->GetRealTimeSeconds() * 5.0f);
+	const float W = 340.0f, H = 78.0f;
+	const float X = Canvas->SizeX - W - 24.0f, Y = Canvas->SizeY * 0.34f;
+	DrawRect(FLinearColor(0.02f, 0.02f, 0.05f, 0.82f), X, Y, W, H);
+	DrawRect(FLinearColor(1.0f, 0.25f, 0.2f, 0.35f + 0.5f * Pulse), X, Y, 4.0f, H);
+	DrawRect(FLinearColor(1.0f, 0.15f, 0.1f, 0.6f + 0.4f * Pulse), X + W - 22.0f, Y + 10.0f, 12.0f, 12.0f);
+	DrawText(FString::Printf(TEXT("NEW  %d/3"), GuideStep + 1), FLinearColor(1.0f, 0.4f, 0.35f), X + 14.0f, Y + 8.0f, Small, 1.0f);
+	DrawText(Titles[GuideStep], FLinearColor(1.0f, 0.95f, 0.85f), X + 14.0f, Y + 24.0f, Medium, 1.0f);
+	DrawText(Lines[GuideStep], FLinearColor(0.8f, 0.8f, 0.85f), X + 14.0f, Y + 52.0f, Small, 1.0f);
+}
+
+// ---- SETTINGS tab (2026-11-16) ----------------------------------------------------------------------------------
+
+void ADCCHUD::PollRemappableKeys()
+{
+	if (!PlayerOwner)
+	{
+		return;
+	}
+	// Setting a key: the next key pressed (not a mouse click, which is how you got here) becomes the binding.
+	if (CapturingAction >= 0)
+	{
+		static TArray<FKey> AllKeys;
+		if (AllKeys.IsEmpty())
+		{
+			EKeys::GetAllKeys(AllKeys);
+			AllKeys.RemoveAll([](const FKey& K)
+			{
+				return !K.IsValid() || K.IsMouseButton() || K.IsAxis1D() || K.IsAxis2D() || K.IsTouch() || K.IsGamepadKey()
+					|| K.IsModifierKey() || K == EKeys::AnyKey;
+			});
+		}
+		for (const FKey& Key : AllKeys)
+		{
+			if (!PlayerOwner->WasInputKeyJustPressed(Key))
+			{
+				continue;
+			}
+			const uint8 Action = uint8(CapturingAction);
+			CapturingAction = -1;
+			if (Key == EKeys::Escape)
+			{
+				return;
+			}
+			const FString Taken = DCCControls::TakenBy(Key);
+			const uint8 Other = DCCControls::BoundTo(Key, Action);
+			if (!Taken.IsEmpty())
+			{
+				ShowNotice(FText::FromString(FString::Printf(TEXT("%s is already %s. Pick another key."), *Key.GetDisplayName().ToString(), *Taken)), 3.0f);
+			}
+			else if (Other != DCCControls::Count)
+			{
+				ShowNotice(FText::FromString(FString::Printf(TEXT("%s is already set to %s. Clear that one first."), *Key.GetDisplayName().ToString(), DCCControls::Name(Other))), 3.0f);
+			}
+			else
+			{
+				DCCControls::Set(Action, Key);
+			}
+			return;
+		}
+		return; // nothing else reads keys while one is being set
+	}
+
+	auto Pressed = [this](uint8 Action)
+	{
+		const FKey Key = DCCControls::Get(Action);
+		return Key.IsValid() && PlayerOwner->WasInputKeyJustPressed(Key);
+	};
+	// On foot the spray can is a belt slot (2026-11-16); this key is for spraying from a truck.
+	ADCCCharacterBase* Crawler = Cast<ADCCCharacterBase>(PlayerOwner->GetPawn());
+	if (Pressed(DCCControls::Spray) && !Crawler)
+	{
+		DCCSpray::TryLocalSpray(PlayerOwner);
+	}
+	if (!Crawler)
+	{
+		return;
+	}
+	if (Pressed(DCCControls::Reactions))
+	{
+		Crawler->ToggleEmoteMenu();
+	}
+	for (uint8 n = 0; n < 8; ++n)
+	{
+		if (Pressed(uint8(DCCControls::QuickReact1 + n)))
+		{
+			Crawler->Server_RequestReaction(uint8(n + 1));
+		}
+	}
+}
+
+float ADCCHUD::DrawSettingsTab(float X, float Y, ADCCCharacterBase* Crawler)
+{
+	if (SettingsChoices.Num() != DCCReactions::MomentCount * 2)
+	{
+		SettingsChoices = DCCReactions::LoadChoices();
+	}
+	const float Row = 24.0f;
+	// A raised button that is also a click target.
+	auto Button = [this, Row](float BX, float BY, float W, const FString& Label, const FString& Command, bool bHot)
+	{
+		AddHitBox(FVector2D(BX, BY), FVector2D(W, Row - 4.0f), FName(*(FString(TEXT("Set|")) + Command)), true, 3);
+		DrawRect(bHot ? FLinearColor(0.85f, 0.70f, 0.20f, 0.95f) : FLinearColor(0.42f, 0.44f, 0.52f, 0.6f), BX - 1.0f, BY - 1.0f, W + 2.0f, Row - 2.0f);
+		DrawRect(bHot ? FLinearColor(0.22f, 0.18f, 0.06f, 0.95f) : FLinearColor(0.08f, 0.10f, 0.14f, 0.95f), BX, BY, W, Row - 4.0f);
+		DrawText(Label, bHot ? FLinearColor(1.0f, 0.92f, 0.70f) : BodyColour, BX + 6.0f, BY + 1.0f);
+	};
+
+	DrawText(TEXT("KEYS"), HeadingColour, X, Y);
+	Y += LineHeight;
+	DrawText(TEXT("Click a key, then press the new one (Esc cancels)."), DimColour, X, Y);
+	Y += LineHeight + 2.0f;
+	for (uint8 a = 0; a < DCCControls::Count; ++a)
+	{
+		if (!DCCControls::IsLive(a))
+		{
+			continue;
+		}
+		const bool bSetting = CapturingAction == a;
+		const FKey Key = DCCControls::Get(a);
+		DrawText(DCCControls::Name(a), BodyColour, X, Y + 1.0f);
+		Button(X + 300.0f, Y, 92.0f, bSetting ? FString(TEXT("press a key")) : Key.IsValid() ? Key.GetDisplayName().ToString() : FString(TEXT("-")),
+			FString::Printf(TEXT("Key|%d"), a), bSetting);
+		if (Key.IsValid() && a >= DCCControls::QuickReact1)
+		{
+			Button(X + 400.0f, Y, 24.0f, TEXT("x"), FString::Printf(TEXT("Clear|%d"), a), false);
+		}
+		Y += Row;
+	}
+
+	Y += SectionGap;
+	DrawText(TEXT("REACTIONS"), HeadingColour, X, Y);
+	Y += LineHeight;
+	DrawText(TEXT("What pops over your head, and what you do, when..."), DimColour, X, Y);
+	Y += LineHeight + 2.0f;
+	const TArray<DCCReactions::FMove>& Moves = DCCReactions::Moves();
+	for (uint8 m = 0; m < DCCReactions::MomentCount; ++m)
+	{
+		const uint8 Bubble = SettingsChoices[m * 2];
+		const uint8 Move = SettingsChoices[m * 2 + 1];
+		DrawText(DCCReactions::MomentName(m), BodyColour, X, Y + 1.0f);
+		Button(X + 140.0f, Y, 120.0f, Bubble == DCCReactions::None ? FString(TEXT("no bubble")) : FString(TEXT("      ")) + DCCReactions::Info(Bubble).Name,
+			FString::Printf(TEXT("Bub|%d"), m), false);
+		if (UTexture2D* Icon = DCCReactions::Icon(Bubble))
+		{
+			DrawTexture(Icon, X + 143.0f, Y - 2.0f, 22.0f, 22.0f, 0.0f, 0.0f, 1.0f, 1.0f, FLinearColor::White, BLEND_Translucent);
+		}
+		Button(X + 268.0f, Y, 156.0f, Moves.IsValidIndex(Move) ? FString(Moves[Move].Name) : FString(TEXT("?")), FString::Printf(TEXT("Move|%d"), m), false);
+		Y += Row;
+	}
+	Y += 6.0f;
+	Button(X, Y, 150.0f, TEXT("Reset to defaults"), TEXT("Reset|0"), false);
+	Y += Row;
+	return Y;
+}
+
+void ADCCHUD::HandleSettingsClick(const FString& Command)
+{
+	FString Kind, Arg;
+	if (!Command.Split(TEXT("|"), &Kind, &Arg))
+	{
+		Kind = Command;
+	}
+	const int32 Index = FCString::Atoi(*Arg);
+	ADCCCharacterBase* Crawler = GetOwningCrawler();
+	auto SendChoices = [this, Crawler]()
+	{
+		DCCReactions::SaveChoices(SettingsChoices);
+		if (Crawler)
+		{
+			Crawler->Server_SetReactionChoices(SettingsChoices);
+		}
+	};
+	if (Kind == TEXT("Key") && Index >= 0 && Index < DCCControls::Count)
+	{
+		CapturingAction = CapturingAction == Index ? -1 : Index;
+	}
+	else if (Kind == TEXT("Clear") && Index >= 0 && Index < DCCControls::Count)
+	{
+		DCCControls::Set(uint8(Index), FKey());
+	}
+	else if ((Kind == TEXT("Bub") || Kind == TEXT("Move")) && Index >= 0 && Index < DCCReactions::MomentCount
+		&& SettingsChoices.Num() == DCCReactions::MomentCount * 2)
+	{
+		// Each click moves on to the next choice, round to "none" and back.
+		const bool bBubble = Kind == TEXT("Bub");
+		uint8& Value = SettingsChoices[Index * 2 + (bBubble ? 0 : 1)];
+		const int32 Options = bBubble ? int32(DCCReactions::Count) : DCCReactions::Moves().Num();
+		Value = uint8((Value + 1) % Options);
+		SendChoices();
+		// A preview of the bubble you just picked.
+		if (Crawler && bBubble && Value != DCCReactions::None)
+		{
+			Crawler->Server_RequestReaction(Value);
+		}
+	}
+	else if (Kind == TEXT("Reset"))
+	{
+		for (uint8 a = 0; a < DCCControls::Count; ++a)
+		{
+			DCCControls::Set(a, DCCControls::Default(a));
+		}
+		SettingsChoices.Reset();
+		for (uint8 m = 0; m < DCCReactions::MomentCount; ++m)
+		{
+			const DCCReactions::FChoice Default = DCCReactions::DefaultFor(m);
+			SettingsChoices.Add(Default.Bubble);
+			SettingsChoices.Add(Default.Move);
+		}
+		SendChoices();
+		ShowNotice(NSLOCTEXT("DCC", "SettingsReset", "Keys and reactions are back to how they started."));
+	}
+}
+
+// ---- The Den's vote strip (2026-11-16) ---------------------------------------------------------------------------
+
+void ADCCHUD::DrawDenStrip(const ADCCArcadeLobby* Lobby)
+{
+	if (!Lobby || !Canvas)
+	{
+		return;
+	}
+	const TArray<DCCArcade::FGame>& Games = DCCArcade::Games();
+	const int32 N = Games.Num();
+	const float Tile = 52.0f, Gap = 18.0f;
+	const float Total = N * Tile + (N - 1) * Gap;
+	const float X0 = (Canvas->SizeX - Total) * 0.5f;
+	UFont* Small = GEngine->GetSmallFont();
+	UFont* Medium = GEngine->GetMediumFont();
+	const bool bCountdown = !Lobby->CountdownLine.IsEmpty();
+	const float PanelH = Tile + 52.0f + (bCountdown ? 22.0f : 0.0f);
+	// It comes down from off the top while anyone is on a pad (or a game is about to start) and rolls back up when
+	// they all step off (2026-11-16).
+	const bool bWanted = Lobby->IsSomeoneOnAPad() || bCountdown;
+	DenStripShown = FMath::FInterpConstantTo(DenStripShown, bWanted ? 1.0f : 0.0f, GetWorld() ? GetWorld()->DeltaRealTimeSeconds : 0.016f, 3.0f);
+	if (DenStripShown <= 0.0f)
+	{
+		return;
+	}
+	const float Eased = FMath::SmoothStep(0.0f, 1.0f, DenStripShown);
+	const float Y0 = 112.0f - (112.0f + PanelH) * (1.0f - Eased); // 112: its resting place, under the health bar
+	DrawRect(FLinearColor(0.02f, 0.015f, 0.04f, 0.62f), X0 - 18.0f, Y0 - 28.0f, Total + 36.0f, PanelH);
+	DrawRect(Lobby->Accent, X0 - 18.0f, Y0 - 28.0f, Total + 36.0f, 2.0f);
+	{
+		const FString Head = TEXT("PICK THE NEXT GAME  -  stand on its pad");
+		float W = 0.0f, H = 0.0f;
+		GetTextSize(Head, W, H, Small, 1.0f);
+		DrawText(Head, DimColour, (Canvas->SizeX - W) * 0.5f, Y0 - 22.0f, Small, 1.0f);
+	}
+	const float Pulse = 0.65f + 0.35f * FMath::Sin(GetWorld() ? GetWorld()->GetRealTimeSeconds() * 4.0f : 0.0f);
+	for (int32 i = 0; i < N; ++i)
+	{
+		const DCCArcade::FGame& Game = Games[i];
+		const float X = X0 + i * (Tile + Gap);
+		const int32 Players = Lobby->PadVotes.IsValidIndex(i) ? Lobby->PadVotes[i] : 0;
+		// The leading game glows.
+		if (i == Lobby->LeadingPad)
+		{
+			DrawRect(Game.Colour * Pulse, X - 3.0f, Y0 - 3.0f, Tile + 6.0f, Tile + 6.0f);
+		}
+		if (UTexture2D* Logo = DCCGameLogos::Logo(Game.Id, Game.Colour))
+		{
+			DrawTexture(Logo, X, Y0, Tile, Tile, 0.0f, 0.0f, 1.0f, 1.0f, FLinearColor(1.0f, 1.0f, 1.0f, Players > 0 || Lobby->LeadingPad < 0 ? 1.0f : 0.55f), BLEND_Translucent);
+		}
+		// The players standing on its pad, right under it.
+		const FString Count = FString::FromInt(Players);
+		float W = 0.0f, H = 0.0f;
+		GetTextSize(Count, W, H, Medium, 1.0f);
+		DrawText(Count, Players > 0 ? FLinearColor(1.0f, 0.86f, 0.45f) : DimColour, X + (Tile - W) * 0.5f, Y0 + Tile + 3.0f, Medium, 1.0f);
+	}
+	if (bCountdown)
+	{
+		float W = 0.0f, H = 0.0f;
+		GetTextSize(Lobby->CountdownLine, W, H, Small, 1.0f);
+		DrawText(Lobby->CountdownLine, FLinearColor(1.0f, 0.86f, 0.45f), (Canvas->SizeX - W) * 0.5f, Y0 + Tile + 26.0f, Small, 1.0f);
 	}
 }

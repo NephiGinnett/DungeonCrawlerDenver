@@ -220,6 +220,8 @@ public:
 	const FDCCFootageEntry* FindEntry(const FString& Player) const;
 
 	virtual FName GetGameId() const override { return TEXT("Haunt"); }
+	/** A tag on the cage makes the stream: footage, once a round each, and an achievement. */
+	virtual void OnTagged(class ADCCCharacterBase* Painter, const FVector& At) override;
 
 	/** Dev (DCC.MineGo): every player to stope RoomIndex, or (bDrift) to a straight stretch of tunnel, facing along it.
 	 *  RoomIndex -1 faces the first ghost miner; -2 stands next to the first body with a note. */
@@ -279,6 +281,9 @@ public:
 	bool IsBadAir(const FVector& Location) const;
 	bool IsInFiredamp(const FVector& Location) const;
 	bool IsLampOff(const FString& Player) const;
+	/** Server: a rockfall at At (on the floor), with the three knocks first. The Tommyknocker calls this. Refused in
+	 *  the cage room. */
+	bool QueueRock(const FVector& At, double Delay = 3.5);
 	/** Server, from UDCCWalletComponent::Server_SetMineLamp (the L key). */
 	void SetLamp(const FString& Player, bool bOn);
 	/** Seconds the local player has been in bad air (the HUD's canary). */
@@ -292,6 +297,21 @@ public:
 	TArray<int32> StoriesHere;
 	int32 NotesInStory(int32 Story) const;
 	int32 NotesReadInStory(int32 Story) const;
+
+	// ---- the cage (2026-11-16, Zoe: "There needs to be a physical cage we crawl in and out of, and it needs to be a safe
+	// space from enemies including aoe. ... They need to be able to go back early if they're all out and a round needs
+	// to end and close up cleanly when all players have died.") ----------------------------------------------------
+	/** Inside the cage: nothing hurts you there, and it is where tapes must be when the round ends. */
+	bool IsInCage(const FVector& Location) const { return InVan(Location); }
+	/** Everyone still standing is in the cage (after the crew has been out): the send-it-up vote is open. */
+	UPROPERTY(Replicated)
+	bool bAllInCage = false;
+	UPROPERTY(Replicated)
+	int32 CageVotesUp = 0;
+	UPROPERTY(Replicated)
+	int32 CageCrew = 0;
+	/** Server, from UDCCWalletComponent::Server_CageVote. */
+	void VoteCageUp(APlayerController* PC, bool bUp);
 
 	static constexpr float TapeSeconds = 120.0f;
 	static constexpr float RoundSeconds = 300.0f;
@@ -316,6 +336,25 @@ private:
 
 	UPROPERTY(Replicated)
 	int32 Seed = 0;
+
+	/** The whole first room (the cage stands in its middle). Traps and drifts keep out of it. */
+	FBox FoyerBox = FBox(ForceInit);
+	bool InFoyer(const FVector& Location) const { return FoyerBox.IsValid && FoyerBox.IsInsideXY(Location); }
+	FVector CageCenter = FVector::ZeroVector;
+	float CageHalf = 400.0f;
+	/** Which way the cage's gate faces (toward the way out of the room). */
+	FVector GateDir = FVector(1, 0, 0);
+	TSet<FString> CageVoters;
+	/** Tape warnings already given this round, per player: 1 at 30 s, 2 at 10 s, 3 full. */
+	TMap<FString, int32> TapeWarned;
+	bool bCrewLeftCage = false;
+	double AllDownSince = 0.0;
+	void BuildCage();
+	/** Dead Air's dressing passes: textures, props, filler (Arcade/DCCHauntDressing.cpp). */
+	void DressDetail();
+	/** The mine's sound: bed, drips, creaks, rumbles, taps, and the song very low (Arcade/DCCHauntAudio.cpp). */
+	void TickMineAudio(float DeltaSeconds);
+	void TickCage();
 
 	UPROPERTY(Transient)
 	TObjectPtr<UDCCDungeonGrid> Grid;
@@ -485,6 +524,9 @@ private:
 	TSet<TWeakObjectPtr<ADCCCharacterBase>> Penalised;
 
 	FBox VanBox = FBox(ForceInit);
+	/** Who has tagged the cage this round. */
+	TSet<FString> CageTaggers;
+	bool bShiftBossDown = false;
 	bool bHouseBuilt = false;
 	bool bMonstersSpawned = false;
 	bool bWrapped = false;

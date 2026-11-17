@@ -16,6 +16,7 @@ namespace DCCChopShop
 	const FName Harness(TEXT("Harness"));
 	const FName GasMeter(TEXT("GasMeter"));
 	const FName TapeReel(TEXT("TapeReel"));
+	const FName Grapple(TEXT("GrapplingHook")); // the old item's id, so the shop finds its icon (T_Icon_GrapplingHook)
 
 	const TArray<FUpgrade>& All()
 	{
@@ -45,6 +46,9 @@ namespace DCCChopShop
 				TEXT("warns, then protects"), 2, 30, FLinearColor(0.5f, 0.75f, 1.0f), true },
 			{ TapeReel, TEXT("Spare Reels"), TEXT("Thirty more seconds of tape a level. The deep stopes are where the footage is."),
 				TEXT("+30 s tape"), 3, 20, FLinearColor(1.0f, 0.45f, 0.6f), true },
+			// ---- Fort Tiner's Trading Post (Fourteener, tickets) -------------------------------------------------
+			{ Grapple, TEXT("Grappling Hook"), TEXT("Always on your belt on Fourteener. G while you're climbing yanks you up the wall, then the line winds back in. Each level throws it further and winds it in faster."),
+				TEXT("+2 m reach, 8 s faster"), 3, 60, FLinearColor(0.7f, 0.78f, 0.86f), false, true },
 		};
 		return List;
 	}
@@ -103,6 +107,17 @@ namespace DCCChopShop
 			return false;
 		}
 		const int32 Price = PriceFor(*Upgrade, Level);
+		if (Upgrade->bTickets)
+		{
+			if (!DCCProfile::SpendTickets(Key, Price))
+			{
+				OutMessage = FString::Printf(TEXT("%s level %d costs %d tickets. You have %d. Every game pays tickets."), Upgrade->Name, Level + 1, Price, DCCProfile::GetTickets(Key));
+				return false;
+			}
+			DCCProfile::SetForKey(Key, TEXT("Chop"), UpgradeId, float(Level + 1));
+			OutMessage = FString::Printf(TEXT("%s is now level %d. It's on your belt from now on."), Upgrade->Name, Level + 1);
+			return true;
+		}
 		if (Upgrade->bMine)
 		{
 			const int32 Credits = GetCredits(Key);

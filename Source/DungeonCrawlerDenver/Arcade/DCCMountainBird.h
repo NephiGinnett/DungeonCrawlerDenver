@@ -50,6 +50,8 @@ protected:
 	/** The red line to DiveTarget during a wind-up. Drawn only, never collides. */
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UStaticMeshComponent> AimLine;
+	/** When the current state began (local Age), for the shadow's sweep. */
+	float StateStart = 0.0f;
 
 	/** The rock in its talons while it carries one to drop. */
 	UPROPERTY(VisibleAnywhere)

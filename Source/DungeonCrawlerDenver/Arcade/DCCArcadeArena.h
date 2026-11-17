@@ -89,6 +89,8 @@ public:
 
 	/** Server: a player who died has just been given a new body. Fourteener moves them to their checkpoint. */
 	virtual void OnRespawned(APlayerController* PC) {}
+	/** Server: a crawler's spray tag (DCCSpray) went up at At. A game can make a spot mean something. */
+	virtual void OnTagged(class ADCCCharacterBase* Painter, const FVector& At) {}
 
 	/** This game's id in DCCArcade::Games() ("Climb"...), for PLAY AGAIN. None for the lobby and the front door. */
 	virtual FName GetGameId() const { return NAME_None; }
@@ -142,7 +144,9 @@ protected:
 	/** Like Block, for any engine basic shape ("Cylinder", "Cone", "Sphere", "Cube"), with full rotation. */
 	AActor* Shape(const TCHAR* ShapeName, const FVector& Center, const FVector& Size, const FLinearColor& Colour,
 		const FRotator& Rotation = FRotator::ZeroRotator, bool bCollide = true);
-	void Sign(const FVector& Location, float Yaw, const FString& Text, const FColor& Colour, float Size);
+	/** World text. Mounted on a dark board behind it unless bBoard is false (2026-11-16, Zoe: text floating in the air read as
+	 *  amateurish); pass false only for text that is painted onto a surface the caller places it flush against. */
+	class ATextRenderActor* Sign(const FVector& Location, float Yaw, const FString& Text, const FColor& Colour, float Size, bool bBoard = true);
 	void Light(const FVector& Location, const FLinearColor& Colour, float Intensity, float Radius);
 	void DestroyLocal(TArray<TObjectPtr<AActor>>& Actors);
 

@@ -1,4 +1,8 @@
 #include "Arcade/DCCArcadeHaunt.h"
+#include "Characters/DCCReactions.h"
+#include "Progression/DCCAchievementComponent.h"
+#include "Characters/DCCEnemyCharacter_DeadAir.h"
+#include "Arcade/DCCBounties.h"
 #include "HAL/IConsoleManager.h"
 #include "PhysicsEngine/BodySetup.h"
 #include "Arcade/DCCWalletComponent.h"
@@ -151,6 +155,9 @@ namespace
 void ADCCArcadeHaunt::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(ADCCArcadeHaunt, bAllInCage);
+	DOREPLIFETIME(ADCCArcadeHaunt, CageVotesUp);
+	DOREPLIFETIME(ADCCArcadeHaunt, CageCrew);
 	DOREPLIFETIME(ADCCArcadeHaunt, Footage);
 	DOREPLIFETIME(ADCCArcadeHaunt, TimeLeft);
 	DOREPLIFETIME(ADCCArcadeHaunt, Seed);
@@ -206,11 +213,61 @@ void ADCCArcadeHaunt::EnsureGrid()
 	}
 	Grid = NewObject<UDCCDungeonGrid>(this);
 	Grid->SetOrigin(GetActorLocation(), TileSize);
-	Grid->Build(GridSize, Seed, /*FightRooms=*/6, /*ChestRooms=*/0);
+	// A mine is drifts with small stopes off them, not a hall of big rooms (2026-11-16): one winding chain.
+	UDCCDungeonGrid::FStyle Mine;
+	Mine.RoomMin = 2;
+	Mine.RoomMax = 3;
+	Mine.GrandMin = 3;
+	Mine.GrandMax = 4;
+	Mine.bChain = true;
+	Mine.Loops = 0;
+	Mine.bShortcut = false;
+	Grid->Build(GridSize, Seed, /*FightRooms=*/7, /*ChestRooms=*/0, Mine);
+	// The layout as text, in the log (# rock, . drift, 0-9 rooms), for checking a seed by eye.
+	for (int32 Y = 0; Y < Grid->GetSize(); ++Y)
+	{
+		FString Row;
+		for (int32 X = 0; X < Grid->GetSize(); ++X)
+		{
+			const int32 Room = Grid->RoomIndexAt(X, Y);
+			Row += !Grid->IsOpen(X, Y) ? TEXT("#") : Room >= 0 ? FString::FromInt(Room % 10) : TEXT(".");
+		}
+		UE_LOG(LogTemp, Verbose, TEXT("[DCC Mine] %s"), *Row);
+	}
 
 	const UDCCDungeonGrid::FRoom& Foyer = Grid->GetRooms()[0];
 	const FVector Min = GetActorLocation() + FVector(Foyer.X * TileSize, Foyer.Y * TileSize, -100.0f);
-	VanBox = FBox(Min + FVector(80, 80, 0), Min + FVector(Foyer.W * TileSize - 80, Foyer.H * TileSize - 80, 400.0f));
+	FoyerBox = FBox(Min + FVector(80, 80, 0), Min + FVector(Foyer.W * TileSize - 80, Foyer.H * TileSize - 80, 400.0f));
+	{
+		// The cage: in the middle of the room, as big as the room allows, its gate toward the first doorway out.
+		CageCenter = FoyerBox.GetCenter();
+		CageCenter.Z = GetActorLocation().Z;
+		CageHalf = FMath::Clamp(FMath::Min(Foyer.W, Foyer.H) * TileSize * 0.5f - 280.0f, 330.0f, 520.0f);
+		const FIntPoint Mid = Foyer.Center();
+		float Best = -1.0f;
+		for (int32 Y = Foyer.Y; Y < Foyer.Y + Foyer.H; ++Y)
+		{
+			for (int32 X = Foyer.X; X < Foyer.X + Foyer.W; ++X)
+			{
+				for (const FIntPoint D : { FIntPoint(1, 0), FIntPoint(-1, 0), FIntPoint(0, 1), FIntPoint(0, -1) })
+				{
+					const int32 NX = X + D.X, NY = Y + D.Y;
+					const bool bOut = NX < Foyer.X || NY < Foyer.Y || NX >= Foyer.X + Foyer.W || NY >= Foyer.Y + Foyer.H;
+					if (bOut && Grid->IsOpen(NX, NY))
+					{
+						const FVector Dir = FVector(NX - Mid.X, NY - Mid.Y, 0.0f);
+						const float Score = Dir.Size();
+						if (Best < 0.0f || Score < Best)
+						{
+							Best = Score;
+							GateDir = FMath::Abs(Dir.X) >= FMath::Abs(Dir.Y) ? FVector(FMath::Sign(Dir.X), 0, 0) : FVector(0, FMath::Sign(Dir.Y), 0);
+						}
+					}
+				}
+			}
+		}
+		VanBox = FBox(CageCenter + FVector(-CageHalf, -CageHalf, -100.0f), CageCenter + FVector(CageHalf, CageHalf, 400.0f));
+	}
 }
 
 static TAutoConsoleVariable<int32> GDCCMineSeed(TEXT("dcc.MineSeed"), 0,
@@ -350,12 +407,7 @@ void ADCCArcadeHaunt::BuildHouse()
 
 		if (bFoyer)
 		{
-			Block(Centre + FVector(0, 0, 2), FVector(Room.W * TileSize - 160, Room.H * TileSize - 160, 4), FLinearColor(0.15f, 0.25f, 0.12f));
-			Sign(Centre + FVector(0, 0, 380), 180.0f, TEXT("MOUNT FOURTEENER"), FColor(200, 220, 255), 30.0f);
-			Sign(Centre + FVector(0, 0, 330), 180.0f, TEXT("THE CAGE"), FColor(140, 255, 160), 60.0f);
-			Sign(Centre + FVector(0, 0, 280), 180.0f, TEXT("LUCKY TUESDAY MINE  -  SHAFT No. 2  -  CLOSED 1893"), FColor(230, 200, 150), 22.0f);
-			Sign(Centre + FVector(0, 0, 250), 180.0f, TEXT("Be in the cage when the clock runs out, or your tape stays down here."), FColor(200, 220, 200), 18.0f);
-			Sign(Centre + FVector(0, 0, 225), 180.0f, TEXT("V records. Tape is limited. Ghosts, monsters, and each other's suffering all rate."), FColor(200, 220, 200), 18.0f);
+			BuildCage();
 			continue;
 		}
 
@@ -403,6 +455,7 @@ void ADCCArcadeHaunt::BuildHouse()
 	}
 	DressMine();
 	DressCave();
+	DressDetail();
 	BuildDepth();
 	PlaceBodies();
 	PlaceTraps();
@@ -592,7 +645,9 @@ void ADCCArcadeHaunt::DressCave()
 		const FIntPoint Cell = Walls[Pick];
 		Walls.RemoveAt(Pick);
 		// On the north face of a tunnel, facing back into it, at eye height.
-		Sign(O + FVector((Cell.X + 0.5f) * TileSize, (Cell.Y + 1.0f) * TileSize - 110.0f, 190.0f), -90.0f, Mark.Text, Mark.Colour, 16.0f);
+		// On a plank nailed to the rock (2026-11-16: bare text used to hang a metre out from the wall). Out far enough to
+		// clear the bulging wall rocks.
+		Sign(O + FVector((Cell.X + 0.5f) * TileSize, (Cell.Y + 1.0f) * TileSize - 70.0f, 190.0f), -90.0f, Mark.Text, Mark.Colour, 16.0f);
 	}
 }
 
@@ -714,15 +769,15 @@ void ADCCArcadeHaunt::DressMine()
 			}
 			for (float T : { -130.0f, 0.0f, 130.0f })
 			{
-				Block(C + Along * T + FVector(0, 0, 2), bX ? FVector(28, 170, 5) : FVector(170, 28, 5), Timber * 0.8f, 0.0f, false);
+				Paint(Block(C + Along * T + FVector(0, 0, 2), bX ? FVector(28, 170, 5) : FVector(170, 28, 5), Timber * 0.8f, 0.0f, false), TEXT("/Game/Cave_Camp/Materials/MI_table"));
 			}
 			if ((X + Y) % 2 == 0)
 			{
 				for (int32 Side = -1; Side <= 1; Side += 2)
 				{
-					Block(C + Across * (Side * (TileSize - 35.0f)) + FVector(0, 0, WallHeight * 0.5f), FVector(34, 34, WallHeight), Timber, 0.0f, false);
+					Paint(Block(C + Across * (Side * (TileSize - 35.0f)) + FVector(0, 0, WallHeight * 0.5f), FVector(34, 34, WallHeight), Timber, 0.0f, false), TEXT("/Game/Cave_Camp/Materials/MI_table"));
 				}
-				Block(C + FVector(0, 0, WallHeight - 30.0f), bX ? FVector(40, TileSize * 2.0f - 20, 40) : FVector(TileSize * 2.0f - 20, 40, 40), Timber, 0.0f, false);
+				Paint(Block(C + FVector(0, 0, WallHeight - 30.0f), bX ? FVector(40, TileSize * 2.0f - 20, 40) : FVector(TileSize * 2.0f - 20, 40, 40), Timber, 0.0f, false), TEXT("/Game/Cave_Camp/Materials/MI_table"));
 			}
 		}
 	}
@@ -799,7 +854,7 @@ void ADCCArcadeHaunt::DressMine()
 		for (int32 c = 0; c < 4; ++c)
 		{
 			const FVector Corner = Centre + FVector((c % 2 ? 1 : -1) * (Room.W * TileSize * 0.5f - 60.0f), (c / 2 ? 1 : -1) * (Room.H * TileSize * 0.5f - 60.0f), WallHeight * 0.5f);
-			Block(Corner, FVector(40, 40, WallHeight), Timber, 0.0f, false);
+			Paint(Block(Corner, FVector(40, 40, WallHeight), Timber, 0.0f, false), TEXT("/Game/Cave_Camp/Materials/MI_table"));
 		}
 	}
 }
@@ -812,23 +867,48 @@ void ADCCArcadeHaunt::SpawnMonsters()
 	}
 	bMonstersSpawned = true;
 
-	const TArray<TSubclassOf<ADCCEnemyCharacter>> Pool = {
-		ADCCEnemyCharacter_Beholder::StaticClass(),
-		ADCCEnemyCharacter_BreakRoomMold::StaticClass(),
-		ADCCEnemyCharacter_Thornback::StaticClass(),
-		ADCCEnemyCharacter_UnclaimedProperty::StaticClass(),
-	};
+	// Dead Air's own creatures (2026-11-16, Docs/enemy-roster-arcade.md), in turn down the drift: a lamp-eater, a pack of
+	// three slag dogs, a Tommyknocker; and the shift boss in the deepest stope.
 	const TArray<UDCCDungeonGrid::FRoom>& Rooms = Grid->GetRooms();
-	for (int32 r = 1; r < Rooms.Num(); ++r)
+	auto Spawn = [this](TSubclassOf<ADCCEnemyCharacter> Class, const FVector& At, bool bChaser)
 	{
-		const FTransform At(FRotator::ZeroRotator, Grid->CellCenter(Rooms[r].Center()) + FVector(0, 0, 140));
-		if (ADCCEnemyCharacter* Monster = GetWorld()->SpawnActorDeferred<ADCCEnemyCharacter>(Pool[r % Pool.Num()], At, nullptr, nullptr,
+		const FTransform Where(FRotator(0.0f, FMath::FRandRange(0.0f, 360.0f), 0.0f), At);
+		if (ADCCEnemyCharacter* Monster = GetWorld()->SpawnActorDeferred<ADCCEnemyCharacter>(Class, Where, nullptr, nullptr,
 			ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn))
 		{
-			Monster->SetChaseGrid(Grid);
-			Monster->LeashRadius = FMath::Max(Monster->LeashRadius, 6000.0f);
-			Monster->FinishSpawning(At);
+			if (bChaser)
+			{
+				Monster->SetChaseGrid(Grid);
+				Monster->LeashRadius = FMath::Max(Monster->LeashRadius, 6000.0f);
+			}
+			Monster->FinishSpawning(Where);
 			Monsters.Add(Monster);
+		}
+	};
+	const int32 Last = Rooms.Num() - 1;
+	for (int32 r = 1; r < Rooms.Num(); ++r)
+	{
+		const FVector Centre = Grid->CellCenter(Rooms[r].Center()) + FVector(0, 0, 140);
+		if (r == Last)
+		{
+			Spawn(ADCCEnemyCharacter_ShiftBoss::StaticClass(), Centre, true);
+			continue;
+		}
+		switch (r % 3)
+		{
+		case 1:
+			Spawn(ADCCEnemyCharacter_LampEater::StaticClass(), Centre, true);
+			break;
+		case 2:
+			for (int32 d = 0; d < 3; ++d)
+			{
+				Spawn(ADCCEnemyCharacter_SlagDog::StaticClass(), Centre + FRotator(0.0f, d * 120.0f, 0.0f).Vector() * 150.0f, true);
+			}
+			break;
+		default:
+			// Off to one side of the stope, not in the middle of the way through.
+			Spawn(ADCCEnemyCharacter_Tommyknocker::StaticClass(), Centre + FVector(Rooms[r].W * TileSize * 0.3f, 0.0f, -60.0f), false);
+			break;
 		}
 	}
 }
@@ -949,11 +1029,36 @@ void ADCCArcadeHaunt::DebugGoTo(int32 RoomIndex, bool bDrift)
 	else if (RoomIndex >= 0 && Rooms.Num() > 0)
 	{
 		const UDCCDungeonGrid::FRoom& Room = Rooms[FMath::Clamp(RoomIndex, 0, Rooms.Num() - 1)];
-		Spot = Grid->CellCenter(Room.Center()) - FVector(TileSize, 0.0f, 0.0f);
-		Yaw = 0.0f; // looking into the room from its west side
+		const FVector Centre = Grid->CellCenter(Room.Center());
+		// Next to whoever is already in the stope, close enough to swing. A full tile west of
+		// centre is outside a melee swing, and TeleportTo was refusing that spot and leaving
+		// everyone in the cage.
+		Spot = Centre + FVector(-160.0f, 0.0f, 0.0f);
+		Yaw = 0.0f;
+		ADCCEnemyCharacter* Nearest = nullptr;
+		float Best = FMath::Square(TileSize * 3.0f);
+		for (const TWeakObjectPtr<ADCCEnemyCharacter>& Monster : Monsters)
+		{
+			ADCCEnemyCharacter* M = Monster.Get();
+			if (!M || !M->IsAlive())
+			{
+				continue;
+			}
+			const float D = FVector::DistSquared2D(M->GetActorLocation(), Centre);
+			if (D < Best)
+			{
+				Best = D;
+				Nearest = M;
+			}
+		}
+		if (Nearest)
+		{
+			Spot = Nearest->GetActorLocation() + FVector(-160.0f, 0.0f, 0.0f);
+		}
 	}
 	if (Spot.IsZero())
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[DCC Mine] dev go: nowhere to put anyone (index %d)."), RoomIndex);
 		return;
 	}
 	TArray<APlayerController*> Players;
@@ -962,8 +1067,13 @@ void ADCCArcadeHaunt::DebugGoTo(int32 RoomIndex, bool bDrift)
 	{
 		if (APawn* Pawn = PC->GetPawn())
 		{
-			Pawn->TeleportTo(Spot + FVector(0, 0, 120), FRotator(0.0f, Yaw, 0.0f));
+			const FVector Dest = Spot + FVector(0, 0, 120);
+			if (!Pawn->TeleportTo(Dest, FRotator(0.0f, Yaw, 0.0f)))
+			{
+				Pawn->SetActorLocation(Dest, false, nullptr, ETeleportType::TeleportPhysics);
+			}
 			PC->SetControlRotation(FRotator(-8.0f, Yaw, 0.0f));
+			UE_LOG(LogTemp, Log, TEXT("[DCC Mine] dev go index %d to %s, crawler at %s"), RoomIndex, *Dest.ToString(), *Pawn->GetActorLocation().ToString());
 		}
 	}
 }
@@ -1239,7 +1349,7 @@ void ADCCArcadeHaunt::TickRocksServer()
 	{
 		const FVector Guess = Pawn->GetActorLocation() + FRotator(0.0f, FMath::FRandRange(0.0f, 360.0f), 0.0f).Vector() * FMath::FRandRange(300.0f, 1200.0f);
 		const FIntPoint Cell = Grid->CellOf(Guess);
-		if (!Grid->IsOpen(Cell.X, Cell.Y) || Grid->RoomIndexAt(Cell.X, Cell.Y) == 0 || InVan(Guess))
+		if (!Grid->IsOpen(Cell.X, Cell.Y) || Grid->RoomIndexAt(Cell.X, Cell.Y) == 0 || InFoyer(Guess))
 		{
 			continue;
 		}
@@ -1250,6 +1360,46 @@ void ADCCArcadeHaunt::TickRocksServer()
 		Rocks.Add(Rock);
 		break;
 	}
+}
+
+void ADCCArcadeHaunt::OnTagged(ADCCCharacterBase* Painter, const FVector& At)
+{
+	const APlayerState* State = Painter ? Painter->GetPlayerState() : nullptr;
+	// The bars, the gate and the floor of it: anywhere within a stride of the cage box counts.
+	if (!State || !VanBox.IsValid || !VanBox.ExpandBy(FVector(160.0f, 160.0f, 120.0f)).IsInside(At))
+	{
+		return;
+	}
+	const FString Name = State->GetPlayerName();
+	if (CageTaggers.Contains(Name))
+	{
+		return;
+	}
+	CageTaggers.Add(Name);
+	DCCBounties::Flag(State, TEXT("CageTag"));
+	EntryFor(Name).Footage += 25.0f;
+	UDCCAchievementComponent::RecordFor(Painter, EDCCAchievementStat::TaggedTheCage);
+	ADCCGameState::Log(this, EDCCLogCategory::Announcement,
+		FText::FromString(FString::Printf(TEXT("%s tagged the cage. The chat loves it: +25 footage."), *Name)));
+}
+
+bool ADCCArcadeHaunt::QueueRock(const FVector& At, double Delay)
+{
+	if (!HasAuthority() || !Grid || InFoyer(At))
+	{
+		return false;
+	}
+	const FIntPoint Cell = Grid->CellOf(At);
+	if (!Grid->IsOpen(Cell.X, Cell.Y) || Grid->RoomIndexAt(Cell.X, Cell.Y) == 0)
+	{
+		return false;
+	}
+	FDCCMineRock Rock;
+	Rock.Id = NextRockId++;
+	Rock.At = FVector(At.X, At.Y, GetActorLocation().Z);
+	Rock.FallsAt = ServerTime() + Delay;
+	Rocks.Add(Rock);
+	return true;
 }
 
 void ADCCArcadeHaunt::TickRocksLocal()
@@ -1462,7 +1612,7 @@ void ADCCArcadeHaunt::PlaceTraps()
 			if (CorridorSpan(X, Y, C, bX))
 			{
 				SpanAxis.Add(FIntPoint(X, Y), bX);
-				if (!InVan(C))
+				if (!InFoyer(C))
 				{
 					Straight.Add(C);
 				}
@@ -1476,7 +1626,7 @@ void ADCCArcadeHaunt::PlaceTraps()
 	{
 		for (int32 X = 0; X < Size; ++X)
 		{
-			if (Grid->IsOpen(X, Y) && Grid->RoomIndexAt(X, Y) == -1 && !InVan(Grid->CellCenter(FIntPoint(X, Y))))
+			if (Grid->IsOpen(X, Y) && Grid->RoomIndexAt(X, Y) == -1 && !InFoyer(Grid->CellCenter(FIntPoint(X, Y))))
 			{
 				AnyDrift.Add(Grid->CellCenter(FIntPoint(X, Y)));
 			}
@@ -1670,6 +1820,7 @@ void ADCCArcadeHaunt::Blast(int32 CrateIndex)
 		if (Who->Stats && Who->IsAlive() && FVector::Dist(Who->GetActorLocation(), At) < 450.0f)
 		{
 			const bool bCrew = !Who->IsA<ADCCEnemyCharacter>();
+			if (bCrew && IsInCage(Who->GetActorLocation())) { continue; } // the cage takes the blast
 			if (bCrew) { HitCrew(Who, 0.3f, 10, true, false); }
 			else { Who->Stats->ApplyDamage(80); }
 			Who->LaunchCharacter((Who->GetActorLocation() - (At)).GetSafeNormal2D() * 650.0f + FVector(0, 0, 260.0f), true, true);
@@ -1949,6 +2100,7 @@ void ADCCArcadeHaunt::TickTrapsServer(float DeltaSeconds)
 			if (Victim)
 			{
 				AddEvent(5, a, Anomalies[a].Location, NameOf(Victim));
+				Victim->ReactTo(DCCReactions::MomentSpotted, false);
 				if (UDCCWalletComponent* Wallet = Victim->FindComponentByClass<UDCCWalletComponent>())
 				{
 					Wallet->Tell(TEXT("Cold air on your neck. Your lamp goes out."));
@@ -2163,24 +2315,8 @@ void ADCCArcadeHaunt::TickTrapsLocal(float DeltaSeconds)
 	// Bad air: the local player's seconds in it (the HUD's canary and vignette read this).
 	LocalBadAirSeconds = Local && IsBadAir(Local->GetActorLocation()) ? LocalBadAirSeconds + DeltaSeconds : 0.0f;
 
-	// The lamp key.
-	if (APlayerController* PC = World->GetFirstPlayerController())
-	{
-		if (PC->WasInputKeyJustPressed(EKeys::G) && Local && PC->PlayerCameraManager)
-		{
-			if (UDCCWalletComponent* Wallet = Local->FindComponentByClass<UDCCWalletComponent>())
-			{
-				Wallet->Server_ThrowLightstick(PC->PlayerCameraManager->GetCameraLocation(), PC->GetControlRotation().Vector());
-			}
-		}
-		if (PC->WasInputKeyJustPressed(EKeys::L) && Local)
-		{
-			if (UDCCWalletComponent* Wallet = Local->FindComponentByClass<UDCCWalletComponent>())
-			{
-				Wallet->Server_SetMineLamp(IsLampOff(NameOf(Local)));
-			}
-		}
-	}
+	// The lamp and lightsticks used to be read here on L and G; they are belt slots now (2026-11-16,
+	// ADCCCharacterBase::GetBelt). L also cycled the log filter, so one press did two things.
 }
 
 // ---- the Mine Outfitters' kit (2026-11-15): depth and air, lamps, lightsticks, the hat, the harness, the meter -----
@@ -2267,9 +2403,9 @@ FDCCFootageEntry* ADCCArcadeHaunt::KitOf(const APawn* Pawn)
 
 void ADCCArcadeHaunt::HitCrew(ADCCCharacterBase* Crawler, float Fraction, int32 Min, bool bHat, bool bGas)
 {
-	if (!Crawler || !Crawler->Stats || !Crawler->IsAlive())
+	if (!Crawler || !Crawler->Stats || !Crawler->IsAlive() || IsInCage(Crawler->GetActorLocation()))
 	{
-		return;
+		return; // nothing reaches inside the cage
 	}
 	float Scale = 1.0f;
 	if (const FDCCFootageEntry* Kit = KitOf(Crawler))
@@ -2401,6 +2537,7 @@ void ADCCArcadeHaunt::ClientTick(float DeltaSeconds)
 		RecordFrame();
 	}
 	TickRecLights();
+	TickMineAudio(DeltaSeconds);
 	TickReelLocal(DeltaSeconds);
 
 	// Knocks are not ambience any more (2026-11-15): three knocks means the roof is about to come down, there.
@@ -2635,6 +2772,18 @@ void ADCCArcadeHaunt::Score(float DeltaSeconds)
 		}
 		Entry.Footage += Shot * DeltaSeconds;
 		Entry.Tape = FMath::Max(0.0f, Entry.Tape - DeltaSeconds);
+		// Tape warnings (2026-11-16, Zoe: "I never really saw a 'maximum footage reached' warning").
+		{
+			int32& Warned = TapeWarned.FindOrAdd(Name);
+			const int32 Due = Entry.Tape <= 0.0f ? 3 : Entry.Tape <= 10.0f ? 2 : Entry.Tape <= 30.0f ? 1 : 0;
+			if (Due > Warned && Camera->Wallet)
+			{
+				Warned = Due;
+				Camera->Wallet->Tell(Due == 3 ? FString(TEXT("TAPE FULL. Your camera stopped. Get this footage back to the cage before the clock runs out."))
+					: Due == 2 ? FString(TEXT("10 seconds of tape left. Make it count."))
+					: FString(TEXT("Tape running low: 30 seconds left.")));
+			}
+		}
 	}
 }
 
@@ -2712,6 +2861,26 @@ void ADCCArcadeHaunt::ServerTick(float DeltaSeconds)
 		return; // ClientTick builds it on this machine too, this same frame or the next
 	}
 	SpawnMonsters();
+	// The shift boss going down is a moment for everyone still in the mine (the Shift's Over bounty).
+	if (!bShiftBossDown)
+	{
+		for (const TWeakObjectPtr<ADCCEnemyCharacter>& Monster : Monsters)
+		{
+			const ADCCEnemyCharacter* Boss = Cast<ADCCEnemyCharacter_ShiftBoss>(Monster.Get());
+			if (Boss && !Boss->IsAlive())
+			{
+				bShiftBossDown = true;
+				TArray<APlayerController*> Crew;
+				GetPlayers(Crew);
+				for (APlayerController* PC : Crew)
+				{
+					if (PC && PC->PlayerState) { DCCBounties::Flag(PC->PlayerState, TEXT("ShiftsOver")); }
+				}
+				ADCCGameState::Log(this, EDCCLogCategory::Announcement, FText::FromString(TEXT("The shift boss is down. Shift's over. Somebody film the lamp.")));
+				break;
+			}
+		}
+	}
 	if (EndsAt < 0.0)
 	{
 		EndsAt = ServerTime() + RoundSeconds;
@@ -2724,6 +2893,11 @@ void ADCCArcadeHaunt::ServerTick(float DeltaSeconds)
 	if (bWrapped)
 	{
 		TickReelServer();
+		return;
+	}
+	TickCage();
+	if (bWrapped)
+	{
 		return;
 	}
 	if (TimeLeft <= 0.0f)
@@ -2797,4 +2971,158 @@ void ADCCArcadeHaunt::ServerTick(float DeltaSeconds)
 	{
 		StatusLines.Add(Stories);
 	}
+}
+
+// ---- the cage (2026-11-16) ----------------------------------------------------------------------------------------
+
+void ADCCArcadeHaunt::BuildCage()
+{
+	// A mine cage: a grated floor, corner posts, bars on every side but a gate toward the way out, a roof of grating,
+	// and the hoist cables running up into the dark. Bars block; the gate is the way in and out.
+	const FVector C = CageCenter;
+	const float Half = CageHalf;
+	const float Height = 420.0f;
+	const FLinearColor Steel(0.16f, 0.17f, 0.19f), Rust(0.17f, 0.09f, 0.05f), Grate(0.07f, 0.07f, 0.08f);
+	const FVector Side(-GateDir.Y, GateDir.X, 0.0f);
+	const float GateHalf = FMath::Min(170.0f, Half - 80.0f);
+
+	Block(C + FVector(0, 0, 3), FVector(Half * 2.0f, Half * 2.0f, 6), Grate, 0.0f, false);
+	for (const FVector Corner : { FVector(1, 1, 0), FVector(1, -1, 0), FVector(-1, 1, 0), FVector(-1, -1, 0) })
+	{
+		Block(C + Corner * Half + FVector(0, 0, Height * 0.5f), FVector(26, 26, Height), Steel);
+		// The hoist cables, up into the shaft.
+		Shape(TEXT("Cylinder"), C + Corner * (Half - 30.0f) + FVector(0, 0, Height + 600.0f), FVector(8, 8, 1200.0f), FLinearColor(0.12f, 0.12f, 0.13f), FRotator::ZeroRotator, false);
+	}
+	// Bars: a round bar every 55 cm on each side; the gate side leaves its middle open.
+	for (const FVector Face : { FVector(1, 0, 0), FVector(-1, 0, 0), FVector(0, 1, 0), FVector(0, -1, 0) })
+	{
+		const FVector Along(-Face.Y, Face.X, 0.0f);
+		const bool bGateSide = Face.Equals(GateDir, 0.1f);
+		for (float T = -Half + 55.0f; T <= Half - 55.0f + 1.0f; T += 55.0f)
+		{
+			if (bGateSide && FMath::Abs(T) < GateHalf)
+			{
+				continue;
+			}
+			Shape(TEXT("Cylinder"), C + Face * Half + Along * T + FVector(0, 0, Height * 0.5f), FVector(10, 10, Height), Rust);
+		}
+		// Rails at waist height and along the top.
+		for (const float Z : { 110.0f, Height })
+		{
+			if (bGateSide && Z < Height)
+			{
+				for (const float S : { -1.0f, 1.0f })
+				{
+					const float Len = Half - GateHalf;
+					Block(C + Face * Half + Along * S * (GateHalf + Len * 0.5f) + FVector(0, 0, Z), FVector(FMath::Abs(Face.X) > 0.5f ? 16 : Len, FMath::Abs(Face.Y) > 0.5f ? 16 : Len, 16), Steel, 0.0f, false);
+				}
+				continue;
+			}
+			Block(C + Face * Half + FVector(0, 0, Z), FVector(FMath::Abs(Face.X) > 0.5f ? 18 : Half * 2.0f, FMath::Abs(Face.Y) > 0.5f ? 18 : Half * 2.0f, 18), Steel, 0.0f, false);
+		}
+	}
+	// The gate itself: two posts, a lintel, and a sliding grille parked open to one side.
+	for (const float S : { -1.0f, 1.0f })
+	{
+		Block(C + GateDir * Half + Side * S * GateHalf + FVector(0, 0, Height * 0.5f), FVector(22, 22, Height), Steel);
+	}
+	Block(C + GateDir * (Half + 30.0f) + Side * (GateHalf + 120.0f) + FVector(0, 0, Height * 0.45f), FVector(FMath::Abs(GateDir.X) > 0.5f ? 8 : GateHalf * 2.0f, FMath::Abs(GateDir.Y) > 0.5f ? 8 : GateHalf * 2.0f, Height * 0.9f), Rust * 0.8f, 0.0f, false);
+	Block(C + FVector(0, 0, Height + 8.0f), FVector(Half * 2.0f, Half * 2.0f, 8), Grate, 0.0f, false);
+	// Inside: a caged work lamp and a bell pull. Outside the gate: the old signs.
+	Light(C + FVector(0, 0, Height - 40.0f), FLinearColor(1.0f, 0.86f, 0.6f), 2000.0f, Half * 2.2f);
+	Shape(TEXT("Sphere"), C + FVector(0, 0, Height - 30.0f), FVector(34, 34, 34), FLinearColor(1.0f, 0.85f, 0.55f), FRotator::ZeroRotator, false);
+	const FVector SignAt = C + GateDir * (Half + 20.0f);
+	const float Yaw = GateDir.Rotation().Yaw;
+	Sign(SignAt + FVector(0, 0, Height + 60.0f), Yaw, TEXT("THE CAGE"), FColor(140, 255, 160), 50.0f);
+	Sign(SignAt + FVector(0, 0, Height + 20.0f), Yaw, TEXT("Safe inside. Be in it when the clock runs out, or your tape stays down here."), FColor(200, 220, 200), 15.0f);
+	const FVector Wall = FoyerBox.IsValid ? FVector(C.X, C.Y, C.Z) - GateDir * (Half + 120.0f) : C;
+	Sign(Wall + FVector(0, 0, 360), Yaw, TEXT("MOUNT FOURTEENER"), FColor(200, 220, 255), 26.0f);
+	Sign(Wall + FVector(0, 0, 320), Yaw, TEXT("LUCKY TUESDAY MINE  -  SHAFT No. 2  -  CLOSED 1893"), FColor(230, 200, 150), 18.0f);
+}
+
+void ADCCArcadeHaunt::TickCage()
+{
+	if (bWrapped || !VanBox.IsValid)
+	{
+		return;
+	}
+	const double Now = ServerTime();
+	int32 Standing = 0, InCage = 0, Crew = 0;
+	TArray<APlayerController*> Players;
+	GetPlayers(Players);
+	for (APlayerController* PC : Players)
+	{
+		ADCCCharacterBase* Crawler = PC ? Cast<ADCCCharacterBase>(PC->GetPawn()) : nullptr;
+		if (!Crawler || !Crawler->Stats)
+		{
+			continue;
+		}
+		++Crew;
+		const bool bIn = IsInCage(Crawler->GetActorLocation());
+		// Safe inside: every kind of damage (claws, traps, blasts, gas, rock) stops at the bars.
+		Crawler->Stats->bInvulnerable = bIn && Crawler->IsAlive();
+		if (Crawler->IsAlive() && !Crawler->IsDowned())
+		{
+			++Standing;
+			InCage += bIn ? 1 : 0;
+			bCrewLeftCage |= !bIn;
+		}
+	}
+	// Monsters never come in: one that gets through the gate is put back outside it.
+	const FBox Keep = VanBox.ExpandBy(FVector(70.0f, 70.0f, 0.0f));
+	for (const TWeakObjectPtr<ADCCEnemyCharacter>& Monster : Monsters)
+	{
+		ADCCEnemyCharacter* M = Monster.Get();
+		if (M && M->IsAlive() && Keep.IsInsideXY(M->GetActorLocation()))
+		{
+			M->TeleportTo(CageCenter + GateDir * (CageHalf + 320.0f) + FVector(0, 0, 120.0f), M->GetActorRotation());
+		}
+	}
+
+	// Everyone down: the round ends now, not when the clock runs out.
+	if (Crew > 0 && Standing == 0)
+	{
+		if (AllDownSince <= 0.0)
+		{
+			AllDownSince = Now;
+		}
+		if (Now - AllDownSince > 3.0)
+		{
+			UE_LOG(LogTemp, Log, TEXT("[DCC Haunt] everyone is down: ending the round."));
+			Wrap();
+			StatusLines.Insert(TEXT("EVERYONE'S DOWN. The mine keeps the tapes."), 0);
+			return;
+		}
+	}
+	else
+	{
+		AllDownSince = 0.0;
+	}
+
+	// The early ride up: open once the crew has been out and everyone standing is back inside.
+	const bool bAll = bCrewLeftCage && Standing > 0 && InCage == Standing;
+	if (!bAll)
+	{
+		CageVoters.Reset();
+	}
+	bAllInCage = bAll;
+	CageCrew = Standing;
+	CageVotesUp = CageVoters.Num();
+	if (bAll && CageVoters.Num() >= Standing)
+	{
+		UE_LOG(LogTemp, Log, TEXT("[DCC Haunt] the crew sent the cage up early."));
+		EndsAt = Now; // the round ends this tick, tapes counted as usual
+		TimeLeft = 0.0f;
+	}
+}
+
+void ADCCArcadeHaunt::VoteCageUp(APlayerController* PC, bool bUp)
+{
+	const FString Name = PC && PC->PlayerState ? PC->PlayerState->GetPlayerName() : FString();
+	if (Name.IsEmpty() || !bAllInCage)
+	{
+		return;
+	}
+	if (bUp) { CageVoters.Add(Name); } else { CageVoters.Remove(Name); }
+	CageVotesUp = CageVoters.Num();
 }

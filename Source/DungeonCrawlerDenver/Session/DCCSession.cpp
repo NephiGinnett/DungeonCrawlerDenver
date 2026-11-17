@@ -97,6 +97,14 @@ namespace
 	void HandleNetworkFailure(UWorld* World, UNetDriver* NetDriver, ENetworkFailure::Type FailureType, const FString& ErrorString)
 	{
 		GLastError = FString::Printf(TEXT("Lost the connection: %s"), *ErrorString);
+		// A timeout while joining is nearly always a firewall dropping the host's replies (2026-11-16, Anke's first
+		// join): say what to do instead of only the engine's text.
+		if (ErrorString.Contains(TEXT("TIMED OUT"), ESearchCase::IgnoreCase) || FailureType == ENetworkFailure::ConnectionTimeout)
+		{
+			GLastError = TEXT("Could not reach the host (timed out). On BOTH PCs: Windows Security > Firewall > Allow an app, and tick "
+				"Dungeon Crawler Denver for Private AND Public (delete any Block rules for it). Same house? Use the Same Wi-Fi invite. "
+				"Elsewhere? Use the Tailscale invite.");
+		}
 		UE_LOG(LogTemp, Warning, TEXT("[DCC Session] %s"), *GLastError);
 	}
 

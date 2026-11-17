@@ -511,16 +511,19 @@ void ADCCArcadeGate::TickRoomsServer(double Now, const TArray<APlayerController*
 		BossName = Boss->DisplayName.ToString();
 		BossHealth = FMath::Clamp(Health, 0.0f, 1.0f);
 		bBossShown = true;
+		// Shades scale with the crawlers in the hall: one fewer than before when you are alone (1, then 2 more), the
+		// old numbers for two, and one more per crawler past that (2026-11-17: solo crawlers never reached phase 2).
+		const int32 ExtraCrawlers = Here.Num() - 2;
 		if (State.Phase == 0 && Health <= 0.66f)
 		{
 			State.Phase = 1;
-			SpawnShades(i, 2 + RankIndex / 2);
+			SpawnShades(i, FMath::Max(1, 2 + RankIndex / 2 + ExtraCrawlers));
 			Say(this, TEXT("The Gatekeeper calls the gate's shades out of the walls."));
 		}
 		else if (State.Phase == 1 && Health <= 0.33f)
 		{
 			State.Phase = 2;
-			SpawnShades(i, 3 + RankIndex / 2);
+			SpawnShades(i, FMath::Max(2, 3 + RankIndex / 2 + ExtraCrawlers));
 			Say(this, TEXT("The Gatekeeper is losing. The whole gate is coming to help it. It slams faster."));
 		}
 		// Slams: a ring under someone, 1.6 s to get out of it, then it lands.
@@ -1033,9 +1036,14 @@ void ADCCArcadeGate::DebugEnterAll(int32 RoomIndex)
 		Entered.Add(PC);
 		if (APawn* Pawn = PC->GetPawn())
 		{
-			const FVector Spot = Rooms[FMath::Clamp(RoomIndex, 0, Rooms.Num() - 1)].Center + FVector(-220, 0, 120);
-			Pawn->TeleportTo(Spot, FRotator::ZeroRotator);
+			const int32 Index = FMath::Clamp(RoomIndex, 0, Rooms.Num() - 1);
+			const FVector Spot = Rooms[Index].Center + FVector(-180, 0, 120);
+			if (!Pawn->TeleportTo(Spot, FRotator::ZeroRotator))
+			{
+				Pawn->SetActorLocation(Spot, false, nullptr, ETeleportType::TeleportPhysics);
+			}
 			PC->SetControlRotation(FRotator(-12.0f, 0.0f, 0.0f)); // facing +X, where the room's centre (and a boss) is
+			UE_LOG(LogTemp, Log, TEXT("[DCC Gate] dev in, room %d, crawler at %s"), Index, *Pawn->GetActorLocation().ToString());
 		}
 	}
 	for (int32 i = 0; i < Rooms.Num(); ++i)

@@ -126,11 +126,7 @@ void ADCCSupplyChest::HandleOverlap(UPrimitiveComponent*, AActor* OtherActor, UP
 	switch (Kind)
 	{
 	case EDCCChestKind::Outfitter:
-		for (const FName& Id : DCCClimbItems::ChestPool())
-		{
-			Arena->GiveItem(Crawler, Id, /*bQuiet=*/true);
-		}
-		Crawler->NotifyClimber(NSLOCTEXT("DCC", "OutfitterTaken", "Outfitted: one of every tool and boost. [Q] uses a tool, [T] switches."));
+		Arena->GiveFullKit(Crawler);
 		break;
 	case EDCCChestKind::Artifact:
 		Arena->GiveItem(Crawler, ArtifactId, false);

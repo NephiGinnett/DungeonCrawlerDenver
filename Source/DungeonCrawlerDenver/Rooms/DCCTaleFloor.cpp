@@ -1,4 +1,8 @@
 #include "Rooms/DCCTaleFloor.h"
+#include "Arcade/DCCWalletComponent.h"
+#include "Progression/DCCAchievementComponent.h"
+#include "Session/DCCStarterKits.h"
+#include "Containers/Ticker.h"
 
 #include "Rooms/DCCDungeonGrid.h"
 #include "Characters/DCCCharacterBase.h"
@@ -1008,6 +1012,12 @@ void ADCCTaleFloor::JoinRun(ADCCCharacterBase* Crawler)
 		RunMembers.Add(Key);
 		GoldAtStart.Add(Key, Crawler->Stats ? Crawler->Stats->Gold : 0);
 	}
+	// Every crawler gets an achievement for coming in (2026-11-16), and the first time, a starter kit to choose.
+	UDCCAchievementComponent::RecordFor(Crawler, EDCCAchievementStat::EnteredWorldDungeon);
+	if (DCCStarterKits::Chosen(Crawler) == 0 && Crawler->Wallet)
+	{
+		Crawler->Wallet->Client_OfferStarterKit();
+	}
 }
 
 void ADCCTaleFloor::SpawnStandIns()
@@ -1437,8 +1447,18 @@ static void DCCEnterTaleCommand()
 
 static FAutoConsoleCommand GEnterTaleCmd(
 	TEXT("DCC.EnterTale"),
-	TEXT("Build the generated dungeon and teleport the player into the start room."),
-	FConsoleCommandDelegate::CreateStatic(&DCCEnterTaleCommand));
+	TEXT("DCC.EnterTale [delay]: build the generated dungeon and teleport the player into the start room."),
+	FConsoleCommandWithArgsDelegate::CreateLambda([](const TArray<FString>& Args)
+	{
+		const float Delay = Args.Num() > 0 ? FCString::Atof(*Args[0]) : 0.0f;
+		if (Delay <= 0.0f)
+		{
+			DCCEnterTaleCommand();
+			return;
+		}
+		// A one-shot ticker so it can be scripted from -ExecCmds before the player exists.
+		FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([](float) { DCCEnterTaleCommand(); return false; }), Delay);
+	}));
 
 static void DCCQuickPlayCommand()
 {

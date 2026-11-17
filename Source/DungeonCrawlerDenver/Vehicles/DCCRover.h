@@ -304,6 +304,10 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_UseRallyTool();
 
+	/** Spray tags from the driver's seat (DCCSpray); on foot it is UDCCWalletComponent::Server_Spray. */
+	UFUNCTION(Server, Reliable)
+	void Server_Spray(FVector At, FVector Normal, FVector ViewDir, const TArray<uint8>& RGB);
+
 	/** The aim camera is local, so the hook shot has to carry the direction the driver was looking. */
 	UFUNCTION(Server, Reliable)
 	void Server_FireHook(FVector Dir);

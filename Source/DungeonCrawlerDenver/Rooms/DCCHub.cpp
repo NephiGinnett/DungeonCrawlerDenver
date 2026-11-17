@@ -268,7 +268,7 @@ void ADCCHub::BuildLocal()
 	// The south wall: the sponsor kiosk and the house rules.
 	Block(FVector(0, -W + 120, 120), FVector(260, 160, 240), FLinearColor(0.45f, 0.30f, 0.05f));
 	Sign(FVector(0, -W + 60, 420), 90.0f, TEXT("SPONSOR KIOSK"), FColor(255, 215, 110), 46.0f);
-	Sign(FVector(0, -W + 60, 370), 90.0f, TEXT("Press O to open your loot boxes. The sponsors are watching."), FColor(200, 190, 170), 20.0f);
+	Sign(FVector(0, -W + 60, 370), 90.0f, TEXT("Tab, then LOOT BOXES, to open your boxes. The sponsors are watching."), FColor(200, 190, 170), 20.0f);
 	Light(FVector(0, -W + 300, 380), FLinearColor(1.0f, 0.82f, 0.4f), 5000.0f, 1100.0f);
 
 	Sign(FVector(-1100, -W + 60, 420), 90.0f, TEXT("F2  Party     F3  Gear bench     Tab  Your crawler"), FColor(170, 200, 170), 24.0f);

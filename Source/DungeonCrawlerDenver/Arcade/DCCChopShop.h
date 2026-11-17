@@ -29,11 +29,19 @@ namespace DCCChopShop
 		FLinearColor Colour;
 		/** Mine Outfitters (Dead Air) rather than the truck: paid in CREDITS, not scrap (2026-11-15). */
 		bool bMine = false;
+		/** Fourteener gear at the Trading Post: paid in TICKETS (2026-11-16). */
+		bool bTickets = false;
 	};
 
 	extern const FName Plating, Tank, Engine, Line, PitCrew;
 	// Mine Outfitters: kit for Dead Air, bought with credits from footage, notes and finished stories.
 	extern const FName AirTank, MineLamp, Lightsticks, HardHat, Harness, GasMeter, TapeReel;
+	// Fourteener, at the Trading Post, for tickets.
+	extern const FName Grapple;
+	/** The belt grappling hook (2026-11-16, Zoe: "always on your belt and just on cool down after use and gets better
+	 *  with upgrades"): how far it yanks you up the wall, and how long it takes to wind back in. */
+	inline float GrappleReach(int32 Level) { return 600.0f + 200.0f * Level; }
+	inline float GrappleCooldown(int32 Level) { return 40.0f - 8.0f * Level; }
 
 	/** How deep (0 at the cage, 1 at the deepest stope) your air reaches. Level 0 is about half way. */
 	inline float AirReach(int32 Level) { return FMath::Min(1.05f, 0.45f + 0.2f * Level); }

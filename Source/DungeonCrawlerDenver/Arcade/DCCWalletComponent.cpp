@@ -1,4 +1,7 @@
 #include "Arcade/DCCWalletComponent.h"
+#include "Characters/DCCReactions.h"
+#include "UI/DCCHUD.h"
+#include "Session/DCCStarterKits.h"
 
 #include "Bench/DCCBenchData.h"
 #include "AnimationRuntime.h"
@@ -25,6 +28,8 @@
 #include "EngineUtils.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/PlayerController.h"
+#include "Arcade/DCCSpray.h"
+#include "Arcade/DCCBounties.h"
 #include "GameFramework/PlayerState.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
@@ -65,11 +70,12 @@ void UDCCWalletComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 	DOREPLIFETIME_CONDITION(UDCCWalletComponent, Owned, COND_OwnerOnly);
 	DOREPLIFETIME(UDCCWalletComponent, Worn);
 	DOREPLIFETIME_CONDITION(UDCCWalletComponent, ClimbTools, COND_OwnerOnly);
-	DOREPLIFETIME_CONDITION(UDCCWalletComponent, ClimbToolIndex, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(UDCCWalletComponent, ClimbBoosts, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(UDCCWalletComponent, CarriedArtifacts, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(UDCCWalletComponent, ClimbHunger, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(UDCCWalletComponent, TrophyIds, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(UDCCWalletComponent, BountiesDone, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(UDCCWalletComponent, BountiesPaid, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(UDCCWalletComponent, TrophyCounts, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(UDCCWalletComponent, Scrap, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(UDCCWalletComponent, ChopLevels, COND_OwnerOnly);
@@ -79,6 +85,12 @@ void UDCCWalletComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 void UDCCWalletComponent::BeginPlay()
 {
 	Super::BeginPlay();
+	// Bounties are read off the profile every couple of seconds on the server: cheap, and nothing has to remember to
+	// call it. A timer, not the tick, because the tick is switched off when nothing cosmetic is worn.
+	if (GetOwner() && GetOwner()->HasAuthority() && GetWorld())
+	{
+		GetWorld()->GetTimerManager().SetTimer(BountyTimer, this, &UDCCWalletComponent::RefreshBounties, 2.0f, true, 1.0f);
+	}
 	if (GetOwner() && GetOwner()->HasAuthority())
 	{
 		if (ADCCCharacterBase* Crawler = Cast<ADCCCharacterBase>(GetOwner()))
@@ -226,22 +238,6 @@ void UDCCWalletComponent::RefreshTrophies()
 	}
 }
 
-void UDCCWalletComponent::Server_UseClimbTool_Implementation()
-{
-	for (TActorIterator<ADCCArcadeClimb> It(GetWorld()); It; ++It)
-	{
-		It->UseTool(Cast<ADCCCharacterBase>(GetOwner()));
-	}
-}
-
-void UDCCWalletComponent::Server_NextClimbTool_Implementation()
-{
-	for (TActorIterator<ADCCArcadeClimb> It(GetWorld()); It; ++It)
-	{
-		It->NextTool(Cast<ADCCCharacterBase>(GetOwner()));
-	}
-}
-
 void UDCCWalletComponent::Server_SellTrophy_Implementation(FName ArtifactId)
 {
 	const FString Key = ProfileKey();
@@ -286,11 +282,37 @@ void UDCCWalletComponent::LoadFromProfile()
 	PushToClients(Key);
 }
 
+void UDCCWalletComponent::Server_Spray_Implementation(FVector At, FVector Normal, FVector ViewDir, const TArray<uint8>& RGB)
+{
+	APawn* Crawler = Cast<APawn>(GetOwner());
+	DCCSpray::ServerSpray(Crawler, Crawler ? Crawler->GetPlayerState() : nullptr, At, Normal, ViewDir, RGB);
+}
+
 void UDCCWalletComponent::Server_Buy_Implementation(FName CosmeticId)
 {
 	const FString Key = ProfileKey();
 	if (Key.IsEmpty())
 	{
+		return;
+	}
+	// The spray can (DCCSpray): owned on the profile like a cosmetic, but worn by nobody. The picture is picked on the
+	// buyer's own PC before this is sent.
+	if (CosmeticId == DCCSpray::CanId)
+	{
+		if (DCCProfile::GetCosmetics(Key).Contains(CosmeticId))
+		{
+			Client_Message(TEXT("New picture saved. Spray it from your belt: press its number, then click."), false);
+			return;
+		}
+		if (!DCCProfile::SpendTickets(Key, DCCSpray::Price))
+		{
+			Client_Message(FString::Printf(TEXT("The spray can costs %d tickets. You have %d."), DCCSpray::Price, DCCProfile::GetTickets(Key)), false);
+			return;
+		}
+		Tickets = DCCProfile::GetTickets(Key);
+		DCCProfile::GrantCosmetic(Key, CosmeticId);
+		Owned = DCCProfile::GetCosmetics(Key);
+		Client_Message(TEXT("Bought a spray can. It is on your belt: press its number, then click whatever you are looking at. From a truck, press Z."), false);
 		return;
 	}
 	if (const DCCCosmetics::FBoothWeapon* Gun = DCCCosmetics::BoothWeapons().FindByPredicate(
@@ -588,6 +610,63 @@ void UDCCWalletComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 	UpdateVisuals();
 }
 
+bool UDCCWalletComponent::BountyDone(FName Id) const
+{
+	const int32 i = DCCBounties::All().IndexOfByPredicate([Id](const DCCBounties::FBounty& B) { return B.Id == Id; });
+	return i != INDEX_NONE && (BountiesDone & (1 << i)) != 0;
+}
+
+bool UDCCWalletComponent::BountyPaid(FName Id) const
+{
+	const int32 i = DCCBounties::All().IndexOfByPredicate([Id](const DCCBounties::FBounty& B) { return B.Id == Id; });
+	return i != INDEX_NONE && (BountiesPaid & (1 << i)) != 0;
+}
+
+void UDCCWalletComponent::RefreshBounties()
+{
+	const FString Key = ProfileKey();
+	if (Key.IsEmpty())
+	{
+		return;
+	}
+	int32 Done = 0, Paid = 0;
+	const TArray<DCCBounties::FBounty>& All = DCCBounties::All();
+	for (int32 i = 0; i < All.Num() && i < 31; ++i)
+	{
+		if (DCCBounties::IsDone(Key, All[i].Id)) { Done |= 1 << i; }
+		if (DCCBounties::IsPaid(Key, All[i].Id)) { Paid |= 1 << i; }
+	}
+	// Tell them the moment one finishes (not on the first read, or every join would announce old ones).
+	if (bBountiesRead)
+	{
+		const int32 New = Done & ~BountiesDone & ~Paid;
+		for (int32 i = 0; i < All.Num() && i < 31; ++i)
+		{
+			if (New & (1 << i))
+			{
+				Tell(FString::Printf(TEXT("Bounty done: %s (+%d tickets). Claim it at the Prize Counter, BOUNTIES tab."), All[i].Name, All[i].Reward));
+				if (ADCCCharacterBase* Owner = Cast<ADCCCharacterBase>(GetOwner()))
+				{
+					Owner->ReactTo(DCCReactions::MomentWin, false);
+				}
+			}
+		}
+	}
+	bBountiesRead = true;
+	BountiesDone = Done;
+	BountiesPaid = Paid;
+}
+
+void UDCCWalletComponent::Server_ClaimBounty_Implementation(FName BountyId)
+{
+	APawn* Pawn = Cast<APawn>(GetOwner());
+	if (Pawn && DCCBounties::Claim(Pawn->GetPlayerState(), BountyId))
+	{
+		Tickets = DCCProfile::GetTickets(ProfileKey());
+		RefreshBounties();
+	}
+}
+
 void UDCCWalletComponent::UpdateVisuals()
 {
 	const AActor* Owner = GetOwner();
@@ -819,4 +898,45 @@ void UDCCWalletComponent::Server_BuySupply_Implementation(FName ItemId)
 	Tickets = DCCProfile::GetTickets(Key);
 	Climb->GiveItem(Crawler, ItemId, true);
 	Client_Message(FString::Printf(TEXT("Bought: %s (-%d tickets). %s"), Item->Name, Price, Item->Blurb), false);
+}
+
+void UDCCWalletComponent::Server_CageVote_Implementation(bool bUp)
+{
+	const APawn* Pawn = Cast<APawn>(GetOwner());
+	APlayerController* PC = Pawn ? Cast<APlayerController>(Pawn->GetController()) : nullptr;
+	for (TActorIterator<ADCCArcadeHaunt> It(GetWorld()); It; ++It)
+	{
+		It->VoteCageUp(PC, bUp);
+		break;
+	}
+}
+
+void UDCCWalletComponent::Client_OfferStarterKit_Implementation()
+{
+	const APawn* Pawn = Cast<APawn>(GetOwner());
+	const APlayerController* PC = Pawn ? Cast<APlayerController>(Pawn->GetController()) : nullptr;
+	if (ADCCHUD* Hud = PC ? Cast<ADCCHUD>(PC->GetHUD()) : nullptr)
+	{
+		Hud->OpenStarterKit();
+	}
+}
+
+void UDCCWalletComponent::Server_ChooseStarterKit_Implementation(int32 Index)
+{
+	DCCStarterKits::Grant(Cast<ADCCCharacterBase>(GetOwner()), Index);
+}
+
+void UDCCWalletComponent::Server_Grapple_Implementation()
+{
+	ADCCCharacterBase* Crawler = Cast<ADCCCharacterBase>(GetOwner());
+	for (TActorIterator<ADCCArcadeClimb> It(GetWorld()); It && Crawler; ++It)
+	{
+		It->BeltGrapple(Crawler);
+		return;
+	}
+}
+
+void UDCCWalletComponent::Client_GrappleThrown_Implementation(float Seconds)
+{
+	GrappleReadyLocal = GetWorld() ? GetWorld()->GetTimeSeconds() + Seconds : 0.0f;
 }

@@ -1,4 +1,5 @@
 #include "Characters/DCCEnemyCharacter.h"
+#include "Characters/DCCReactions.h"
 
 #include "Rooms/DCCDungeonGrid.h"
 #include "Stats/DCCStatsComponent.h"
@@ -228,7 +229,7 @@ ADCCCharacterBase* ADCCEnemyCharacter::FindNearestHostileTarget() const
 	for (TActorIterator<ADCCCharacterBase> It(World); It; ++It)
 	{
 		ADCCCharacterBase* Candidate = *It;
-		if (!Candidate || !Candidate->IsAlive() || !IsHostileTo(Candidate))
+		if (!Candidate || !Candidate->IsAlive() || !IsHostileTo(Candidate) || !AcceptsTarget(Candidate))
 		{
 			continue;
 		}
@@ -838,7 +839,7 @@ void ADCCEnemyCharacter::Tick(float DeltaSeconds)
 	{
 		const float DistanceSquared = FVector::DistSquared(GetActorLocation(), CurrentTarget->GetActorLocation());
 
-		bool bDropTarget = !CurrentTarget->IsAlive() || DistanceSquared > FMath::Square(LeashRadius);
+		bool bDropTarget = !CurrentTarget->IsAlive() || DistanceSquared > FMath::Square(LeashRadius) || !AcceptsTarget(CurrentTarget);
 
 		// An ally is also leashed to its leader, not just to its target. Without
 		// this a mob that backs away tows the whole escort off the map.
@@ -924,6 +925,11 @@ void ADCCEnemyCharacter::Tick(float DeltaSeconds)
 			Candidate = nullptr;
 		}
 
+		// Spotted: a "!" over the crawler it has just picked (2026-11-16, reactions).
+		if (Candidate && Candidate->IsPlayerControlled() && !bIsAlly)
+		{
+			Candidate->ReactTo(DCCReactions::MomentSpotted);
+		}
 		CurrentTarget = Candidate;
 		bIsChasing = false;
 	}

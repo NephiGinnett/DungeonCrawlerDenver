@@ -5,6 +5,10 @@ public class DungeonCrawlerDenver : ModuleRules
 	public DungeonCrawlerDenver(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+		// Each .cpp compiles on its own (2026-11-16). Many files keep private helpers in anonymous namespaces with the
+		// same names (Rate, ToPcm, Wave, FCastSpeaker...); unity builds glued them into one file whenever a new .cpp
+		// reshuffled the batches, and the build broke in code nobody had touched.
+		bUseUnity = false;
 
 		PublicDependencyModuleNames.AddRange(new string[] {
 			"Core",
@@ -51,8 +55,16 @@ public class DungeonCrawlerDenver : ModuleRules
 			"HTTP",
 			"Json",
 			"JsonUtilities",
-			"DeveloperSettings"
+			"DeveloperSettings",
+			// Spray tags (Arcade/DCCSpray): read the JPG or PNG a player picks for their tag.
+			"ImageWrapper"
 		});
+
+		// Spray tags: the Windows picture picker (GetOpenFileNameW).
+		if (Target.Platform == UnrealTargetPlatform.Win64)
+		{
+			PublicSystemLibraries.Add("comdlg32.lib");
+		}
 
 		// DCC.NpcRetarget (Arcade/DCCNpcRetarget.cpp, editor only): builds IK Rigs and a retargeter in code and batch
 		// retargets the mannequin clips onto the NPC Forge skeleton (2026-11-14).

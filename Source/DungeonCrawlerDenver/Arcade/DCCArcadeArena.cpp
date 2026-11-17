@@ -1,4 +1,5 @@
 #include "Arcade/DCCArcadeArena.h"
+#include "Arcade/DCCSpray.h"
 #include "PhysicsEngine/BodySetup.h"
 #include "Components/BoxComponent.h"
 
@@ -80,6 +81,7 @@ void ADCCArcadeArena::BeginPlay()
 	if (HasAuthority())
 	{
 		ServerBegin();
+		DCCSpray::Restore(this); // the host keeps everyone's tags between sessions
 	}
 }
 
@@ -524,18 +526,18 @@ AActor* ADCCArcadeArena::Shape(const TCHAR* ShapeName, const FVector& Center, co
 	return Actor;
 }
 
-void ADCCArcadeArena::Sign(const FVector& Location, float Yaw, const FString& Text, const FColor& Colour, float Size)
+ATextRenderActor* ADCCArcadeArena::Sign(const FVector& Location, float Yaw, const FString& Text, const FColor& Colour, float Size, bool bBoard)
 {
 	UWorld* World = GetWorld();
 	if (!World)
 	{
-		return;
+		return nullptr;
 	}
 	const FTransform Transform(FRotator(0.0f, Yaw, 0.0f), Location);
 	ATextRenderActor* Actor = World->SpawnActorDeferred<ATextRenderActor>(ATextRenderActor::StaticClass(), Transform);
 	if (!Actor)
 	{
-		return;
+		return nullptr;
 	}
 	Actor->SetReplicates(false);
 	if (UTextRenderComponent* Render = Actor->GetTextRender())
@@ -548,6 +550,42 @@ void ADCCArcadeArena::Sign(const FVector& Location, float Yaw, const FString& Te
 	}
 	Actor->FinishSpawning(Transform);
 	(BlockSink ? *BlockSink : LocalActors).Add(Actor);
+	// The board: weathered and dark, a little bigger than the text, just behind it (text faces along its own +X).
+	if (bBoard)
+	{
+		int32 Lines = 1;
+		int32 Longest = 0, Run = 0;
+		for (const TCHAR C : Text)
+		{
+			if (C == TEXT('\n')) { ++Lines; Run = 0; continue; }
+			Longest = FMath::Max(Longest, ++Run);
+		}
+		const float Width = Longest * Size * 0.56f + Size * 1.2f;
+		const float Height = Lines * Size * 1.15f + Size * 0.8f;
+		const FVector Back = FRotator(0.0f, Yaw, 0.0f).Vector();
+		// Set back in proportion to the text, so a title's board and its subtitle's board never share a plane (no flicker
+		// where stacked signs overlap; they read as one panel).
+		const FVector BoardAt = Location - Back * (3.0f + Size * 0.06f);
+		Block(BoardAt, FVector(4.0f, Width, Height), FLinearColor(0.07f, 0.055f, 0.045f), Yaw, false);
+		// Standing free? Then it stands on two posts down to whatever is below, rather than hanging in the air. A board
+		// already against a wall or resting on something finds the ground close and gets none.
+		const FVector Bottom = BoardAt - Back * 6.0f - FVector(0.0f, 0.0f, Height * 0.5f);
+		FHitResult Hit;
+		FCollisionQueryParams Params(SCENE_QUERY_STAT(DCCSignPosts), false);
+		FHitResult Wall;
+		const bool bOnWall = World->LineTraceSingleByChannel(Wall, BoardAt, BoardAt - Back * 80.0f, ECC_WorldStatic, Params);
+		if (!bOnWall && World->LineTraceSingleByChannel(Hit, Bottom, Bottom - FVector(0.0f, 0.0f, 1500.0f), ECC_WorldStatic, Params) && Hit.Distance > 25.0f)
+		{
+			const FVector Side = FRotator(0.0f, Yaw + 90.0f, 0.0f).Vector();
+			const float Post = Hit.Distance + Height * 0.6f;
+			for (const float S : { -1.0f, 1.0f })
+			{
+				const FVector Foot = Bottom + Side * S * (Width * 0.5f - 12.0f);
+				Block(FVector(Foot.X, Foot.Y, Hit.ImpactPoint.Z + Post * 0.5f), FVector(9.0f, 9.0f, Post), FLinearColor(0.045f, 0.035f, 0.03f), Yaw, false);
+			}
+		}
+	}
+	return Actor;
 }
 
 void ADCCArcadeArena::Light(const FVector& Location, const FLinearColor& Colour, float Intensity, float Radius)

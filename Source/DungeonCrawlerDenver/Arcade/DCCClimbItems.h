@@ -8,7 +8,7 @@
  * is Dungeon Crawler Denver gear: it lives for the round (tools and boosts) or goes
  * into the arcade profile's trophy vault (artifacts).
  *
- *   Tool      kept, used with [Q] ([T] picks which)
+ *   Tool      kept, used from its belt slot
  *   Boost     works the moment it is picked up
  *   Artifact  carried; lost if you die; banked as a trophy if you are alive when the
  *             round ends. Some sell at the Den's Prize Counter.
@@ -26,7 +26,7 @@ namespace DCCClimbItems
 		/** Tickets at the Prize Counter, for artifacts that sell. 0 = a keepsake, not for sale. */
 		int32 SellValue = 0;
 		FLinearColor Colour;
-		/** Hunger this food restores (0-100; 0 = not food). Food is a tool: [Q] or a hotbar slot eats it. */
+		/** Hunger this food restores (0-100; 0 = not food). Food is a tool: its belt slot eats it. */
 		float Food = 0.0f;
 	};
 

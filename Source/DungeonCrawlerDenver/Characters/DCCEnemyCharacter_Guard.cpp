@@ -4,20 +4,14 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/SkeletalMesh.h"
 #include "UObject/ConstructorHelpers.h"
+#include "Characters/DCCForgeBody.h"
 
 ADCCEnemyCharacter_Guard::ADCCEnemyCharacter_Guard()
 {
 	DisplayName = NSLOCTEXT("DCC", "GuardName", "Security");
 
-	static ConstructorHelpers::FObjectFinder<USkeletalMesh> GuardMesh(
-		TEXT("/Game/DCC/Characters/Minions/SK_BuffMinion.SK_BuffMinion"));
-	if (USkeletalMeshComponent* MeshComponent = GetMesh())
-	{
-		if (GuardMesh.Succeeded())
-		{
-			MeshComponent->SetSkeletalMesh(GuardMesh.Object);
-		}
-	}
+	// An NPC Forge person (2026-11-16): the old cartoon minion body looked like someone else's character.
+	DCCForgeBody::Apply(*this, DCCForgeBody::Body(4), 1.15f);
 
 	// Placeholder stat block - no DT_DCCEnemies.json row exists for a bar
 	// guard yet, so these are picked to read as "physically imposing but not

@@ -20,12 +20,15 @@ class DUNGEONCRAWLERDENVER_API UDCCCosmeticShopWidget : public UUserWidget
 public:
 	TFunction<void()> OnCloseRequested;
 
-	/** 0 PRIZES, 1 TROPHIES, 2 CHOP SHOP. Set before it is shown; the tab buttons change it. */
+	/** 0 PRIZES, 1 TROPHIES, 2 CHOP SHOP, 3 OUTFITTERS, 4 TRADING POST, 5 BOUNTIES. Set before it is shown; the tab buttons change it. */
 	int32 Tab = 0;
 
 	/** What the right-hand panel shows: the tile under the mouse, else the one last clicked on each tab. */
 	FName HoverId;
-	FName SelectedId[5];
+	FName SelectedId[6];
+
+	/** CLEAR ALL SPRAYS asks twice: the first click arms it for a few seconds. */
+	double ClearArmedAt = 0.0;
 
 protected:
 	virtual void NativeOnInitialized() override;

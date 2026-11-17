@@ -1,48 +1,13 @@
 #include "Characters/DCCEnemyCharacter_Gate.h"
 
 #include "Characters/DCCForgeBody.h"
+#include "Characters/DCCCreatureLook.h"
 #include "Combat/DCCBossComponent.h"
 #include "Components/PointLightComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Stats/DCCStatsComponent.h"
-
-namespace
-{
-	/** The character-shade overlay (it multiplies what is behind it), pushed toward a colour: a gate's touch. */
-	void TintBody(ADCCCharacterBase* Character, const FLinearColor& Tint, float Rim)
-	{
-		USkeletalMeshComponent* Body = Character ? Character->GetMesh() : nullptr;
-		UMaterialInterface* Shade = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/DCC/Materials/M_CharacterShade.M_CharacterShade"));
-		if (!Body || !Shade)
-		{
-			return;
-		}
-		UMaterialInstanceDynamic* Mid = UMaterialInstanceDynamic::Create(Shade, Character);
-		Mid->SetVectorParameterValue(TEXT("Tint"), FLinearColor(Tint.R, Tint.G, Tint.B, 1.0f));
-		Mid->SetVectorParameterValue(TEXT("Edge"), FLinearColor::White);
-		Mid->SetScalarParameterValue(TEXT("RimStrength"), Rim);
-		Body->SetOverlayMaterial(Mid);
-	}
-
-	/** A light that rides along on a character. */
-	void Aura(ADCCCharacterBase* Character, const FLinearColor& Colour, float Intensity, float Radius, float Height)
-	{
-		if (!Character || !Character->GetMesh())
-		{
-			return;
-		}
-		UPointLightComponent* Glow = NewObject<UPointLightComponent>(Character);
-		Glow->SetupAttachment(Character->GetRootComponent());
-		Glow->SetRelativeLocation(FVector(0, 0, Height));
-		Glow->SetLightColor(Colour);
-		Glow->SetIntensity(Intensity);
-		Glow->SetAttenuationRadius(Radius);
-		Glow->SetCastShadows(false);
-		Glow->RegisterComponent();
-	}
-}
 
 // ---- the Gatekeeper ------------------------------------------------------------------------------------------------
 
@@ -77,8 +42,8 @@ ADCCEnemyCharacter_Gatekeeper::ADCCEnemyCharacter_Gatekeeper()
 void ADCCEnemyCharacter_Gatekeeper::BeginPlay()
 {
 	Super::BeginPlay();
-	TintBody(this, FLinearColor(0.72f, 0.5f, 1.0f), 0.6f);
-	Aura(this, FLinearColor(0.6f, 0.35f, 1.0f), 5000.0f, 650.0f, 120.0f);
+	DCCCreatureLook::Tint(this, FLinearColor(0.72f, 0.5f, 1.0f), FLinearColor::White, 0.6f);
+	DCCCreatureLook::Aura(this, FLinearColor(0.6f, 0.35f, 1.0f), 5000.0f, 650.0f, 120.0f);
 }
 
 // ---- a Champion ----------------------------------------------------------------------------------------------------
@@ -102,8 +67,8 @@ ADCCEnemyCharacter_GateChampion::ADCCEnemyCharacter_GateChampion()
 void ADCCEnemyCharacter_GateChampion::BeginPlay()
 {
 	Super::BeginPlay();
-	TintBody(this, FLinearColor(1.0f, 0.82f, 0.45f), 0.55f);
-	Aura(this, FLinearColor(1.0f, 0.75f, 0.3f), 3000.0f, 450.0f, 140.0f);
+	DCCCreatureLook::Tint(this, FLinearColor(1.0f, 0.82f, 0.45f), FLinearColor::White, 0.55f);
+	DCCCreatureLook::Aura(this, FLinearColor(1.0f, 0.75f, 0.3f), 3000.0f, 450.0f, 140.0f);
 }
 
 FString ADCCEnemyCharacter_GateChampion::RollName(int32 Seed)
@@ -146,22 +111,8 @@ void ADCCEnemyCharacter_GateShade::BeginPlay()
 {
 	Super::BeginPlay();
 	// See-through violet, in the same hologram material as Dead Air's ghosts, but the gate's colour.
-	USkeletalMeshComponent* Body = GetMesh();
-	UMaterialInterface* Holo = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Cyberpunk_City/Materials/Master/M_hologram.M_hologram"));
-	if (Body && Holo)
-	{
-		UMaterialInstanceDynamic* Spirit = UMaterialInstanceDynamic::Create(Holo, this);
-		Spirit->SetVectorParameterValue(TEXT("Emissive Color"), FLinearColor(0.75f, 0.35f, 1.0f, 1.0f));
-		Spirit->SetScalarParameterValue(TEXT("Emissive Intensity"), 9.0f);
-		Spirit->SetScalarParameterValue(TEXT("Tiling Hologram"), 10.0f);
-		for (int32 Slot = 0; Slot < Body->GetNumMaterials(); ++Slot)
-		{
-			Body->SetMaterial(Slot, Spirit);
-		}
-		// Something must sit in the overlay slot, or the arena's own shade would be put on top of the glow.
-		TintBody(this, FLinearColor(1.0f, 1.0f, 1.0f), 0.0f);
-	}
-	Aura(this, FLinearColor(0.55f, 0.3f, 1.0f), 900.0f, 280.0f, 100.0f);
+	DCCCreatureLook::Hologram(this, FLinearColor(0.75f, 0.35f, 1.0f, 1.0f), 9.0f, 10.0f);
+	DCCCreatureLook::Aura(this, FLinearColor(0.55f, 0.3f, 1.0f), 900.0f, 280.0f, 100.0f);
 }
 
 void ADCCEnemyCharacter_GateShade::Tick(float DeltaSeconds)

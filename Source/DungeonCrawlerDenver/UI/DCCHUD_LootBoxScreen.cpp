@@ -19,6 +19,10 @@
 
 #include "UI/DCCItemVisuals.h"
 #include "UI/DCCLootScreenInput.h"
+#include "UI/DCCLootStage.h"
+#include "Engine/Texture2D.h"
+#include "Engine/TextureRenderTarget2D.h"
+#include "Engine/StaticMesh.h"
 #include "Characters/DCCCharacterBase.h"
 #include "Equipment/DCCEquipmentComponent.h"
 #include "Equipment/DCCEquipmentTypes.h"
@@ -29,14 +33,15 @@
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
 #include "HAL/IConsoleManager.h"
+#include "TimerManager.h"
 
 namespace
 {
 	constexpr double ChargeSeconds = 0.75;
 	constexpr double ChargeAllSeconds = 1.2;
-	constexpr double BurstAt = 0.45;
-	constexpr double NextBoxDelay = 1.7;
-	constexpr double BatchNextDelay = 2.8;
+	constexpr double BurstAt = 1.25;       // the chest shakes harder and harder, glows, then bursts (2026-11-16: was 0.45)
+	constexpr double NextBoxDelay = 2.6;
+	constexpr double BatchNextDelay = 3.6;
 	constexpr double RequestTimeout = 4.0;
 	constexpr int32 MaxBatchCards = 32;
 
@@ -147,6 +152,10 @@ void ADCCHUD::ToggleLootBoxScreen()
 
 	if (bLootScreenOpen)
 	{
+		if (LootStage)
+		{
+			LootStage->SetActive(false);
+		}
 		bLootScreenOpen = false;
 		bLootHoldOne = false;
 		bLootHoldAll = false;
@@ -160,6 +169,10 @@ void ADCCHUD::ToggleLootBoxScreen()
 		return;
 	}
 
+	if (ADCCLootStage* Stage = GetLootStage())
+	{
+		Stage->SetActive(true);
+	}
 	if (!LootScreenInput)
 	{
 		LootScreenInput = CreateWidget<UDCCLootScreenInput>(PlayerOwner, UDCCLootScreenInput::StaticClass());
@@ -261,6 +274,38 @@ void ADCCHUD::ReceiveLootBoxReveal(const FDCCLootBoxReveal& Reveal)
 
 	LootReveal = Reveal;
 	LootRevealStart = Now;
+	RevealPictures.Reset();
+	if (ADCCLootStage* Stage = GetLootStage())
+	{
+		const ADCCCharacterBase* Crawler = GetOwningCrawler();
+		const UDCCEquipmentComponent* Equipment = Crawler ? Crawler->Equipment.Get() : nullptr;
+		for (int32 i = 0; i < ADCCLootStage::BoothCount; ++i)
+		{
+			UTexture* Picture = nullptr;
+			UStaticMesh* Mesh = nullptr;
+			if (Reveal.Entries.IsValidIndex(i) && Reveal.Entries[i].Kind == EDCCLootRevealKind::Item && !Reveal.Entries[i].ItemId.IsNone())
+			{
+				const FName Id = Reveal.Entries[i].ItemId;
+				FDCCEquipmentDef Def;
+				if (Equipment && Equipment->FindItem(Id, Def))
+				{
+					// What it looks like lying in your hands: the ground model (a folded blazer, a ring in its box) if it has one.
+					Mesh = Def.GroundMesh.LoadSynchronous();
+					if (!Mesh)
+					{
+						Mesh = Def.Mesh.LoadSynchronous();
+					}
+				}
+				if (!Mesh)
+				{
+					const FString Icon = FString::Printf(TEXT("T_Icon_%s"), *Id.ToString());
+					Picture = LoadObject<UTexture2D>(nullptr, *FString::Printf(TEXT("/Game/DCC/UI/Icons/%s.%s"), *Icon, *Icon));
+				}
+			}
+			UTexture* Photo = Stage->Photo(i, Mesh);
+			RevealPictures.Add(Photo ? Photo : Picture);
+		}
+	}
 	LootNextChargeAt = Now + (Reveal.BoxCount > 1 ? BatchNextDelay : NextBoxDelay);
 }
 
@@ -396,9 +441,23 @@ void ADCCHUD::DrawLootReveal(double Now)
 	UFont* Large = GEngine->GetLargeFont();
 
 	// 1. The box, alone in the middle, shaking itself apart.
+	ADCCLootStage* Stage = GetLootStage();
+	if (Stage)
+	{
+		Stage->PoseReveal(T, static_cast<float>(BurstAt), TierColour);
+	}
+	UTextureRenderTarget2D* ChestPicture = Stage ? Stage->RevealImage() : nullptr;
 	if (T < BurstAt)
 	{
 		const float U = T / BurstAt;
+		if (ChestPicture)
+		{
+			// The chest itself shakes and glows on its stage; here it only grows a touch as it builds.
+			const float Size = 380.0f + U * 40.0f;
+			DrawRect(WithAlpha(TierColour, 0.10f * U * U), CX - Size * 0.5f, CY - Size * 0.5f, Size, Size);
+			DrawTexture(ChestPicture, CX - Size * 0.5f, CY - Size * 0.5f, Size, Size, 0.0f, 0.0f, 1.0f, 1.0f, FLinearColor::White, BLEND_Additive);
+			return;
+		}
 		const float Shake = 4.0f + U * 14.0f;
 		const float Jx = FMath::Sin(T * 71.0f) * Shake;
 		const float Jy = FMath::Cos(T * 59.0f) * Shake * 0.6f;
@@ -424,9 +483,17 @@ void ADCCHUD::DrawLootReveal(double Now)
 		}
 	}
 
+	// The open chest, light pouring out of it, fading as the cards come out.
+	if (ChestPicture && B < 1.4f)
+	{
+		const float Fade = FMath::Clamp(1.0f - B / 1.4f, 0.0f, 1.0f);
+		const float Size = 420.0f;
+		DrawTexture(ChestPicture, CX - Size * 0.5f, CY - Size * 0.5f, Size, Size, 0.0f, 0.0f, 1.0f, 1.0f, FLinearColor(Fade, Fade, Fade, 1.0f), BLEND_Additive);
+	}
+
 	// 3. The header.
 	const FString Header = bBatch
-		? FString::Printf(TEXT("%d BOXES OPENED"), LootReveal.BoxCount)
+		? (LootReveal.BoxCount == 1 ? FString(TEXT("1 BOX OPENED")) : FString::Printf(TEXT("%d BOXES OPENED"), LootReveal.BoxCount))
 		: FString::Printf(TEXT("%s BOX"), *RarityName(LootReveal.Tier).ToUpper());
 	{
 		const float A = EaseOut(B / 0.3f);
@@ -452,9 +519,12 @@ void ADCCHUD::DrawLootReveal(double Now)
 	const int32 Shown = bBatch ? FMath::Min(Total, MaxBatchCards) : Total;
 	const int32 Columns = bBatch ? FMath::Min(Shown, 8) : Shown;
 	const int32 Rows = FMath::DivideAndRoundUp(Shown, Columns);
-	const float CardW = bBatch ? 170.0f : 210.0f;
-	const float CardH = bBatch ? 74.0f : 250.0f;
 	const float Gap = bBatch ? 10.0f : 22.0f;
+	// As wide as they like up to the screen's edge, then narrower so a full row always fits (six rewards ran off
+	// both sides of a 1280-wide window).
+	const float Room = Canvas->SizeX - 60.0f;
+	const float CardW = FMath::Min(bBatch ? 170.0f : 210.0f, (Room - (Columns - 1) * Gap) / Columns);
+	const float CardH = bBatch ? 74.0f : 300.0f;
 	const float GridW = Columns * CardW + (Columns - 1) * Gap;
 	const float GridH = Rows * CardH + (Rows - 1) * Gap;
 	const float Left = CX - GridW * 0.5f;
@@ -497,48 +567,60 @@ void ADCCHUD::DrawLootReveal(double Now)
 
 		const FLinearColor NameColour = WithAlpha(C * 0.6f + FLinearColor::White * 0.4f, Alpha);
 
+		// The item's own picture (from its real model, or its icon), when there is one.
+		UTexture* Picture = !bMore && RevealPictures.IsValidIndex(i) ? RevealPictures[i].Get() : nullptr;
 		if (bBatch)
 		{
 			const float IconSize = 44.0f;
 			const float IconX = X + 10.0f, IconY = Y + (CardH - IconSize) * 0.5f;
 			DrawRect(WithAlpha(C, 0.14f * Alpha), IconX, IconY, IconSize, IconSize);
-			if (!bMore)
+			if (Picture)
+			{
+				DrawTexture(Picture, IconX, IconY, IconSize, IconSize, 0.0f, 0.0f, 1.0f, 1.0f, FLinearColor(Alpha, Alpha, Alpha, Alpha), BLEND_Additive);
+			}
+			else if (!bMore)
 			{
 				DrawItemIcon(Card.Icon, IconX, IconY, IconSize, C, Alpha);
 			}
+			// One line each, cut to the card with "..." rather than running off it.
 			const float TX = IconX + IconSize + 10.0f;
-			DrawText(Card.Name, NameColour, TX, Y + 14.0f, Small, 1.0f);
-			DrawText(Card.Subtitle, WithAlpha(Dim, Alpha), TX, Y + 34.0f, Small, 1.0f);
+			const float TextW = X + CardW - 8.0f - TX;
+			const TArray<FString> NameLine = WrapToWidth(Card.Name, Small, TextW, 1);
+			const TArray<FString> SubLine = WrapToWidth(Card.Subtitle, Small, TextW, 1);
+			DrawText(NameLine.IsEmpty() ? FString() : NameLine[0], NameColour, TX, Y + 14.0f, Small, 1.0f);
+			DrawText(SubLine.IsEmpty() ? FString() : SubLine[0], WithAlpha(Dim, Alpha), TX, Y + 34.0f, Small, 1.0f);
 			continue;
 		}
 
-		const float IconSize = 96.0f;
+		const float IconSize = 128.0f;
 		const float IconX = X + (CardW - IconSize) * 0.5f;
-		const float IconY = Y + 26.0f;
+		const float IconY = Y + 20.0f;
 		DrawRect(WithAlpha(C, 0.12f * Alpha), IconX, IconY, IconSize, IconSize);
-		DrawItemIcon(Card.Icon, IconX, IconY, IconSize, C, Alpha);
+		if (Picture)
+		{
+			DrawTexture(Picture, IconX, IconY, IconSize, IconSize, 0.0f, 0.0f, 1.0f, 1.0f, FLinearColor(Alpha, Alpha, Alpha, Alpha), BLEND_Additive);
+		}
+		else
+		{
+			DrawItemIcon(Card.Icon, IconX + 16.0f, IconY + 16.0f, IconSize - 32.0f, C, Alpha);
+		}
 
 		float TY = IconY + IconSize + 14.0f;
-		auto Centred = [&](const FString& Line, const FLinearColor& Colour, UFont* Font)
+		// Wrapped to the card (2026-11-16, Zoe: "some of the text from the lootboxes doesn't wrap and just dangles on").
+		auto Centred = [&](const FString& Line, const FLinearColor& Colour, UFont* Font, int32 MaxLines)
 		{
-			if (Line.IsEmpty())
+			for (const FString& Part : WrapToWidth(Line, Font, CardW - 16.0f, MaxLines))
 			{
-				return;
+				float W = 0.0f, H = 0.0f;
+				GetTextSize(Part, W, H, Font, 1.0f);
+				DrawText(Part, Colour, X + FMath::Max(8.0f, (CardW - W) * 0.5f), TY, Font, 1.0f);
+				TY += H + 2.0f;
 			}
-			float W = 0.0f, H = 0.0f;
-			GetTextSize(Line, W, H, Font, 1.0f);
-			// A long name drops to the small font rather than spilling off the card.
-			UFont* Use = W > CardW - 16.0f && Font != Small ? Small : Font;
-			if (Use != Font)
-			{
-				GetTextSize(Line, W, H, Use, 1.0f);
-			}
-			DrawText(Line, Colour, X + FMath::Max(8.0f, (CardW - W) * 0.5f), TY, Use, 1.0f);
-			TY += H + 4.0f;
+			TY += 3.0f;
 		};
-		Centred(Card.Name, NameColour, Medium);
-		Centred(Card.Subtitle, WithAlpha(Dim, Alpha), Small);
-		Centred(Card.Detail, WithAlpha(Ink, Alpha), Small);
+		Centred(Card.Name, NameColour, Medium, 2);
+		Centred(Card.Subtitle, WithAlpha(Dim, Alpha), Small, 2);
+		Centred(Card.Detail, WithAlpha(Ink, Alpha), Small, 3);
 	}
 }
 
@@ -728,7 +810,7 @@ void ADCCHUD::DrawLootBoxScreen()
 		}
 
 		const FLinearColor Colour = RarityColour(Row[i]);
-		DrawGiftBox(X, Y, Size, Colour, Alpha, Glow);
+		DrawChest(X, Y, Size, Colour, Alpha, Glow);
 		LootBoxRects[i] = FBox2D(FVector2D(X - Size * 0.6f, Y - Size), FVector2D(X + Size * 0.6f, Y + 8.0f));
 
 		if (bSelected)
@@ -802,3 +884,143 @@ static FAutoConsoleCommandWithWorldAndArgs GGiveBoxesCmd(
 	TEXT("DCC.GiveBoxes"),
 	TEXT("DCC.GiveBoxes [count]: give every crawler [count] loot boxes of each tier (default 2)."),
 	FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&DCCGiveBoxesCommand));
+
+// ---- Real chests and items (2026-11-16) ---------------------------------------------------------------------------
+
+ADCCLootStage* ADCCHUD::GetLootStage()
+{
+	if (!LootStage && GetWorld())
+	{
+		// Far below everything, where nothing else is, and only this machine has one.
+		FActorSpawnParameters Params;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		Params.ObjectFlags |= RF_Transient;
+		// High above the world, never below it: height fog thickens exponentially downward and filled every picture
+		// with the arena's fog colour when the studio hung 600 m underground.
+		LootStage = GetWorld()->SpawnActor<ADCCLootStage>(ADCCLootStage::StaticClass(), FTransform(FVector(0.0f, 0.0f, 200000.0f)), Params);
+	}
+	return LootStage;
+}
+
+void ADCCHUD::DrawChest(float CentreX, float BaseY, float Size, const FLinearColor& Colour, float Alpha, float Glow)
+{
+	UTextureRenderTarget2D* Picture = LootStage ? LootStage->IdleImage() : nullptr;
+	if (!Picture)
+	{
+		DrawGiftBox(CentreX, BaseY, Size, Colour, Alpha, Glow);
+		return;
+	}
+	// A glow in the box's colour behind it, and the chest itself tinted toward that colour so the tiers tell apart.
+	const float S = Size * 1.5f;
+	if (Glow > 0.0f)
+	{
+		const float G = S * (0.1f + Glow * 0.2f);
+		DrawRect(WithAlpha(Colour, 0.10f * Glow * Alpha), CentreX - S * 0.5f - G, BaseY - S - G * 0.5f, S + G * 2.0f, S + G);
+	}
+	DrawRect(WithAlpha(Colour, 0.55f * Alpha), CentreX - S * 0.32f, BaseY - 2.0f, S * 0.64f, 3.0f); // the tier's line under it
+	const FLinearColor Tint = FMath::Lerp(FLinearColor::White, Colour, 0.4f) * Alpha;
+	DrawTexture(Picture, CentreX - S * 0.5f, BaseY - S * 0.92f, S, S, 0.0f, 0.0f, 1.0f, 1.0f, FLinearColor(Tint.R, Tint.G, Tint.B, 1.0f), BLEND_Additive);
+}
+
+TArray<FString> ADCCHUD::WrapToWidth(const FString& Text, UFont* Font, float MaxWidth, int32 MaxLines)
+{
+	TArray<FString> Lines;
+	if (Text.IsEmpty())
+	{
+		return Lines;
+	}
+	TArray<FString> Words;
+	Text.ParseIntoArrayWS(Words);
+	FString Current;
+	for (int32 w = 0; w < Words.Num(); ++w)
+	{
+		const FString Trial = Current.IsEmpty() ? Words[w] : Current + TEXT(" ") + Words[w];
+		float W = 0.0f, H = 0.0f;
+		GetTextSize(Trial, W, H, Font, 1.0f);
+		if (W <= MaxWidth || Current.IsEmpty())
+		{
+			Current = Trial;
+			continue;
+		}
+		Lines.Add(Current);
+		Current = Words[w];
+		if (Lines.Num() == MaxLines)
+		{
+			Current.Reset();
+			// Out of room: the last line says there was more.
+			FString& Last = Lines.Last();
+			for (;;)
+			{
+				float LW = 0.0f, LH = 0.0f;
+				GetTextSize(Last + TEXT("..."), LW, LH, Font, 1.0f);
+				if (LW <= MaxWidth || Last.Len() <= 1)
+				{
+					break;
+				}
+				Last.LeftChopInline(1);
+			}
+			Last += TEXT("...");
+			return Lines;
+		}
+	}
+	if (!Current.IsEmpty())
+	{
+		// A single word wider than the card is cut too.
+		float W = 0.0f, H = 0.0f;
+		GetTextSize(Current, W, H, Font, 1.0f);
+		while (W > MaxWidth && Current.Len() > 1)
+		{
+			Current.LeftChopInline(1);
+			GetTextSize(Current + TEXT("..."), W, H, Font, 1.0f);
+			if (W <= MaxWidth)
+			{
+				Current += TEXT("...");
+				break;
+			}
+		}
+		Lines.Add(Current);
+	}
+	return Lines;
+}
+
+void ADCCHUD::DevOpenBestLootBox()
+{
+	if (!bLootScreenOpen)
+	{
+		ToggleLootBoxScreen();
+	}
+	TArray<EDCCLootBoxTier> Row;
+	BuildLootRow(Row);
+	if (Row.IsEmpty() && GEngine && GetWorld())
+	{
+		GEngine->Exec(GetWorld(), TEXT("DCC.GiveBoxes 1")); // none to open: give one of each (a test, after all)
+		BuildLootRow(Row);
+	}
+	if (!Row.IsEmpty())
+	{
+		SendLootOpen(Row.Last(), 1, false);
+	}
+}
+
+// DCC.LootOpen [delay]: (dev) open the loot screen and one of your best boxes, for checking the reveal.
+static FAutoConsoleCommandWithWorldAndArgs GLootOpenCommand(TEXT("DCC.LootOpen"), TEXT("DCC.LootOpen [delay]: (dev) open the loot screen and your best box."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		const float Delay = Args.Num() > 0 ? FCString::Atof(*Args[0]) : 0.0f;
+		TWeakObjectPtr<UWorld> Weak(World);
+		auto Open = [Weak]()
+		{
+			APlayerController* PC = Weak.IsValid() ? Weak->GetFirstPlayerController() : nullptr;
+			if (ADCCHUD* Hud = PC ? Cast<ADCCHUD>(PC->GetHUD()) : nullptr)
+			{
+				Hud->DevOpenBestLootBox();
+			}
+		};
+		if (Delay <= 0.0f || !World)
+		{
+			Open();
+			return;
+		}
+		FTimerHandle Handle;
+		World->GetTimerManager().SetTimer(Handle, FTimerDelegate::CreateLambda(Open), Delay, false);
+	}));

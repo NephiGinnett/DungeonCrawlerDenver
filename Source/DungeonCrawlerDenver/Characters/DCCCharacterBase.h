@@ -68,6 +68,34 @@ DECLARE_MULTICAST_DELEGATE_ThreeParams(FDCCDamageLanded, ADCCCharacterBase* /*De
  * Server-authoritative. PerformAttack refuses to run on a client; clients see
  * the outcome through replicated hit points and the cosmetic multicast.
  */
+/**
+ * One slot on the belt (2026-11-16, Zoe: "I feel we have 1000 different keys and could better consolidate a few into
+ * a selected item + click rather than a dedicated key"). The number keys pick a slot. A skill is armed as before; a
+ * thing you aim (a lightstick, the spray can, a throw) is armed and the next left click uses it; anything else (a
+ * tool, food, the lamp, the body cam, the grappling hook) is used the moment its number is pressed. On a wall your
+ * hands are busy, so every slot works straight from its number there. Built fresh each time it is asked for, from
+ * what this crawler has right now in this game. Local.
+ */
+enum class EDCCBelt : uint8 { Skill, Grapple, Tool, Quick, Spray, Lightstick, Lamp, BodyCam, Throw, Stow };
+
+struct FDCCBeltEntry
+{
+	EDCCBelt Kind = EDCCBelt::Skill;
+	/** The skill, the tool or the consumable this slot is for (none for the rest). */
+	FName ItemId;
+	FString Name;
+	/** How many are left, or -1 when that does not apply. */
+	int32 Count = -1;
+	/** Seconds until it can be used again (a skill, the hook). */
+	float Cooldown = 0.0f;
+	/** A switch that is on (the lamp, the body cam). */
+	bool bOn = false;
+	/** Armed and then used with a click, rather than used on the key. */
+	bool bAimed = false;
+	/** The food slot: how many different foods and drinks you have (the middle mouse button picks among them). */
+	int32 Choices = 0;
+};
+
 UCLASS(Abstract)
 class DUNGEONCRAWLERDENVER_API ADCCCharacterBase : public ACharacter, public IDCCLootSource
 {
@@ -308,6 +336,15 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Animation", meta = (ClampMin = "0.0"))
 	float HitReactionCooldown = 0.22f;
 
+	/**
+	 * The struck character stops dead for this long before the flinch (2026-11-16, Zoe, after Elyra's Tales' hit-stop:
+	 * "a small stutter / pausing the defender"). Only the one who was hit pauses, on every screen; nobody else's game
+	 * does, which is what a whole-game freeze would do to a five-player round. Zero turns it off.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Animation", meta = (ClampMin = "0.0"))
+	float HitStutterSeconds = 0.08f;
+	FTimerHandle HitStutterTimer;
+
 	/** Above this ground speed the run cycle is used instead of the walk. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Animation", meta = (ClampMin = "0.0"))
 	float RunSpeedThreshold = 320.0f;
@@ -463,6 +500,31 @@ public:
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_PlayEmoteAtIndex(int32 Index);
 	void Multicast_PlayEmoteAtIndex_Implementation(int32 Index);
+
+	/**
+	 * Reactions (Characters/DCCReactions, 2026-11-16): a bubble over the head, often with a move. Server only. Automatic
+	 * ones (bAuto) wait out a short cooldown, so a busy fight does not become a storm of bubbles; ones a player picks,
+	 * and the big moments (going down, a revive, the summit), go straight through.
+	 */
+	void React(uint8 Reaction, bool bAuto = true);
+	/** A moment (DCCReactions::EMoment) happened: react the way this player chose for it (SETTINGS tab). Server. */
+	void ReactTo(uint8 Moment, bool bAuto = true);
+	UFUNCTION(Server, Reliable)
+	void Server_RequestReaction(uint8 Reaction);
+	/** This player's choice of bubble and move for each moment, from their own PC. */
+	UFUNCTION(Server, Reliable)
+	void Server_SetReactionChoices(const TArray<uint8>& Choices);
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_React(uint8 Reaction, uint8 Move);
+	TArray<uint8> ReactionChoices;
+	bool bReactionChoicesSent = false;
+	uint8 GetReaction() const { return ActiveReaction; }
+	float GetReactionStart() const { return ReactionStartTime; }
+	uint8 ActiveReaction = 0;
+	float ReactionStartTime = -100.0f;
+	float NextAutoReactionTime = 0.0f;
+	float NextPickedReactionTime = 0.0f;
+	bool bOutOfBreath = false;
 
 	/** Played once per swing. Without this, attacks are invisible. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Animation")
@@ -746,13 +808,12 @@ public:
 	// BindKey carries no payload, so the wheel needs one thunk per direction -
 	// the same reason the five skill slots each have their own function.
 	//
-	// Routed to whichever menu is actually open. The three are mutually
-	// exclusive in practice - opening one closes the others - but checking
-	// VendorTargetActor and LootTargetActor first costs nothing and means the
-	// wheel never silently does nothing because it was driving the wrong
-	// menu's index.
-	void InteractionScrollUp() { bInSelfieMode ? CycleSelfiePose(-1) : bEmoteMenuOpen ? CycleEmoteMenu(-1) : VendorTargetActor ? CycleVendorMenu(-1) : LootTargetActor ? CycleLootMenu(-1) : OathgateTargetActor ? CycleOathgateMenu(-1) : NPCInteractionTarget ? CycleNPCInteractionMenu(-1) : CycleInteractionOption(-1); }
-	void InteractionScrollDown() { bInSelfieMode ? CycleSelfiePose(1) : bEmoteMenuOpen ? CycleEmoteMenu(1) : VendorTargetActor ? CycleVendorMenu(1) : LootTargetActor ? CycleLootMenu(1) : OathgateTargetActor ? CycleOathgateMenu(1) : NPCInteractionTarget ? CycleNPCInteractionMenu(1) : CycleInteractionOption(1); }
+	// Routed to whichever menu is actually open. With none open, and with the
+	// interaction list empty, the wheel steps the belt's aimed slots (see
+	// HandleScroll). An armed skill is left alone.
+	void InteractionScrollUp() { HandleScroll(-1); }
+	void InteractionScrollDown() { HandleScroll(1); }
+	void HandleScroll(int32 Delta);
 
 	UFUNCTION(BlueprintCallable, Category = "DCC|Interaction")
 	void CloseInteraction();
@@ -1577,7 +1638,7 @@ public:
 	void ReleaseClimb();
 
 	// --- Hold-to-climb (2026-11-13, Zoe's design) ------------------------------
-	// 1. Equip the Climbing skill (hotbar). 2. Hold the left mouse button: you grab
+	// 1. Equip the Climbing skill (belt). 2. Hold the left mouse button: you grab
 	// the wall in front of you and climb (also when you walk into a wall while
 	// holding). 3. Let go of the button, or run out of stamina, and you drop.
 	// Right mouse, held, climbs down. Without Climbing equipped a wall is never
@@ -1592,9 +1653,8 @@ public:
 	/** Local, for the automated climb test (DCC.ClimbTest): as if the left mouse were held or released. */
 	void DebugSetClimbHold(bool bHeld) { bClimbHeld = bHeld; bDescendHeld = false; ClimbGrabRetry = 0.0f; }
 
-	/** [Q] / [T]: use or switch the Fourteener tool in hand (UDCCWalletComponent). */
-	void UseClimbTool();
-	void NextClimbTool();
+	/** The belt grappling hook (Fourteener). The hook slot calls this. */
+	void ThrowGrapple();
 
 	/** Server: move this climber somewhere at once, on every machine including their own (a grappling hook). */
 	void SnapTo(const FVector& Location);
@@ -1647,6 +1707,45 @@ public:
 
 	UFUNCTION(Server, Reliable)
 	void Server_UseQuickSlot(int32 Index);
+
+	// --- The belt (see FDCCBeltEntry) ---------------------------------------------------------------------------
+	/** What is on this crawler's belt right now, slot 1 first. At most 9 slots (the number keys). */
+	void GetBelt(TArray<FDCCBeltEntry>& Out) const;
+	/** A number key: arm, use or put away the slot at Index (0-based). */
+	void BeltKey(int32 Index);
+	/** (dev) a left click, for automated checks (DCC.Click). */
+	void DevClick() { OnPrimaryPressed(); OnPrimaryReleased(); }
+	/** (dev) the scroll wheel. Positive is wheel-down, the same direction InteractionScrollDown uses. */
+	void DevWheel(int32 Delta) { HandleScroll(Delta); }
+	/** Step through aimed belt slots: nothing armed, then each aimed slot, then nothing again. */
+	void CycleBeltAim(int32 Delta);
+	/** The aimed slot waiting for a click, if any. */
+	bool IsBeltArmed(const FDCCBeltEntry& Entry) const { return ArmedBeltKind == int32(Entry.Kind) && ArmedBeltItem == Entry.ItemId; }
+	bool HasBeltArmed() const { return ArmedBeltKind >= 0; }
+	/** The name of the armed slot, for the HUD's hint. */
+	FString GetArmedBeltName() const;
+	/** Put the armed slot away. */
+	void DisarmBelt() { ArmedBeltKind = -1; ArmedBeltItem = NAME_None; }
+	/** In one of the arcade games (not the Dungeon Crawler Denver runs). */
+	bool IsInArcade() const;
+	/** Use an entry from GetBelt now. */
+	void UseBeltEntry(const FDCCBeltEntry& Entry);
+	/**
+	 * Food and drink share one belt slot (2026-11-17, Zoe: "make food sit on one spot and make it so you can press a
+	 * button ... to cycle through what you have"). These are the ones you have, in a fixed order; the slot shows and
+	 * eats SelectedFood. The middle mouse button (CycleFood) moves on to the next.
+	 */
+	void GetFoods(TArray<FName>& Out) const;
+	void CycleFood();
+	/** Where the food slot's food is in GetFoods (0 when nothing has been picked yet). */
+	int32 GetFoodIndex() const { TArray<FName> Foods; GetFoods(Foods); return FMath::Max(0, Foods.IndexOfByKey(SelectedFood)); }
+	mutable FName SelectedFood;
+	/** Where the picked food was, so when the last one is eaten the slot moves to the next food, not the first. */
+	mutable int32 SelectedFoodAt = 0;
+
+	/** Server: use a Fourteener tool or a consumable by id (a belt slot). */
+	UFUNCTION(Server, Reliable)
+	void Server_UseBeltItem(FName ItemId);
 	float StaminaRegenMultiplier = 1.0f;
 
 	/** Seconds continuously on the ground. Stamina does not come back during a stall or a fall. Server only. */
@@ -1761,11 +1860,25 @@ protected:
 	/** Arms the Nth known skill. One handler per key; BindKey carries no payload. */
 	void SelectSkillSlot(int32 Index);
 	// Hotbar (2026-11-13): 1 = your first skill, 2 and 3 = quick items, 4 and 5 = your next two skills.
-	void SelectSkillSlot1() { SelectSkillSlot(0); }
-	void SelectSkillSlot2() { UseQuickSlot(0); }
-	void SelectSkillSlot3() { UseQuickSlot(1); }
-	void SelectSkillSlot4() { SelectSkillSlot(1); }
-	void SelectSkillSlot5() { SelectSkillSlot(2); }
+	// The belt's number keys (2026-11-16): one handler per key, BindKey carries no payload.
+	void BeltKey1() { BeltKey(0); }
+	void BeltKey2() { BeltKey(1); }
+	void BeltKey3() { BeltKey(2); }
+	void BeltKey4() { BeltKey(3); }
+	void BeltKey5() { BeltKey(4); }
+	void BeltKey6() { BeltKey(5); }
+	void BeltKey7() { BeltKey(6); }
+	void BeltKey8() { BeltKey(7); }
+	void BeltKey9() { BeltKey(8); }
+public:
+	/** The B menu's camera rows, between the reactions and the moves: the photo pose, the selfie camera. */
+	static constexpr int32 EmoteCameraRows = 2;
+protected:
+	int32 ArmedBeltKind = -1;
+	FName ArmedBeltItem;
+	/** P and M belong to the dungeon runs; the arcade games ignore them. */
+	void PausePressed() { if (!IsInArcade()) { RequestTogglePause(); } }
+	void MountPressed() { if (!IsInArcade()) { ToggleMount(); } }
 
 public:
 
@@ -2627,6 +2740,17 @@ public:
 	bool bRecordingFootage = false;
 
 	void ToggleRecording();
+
+	/**
+	 * The selfie cam (2026-11-16, Zoe: "a selfie facing camera for when they prefer"): X swings the camera round to
+	 * look back at your face while you keep moving and filming, the way a vlogger holds a phone. X again puts it back.
+	 * Unlike the C pose selfie, play does not stop. Local: only this player's view changes.
+	 */
+	void ToggleFacingCamera();
+	bool IsFacingCamera() const { return bFacingCamera; }
+	bool bFacingCamera = false;
+	bool bFacingCameraWasControlRotation = true;
+	void TickFacingCamera(float DeltaSeconds);
 
 	UFUNCTION(Server, Reliable)
 	void Server_SetRecording(bool bRecording);

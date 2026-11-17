@@ -26,6 +26,11 @@
 #include "Dialogue/DCCDialogueNPC.h"
 #include "Onboarding/DCCOnboardingComponent.h"
 #include "Vehicles/DCCRover.h"
+#include "Arcade/DCCSpray.h"
+#include "Arcade/DCCSprayTag.h"
+#include "Engine/PointLight.h"
+#include "Components/PointLightComponent.h"
+#include "Misc/Paths.h"
 
 namespace
 {
@@ -276,6 +281,36 @@ void ADCCRallyTrailerDirector::Setup()
 	}
 	Zoe = SpawnCrawler(TEXT("Zoe"), SkyBase + FVector(50, -50, -15), -30.0f, TEXT("FloorBossCrown"), AnimCall);
 
+	// The tag beat: a rival crew's tow truck parked by the dispatch office, and the trailer's own tag, "(YOUR JPG HERE)".
+	RivalTruck = SpawnTruck(Yard + FVector(-500, 1450, Ride - Yard.Z), 90.0f, 1, TEXT("RIVAL"));
+	if (ADCCRover* Truck = RivalTruck.Get()) { Truck->SetWrecker(true); }
+	{
+		FString Error;
+		if (!DCCSpray::DecodePicture(FPaths::ProjectDir() / TEXT("SourceArt/Itch/tag_your_jpg_here.png"), TagPixels, Error))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[DCC Trailer] tag picture: %s"), *Error);
+		}
+		// Who sprays (0 Marcel, 1 Vaughn), from where, which way. Straight at the wall or the truck's flank.
+		// The dispatch office's east face is at about x = -1857 (found by trace, 2026-11-16).
+		TagShots.Add({ 25.2f, 0, Yard + FVector(-1650, 2850, 240), FVector(-1, 0, 0) });
+		TagShots.Add({ 26.7f, 0, Yard + FVector(-1650, 3430, 300), FVector(-1, 0, 0) });
+		TagShots.Add({ 28.8f, 1, Yard + FVector(-150, 1450, 150), FVector(-1, 0, 0) });
+		// That face of the office is in deep shadow at night, and a painted tag takes the light it is in.
+		const FVector Lamps[] = { Yard + FVector(-1350, 3150, 430), Yard + FVector(-60, 1250, 330) };
+		FActorSpawnParameters LampParams;
+		LampParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		for (const FVector& At : Lamps)
+		{
+			if (APointLight* Lamp = World->SpawnActor<APointLight>(At, FRotator::ZeroRotator, LampParams))
+			{
+				Lamp->PointLightComponent->SetIntensity(12000.0f);
+				Lamp->PointLightComponent->SetAttenuationRadius(1500.0f);
+				Lamp->PointLightComponent->SetLightColor(FLinearColor(1.0f, 0.86f, 0.95f));
+				Lamp->PointLightComponent->SetCastShadows(false);
+			}
+		}
+	}
+
 	DropMark = SpawnTruck(Yard + FVector(1920, 4000, Ride - Yard.Z), 0.0f, 1, TEXT("MARK"));
 	if (ADCCRover* Parked = DropMark.Get())
 	{
@@ -441,6 +476,7 @@ void ADCCRallyTrailerDirector::Pose(float T)
 	}
 
 	OwnerBeat(T);
+	SprayBeat(T);
 
 	// The drop: Scott's truck leaves its bay and the mark is on the bumper.
 	if (T >= DropStart)
@@ -552,11 +588,29 @@ void ADCCRallyTrailerDirector::Shoot(float T)
 	}
 	else if (T < 34.0f)
 	{
-		// Into the wrecker cab from the driver's side. She sits forward of the bed, in the nose.
-		const FVector Truck = SkyTruck.IsValid() ? SkyTruck->GetActorLocation() : Origin + FVector(0, SkyFixed, Rise);
-		From = Truck + FVector(40.0f, -480.0f, 120.0f);
-		LookAt = Truck + FVector(210.0f, -20.0f, 30.0f);
-		Fov = 34.0f;
+		// The tag beat (replaced the skyway, 2026-11-16, Zoe: "instead of the side of the truck, you see a player spraying
+		// their jpg"). Marcel at the dispatch wall, Vaughn at the rival's truck, then back to see both.
+		if (T < 27.6f)
+		{
+			const float A = Ease(Phase(T, 24.0f, 27.6f));
+			From = Yard + FMath::Lerp(FVector(-1120.0f, 2560.0f, 215.0f), FVector(-1240.0f, 2700.0f, 205.0f), A);
+			LookAt = Yard + FVector(-1857.0f, 3080.0f, 255.0f);
+			Fov = 54.0f;
+		}
+		else if (T < 30.4f)
+		{
+			const float A = Ease(Phase(T, 27.6f, 30.4f));
+			From = Yard + FMath::Lerp(FVector(480.0f, 880.0f, 220.0f), FVector(380.0f, 1000.0f, 200.0f), A);
+			LookAt = Yard + FVector(-450.0f, 1450.0f, 130.0f);
+			Fov = 46.0f;
+		}
+		else
+		{
+			const float A = Ease(Phase(T, 30.4f, 34.0f));
+			From = Yard + FMath::Lerp(FVector(700.0f, 1650.0f, 380.0f), FVector(1350.0f, 1250.0f, 720.0f), A);
+			LookAt = Yard + FMath::Lerp(FVector(-900.0f, 2450.0f, 230.0f), FVector(-1200.0f, 2600.0f, 300.0f), A);
+			Fov = 55.0f;
+		}
 	}
 	else if (T < DropStart)
 	{
@@ -669,7 +723,7 @@ void ADCCRallyTrailerDirector::OwnerBeat(float T)
 		const FVector Face(KyleAt.X + 200.0f, KyleAt.Y - 280.0f, Stand);
 		const FVector Away(Street.X + 2600.0f, Street.Y - 2400.0f, Stand);
 		FVector At = FMath::Lerp(From, Face, Ease(Phase(T, 34.3f, 36.4f)));
-		if (T >= 40.4f) { At = FMath::Lerp(Face, Away, Ease(Phase(T, 40.4f, DropStart))); }
+		if (T >= 40.4f) { At = FMath::Lerp(Face, Away, Ease(Phase(T, 40.4f, DropStart))); } // DropStart is 41 now
 		const FVector Look = T >= 40.4f ? Away : KyleAt;
 		Yell->SetActorLocationAndRotation(At, FRotator(0.0f, (Look - At).Rotation().Yaw, 0.0f));
 		Yell->SetMood(T < 36.4f || T >= 40.4f ? ADCCRallyThug::Run : ADCCRallyThug::Attack);
@@ -764,7 +818,7 @@ void ADCCRallyTrailerDirector::Tick(float DeltaSeconds)
 	{
 		const ADCCRover* Car = *It;
 		const bool bOurs = Car == BayScott.Get() || Car == BayCJ.Get() || Car == BayMarcel.Get() || Car == BayVaughn.Get()
-			|| Car == HookTruck.Get() || Car == HookMark.Get() || Car == SkyTruck.Get() || Car == DropMark.Get();
+			|| Car == HookTruck.Get() || Car == HookMark.Get() || Car == SkyTruck.Get() || Car == DropMark.Get() || Car == RivalTruck.Get();
 		if (!bOurs)
 		{
 			It->SetActorHiddenInGame(true);
@@ -811,3 +865,82 @@ static FAutoConsoleCommandWithWorldAndArgs GRallyTrailerCommand(
 	TEXT("DCC.RallyTrailer"),
 	TEXT("DCC.RallyTrailer [capture <dir>]: play the 52 s Repo Rally ad (in a Repo Rally round). Tools/make_trailer.py --rally renders it."),
 	FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&DCCRallyTrailerCommand));
+
+void ADCCRallyTrailerDirector::SprayBeat(float T)
+{
+	if (T < 23.5f || T >= 34.0f)
+	{
+		return;
+	}
+	const FVector Yard = YardOf(Origin);
+	const float Stand = Yard.Z + 100.0f;
+	ADCCCharacterBase* Painters[] = { Marcel.Get(), Vaughn.Get() };
+	const FVector Spots[] = { FVector(-1650.0f, 3150.0f, 0.0f), FVector(-160.0f, 1450.0f, 0.0f) };
+	const float LastShot[] = { 26.7f, 28.8f };
+	for (int32 i = 0; i < 2; ++i)
+	{
+		if (ADCCCharacterBase* Who = Painters[i])
+		{
+			// Facing the wall (or the truck), arms up at it like a can, then a little celebration once the tag is up.
+			// The aim clip stands side-on with the arm out to the left, so the body turns a quarter away from the target.
+			const bool bAiming = T < LastShot[i] + 0.9f;
+			Who->SetActorLocationAndRotation(FVector(Yard.X + Spots[i].X, Yard.Y + Spots[i].Y, Stand), FRotator(0.0f, bAiming ? 270.0f : 0.0f, 0.0f));
+			SetClip(Who, bAiming ? AnimAim : (i == 0 ? AnimDance : AnimBoom));
+		}
+	}
+	if (ADCCRover* Truck = RivalTruck.Get())
+	{
+		Place(Truck, Yard + FVector(-500.0f, 1450.0f, 150.0f), 90.0f);
+	}
+
+	for (FTagShot& Shot : TagShots)
+	{
+		if (Shot.Painted < 0.0f && T >= Shot.At && TagPixels.Num() == DCCSpray::Bytes)
+		{
+			Shot.Painted = T;
+			// Trucks do not block traces (only pawns hit them), so the truck's tag goes on its measured flank and is fixed
+			// to it.
+			if (Shot.Who == 1 && RivalTruck.IsValid())
+			{
+				// Trucks block only pawns, so find its flank on the pawn channel.
+				ADCCRover* Truck = RivalTruck.Get();
+				FHitResult Side;
+				FCollisionQueryParams Only(SCENE_QUERY_STAT(DCCTrailerTruck), false);
+				for (ADCCCharacterBase* Who : Painters) { if (Who) { Only.AddIgnoredActor(Who); } }
+				FVector At = Truck->GetActorLocation() + FVector(110.0f, 0.0f, 0.0f);
+				if (GetWorld()->LineTraceSingleByChannel(Side, Shot.From, Shot.From + Shot.Dir * 1500.0f, ECC_Pawn, Only) && Side.GetActor() == Truck)
+				{
+					At = Side.ImpactPoint;
+				}
+				if (ADCCSprayTag* Tag = DCCSpray::PaintTag(GetWorld(), At, FVector(1, 0, 0), Shot.Dir, TagPixels, TEXT("Trailer"), Painters[1]))
+				{
+					Tag->AttachToActor(Truck, FAttachmentTransformRules::KeepWorldTransform);
+					Shot.Tag = Tag;
+					UE_LOG(LogTemp, Log, TEXT("[DCC Trailer] tag 1 on the rival truck's flank at x=%.0f"), At.X - YardOf(Origin).X);
+				}
+				continue;
+			}
+			FHitResult Hit;
+			FCollisionQueryParams Params(SCENE_QUERY_STAT(DCCTrailerTag), true);
+			for (ADCCCharacterBase* Who : Painters) { if (Who) { Params.AddIgnoredActor(Who); } }
+			if (GetWorld()->LineTraceSingleByChannel(Hit, Shot.From, Shot.From + Shot.Dir * 1500.0f, ECC_Visibility, Params))
+			{
+				Shot.Tag = DCCSpray::PaintTag(GetWorld(), Hit.ImpactPoint, Hit.ImpactNormal, Shot.Dir, TagPixels, TEXT("Trailer"), Painters[Shot.Who]);
+				UE_LOG(LogTemp, Log, TEXT("[DCC Trailer] tag %d on %s, %.0f cm out"), Shot.Who, Hit.GetActor() ? *Hit.GetActor()->GetName() : TEXT("?"), Hit.Distance);
+			}
+			else
+			{
+				UE_LOG(LogTemp, Warning, TEXT("[DCC Trailer] tag %d found no surface"), Shot.Who);
+			}
+		}
+		// It pops on: quick to full size, a touch over, then settles.
+		if (ADCCSprayTag* Tag = Shot.Tag.Get())
+		{
+			const float Age = T - Shot.Painted;
+			const float Grow = Age < 0.25f ? FMath::Lerp(0.15f, 1.12f, Ease(Age / 0.25f)) : FMath::Lerp(1.12f, 1.0f, FMath::Clamp((Age - 0.25f) / 0.2f, 0.0f, 1.0f));
+			// Deeper on the truck so it wraps the curved bodywork.
+			const float Big = Shot.Who == 1 ? 1.0f : 1.6f; // the wall tags read from across the yard
+			Tag->SetActorScale3D(FVector(Shot.Who == 1 ? 5.0f : 1.0f, Grow * Big, Grow * Big));
+		}
+	}
+}

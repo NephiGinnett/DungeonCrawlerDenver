@@ -104,7 +104,7 @@ void UDCCDungeonGrid::Corridor(FIntPoint A, FIntPoint B)
 	}
 }
 
-bool UDCCDungeonGrid::Build(int32 InSize, int32 InSeed, int32 FightRooms, int32 ChestRooms)
+bool UDCCDungeonGrid::Build(int32 InSize, int32 InSeed, int32 FightRooms, int32 ChestRooms, const FStyle& Style)
 {
 	Size = FMath::Clamp(InSize, 16, 48);
 	Seed = InSeed;
@@ -132,8 +132,11 @@ bool UDCCDungeonGrid::Build(int32 InSize, int32 InSeed, int32 FightRooms, int32 
 	{
 		++Tries;
 		const bool bGrand = Placed.Num() == Want.Num() - 1;
-		const int32 W = bGrand ? Stream.RandRange(7, 9) : Stream.RandRange(5, 7);
-		const int32 H = bGrand ? Stream.RandRange(7, 9) : Stream.RandRange(5, 7);
+		// The first room (the start) is never smaller than 3 cells: Dead Air's cage stands in it.
+		const int32 Lo = Placed.Num() == 0 ? FMath::Max(Style.RoomMin, 3) : Style.RoomMin;
+		const int32 Hi = Placed.Num() == 0 ? FMath::Max(Style.RoomMax, 3) : Style.RoomMax;
+		const int32 W = bGrand ? Stream.RandRange(Style.GrandMin, Style.GrandMax) : Stream.RandRange(Lo, Hi);
+		const int32 H = bGrand ? Stream.RandRange(Style.GrandMin, Style.GrandMax) : Stream.RandRange(Lo, Hi);
 		if (W >= Size - 2 || H >= Size - 2)
 		{
 			continue;
@@ -184,6 +187,28 @@ bool UDCCDungeonGrid::Build(int32 InSize, int32 InSeed, int32 FightRooms, int32 
 		return DA < DB;
 	});
 
+	if (Style.bChain && Rest.Num() > 1)
+	{
+		// A walk: from the start, always on to the nearest room not yet visited, so consecutive rooms are neighbours
+		// and the corridor between each pair is short. The last one reached is the deepest.
+		TArray<FRoom> Walk;
+		FRoom Here = Start;
+		TArray<FRoom> Left = Rest;
+		while (Left.Num() > 0)
+		{
+			int32 Best = 0;
+			float BestD = TNumericLimits<float>::Max();
+			for (int32 k = 0; k < Left.Num(); ++k)
+			{
+				const float D = FVector2D::DistSquared(FVector2D(Left[k].Center().X, Left[k].Center().Y), FVector2D(Here.Center().X, Here.Center().Y));
+				if (D < BestD) { BestD = D; Best = k; }
+			}
+			Here = Left[Best];
+			Walk.Add(Here);
+			Left.RemoveAt(Best);
+		}
+		Rest = Walk;
+	}
 	const FRoom Far = Rest.Pop();
 	TArray<FName> Middle = Want;
 	Middle.RemoveAt(0);
@@ -225,6 +250,12 @@ bool UDCCDungeonGrid::Build(int32 InSize, int32 InSeed, int32 FightRooms, int32 
 	Joined.Add(0);
 	for (int32 i = 1; i < Rooms.Num(); ++i)
 	{
+		if (Style.bChain)
+		{
+			Corridor(Rooms[i - 1].Center(), Rooms[i].Center()); // one drift, room after room
+			Joined.Add(i);
+			continue;
+		}
 		int32 Best = 0;
 		float BestDistance = TNumericLimits<float>::Max();
 		for (int32 J : Joined)
@@ -242,7 +273,7 @@ bool UDCCDungeonGrid::Build(int32 InSize, int32 InSeed, int32 FightRooms, int32 
 		Joined.Add(i);
 	}
 
-	for (int32 Loop = 0; Loop < 2 && Rooms.Num() > 2; ++Loop)
+	for (int32 Loop = 0; Loop < Style.Loops && Rooms.Num() > 2; ++Loop)
 	{
 		const int32 A = Stream.RandRange(1, Rooms.Num() - 1);
 		const int32 B = Stream.RandRange(1, Rooms.Num() - 1);
@@ -252,7 +283,10 @@ bool UDCCDungeonGrid::Build(int32 InSize, int32 InSeed, int32 FightRooms, int32 
 		}
 	}
 
-	Corridor(Rooms[0].Center(), Rooms.Last().Center());
+	if (Style.bShortcut)
+	{
+		Corridor(Rooms[0].Center(), Rooms.Last().Center());
+	}
 
 	TArray<FIntPoint> Path;
 	if (!FindPath(Rooms[0].Center(), Rooms.Last().Center(), Path))

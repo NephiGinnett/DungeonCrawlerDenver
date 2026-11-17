@@ -1,4 +1,11 @@
 #include "Arcade/DCCArcadeGames.h"
+#include "Characters/DCCReactions.h"
+#include "Progression/DCCAchievementComponent.h"
+#include "Arcade/DCCBounties.h"
+#include "Combat/DCCGameState.h"
+#include "Sound/SoundBase.h"
+#include "Components/AudioComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 #include "Arcade/DCCArcade.h"
 #include "Components/CapsuleComponent.h"
@@ -100,10 +107,15 @@ void ADCCArcadeLobby::BuildLocal()
 	{
 		const DCCArcade::FGame& Game = Games[i];
 		const FVector Pad = PadCenter(i);
-		Block(Pad + FVector(0, 0, 3), FVector(700, 700, 6), Game.Colour * 0.6f);
+		// No collision: you stand on the floor, and the pad sinks under your feet (TickPads).
+		// 14 cm tall (it was 6) so it can press 10 cm and still show; TickPads lifts the dressing on it to match.
+		PadTops.Add(Block(Pad + FVector(0, 0, 7), FVector(700, 700, 14), Game.Colour * 0.6f, 0.0f, false));
 		Block(Pad + FVector(0, 520, 220), FVector(420, 180, 440), Game.Colour * 0.35f);
 		Sign(Pad + FVector(0, 420, 520), -90.0f, FString(Game.Title).ToUpper(), ToColor(Game.Colour), 44.0f);
 		Sign(Pad + FVector(0, 420, 470), -90.0f, Game.Pitch, FColor(210, 205, 220), 14.0f);
+		// The game's record, on its own board where you vote for it (2026-11-16: it used to be a long list on screen).
+		RecordSigns.Add(Sign(Pad + FVector(0, 420, 428), -90.0f, TEXT(" "), FColor(255, 214, 120), 22.0f, false));
+		RecordShown.Add(FString());
 		Light(Pad + FVector(0, 0, 400), Game.Colour, 9000.0f, 900.0f);
 		FDCCDenDecor::Dress(this, Game.Id, Pad, Game.Colour);
 	}
@@ -214,8 +226,113 @@ void ADCCArcadeLobby::BuildLocal()
 	Light(Chop + FVector(-300, -360, 320), FLinearColor(1.0f, 0.5f, 0.2f), 2500.0f, 500.0f);
 }
 
+void ADCCArcadeLobby::TickPads(float DeltaSeconds)
+{
+	UWorld* World = GetWorld();
+	const TArray<DCCArcade::FGame>& Games = DCCArcade::Games();
+	if (!World || PadTops.Num() != Games.Num())
+	{
+		return;
+	}
+	// The first time: everything lying on each pad (its colour slab and the dressing on top of it) rides down with it.
+	if (PadRiders.IsEmpty())
+	{
+		PadRiders.SetNum(Games.Num());
+		PadSink.Init(0.0f, Games.Num());
+		for (TActorIterator<AActor> It(World); It; ++It)
+		{
+			AActor* Actor = *It;
+			if (!Actor || Actor == this || Cast<APawn>(Actor) || !Actor->GetRootComponent())
+			{
+				continue;
+			}
+			const FVector L = Actor->GetActorLocation();
+			for (int32 i = 0; i < Games.Num(); ++i)
+			{
+				const FVector D = L - PadCenter(i);
+				if (FMath::Abs(D.X) <= 360.0f && FMath::Abs(D.Y) <= 360.0f && D.Z > -5.0f && D.Z < 40.0f)
+				{
+					Actor->GetRootComponent()->SetMobility(EComponentMobility::Movable);
+					// The dressing was placed for the old 6 cm pad: lift it onto the 14 cm one.
+					const FVector Rest = Actor == PadTops[i].Get() ? L : L + FVector(0.0f, 0.0f, 8.0f);
+					Actor->SetActorLocation(Rest);
+					PadRiders[i].Add({ Actor, Rest });
+					break;
+				}
+			}
+		}
+	}
+	bSomeoneOnPad = false;
+	for (int32 i = 0; i < Games.Num(); ++i)
+	{
+		// Anyone standing on it (crawlers only: a player's pawn has a PlayerState).
+		bool bOccupied = false;
+		for (TActorIterator<APawn> It(World); It && !bOccupied; ++It)
+		{
+			const FVector D = It->GetActorLocation() - PadCenter(i);
+			bOccupied = It->GetPlayerState() && FMath::Abs(D.X) <= 350.0f && FMath::Abs(D.Y) <= 350.0f && FMath::Abs(D.Z) < 250.0f;
+		}
+		bSomeoneOnPad |= bOccupied;
+		// Down 10 cm quickly (its top stays just above the floor), back up a little slower, like a plate on a spring.
+		const float Target = bOccupied ? 10.0f : 0.0f;
+		const float Was = PadSink[i];
+		PadSink[i] = FMath::FInterpConstantTo(PadSink[i], Target, DeltaSeconds, bOccupied ? 70.0f : 35.0f);
+		if (PadSink[i] != Was)
+		{
+			for (const TPair<TWeakObjectPtr<AActor>, FVector>& Rider : PadRiders[i])
+			{
+				if (AActor* Actor = Rider.Key.Get())
+				{
+					Actor->SetActorLocation(Rider.Value - FVector(0.0f, 0.0f, PadSink[i]));
+				}
+			}
+		}
+	}
+}
+
 void ADCCArcadeLobby::ClientTick(float DeltaSeconds)
 {
+	TickPads(DeltaSeconds);
+	// Each pad's board shows its game's record, kept current as people play.
+	for (int32 i = 0; i < RecordSigns.Num() && i < PadRecords.Num(); ++i)
+	{
+		if (RecordShown[i] != PadRecords[i])
+		{
+			RecordShown[i] = PadRecords[i];
+			if (ATextRenderActor* Text = RecordSigns[i].Get())
+			{
+				Text->GetTextRender()->SetText(FText::FromString(PadRecords[i]));
+			}
+		}
+	}
+	// The Den's playlist: the songs already in the game, one after another, low, with a breath between them.
+	if (UWorld* MusicWorld = GetWorld(); MusicWorld && MusicWorld->GetNetMode() != NM_DedicatedServer)
+	{
+		const double Now = MusicWorld->GetTimeSeconds();
+		if (Now >= NextDenSong && (!DenSong.IsValid() || !DenSong->IsPlaying()))
+		{
+			static const TCHAR* Playlist[] = {
+				TEXT("/Game/Songs/Meet_the_Whoops.Meet_the_Whoops"), TEXT("/Game/Songs/Swept_Away.Swept_Away"),
+				TEXT("/Game/Songs/Repo_Rally.Repo_Rally"), TEXT("/Game/Songs/Platinum_Dust_Mine.Platinum_Dust_Mine"),
+			};
+			if (DenSongIndex < 0)
+			{
+				DenSongIndex = FMath::RandRange(0, UE_ARRAY_COUNT(Playlist) - 1);
+			}
+			NextDenSong = Now + 5.0;
+			for (int32 Try = 0; Try < UE_ARRAY_COUNT(Playlist); ++Try)
+			{
+				DenSongIndex = (DenSongIndex + 1) % UE_ARRAY_COUNT(Playlist);
+				if (USoundBase* Song = LoadObject<USoundBase>(nullptr, Playlist[DenSongIndex]))
+				{
+					DenSong = UGameplayStatics::SpawnSound2D(MusicWorld, Song, 0.22f, 1.0f, 0.0f, nullptr, false, true);
+					NextDenSong = Now + FMath::Max(20.0f, Song->GetDuration()) + 4.0;
+					break;
+				}
+			}
+		}
+	}
+
 	// Opens the shop on stepping onto the counter's pad, not every frame while
 	// standing there: DONE closes it, and it stays closed until you step off and on.
 	APlayerController* PC = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr;
@@ -312,29 +429,41 @@ void ADCCArcadeLobby::ServerTick(float DeltaSeconds)
 	Title = TEXT("THE DEN  -  pick the next game");
 	Accent = FLinearColor(1.0f, 0.45f, 0.9f);
 	StatusLines.Reset();
+	// The HUD draws the Den as a strip of game logos with the players on each (ADCCHUD::DrawDenStrip); the records go
+	// on the pads' boards (ClientTick). Nothing here is a long list any more.
+	PadVotes.SetNum(Games.Num());
+	PadRecords.SetNum(Games.Num());
 	for (int32 i = 0; i < Games.Num(); ++i)
 	{
 		const DCCArcade::FGame& Game = Games[i];
 		const DCCArcade::FGame* GamePtr = &Game;
-		StatusLines.Add(FString::Printf(TEXT("%s  -  %d %s     %s: %s"),
-			Game.Title, Votes[i], Votes[i] == 1 ? TEXT("vote") : TEXT("votes"), Game.RecordLabel,
+		PadVotes[i] = uint8(FMath::Clamp(Votes[i], 0, 255));
+		PadRecords[i] = FString::Printf(TEXT("%s: %s"), Game.RecordLabel,
 			*DCCProfile::Leaderboard(GetWorld(), Game.Id, Game.RecordStat, Game.bHigherIsBetter,
-				[GamePtr](float V) { return DCCArcade::FormatRecord(*GamePtr, V); })));
+				[GamePtr](float V) { return DCCArcade::FormatRecord(*GamePtr, V); }));
 	}
+	LeadingPad = Voted > 0 ? Leader : -1;
+	CountdownLine.Reset();
 	if (CountdownEndsAt > 0.0)
 	{
 		const int32 Left = FMath::Max(0, FMath::CeilToInt(CountdownEndsAt - Now));
-		StatusLines.Add(FString::Printf(TEXT("Starting %s in %d s  (%d of %d voted)"), Games[Leader].Title, Left, Voted, Present));
+		CountdownLine = FString::Printf(TEXT("Starting %s in %d s  (%d of %d voted)"), Games[Leader].Title, Left, Voted, Present);
+		StatusLines.Add(CountdownLine);
 		if (Now >= CountdownEndsAt)
 		{
 			bLeaving = true;
 			DCCArcade::Travel(GetWorld(), Games[Leader].Id);
 		}
 	}
-	else
-	{
-		StatusLines.Add(TEXT("Every player's records are saved separately, per game, on the host."));
-	}
+}
+
+void ADCCArcadeLobby::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(ADCCArcadeLobby, PadVotes);
+	DOREPLIFETIME(ADCCArcadeLobby, PadRecords);
+	DOREPLIFETIME(ADCCArcadeLobby, CountdownLine);
+	DOREPLIFETIME(ADCCArcadeLobby, LeadingPad);
 }
 
 // ===========================================================================
@@ -659,17 +788,20 @@ void ADCCArcadeClimb::BuildMountain()
 	}
 
 	// The trail from the fort gate to the foot of the rock, and the route board.
-	Block(O + FVector(WideHalf + 1700, 0, 1), FVector(3400, 360, 4), FLinearColor(0.42f, 0.32f, 0.2f));
+	for (int32 Step = 0; Step < 9; ++Step)
+	{
+		Paint(Block(O + FVector(WideHalf + 1700 - 1700 + (Step + 0.5f) * (3400.0f / 9.0f), 0, 1), FVector(3400.0f / 9.0f, 360, 4), FLinearColor(0.42f, 0.32f, 0.2f)), TEXT("/Game/Dam_city/Materials/Tiled_materials/MI_soil"));
+	}
 	// Faces the fort (+X), where everyone arrives; it used to face the rock (Zoe, 2026-11-13).
 	Sign(O + FVector(WideHalf + 600, 0, 340), 0.0f, TEXT("FOURTEENER  ->  SUMMIT 14,115 FT"), FColor(220, 235, 255), 50.0f);
 	const float Board = WideHalf + 350.0f;
-	Block(O + FVector(Board - 15, -520, 200), FVector(20, 620, 300), FLinearColor(0.3f, 0.19f, 0.1f));
-	Sign(O + FVector(Board, -520, 320), 0.0f, TEXT("THE ROUTES"), FColor(255, 214, 140), 34.0f);
-	Sign(O + FVector(Board, -520, 280), 0.0f, TEXT("EXPRESS (this face): ledges every 12 m, double rockfall"), FColor(255, 160, 140), 13.0f);
-	Sign(O + FVector(Board, -520, 255), 0.0f, TEXT("SWITCHBACKS (other faces): ledges every 6 m, watch the ice"), FColor(170, 220, 255), 13.0f);
-	Sign(O + FVector(Board, -520, 225), 0.0f, TEXT("Equip Climbing. HOLD left mouse to climb, let go to drop."), FColor(235, 230, 220), 13.0f);
-	Sign(O + FVector(Board, -520, 200), 0.0f, TEXT("Chests on the ledges hold climbing gear. [Q] use a tool, [T] switch."), FColor(235, 230, 220), 13.0f);
-	Sign(O + FVector(Board, -520, 175), 0.0f, TEXT("Rope in a friend from above. Rest together to pitch a camp."), FColor(235, 230, 220), 13.0f);
+	Paint(Block(O + FVector(Board - 15, -520, 200), FVector(20, 620, 300), FLinearColor(0.3f, 0.19f, 0.1f)), TEXT("/Game/Beach_house/Material/MI_wood_exterior"));
+	Sign(O + FVector(Board, -520, 320), 0.0f, TEXT("THE ROUTES"), FColor(255, 214, 140), 34.0f, false);
+	Sign(O + FVector(Board, -520, 280), 0.0f, TEXT("EXPRESS (this face): ledges every 12 m, double rockfall"), FColor(255, 160, 140), 13.0f, false);
+	Sign(O + FVector(Board, -520, 255), 0.0f, TEXT("SWITCHBACKS (other faces): ledges every 6 m, watch the ice"), FColor(170, 220, 255), 13.0f, false);
+	Sign(O + FVector(Board, -520, 225), 0.0f, TEXT("Equip Climbing. HOLD left mouse to climb, let go to drop."), FColor(235, 230, 220), 13.0f, false);
+	Sign(O + FVector(Board, -520, 200), 0.0f, TEXT("Chests on the ledges hold climbing gear. Tools go on your belt: press their number."), FColor(235, 230, 220), 13.0f, false);
+	Sign(O + FVector(Board, -520, 175), 0.0f, TEXT("Rope in a friend from above. Rest together to pitch a camp."), FColor(235, 230, 220), 13.0f, false);
 	Prop(CartA, O + FVector(WideHalf + 900, 420, 0), 15.0f, FVector(0, 0, 160), true);
 
 	// The wider world: a mountain range on three sides, a forest across the meadow.
@@ -720,7 +852,14 @@ void ADCCArcadeClimb::BuildFort()
 	const FLinearColor Log(0.36f, 0.22f, 0.11f), DarkLog(0.22f, 0.13f, 0.07f);
 	const FLinearColor Dirt(0.45f, 0.34f, 0.21f), Roof(0.3f, 0.1f, 0.08f);
 
-	Block(C + FVector(0, 0, 1), FVector(Half * 2, Half * 2, 4), Dirt);
+	// Texture pass (2026-11-16): packed soil in 4 m tiles, so the texture keeps its scale (one 24 m block smeared it).
+	for (int32 TX = 0; TX < 6; ++TX)
+	{
+		for (int32 TY = 0; TY < 6; ++TY)
+		{
+			Paint(Block(C + FVector(-Half + 200.0f + TX * 400.0f, -Half + 200.0f + TY * 400.0f, 1), FVector(400, 400, 4), Dirt), TEXT("/Game/Dam_city/Materials/Tiled_materials/MI_soil"));
+		}
+	}
 
 	// The palisade: pointed logs, with a gap for the gate on the side facing the peak (-X).
 	for (int32 SideIndex = 0; SideIndex < 4; ++SideIndex)
@@ -734,17 +873,18 @@ void ADCCArcadeClimb::BuildFort()
 				continue; // the gate
 			}
 			const float H = 380.0f + 40.0f * FMath::Sin(T * 0.37f);
-			Shape(TEXT("Cylinder"), C + P + FVector(0, 0, H * 0.5f), FVector(70, 70, H), Log);
-			Shape(TEXT("Cone"), C + P + FVector(0, 0, H + 25.0f), FVector(70, 70, 50), DarkLog, FRotator::ZeroRotator, false);
+			// Bark, not flat orange (texture pass, 2026-11-16).
+			Paint(Shape(TEXT("Cylinder"), C + P + FVector(0, 0, H * 0.5f), FVector(70, 70, H), Log), TEXT("/Game/Ancient_civilization/Materials/MI_tree_bark"));
+			Paint(Shape(TEXT("Cone"), C + P + FVector(0, 0, H + 25.0f), FVector(70, 70, 50), DarkLog, FRotator::ZeroRotator, false), TEXT("/Game/Ancient_civilization/Materials/MI_Bark_01"));
 		}
 	}
 
 	// The gate: two tall posts, a crossbeam, and the town's name.
 	for (const float Y : { -380.0f, 380.0f })
 	{
-		Shape(TEXT("Cylinder"), C + FVector(-Half, Y, 300), FVector(90, 90, 600), DarkLog);
+		Paint(Shape(TEXT("Cylinder"), C + FVector(-Half, Y, 300), FVector(90, 90, 600), DarkLog), TEXT("/Game/Ancient_civilization/Materials/MI_tree_bark"));
 	}
-	Block(C + FVector(-Half, 0, 560), FVector(60, 860, 70), Log);
+	Paint(Block(C + FVector(-Half, 0, 560), FVector(60, 860, 70), Log), TEXT("/Game/Beach_house/Material/MI_wood_exterior"));
 	// The gate sign faces into the fort, where everyone spawns (2026-11-13). The old outward-facing
 	// copy showed through backwards from inside, so it is gone.
 	Sign(C + FVector(-Half + 10, 0, 760), 0.0f, TEXT("FORT TINER"), FColor(255, 214, 140), 60.0f);
@@ -752,7 +892,7 @@ void ADCCArcadeClimb::BuildFort()
 	// The inside of the gate, for crawlers setting out from the campfire. Sign text
 	// shows mirrored from behind, so the outward ones need a board between them and
 	// these.
-	Block(C + FVector(-Half + 10, 0, 520), FVector(16, 700, 200), FLinearColor(0.3f, 0.19f, 0.1f), 0.0f, false);
+	Paint(Block(C + FVector(-Half + 10, 0, 520), FVector(16, 700, 200), FLinearColor(0.3f, 0.19f, 0.1f), 0.0f, false), TEXT("/Game/Beach_house/Material/MI_wood_exterior"));
 	Sign(C + FVector(-Half + 25, 0, 560), 0.0f, TEXT("TO THE SUMMIT"), FColor(255, 214, 140), 56.0f);
 	Sign(C + FVector(-Half + 25, 0, 470), 0.0f, TEXT("Rest on the ledges. Come back down."), FColor(235, 220, 200), 22.0f);
 
@@ -767,7 +907,7 @@ void ADCCArcadeClimb::BuildFort()
 			{
 				Shape(TEXT("Cylinder"), T + Leg + FVector(0, 0, 350), FVector(40, 40, 700), DarkLog);
 			}
-			Block(T + FVector(0, 0, 640), FVector(280, 280, 30), Log);
+			Paint(Block(T + FVector(0, 0, 640), FVector(280, 280, 30), Log), TEXT("/Game/Beach_house/Material/MI_wood_exterior"));
 			Shape(TEXT("Cone"), T + FVector(0, 0, 820), FVector(360, 360, 220), Roof, FRotator::ZeroRotator, false);
 		}
 		Prop(Flag, T + FVector(0, 0, 820), 90.0f, FVector(0, 0, 320));
@@ -819,7 +959,7 @@ void ADCCArcadeClimb::BuildFort()
 	{
 		const FVector Pad = TradingPostPad();
 		Block(Pad + FVector(0, 0, 3), FVector(360, 360, 4), FLinearColor(0.85f, 0.55f, 0.15f), 0.0f, false);
-		Block(Pad + FVector(0, 150, 55), FVector(300, 50, 110), FLinearColor(0.36f, 0.22f, 0.11f)); // the counter
+		Paint(Block(Pad + FVector(0, 150, 55), FVector(300, 50, 110), FLinearColor(0.36f, 0.22f, 0.11f)), TEXT("/Game/Beach_house/Material/MI_wood_exterior")); // the counter
 		Prop(CampCrates, Pad + FVector(-230, 200, 0), 20.0f, FVector(0, 0, 110), true);
 		Sign(Pad + FVector(0, 130, 140), -90.0f, TEXT("BUY HERE"), FColor(255, 214, 140), 18.0f);
 		Light(Pad + FVector(0, 0, 260), FLinearColor(1.0f, 0.7f, 0.35f), 3000.0f, 700.0f);
@@ -893,8 +1033,8 @@ void ADCCArcadeClimb::BuildFort()
 	Shape(TEXT("Cylinder"), C + FVector(-500, -650, 450), FVector(18, 18, 900), FLinearColor(0.8f, 0.8f, 0.8f));
 	Block(C + FVector(-500, -560, 820), FVector(6, 180, 110), FLinearColor(0.7f, 0.12f, 0.12f), 0.0f, false);
 	Sign(C + FVector(-505, -560, 805), 180.0f, TEXT("FT"), FColor(255, 255, 255), 40.0f);
-	Shape(TEXT("Cylinder"), C + FVector(-450, 650, 60), FVector(160, 160, 120), FLinearColor(0.45f, 0.44f, 0.42f));
-	Block(C + FVector(-450, 650, 260), FVector(200, 30, 20), Log, 0.0f, false);
+	Paint(Shape(TEXT("Cylinder"), C + FVector(-450, 650, 60), FVector(160, 160, 120), FLinearColor(0.45f, 0.44f, 0.42f)), TEXT("/Game/Abandonned_Brutalist/Materials/MI_stones"));
+	Paint(Block(C + FVector(-450, 650, 260), FVector(200, 30, 20), Log, 0.0f, false), TEXT("/Game/Beach_house/Material/MI_wood_exterior"));
 	{
 		const FVector G = C + FVector(Half - 320, Half - 300, 0);
 		const FLinearColor Goat(0.9f, 0.88f, 0.82f);
@@ -1456,8 +1596,8 @@ void ADCCArcadeClimb::SpawnChests()
 		}
 	};
 
-	// The Outfitter's Crate, by Ma Ore on the trading post's porch: one of everything.
-	Spawn(FortCenter() + FVector(480, 560, 0), 200.0f, EDCCChestKind::Outfitter, NAME_None);
+	// (The Outfitter's Crate, "one of everything", was a dev chest: removed 2026-11-16 at Zoe's request. The Trading
+	// Post sells kit for tickets instead.)
 	// Food at the fort: a burrito for everyone before the climb (2026-11-13: "plenty of food").
 	const TArray<FName> Foods = DCCClimbItems::FoodPool();
 	for (int32 f = 0; f < 3 && Foods.Num() > 0; ++f)
@@ -1538,7 +1678,6 @@ void ADCCArcadeClimb::SyncKit(ADCCCharacterBase* Crawler)
 		return;
 	}
 	Wallet->ClimbTools = Kit->Tools;
-	Wallet->ClimbToolIndex = Kit->Tools.IsEmpty() ? 0 : FMath::Clamp(Kit->Selected, 0, Kit->Tools.Num() - 1);
 	Wallet->CarriedArtifacts = Kit->Artifacts;
 	TArray<FString> Boosts;
 	const double Now = ServerTime();
@@ -1548,6 +1687,19 @@ void ADCCArcadeClimb::SyncKit(ADCCCharacterBase* Crawler)
 	if (Kit->HardHats > 0) { Boosts.Add(Kit->HardHats > 1 ? FString::Printf(TEXT("Hard Hat x%d"), Kit->HardHats) : FString(TEXT("Hard Hat"))); }
 	if (Kit->SafetyLines > 0) { Boosts.Add(Kit->SafetyLines > 1 ? FString::Printf(TEXT("Safety Line x%d"), Kit->SafetyLines) : FString(TEXT("Safety Line"))); }
 	Wallet->ClimbBoosts = FString::Join(Boosts, TEXT("   "));
+}
+
+void ADCCArcadeClimb::GiveFullKit(ADCCCharacterBase* Crawler)
+{
+	if (!Crawler)
+	{
+		return;
+	}
+	for (const FName& Id : DCCClimbItems::ChestPool())
+	{
+		GiveItem(Crawler, Id, /*bQuiet=*/true);
+	}
+	Crawler->NotifyClimber(NSLOCTEXT("DCC", "OutfitterTaken", "Outfitted: one of every tool and boost. They are on your belt: press a tool's number."));
 }
 
 void ADCCArcadeClimb::GiveItem(ADCCCharacterBase* Crawler, FName ItemId, bool bQuiet)
@@ -1562,10 +1714,18 @@ void ADCCArcadeClimb::GiveItem(ADCCCharacterBase* Crawler, FName ItemId, bool bQ
 	switch (Item->Kind)
 	{
 	case DCCClimbItems::EKind::Tool:
+		// Everyone has a hook on their belt now: a spare one in a chest winds yours straight back in.
+		if (ItemId == DCCClimbItems::GrapplingHook)
+		{
+			GrappleReadyAt.Add(Crawler->GetPlayerState(), 0.0);
+			if (Crawler->Wallet) { Crawler->Wallet->Client_GrappleThrown(0.0f); }
+			Message = TEXT("Found a spare line: your grappling hook is ready again.");
+			break;
+		}
 		Kit->Tools.Add(ItemId);
 		Kit->Selected = Kit->Tools.Num() - 1;
-		Crawler->OfferQuickItem(ItemId); // hotbar slot 2 or 3, if one is free
-		Message = FString::Printf(TEXT("Found: %s. %s  [Q] use"), Item->Name, Item->Blurb);
+		Crawler->OfferQuickItem(ItemId);
+		Message = FString::Printf(TEXT("Found: %s. %s  (on your belt)"), Item->Name, Item->Blurb);
 		break;
 	case DCCClimbItems::EKind::Boost:
 		if (ItemId == DCCClimbItems::ChalkBag) { Kit->ChalkUntil = FMath::Max(Kit->ChalkUntil, ServerTime()) + 90.0; }
@@ -1600,18 +1760,6 @@ void ADCCArcadeClimb::UseToolId(ADCCCharacterBase* Crawler, FName ToolId)
 	UseTool(Crawler);
 }
 
-void ADCCArcadeClimb::NextTool(ADCCCharacterBase* Crawler)
-{
-	if (FClimbKit* Kit = KitOf(Crawler))
-	{
-		if (Kit->Tools.Num() > 1)
-		{
-			Kit->Selected = (Kit->Selected + 1) % Kit->Tools.Num();
-			SyncKit(Crawler);
-		}
-	}
-}
-
 void ADCCArcadeClimb::UseTool(ADCCCharacterBase* Crawler)
 {
 	FClimbKit* Kit = KitOf(Crawler);
@@ -1627,24 +1775,11 @@ void ADCCArcadeClimb::UseTool(ADCCCharacterBase* Crawler)
 
 	if (Tool == DCCClimbItems::GrapplingHook)
 	{
-		ADCCClimbPoint* Point = Crawler->ActiveClimbPoint;
-		UCapsuleComponent* Capsule = Crawler->GetCapsuleComponent();
-		if (!Point || !Capsule)
+		// An old one from before the belt hook: it works like a level-0 throw.
+		if (!GrappleUp(Crawler, DCCChopShop::GrappleReach(0)))
 		{
-			Crawler->Wallet->Tell(TEXT("The hook needs a wall: use it while you're climbing."));
 			return;
 		}
-		const FVector From = Crawler->GetActorLocation();
-		const float TargetZ = FMath::Min(From.Z + 600.0f, Point->GetTopZ() - 40.0f);
-		FVector To = Point->GetAttachLocationFor(Crawler, TargetZ);
-		FHitResult Hit;
-		if (World->SweepSingleByChannel(Hit, From, To, FQuat::Identity, ECC_Pawn,
-			FCollisionShape::MakeCapsule(Capsule->GetScaledCapsuleRadius() - 2.0f, Capsule->GetScaledCapsuleHalfHeight() - 2.0f), Params))
-		{
-			To = From + (To - From) * FMath::Max(0.0f, Hit.Time - 0.02f); // up to the ledge, then crawl over it as usual
-		}
-		Crawler->SnapTo(To);
-		Crawler->Wallet->Tell(TEXT("The hook bites. Up you go."));
 		bUsed = true;
 	}
 	else if (Tool == DCCClimbItems::Piton)
@@ -1689,6 +1824,60 @@ void ADCCArcadeClimb::UseTool(ADCCCharacterBase* Crawler)
 	}
 }
 
+bool ADCCArcadeClimb::GrappleUp(ADCCCharacterBase* Crawler, float Reach)
+{
+	ADCCClimbPoint* Point = nullptr;
+	if (Crawler)
+	{
+		Point = Crawler->ActiveClimbPoint;
+	}
+	UCapsuleComponent* Capsule = Crawler ? Crawler->GetCapsuleComponent() : nullptr;
+	UWorld* World = GetWorld();
+	if (!Point || !Capsule || !World)
+	{
+		if (Crawler && Crawler->Wallet) { Crawler->Wallet->Tell(TEXT("The hook needs a wall: use it while you're climbing.")); }
+		return false;
+	}
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(DCCGrapple), false, Crawler);
+	const FVector From = Crawler->GetActorLocation();
+	const float TargetZ = FMath::Min(From.Z + Reach, Point->GetTopZ() - 40.0f);
+	FVector To = Point->GetAttachLocationFor(Crawler, TargetZ);
+	FHitResult Hit;
+	if (World->SweepSingleByChannel(Hit, From, To, FQuat::Identity, ECC_Pawn,
+		FCollisionShape::MakeCapsule(Capsule->GetScaledCapsuleRadius() - 2.0f, Capsule->GetScaledCapsuleHalfHeight() - 2.0f), Params))
+	{
+		To = From + (To - From) * FMath::Max(0.0f, Hit.Time - 0.02f); // up to the ledge, then crawl over it as usual
+	}
+	Crawler->SnapTo(To);
+	return true;
+}
+
+void ADCCArcadeClimb::BeltGrapple(ADCCCharacterBase* Crawler)
+{
+	APlayerState* PlayerState = Crawler ? Crawler->GetPlayerState() : nullptr;
+	if (!PlayerState || !Crawler->IsAlive() || !Crawler->Wallet)
+	{
+		return;
+	}
+	const double Now = ServerTime();
+	double& Ready = GrappleReadyAt.FindOrAdd(PlayerState);
+	if (Now < Ready)
+	{
+		Crawler->Wallet->Tell(FString::Printf(TEXT("The line is still winding in: %d s."), FMath::CeilToInt(Ready - Now)));
+		return;
+	}
+	const int32 Level = DCCChopShop::GetLevel(DCCProfile::KeyFor(PlayerState), DCCChopShop::Grapple);
+	if (!GrappleUp(Crawler, DCCChopShop::GrappleReach(Level)))
+	{
+		return;
+	}
+	const float Cooldown = DCCChopShop::GrappleCooldown(Level);
+	Ready = Now + Cooldown;
+	UE_LOG(LogTemp, Log, TEXT("[DCC Grapple] %s, level %d: now at z=%.0f, back in %.0f s"), *PlayerState->GetPlayerName(), Level, Crawler->GetActorLocation().Z, Cooldown);
+	Crawler->Wallet->Client_GrappleThrown(Cooldown);
+	Crawler->Wallet->Tell(TEXT("The hook bites. Up you go."));
+}
+
 void ADCCArcadeClimb::TickKits(float StepSeconds)
 {
 	UWorld* World = GetWorld();
@@ -1710,6 +1899,11 @@ void ADCCArcadeClimb::TickKits(float StepSeconds)
 		}
 		FClimbKit& Kit = It.Value();
 		ADCCCharacterBase* Crawler = Cast<ADCCCharacterBase>(PlayerState->GetPawn());
+		// Cold up high: now and then, a snowflake over anyone above High Camp.
+		if (Crawler && Crawler->IsAlive() && Crawler->GetActorLocation().Z - GetActorLocation().Z > MidZ && FMath::FRand() < StepSeconds / 50.0f)
+		{
+			Crawler->ReactTo(DCCReactions::MomentCold);
+		}
 
 		// Dead: artifacts stay on the mountain.
 		if ((!Crawler || !Crawler->IsAlive()) && !Kit.Artifacts.IsEmpty())
@@ -1893,6 +2087,10 @@ void ADCCArcadeClimb::ServerTick(float DeltaSeconds)
 		if (Height >= TopZ - 60.0f && !Summited.Contains(PlayerState))
 		{
 			Summited.Add(PlayerState);
+			if (ADCCCharacterBase* Climber = Cast<ADCCCharacterBase>(PlayerState->GetPawn()))
+			{
+				Climber->ReactTo(DCCReactions::MomentWin, false);
+			}
 			DCCProfile::Add(PlayerState, TEXT("Climb"), TEXT("Summits"), 1.0f);
 			DCCProfile::RecordBest(PlayerState, TEXT("Climb"), TEXT("FastestSummit"), Elapsed, /*bHigherIsBetter=*/false);
 			AddPoints(PlayerState, 100, TEXT("summit"));
@@ -4913,4 +5111,25 @@ void ADCCArcadeNeon::UpdateTraffic()
 			}
 		}
 	}
+}
+
+void ADCCArcadeClimb::OnTagged(ADCCCharacterBase* Painter, const FVector& At)
+{
+	const APlayerState* State = Painter ? Painter->GetPlayerState() : nullptr;
+	// The top tenth of the climb: 144 m and up, where only the people who earned it stand.
+	if (!State || At.Z - GetActorLocation().Z < TopZ * 0.9f || SummitTaggers.Contains(State->GetPlayerName()))
+	{
+		return;
+	}
+	SummitTaggers.Add(State->GetPlayerName());
+	DCCBounties::Flag(State, TEXT("SummitTag")); // the bounty, even for someone who already has the achievement
+	// Once ever, not once a round (Zoe, 2026-11-16): a crawler who already has Proof of Summit gets nothing new, and the
+	// mountain does not announce it again.
+	if (Painter->Achievements && Painter->Achievements->IsUnlocked(TEXT("ProofOfSummit")))
+	{
+		return;
+	}
+	UDCCAchievementComponent::RecordFor(Painter, EDCCAchievementStat::TaggedTheSummit);
+	ADCCGameState::Log(this, EDCCLogCategory::Announcement,
+		FText::FromString(FString::Printf(TEXT("%s put their tag on the top of Fourteener. Proof."), *State->GetPlayerName())));
 }

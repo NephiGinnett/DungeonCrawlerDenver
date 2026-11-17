@@ -72,6 +72,9 @@ enum class EDCCMenuTab : uint8
 	/** Private 1:1 - type a name to open a channel with them. */
 	Whispers,
 
+	/** Keys and reactions (2026-11-16): remap the new keys, choose the bubble and move for each moment. */
+	Settings,
+
 	MAX
 };
 
@@ -156,6 +159,10 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "DCC|UI")
 	void ToggleMenu();
+	/** Opens the Tab menu on a given page (dev command DCC.MenuTab). */
+	void OpenMenuTab(EDCCMenuTab Tab) { MenuTab = Tab; if (!bShowMenu) { ToggleMenu(); } }
+	/** The starter-kit choice (UDCCWalletComponent::Client_OfferStarterKit). */
+	void OpenStarterKit();
 
 	/**
 	 * Canvas hit boxes are how an immediate-mode HUD gets clickable regions - the
@@ -227,6 +234,8 @@ public:
 	// Every sealed box in a row. Hold Space (or hold the mouse on a box) to
 	// open one, and keep holding to open the next. Hold R to open them all.
 	void ToggleLootBoxScreen();
+	/** Dev (DCC.LootOpen): open the screen if needed and open one of the best boxes you have. */
+	void DevOpenBestLootBox();
 	bool IsLootBoxScreenOpen() const { return bLootScreenOpen; }
 	void ReceiveLootBoxReveal(const FDCCLootBoxReveal& Reveal);
 	/** From UDCCLootScreenInput. True if the screen used the key. */
@@ -522,6 +531,20 @@ protected:
 	/** The B-key emote picker: wheel to choose a performance from
 	 *  EmoteAnimations, E to actually play it. */
 	void DrawEmoteMenu(ADCCCharacterBase* Crawler);
+	/** Reaction bubbles over heads (Characters/DCCReactions). */
+	void DrawReactions();
+	/** The Den: a slim strip of game logos with the players on each pad, in place of the long status list. */
+	void DrawDenStrip(const class ADCCArcadeLobby* Lobby);
+	/** How far down the Den strip is: 0 tucked up off the top, 1 all the way down. */
+	float DenStripShown = 0.0f;
+	/** The SETTINGS tab: keys (UI/DCCControls) and each moment's bubble and move (DCCReactions). */
+	float DrawSettingsTab(float X, float Y, ADCCCharacterBase* Crawler);
+	void HandleSettingsClick(const FString& Command);
+	/** Reads the remappable keys every frame (and a key being set, while one is). */
+	void PollRemappableKeys();
+	/** The action waiting for a key on the SETTINGS tab, or -1. */
+	int32 CapturingAction = -1;
+	TArray<uint8> SettingsChoices;
 
 	/**
 	 * The DM panel: buttons for everything the exec commands do.
@@ -700,6 +723,15 @@ private:
 	/** PLAY AGAIN / BACK TO THE DEN, while an arcade arena's round is over. */
 	UPROPERTY(Transient)
 	TObjectPtr<UDCCRoundOverWidget> RoundOver;
+	UPROPERTY(Transient)
+	TObjectPtr<class UDCCCageVoteWidget> CageVote;
+	UPROPERTY(Transient)
+	TObjectPtr<class UDCCStarterKitWidget> StarterKit;
+	/** The new-player guide (2026-11-16): 0 open the menu, 1 open loot boxes, 2 equip something, 3 done. Per crawler, on this PC. */
+	int32 GuideStep = -1;
+	FString GuideKey;
+	FString GuideGear;
+	void DrawNewPlayerGuide(class ADCCCharacterBase* Crawler);
 	void UpdateRoundOver();
 
 	/** Running as the standalone pose bench (DCCArcade::IsBenchTool). */
@@ -750,6 +782,15 @@ private:
 	void BuildLootRow(TArray<EDCCLootBoxTier>& OutRow) const;
 	void SendLootOpen(EDCCLootBoxTier Tier, int32 Count, bool bAll);
 	void DrawGiftBox(float CentreX, float BaseY, float Size, const FLinearColor& Colour, float Alpha, float Glow);
+	/** A real chest (UI/DCCLootStage), standing on BaseY; falls back to DrawGiftBox if the stage is missing. */
+	void DrawChest(float CentreX, float BaseY, float Size, const FLinearColor& Colour, float Alpha, float Glow);
+	/** Text cut into lines that fit MaxWidth (at most MaxLines; the last one ends in "..." if it had to be cut). */
+	TArray<FString> WrapToWidth(const FString& Text, class UFont* Font, float MaxWidth, int32 MaxLines);
+	/** The loot screen's photo studio, and the picture of each item in the current reveal. */
+	UPROPERTY(Transient)
+	TObjectPtr<class ADCCLootStage> LootStage;
+	TArray<TWeakObjectPtr<class UTexture>> RevealPictures;
+	class ADCCLootStage* GetLootStage();
 	void DrawLootReveal(double Now);
 
 	EDCCChatInputMode ChatInputMode = EDCCChatInputMode::None;
@@ -837,7 +878,7 @@ private:
 	/** The arcade game's arena, if this level is one (the HUD trims itself there). */
 	const class ADCCArcadeArena* GetArcadeArena() const;
 
-	/** Fourteener: tools ([Q]/[T]), boosts and carried artifacts, bottom right. */
+	/** Fourteener: boosts and carried artifacts, bottom right. Tools are on the belt. */
 	void DrawClimbKit(class ADCCCharacterBase* Crawler);
 
 	/** Repo Rally: tools ([Q]/[F]) and the shift readout. Read off the car, which is the possessed pawn. */

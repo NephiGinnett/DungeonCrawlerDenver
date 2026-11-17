@@ -22,7 +22,7 @@ namespace DCCClimbItems
 	const TArray<FItem>& All()
 	{
 		static const TArray<FItem> Items = {
-			// Tools: [Q] to use.
+			// Tools: a belt slot each (its number key uses it).
 			{ GrapplingHook, TEXT("Grappling Hook"), TEXT("While climbing: yank yourself 6 m up the wall."), EKind::Tool, 0, FLinearColor(0.7f, 0.75f, 0.8f) },
 			{ Piton, TEXT("Piton"), TEXT("Drive it in: if you fall, you come back here."), EKind::Tool, 0, FLinearColor(0.85f, 0.85f, 0.9f) },
 			{ TrailMix, TEXT("Trail Mix"), TEXT("Eat it: stamina back to full, even on the wall. A little less hungry."), EKind::Tool, 0, FLinearColor(0.85f, 0.6f, 0.3f), 20.0f },
@@ -57,7 +57,7 @@ namespace DCCClimbItems
 		static const TMap<FName, int32> Prices = {
 			{ Apple, 2 }, { Jerky, 4 }, { GranolaBar, 5 }, { GreenChileBurrito, 9 }, { TrailMix, 8 },
 			{ Piton, 10 }, { ChalkBag, 10 }, { HardHat, 12 }, { SafetyLine, 14 }, { Crampons, 16 }, { WindCloak, 16 },
-			{ GrapplingHook, 22 },
+			// No GrapplingHook: it is on everyone's belt now (DCCChopShop::Grapple), upgraded rather than bought.
 		};
 		const int32* Price = Prices.Find(Id);
 		return Price ? *Price : 0;

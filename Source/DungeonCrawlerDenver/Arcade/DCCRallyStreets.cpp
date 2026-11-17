@@ -408,7 +408,8 @@ void ADCCArcadeKart::DressStreetLife()
 			const FColor Ink = Inks[Tag.RandRange(0, UE_ARRAY_COUNT(Inks) - 1)];
 			if (ATextRenderActor* Sign = Label(At, Yaw, Word(), Ink, Size))
 			{
-				Sign->SetActorRotation(FRotator(Tag.FRandRange(-7.0f, 7.0f), Yaw, Tag.FRandRange(-16.0f, 16.0f)));
+				// Tilted in the surface's own plane only (roll), so the paint stays flat on the board it is sprayed on.
+				Sign->SetActorRotation(FRotator(0.0f, Yaw, Tag.FRandRange(-12.0f, 12.0f)));
 			}
 		};
 
@@ -430,11 +431,10 @@ void ADCCArcadeKart::DressStreetLife()
 					const float Side = Tag.FRand() < 0.5f ? 1.0f : -1.0f;
 					const FVector BoardAt = Front + Along * Side * 480.0f + FVector(0, 0, 780);
 					Block(BoardAt, FVector(20, 620, 1500), BoardColour, Face, true);
-					Spray(Front + Out * 50.0f + FVector(0, 0, 220), Face, Tag.FRandRange(44.0f, 72.0f));
 					for (int32 Line = 0; Line < 3; ++Line)
 					{
 						const float Z = 480.0f - Line * 400.0f;
-						Spray(BoardAt + Out * 24.0f + Along * Tag.FRandRange(-30.0f, 30.0f) + FVector(0, 0, Z),
+						Spray(BoardAt + Out * 11.5f + Along * Tag.FRandRange(-30.0f, 30.0f) + FVector(0, 0, Z),
 							Face, Tag.FRandRange(56.0f, 92.0f));
 					}
 				}
@@ -447,9 +447,14 @@ void ADCCArcadeKart::DressStreetLife()
 			const float Len = Delta.Size2D();
 			const FVector Dir = Delta.GetSafeNormal2D();
 			const FVector In = FRotator(0.0f, InwardYaw, 0.0f).Vector();
+			// The fence is 1.7 m of open mesh: the tags go on plywood sheets zip-tied to it at chest height (2026-11-16, Zoe:
+			// the words used to float in the air above the fence).
+			const FVector Along2D(-In.Y, In.X, 0.0f);
 			for (float D = 600.0f; D < Len - 600.0f; D += Tag.FRandRange(900.0f, 1600.0f))
 			{
-				Spray(From + Dir * D + In * 90.0f + FVector(0, 0, Tag.FRandRange(170.0f, 340.0f)), InwardYaw, Tag.FRandRange(48.0f, 84.0f));
+				const FVector Sheet = From + Dir * D + In * 14.0f + FVector(0, 0, 95.0f);
+				Block(Sheet, FVector(4.0f, 240.0f, 122.0f), FLinearColor(0.34f, 0.27f, 0.18f), InwardYaw, false);
+				Spray(Sheet + In * 3.0f + Along2D * Tag.FRandRange(-20.0f, 20.0f), InwardYaw, Tag.FRandRange(30.0f, 44.0f));
 			}
 		};
 		FenceTags(Yard + FVector(-E, -E, 0), Yard + FVector(-E, E, 0), 0.0f);
@@ -458,12 +463,6 @@ void ADCCArcadeKart::DressStreetLife()
 		FenceTags(Yard + FVector(E, -E, 0), Yard + FVector(E, -2600, 0), 180.0f);
 		FenceTags(Yard + FVector(E, 2600, 0), Yard + FVector(E, E, 0), 180.0f);
 
-		for (int32 g = 0; g < 2; ++g)
-		{
-			const FVector At = O + FVector(GasOffset(g).X, GasOffset(g).Y, 0);
-			Spray(At + FVector(1300, 200, 260), 90.0f, 64.0f);
-			Spray(At + FVector(-200, 1100, 240), 0.0f, 58.0f);
-		}
 	}
 
 	// Painted graffiti, wall grime and puddles (2026-11-14, Zoe: "I didn't really see much graffiti"). The text
