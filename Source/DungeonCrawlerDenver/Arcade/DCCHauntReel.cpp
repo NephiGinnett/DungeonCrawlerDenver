@@ -11,6 +11,7 @@
 
 #include "Arcade/DCCArcadeHaunt.h"
 #include "Arcade/DCCWalletComponent.h"
+#include "Session/DCCProfile.h"
 #include "Favor/DCCFavorComponent.h"
 #include "Stats/DCCStatsComponent.h"
 #include "InputCoreTypes.h"
@@ -42,8 +43,19 @@ namespace
 		return State ? State->GetPlayerName() : (C ? C->DisplayName.ToString() : FString());
 	}
 
-	constexpr double ClipSeconds = 4.5;
-	constexpr int32 MaxClips = 8;
+	constexpr double ClipSeconds = 5.0;
+}
+
+namespace
+{
+	int32 BucketOf(uint8 Label)
+	{
+		// 1 lamp, 2 ghost, 12 story ghost. 4/5/6 monsters. 7-11 traps.
+		if (Label == 1 || Label == 2 || Label == 12) { return 0; }
+		if (Label >= 4 && Label <= 6) { return 1; }
+		if (Label >= 7 && Label <= 11) { return 2; }
+		return -1;
+	}
 }
 
 FString ADCCArcadeHaunt::LabelTitle(uint8 Label)
@@ -70,25 +82,25 @@ FString ADCCArcadeHaunt::LabelTitle(uint8 Label)
 
 void ADCCArcadeHaunt::BuildReel()
 {
-	// One post per crew member whose tape made it up: their best moment (the stretch of recording that scored most),
-	// ranked on the Scroller by popularity. Popularity is the footage, plus Charisma (the camera loves some people),
-	// plus AI Favor (the audience already knows them), plus what they found (notes) and what the crew told (stories).
+	// Every crawler posts. One player: their best 4 moments. Two: 2 each. Three or more: at least 1 each.
+	// A moment with no views still posts. Clips are about 5 seconds and do not overlap.
 	struct FPick { FString Who; double Peak = 0.0; float Score = 0.0f; uint8 Label = 0; };
+	const int32 Crew = FMath::Max(1, Uploaders.Num());
+	const int32 Each = Crew <= 1 ? 4 : Crew == 2 ? 2 : 1;
+
 	TArray<FDCCReelClip> Posts;
 	TArray<float> Popularity;
 	for (const FString& Who : Uploaders)
 	{
-		const TArray<FShotMark>* Marks = ShotLog.Find(Who);
-		FPick Best;
-		Best.Who = Who;
-		if (Marks)
+		TArray<FPick> Candidates;
+		if (const TArray<FShotMark>* Marks = ShotLog.Find(Who))
 		{
 			FPick Cur;
 			float CurPeak = -1.0f;
 			double Last = -100.0;
 			auto Flush = [&]()
 			{
-				if (CurPeak > 0.0f && Cur.Score > Best.Score) { Best = Cur; Best.Who = Who; }
+				if (CurPeak > 0.0f) { Cur.Who = Who; Candidates.Add(Cur); }
 				Cur = FPick();
 				CurPeak = -1.0f;
 			};
@@ -100,10 +112,34 @@ void ADCCArcadeHaunt::BuildReel()
 				if (M.Shot > CurPeak) { CurPeak = M.Shot; Cur.Peak = M.T; Cur.Label = M.Label; }
 			}
 			Flush();
+			Candidates.Sort([](const FPick& A, const FPick& B) { return A.Score > B.Score; });
 		}
-		if (Best.Peak <= 0.0)
+
+		TArray<FPick> Chosen;
+		for (const FPick& Candidate : Candidates)
 		{
-			Best.Peak = ServerTime() - 5.0; // nothing scored: the last moments in the cage, waving
+			if (Chosen.Num() >= Each) { break; }
+			bool bOverlap = false;
+			for (const FPick& Have : Chosen)
+			{
+				if (FMath::Abs(Have.Peak - Candidate.Peak) < ClipSeconds) { bOverlap = true; break; }
+			}
+			if (!bOverlap) { Chosen.Add(Candidate); }
+		}
+		const double Tail = ServerTime() - 5.0;
+		for (int32 Pad = 0; Chosen.Num() < Each && Pad < Each; ++Pad)
+		{
+			FPick Filler;
+			Filler.Who = Who;
+			Filler.Peak = Tail - Pad * (ClipSeconds + 0.4);
+			Filler.Score = 0.1f;
+			Filler.Label = 0;
+			bool bOverlap = false;
+			for (const FPick& Have : Chosen)
+			{
+				if (FMath::Abs(Have.Peak - Filler.Peak) < ClipSeconds) { bOverlap = true; break; }
+			}
+			if (!bOverlap) { Chosen.Add(Filler); }
 		}
 
 		const FDCCFootageEntry* Entry = FindEntry(Who);
@@ -115,20 +151,48 @@ void ADCCArcadeHaunt::BuildReel()
 		const int32 Charisma = Crawler && Crawler->Stats ? Crawler->Stats->GetEnhanced().GetScore(EDCCAbility::Charisma) : 3;
 		const int32 Favor = Crawler && Crawler->Favor ? Crawler->Favor->Favor : 0;
 		const TSet<int32>* Read = ReadBy.Find(Who);
+		const int32 Notes = Read ? Read->Num() : 0;
+		const int32 Stories = StoriesDone.Num();
 		const float Views = Entry ? float(Entry->Views) : 0.0f;
-		const float Pop = Views * (1.0f + 0.08f * Charisma) + FMath::Max(0, Favor) * 25.0f + (Read ? Read->Num() : 0) * 400.0f
-			+ StoriesDone.Num() * 1500.0f + FMath::FRandRange(0.0f, 300.0f);
+		const TArray<FShotMark>* Marks = ShotLog.Find(Who);
 
-		FDCCReelClip Post;
-		Post.Cams.Add(Who);
-		Post.From = Best.Peak - ClipSeconds * 0.55;
-		Post.To = Best.Peak + ClipSeconds * 0.45;
-		Post.Title = LabelTitle(Best.Label);
-		Post.Likes = FMath::RoundToInt(Pop * 0.11f);
-		Post.Comments = FMath::RoundToInt(Pop * 0.006f) + 3;
-		Post.Shares = FMath::RoundToInt(Pop * 0.0025f);
-		Posts.Add(Post);
-		Popularity.Add(Pop);
+		for (const FPick& Best : Chosen)
+		{
+			const float Pop = Views * (1.0f + 0.08f * Charisma) + FMath::Max(0, Favor) * 25.0f + Notes * 400.0f
+				+ Stories * 1500.0f + Best.Score * 20.0f + FMath::FRandRange(0.0f, 300.0f);
+
+			int32 Ghost = 0, Monster = 0, Trap = 0;
+			if (Marks)
+			{
+				const double From = Best.Peak - ClipSeconds * 0.55;
+				const double To = Best.Peak + ClipSeconds * 0.45;
+				for (const FShotMark& M : *Marks)
+				{
+					if (M.T < From || M.T > To) { continue; }
+					switch (BucketOf(M.Label))
+					{
+					case 0: ++Ghost; break;
+					case 1: ++Monster; break;
+					case 2: ++Trap; break;
+					default: break;
+					}
+				}
+			}
+
+			FDCCReelClip Post;
+			Post.Cams.Add(Who);
+			Post.From = Best.Peak - ClipSeconds * 0.55;
+			Post.To = Best.Peak + ClipSeconds * 0.45;
+			Post.Title = LabelTitle(Best.Label);
+			Post.Views = FMath::RoundToInt(Views);
+			Post.Likes = FMath::RoundToInt(Pop * 0.11f);
+			Post.Comments = FMath::RoundToInt(Pop * 0.006f) + 3;
+			Post.Shares = FMath::RoundToInt(Pop * 0.0025f);
+			Post.Card = FString::Printf(TEXT("ghost +%d\nmonster +%d\ntrap +%d\nnotes %d    stories %d\n%s views"),
+				Ghost, Monster, Trap, Notes, Stories, *FText::AsNumber(Post.Views).ToString());
+			Posts.Add(Post);
+			Popularity.Add(Pop);
+		}
 	}
 
 	// Rank, and pay by rank: trending pays best, everyone who posted gets something.
@@ -145,12 +209,27 @@ void ADCCArcadeHaunt::BuildReel()
 		Post.Rank = r + 1;
 		Post.Tickets = r < 3 ? RankTickets[r] : 6;
 		Post.Credits = r < 3 ? RankCredits[r] : 3;
+		Post.Card += FString::Printf(TEXT("\n%d likes    +%d tickets"), Post.Likes, Post.Tickets);
 		for (APlayerController* PC : Players)
 		{
 			if (PC && PC->PlayerState && PC->PlayerState->GetPlayerName() == Post.Cams[0])
 			{
 				UDCCWalletComponent::AwardTickets(PC->PlayerState, Post.Tickets, FString::Printf(TEXT("#%d on the Scroller"), Post.Rank));
 				UDCCWalletComponent::AwardCredits(PC->PlayerState, Post.Credits, FString::Printf(TEXT("#%d on the Scroller"), Post.Rank));
+				FDCCUpload Saved;
+				Saved.Id = FString::Printf(TEXT("Haunt|%s|%.1f|%s"), *Post.Cams[0], Post.From, *Post.Title);
+				Saved.Title = Post.Title;
+				Saved.Moment = Post.Title;
+				Saved.Views = Post.Views;
+				Saved.Likes = Post.Likes;
+				Saved.Comments = Post.Comments;
+				Saved.Shares = Post.Shares;
+				Saved.When = FDateTime::Now().ToString(TEXT("%Y-%m-%d"));
+				Saved.Game = TEXT("Dead Air");
+				Saved.CommentLines.Add(TEXT("the way the lamp went BLUE"));
+				Saved.CommentLines.Add(TEXT("Mount Fourteener is NOT normal"));
+				Saved.CommentLines.Add(Post.Card);
+				DCCProfile::AddUpload(PC->PlayerState, Saved);
 			}
 		}
 	}

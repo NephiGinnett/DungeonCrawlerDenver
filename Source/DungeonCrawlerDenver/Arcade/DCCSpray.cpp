@@ -293,7 +293,7 @@ namespace DCCSpray
 		ADCCCharacterBase* Crawler = Cast<ADCCCharacterBase>(Pawn);
 		if (Crawler && Crawler->Wallet && !Crawler->Wallet->Owns(CanId))
 		{
-			Notice(PC, TEXT("No spray can. The Prize Counter in the Den sells one: pick any picture and it becomes your tag."));
+			Notice(PC, TEXT("No spray can. The Prize Counter in the Safe Room sells one: pick any picture and it becomes your tag."));
 			return;
 		}
 		TArray<uint8> RGB;

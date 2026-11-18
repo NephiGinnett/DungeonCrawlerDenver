@@ -75,6 +75,9 @@ enum class EDCCMenuTab : uint8
 	/** Keys and reactions (2026-11-16): remap the new keys, choose the bubble and move for each moment. */
 	Settings,
 
+	/** Dead Air posts, the channel, and the old party / allies / whisper threads. */
+	Social,
+
 	MAX
 };
 
@@ -161,6 +164,8 @@ public:
 	void ToggleMenu();
 	/** Opens the Tab menu on a given page (dev command DCC.MenuTab). */
 	void OpenMenuTab(EDCCMenuTab Tab) { MenuTab = Tab; if (!bShowMenu) { ToggleMenu(); } }
+	/** Opens SOCIAL on one friend's whisper thread. */
+	void OpenSocialFriend(const FString& Name);
 	/** The starter-kit choice (UDCCWalletComponent::Client_OfferStarterKit). */
 	void OpenStarterKit();
 
@@ -173,6 +178,15 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "DCC|UI")
 	bool IsMenuVisible() const { return bShowMenu; }
+
+	// --- The summoning tubes' panel (2026-11-17, Arcade/DCCSummons.h) ---
+	/** E at a podium: open its panel, or close it. */
+	void ToggleSummonPanel(int32 Tube);
+	bool IsSummonPanelOpen() const { return SummonTube >= 0; }
+	/** The reveal banner after a pull. */
+	void ShowSummonResult(FName Friend, uint8 Tier, uint8 Variant, const FString& WeaponName);
+	/** The reveal banner alone (also drawn while a trailer is rolling). */
+	void DrawSummonBanner();
 
 	/** How many feed lines to show under the menu. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "DCC|UI", meta = (ClampMin = "0"))
@@ -208,6 +222,9 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "DCC|UI")
 	void ShowNotice(const FText& Message, float Seconds = 2.5f);
+
+	/** Slides an achievement card in at the top. Several queue so they never overlap. */
+	void PushAchievement(const FString& Title, const FString& Reward);
 
 	/** Opens or closes the DM panel, and takes the cursor with it. */
 	UFUNCTION(BlueprintCallable, Category = "DCC|Admin")
@@ -535,6 +552,13 @@ protected:
 	void DrawReactions();
 	/** The Den: a slim strip of game logos with the players on each pad, in place of the long status list. */
 	void DrawDenStrip(const class ADCCArcadeLobby* Lobby);
+	/** The podium prompt, the summon panel and the reveal banner. */
+	void DrawSummon(const class ADCCArcadeLobby* Lobby);
+	int32 SummonTube = -1;
+	/** Pulls waiting for (or showing) their banner, each from when its friend lands. Pulls in quick succession each get
+	 *  their turn rather than resetting one banner's timer (the gacha ad's button-mashing showed none until the last). */
+	struct FSummonBanner { FName Friend; uint8 Tier = 0; uint8 Variant = 0; FString Weapon; double At = 0.0; };
+	TArray<FSummonBanner> SummonBanners;
 	/** How far down the Den strip is: 0 tucked up off the top, 1 all the way down. */
 	float DenStripShown = 0.0f;
 	/** The SETTINGS tab: keys (UI/DCCControls) and each moment's bubble and move (DCCReactions). */
@@ -618,6 +642,14 @@ protected:
 	/** Whispers tab: a name field (WhisperTargetName) gating a 1:1 log/input. */
 	float DrawWhispersTab(float X, float Y, ADCCCharacterBase* Crawler);
 
+	/** Social page: uploads, channel numbers, friends, and the party / allies / whisper threads. */
+	float DrawSocial(float X, float Y, ADCCCharacterBase* Crawler);
+
+	/** 0 home, 1 party thread, 2 allies thread, 3 one friend, 4 one post. */
+	int32 SocialView = 0;
+	int32 SocialPost = -1;
+	FString SocialFriend;
+
 	/**
 	 * Shared message-list renderer for Party/Allies/Whispers/Chatter.
 	 *
@@ -664,6 +696,15 @@ protected:
 
 private:
 	bool bShowMenu = false;
+
+	struct FAchieveToast
+	{
+		FString Title;
+		FString Reward;
+		double StartedAt = -1.0;
+	};
+	TArray<FAchieveToast> AchieveToasts;
+	void DrawAchievementPopups();
 
 	/** Which achievement row is expanded. None means no card is showing. */
 	FName SelectedAchievementId;

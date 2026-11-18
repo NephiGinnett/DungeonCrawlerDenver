@@ -1268,6 +1268,16 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DCC|Loot")
 	void DCCEquipItem(int32 Index);
 
+	/** Takes one worn slot off. The Character tab's UNEQUIP button calls this. Same routing as DCCEquipItem. */
+	UFUNCTION(BlueprintCallable, Category = "DCC|Loot")
+	void DCCUnequipSlot(uint8 Slot);
+
+	/** Public so the menu can ask. The belt only reads the front of the skill list. */
+	void DCCPutSkillOnBelt(int32 Index);
+
+	/** Dev. Plays the attack clip for whatever is in the main hand. */
+	void DebugSwing();
+
 	/**
 	 * Drinks one stowed consumable from this crawler's own pack - the Tab
 	 * menu's Inventory page calls this on a clicked row. Same routing reason
@@ -2014,6 +2024,13 @@ protected:
 	// cannot be overloaded by parameter type the way plain C++ functions can.
 	UFUNCTION(Server, Reliable)
 	void Server_EquipInventoryItem(int32 Index);
+
+	UFUNCTION(Server, Reliable)
+	void Server_UnequipSlot(uint8 Slot);
+
+	/** Move a known skill to the front of the list. The belt only reads the front. */
+	UFUNCTION(Server, Reliable)
+	void Server_PutSkillOnBelt(int32 Index);
 
 	UFUNCTION(Server, Reliable)
 	void Server_ConsumeStowedDrink(int32 Index);

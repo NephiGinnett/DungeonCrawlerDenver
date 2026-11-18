@@ -762,8 +762,12 @@ void ADCCHUD::DrawRallyTruck(const ADCCArcadeKart* Kart, const ADCCRover* Rover)
 	}
 	else if (Rover->RallyTow)
 	{
-		RallyPill(LX, TY - 2.0f * S, Rover->bRallyTowDocked ? (Rover->bRallyInYard ? TEXT("IN THE YARD - [Q] DROP IT") : TEXT("TOWING - get it to the yard"))
-			: TEXT("REELING IT IN..."), Rover->bRallyTowDocked ? Green : Cyan, S);
+		const TCHAR* TowLine = TEXT("REELING IT IN...");
+		if (Rover->RallyTrick == 1) { TowLine = TEXT("HOLD THE LINE - A and D"); }
+		else if (Rover->RallyTrick == 2) { TowLine = TEXT("OVERHEAD - A and D, Q banks"); }
+		else if (Rover->bRallyTowDocked && Rover->bRallyInYard) { TowLine = TEXT("IN THE YARD - [Q] DROP IT"); }
+		else if (Rover->bRallyTowDocked) { TowLine = TEXT("TOWING - [Q] lifts it"); }
+		RallyPill(LX, TY - 2.0f * S, TowLine, Rover->bRallyTowDocked ? Green : Cyan, S);
 	}
 	else
 	{

@@ -19,6 +19,7 @@
 #include "Vehicles/DCCRover.h"
 #include "UI/DCCHUD.h"
 #include "Arcade/DCCArcadeArena.h"
+#include "Arcade/DCCArcade.h"
 #include "Arcade/DCCArcadeGames.h"
 #include "Arcade/DCCArcadeGate.h"
 #include "Arcade/DCCArcadeHaunt.h"
@@ -26,6 +27,10 @@
 #include "Camera/CameraActor.h"
 #include "EngineUtils.h"
 #include "Characters/DCCEnemyCharacter.h"
+#include "Equipment/DCCEquipmentComponent.h"
+#include "Progression/DCCAchievementComponent.h"
+#include "Characters/DCCAttackStyle.h"
+#include "UI/DCCChatTypes.h"
 
 namespace
 {
@@ -472,4 +477,177 @@ static FAutoConsoleCommandWithWorldAndArgs GDevFight(TEXT("DCC.Fight"), TEXT("DC
 				}
 			}), 0.03f, true);
 		});
+	}));
+
+// DCC.Podium <tube 1-4> [delay]: (dev) stand the local crawler at a summoning tube's podium and open its panel.
+// DCC.SummonFree <tube 1-4> [delay]: (dev) a pull at that tube that costs no tickets (so tests leave the profile alone).
+static FAutoConsoleCommandWithWorldAndArgs GDevPodium(TEXT("DCC.Podium"), TEXT("DCC.Podium <tube 1-4> [delay]: (dev) go to a F.I.A.T. podium."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		const int32 Tube = FMath::Clamp(Args.Num() > 0 ? FCString::Atoi(*Args[0]) : 1, 1, ADCCArcadeLobby::TubeCount) - 1;
+		After(World, Args.Num() > 1 ? FCString::Atof(*Args[1]) : 0.0f, [Tube](UWorld* W)
+		{
+			ADCCCharacterBase* Me = LocalCrawler(W);
+			APlayerController* PC = W->GetFirstPlayerController();
+			for (TActorIterator<ADCCArcadeLobby> It(W); It && Me && PC; ++It)
+			{
+				const FVector At = It->PodiumCenter(Tube) + FVector(60, 130, 100);
+				Me->SetActorLocation(At, false, nullptr, ETeleportType::TeleportPhysics);
+				PC->SetControlRotation((It->TubeCenter(Tube) + FVector(0, 0, 300) - At).Rotation());
+				if (ADCCHUD* Hud = Cast<ADCCHUD>(PC->GetHUD())) { Hud->ToggleSummonPanel(Tube); }
+			}
+		});
+	}));
+
+static FAutoConsoleCommandWithWorldAndArgs GDevSummonFree(TEXT("DCC.SummonFree"), TEXT("DCC.SummonFree <tube 1-4> [delay]: (dev) a free summon."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		const int32 Tube = FMath::Clamp(Args.Num() > 0 ? FCString::Atoi(*Args[0]) : 1, 1, ADCCArcadeLobby::TubeCount) - 1;
+		After(World, Args.Num() > 1 ? FCString::Atof(*Args[1]) : 0.0f, [Tube](UWorld* W)
+		{
+			ADCCCharacterBase* Me = LocalCrawler(W);
+			APlayerController* PC = W->GetFirstPlayerController();
+			if (ADCCHUD* Hud = PC ? Cast<ADCCHUD>(PC->GetHUD()) : nullptr)
+			{
+				if (Hud->IsSummonPanelOpen()) { Hud->ToggleSummonPanel(Tube); }
+			}
+			if (Me && Me->Wallet) { Me->Wallet->DoSummon(uint8(Tube), true); }
+		});
+	}));
+
+// DCC.Equip <Row> [delay]: (dev) wear a gear row. DCC.Hit <BoxName> [delay]: (dev) press a canvas button by name.
+static FAutoConsoleCommandWithWorldAndArgs GDevEquip(TEXT("DCC.Equip"), TEXT("DCC.Equip <RowName> [delay]: (dev) equip a gear row on the local crawler."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		if (Args.Num() < 1) { return; }
+		const FString Id = Args[0];
+		After(World, Args.Num() > 1 ? FCString::Atof(*Args[1]) : 0.0f, [Id](UWorld* W)
+		{
+			if (ADCCCharacterBase* Crawler = LocalCrawler(W)) { Crawler->DCCEquip(Id); }
+		});
+	}));
+
+static FAutoConsoleCommandWithWorldAndArgs GDevHit(TEXT("DCC.Hit"), TEXT("DCC.Hit <BoxName> [delay]: (dev) click a canvas hit box by name, e.g. Off|0."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		if (Args.Num() < 1) { return; }
+		const FString Box = Args[0];
+		After(World, Args.Num() > 1 ? FCString::Atof(*Args[1]) : 0.0f, [Box](UWorld* W)
+		{
+			APlayerController* PC = W ? W->GetFirstPlayerController() : nullptr;
+			if (ADCCHUD* Hud = PC ? Cast<ADCCHUD>(PC->GetHUD()) : nullptr)
+			{
+				Hud->NotifyHitBoxClick(FName(*Box));
+			}
+		});
+	}));
+
+static FAutoConsoleCommandWithWorldAndArgs GDevAchieve(TEXT("DCC.Achieve"), TEXT("DCC.Achieve [delay]: (dev) queue two achievement cards, one after the other."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		After(World, Args.Num() > 0 ? FCString::Atof(*Args[0]) : 0.0f, [](UWorld* W)
+		{
+			ADCCCharacterBase* Crawler = LocalCrawler(W);
+			UDCCAchievementComponent* Achievements = Crawler ? UDCCAchievementComponent::Find(Crawler) : nullptr;
+			if (!Achievements)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("[DCC Achieve] no component"));
+				return;
+			}
+			Achievements->DebugAnnounce(TEXT("First Light"), 40, 0);
+			Achievements->DebugAnnounce(TEXT("Still Standing"), 25, 2);
+		});
+	}));
+
+// DCC.Style <Row|none> [delay]: (dev) equip, then swing, so the log names the style and the clip.
+static FAutoConsoleCommandWithWorldAndArgs GDevStyle(TEXT("DCC.Style"), TEXT("DCC.Style <RowName|none> [delay]: (dev) equip and swing."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		const FString Row = Args.Num() > 0 ? Args[0] : TEXT("none");
+		After(World, Args.Num() > 1 ? FCString::Atof(*Args[1]) : 0.0f, [Row](UWorld* W)
+		{
+			ADCCCharacterBase* Crawler = LocalCrawler(W);
+			if (!Crawler)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("[DCC Style] no crawler"));
+				return;
+			}
+			if (Row.Equals(TEXT("none"), ESearchCase::IgnoreCase) || Row.Equals(TEXT("hands"), ESearchCase::IgnoreCase))
+			{
+				Crawler->DCCUnequipSlot(0);
+			}
+			else
+			{
+				Crawler->DCCEquip(Row);
+			}
+			const FName Id = (Row.Equals(TEXT("none"), ESearchCase::IgnoreCase) || Row.Equals(TEXT("hands"), ESearchCase::IgnoreCase))
+				? NAME_None : FName(*Row);
+			FString Path;
+			float Rate = 1.0f;
+			bool bBorrowed = false;
+			const DCCAttackStyle::EStyle Style = DCCAttackStyle::FromId(Id);
+			DCCAttackStyle::ClipFor(Style, Path, Rate, bBorrowed);
+			UE_LOG(LogTemp, Log, TEXT("[DCC Style] ask %s -> %s rate %.2f %s"),
+				*Row, DCCAttackStyle::Name(Style), Rate, bBorrowed ? TEXT("borrowed") : TEXT("own clip"));
+			Crawler->DebugSwing();
+		});
+	}));
+
+// DCC.Whisper <Name> <Text> [delay]: (dev) a private line, and open that friend's thread.
+static FAutoConsoleCommandWithWorldAndArgs GDevWhisper(TEXT("DCC.Whisper"), TEXT("DCC.Whisper <Name> <Text> [delay]: (dev) send a whisper and open the thread."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		const FString Name = Args.Num() > 0 ? Args[0] : TEXT("Scott");
+		FString Text = Args.Num() > 1 ? Args[1] : TEXT("You up?");
+		float Delay = 0.0f;
+		if (Args.Num() > 2 && Args.Last().IsNumeric())
+		{
+			Delay = FCString::Atof(*Args.Last());
+			Text.Empty();
+			for (int32 i = 1; i < Args.Num() - 1; ++i)
+			{
+				if (!Text.IsEmpty()) { Text += TEXT(" "); }
+				Text += Args[i];
+			}
+		}
+		else if (Args.Num() > 2)
+		{
+			for (int32 i = 2; i < Args.Num(); ++i) { Text += TEXT(" "); Text += Args[i]; }
+		}
+		After(World, Delay, [Name, Text](UWorld* W)
+		{
+			ADCCCharacterBase* Crawler = LocalCrawler(W);
+			APlayerController* PC = W ? W->GetFirstPlayerController() : nullptr;
+			ADCCHUD* Hud = PC ? Cast<ADCCHUD>(PC->GetHUD()) : nullptr;
+			if (Hud) { Hud->OpenSocialFriend(Name); }
+			if (Crawler)
+			{
+				Crawler->Server_SendChatMessage(EDCCChatChannel::Whispers, Name, FText::FromString(Text));
+				UE_LOG(LogTemp, Log, TEXT("[DCC Social] whisper to %s: %s"), *Name, *Text);
+			}
+		});
+	}));
+
+// DCC.RallyPose <struggle|flip|drop> [delay]: (dev) put a mark on the first truck.
+static FAutoConsoleCommandWithWorldAndArgs GDevRallyPose(TEXT("DCC.RallyPose"), TEXT("DCC.RallyPose <struggle|flip|drop> [delay]: (dev) pose a tow."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		const FString What = Args.Num() > 0 ? Args[0] : TEXT("flip");
+		After(World, Args.Num() > 1 ? FCString::Atof(*Args[1]) : 0.0f, [What](UWorld* W)
+		{
+			for (TActorIterator<ADCCArcadeKart> It(W); It; ++It)
+			{
+				It->DebugPose(What);
+				return;
+			}
+			UE_LOG(LogTemp, Warning, TEXT("[DCC Drive] pose %s: no rally"), *What);
+		});
+	}));
+
+// DCC.GoTo <Game> [delay]: (dev) DCC.Arcade with a delay, for tests that travel mid-run (summoned allies following).
+static FAutoConsoleCommandWithWorldAndArgs GDevGoTo(TEXT("DCC.GoTo"), TEXT("DCC.GoTo <Haunt|Climb|Kart|Neon|Gate|...> [delay]: (dev) travel to a game."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		const FName Game = Args.Num() > 0 ? FName(*Args[0]) : NAME_None;
+		After(World, Args.Num() > 1 ? FCString::Atof(*Args[1]) : 0.0f, [Game](UWorld* W) { DCCArcade::Travel(W, Game); });
 	}));

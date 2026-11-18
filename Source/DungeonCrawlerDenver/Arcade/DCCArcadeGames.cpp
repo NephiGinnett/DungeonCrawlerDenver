@@ -1,4 +1,6 @@
 #include "Arcade/DCCArcadeGames.h"
+#include "Arcade/DCCSummons.h"
+#include "Components/PointLightComponent.h"
 #include "Characters/DCCReactions.h"
 #include "Progression/DCCAchievementComponent.h"
 #include "Arcade/DCCBounties.h"
@@ -99,7 +101,7 @@ void ADCCArcadeLobby::BuildLocal()
 	Block(O + FVector(-L - 20, 0, H * 0.5f), FVector(40, W * 2, H), FLinearColor(0.08f, 0.06f, 0.12f));
 
 	// Text faces +X at yaw 0; the north wall's signs turn to face the room (-Y).
-	Sign(O + FVector(0, W - 40, 780), -90.0f, TEXT("THE DEN"), FColor(255, 120, 230), 120.0f);
+	Sign(O + FVector(0, W - 40, 780), -90.0f, TEXT("THE SAFE ROOM"), FColor(255, 120, 230), 90.0f);
 	Sign(O + FVector(0, W - 40, 680), -90.0f, TEXT("Stand on a game to vote. Majority wins. Everyone goes together."), FColor(200, 190, 220), 30.0f);
 
 	const TArray<DCCArcade::FGame>& Games = DCCArcade::Games();
@@ -224,6 +226,8 @@ void ADCCArcadeLobby::BuildLocal()
 	Sign(Chop + FVector(0, -465, 56), 90.0f, TEXT("scrap from the driving games buys truck upgrades"), FColor(220, 225, 235), 16.0f);
 	Light(Chop + FVector(0, -200, 520), Aqua, 9000.0f, 1300.0f);
 	Light(Chop + FVector(-300, -360, 320), FLinearColor(1.0f, 0.5f, 0.2f), 2500.0f, 500.0f);
+
+	BuildTubes();
 }
 
 void ADCCArcadeLobby::TickPads(float DeltaSeconds)
@@ -290,8 +294,196 @@ void ADCCArcadeLobby::TickPads(float DeltaSeconds)
 	}
 }
 
+// ---- The summoning tubes (2026-11-17, Arcade/DCCSummons.h) -----------------------------------------------------------
+// Four glass tubes along the south wall between the Prize Counter and the Chop Shop, hanging from a neon canopy (the Den
+// has no ceiling of its own), each on a big tiered base with a podium in front. A pull lights the tube in its rarity's
+// colour, a beam runs down it, and the friend floats down inside (DCCSummons::SpawnAlly) and steps out.
+
+void ADCCArcadeLobby::BuildTubes()
+{
+	const FLinearColor Gold(1.0f, 0.75f, 0.25f), Plum(0.22f, 0.1f, 0.28f), Violet(0.62f, 0.35f, 1.0f), Ink(0.05f, 0.03f, 0.08f);
+	const FVector Mid = (TubeCenter(0) + TubeCenter(TubeCount - 1)) * 0.5f;
+	const float Span = FVector::Dist(TubeCenter(0), TubeCenter(TubeCount - 1)) + 700.0f;
+
+	// The canopy: a dark slab with a gold edge and a neon strip underneath, held up by two pillars at the wall.
+	Block(Mid + FVector(0, 0, 860), FVector(Span, 520, 40), Ink, 0.0f, false);
+	Block(Mid + FVector(0, 262, 860), FVector(Span, 10, 56), Gold, 0.0f, false);
+	if (AActor* Strip = Block(Mid + FVector(0, 240, 836), FVector(Span - 40, 14, 6), Violet, 0.0f, false))
+	{
+		Paint(Strip, TEXT("/Game/Synthwave_city/Material/MI_neon_1"));
+	}
+	for (int32 Side = -1; Side <= 1; Side += 2)
+	{
+		Block(Mid + FVector(Side * (Span * 0.5f - 40.0f), -180, 430), FVector(60, 60, 860), Plum);
+	}
+	// Zoe (2026-11-17): "Don't call it the summoning tubes, maybe more like, FIAT - Friend in a tube".
+	Sign(Mid + FVector(0, 262, 975), 90.0f, TEXT("F.I.A.T."), FColor(255, 205, 110), 96.0f);
+
+	TubeLights.Reset();
+	TubeBeams.Reset();
+	TubeBeamScale.Reset();
+	for (int32 i = 0; i < TubeCount; ++i)
+	{
+		const FVector C = TubeCenter(i);
+		// The base: three tiers, plum, gold, then a glowing disc the friend lands on.
+		Shape(TEXT("Cylinder"), C + FVector(0, 0, 20), FVector(380, 380, 40), Plum, FRotator::ZeroRotator, true);
+		Shape(TEXT("Cylinder"), C + FVector(0, 0, 50), FVector(320, 320, 20), Gold, FRotator::ZeroRotator, true);
+		if (AActor* Disc = Shape(TEXT("Cylinder"), C + FVector(0, 0, 63), FVector(250, 250, 6), Violet, FRotator::ZeroRotator, false))
+		{
+			Paint(Disc, TEXT("/Game/Synthwave_city/Material/MI_neon_1"));
+		}
+		for (int32 k = 0; k < 8; ++k)
+		{
+			// Gold studs round the rim.
+			const FVector Rim = FRotator(0, k * 45.0f, 0).Vector() * 172.0f;
+			Shape(TEXT("Sphere"), C + Rim + FVector(0, 0, 66), FVector(22, 22, 22), Gold, FRotator::ZeroRotator, false);
+		}
+		// The tube: curved glass from the base up into the canopy, with a door-shaped gap cut out of the side facing the
+		// room (2026-11-17, Zoe: "come out of a cut out in the glass"). Fourteen panes round a circle, three left out,
+		// gold posts either side of the gap. A gold collar at each end.
+		const FVector Out = TubeExit(i);
+		const float Radius = 112.0f;
+		constexpr int32 Panes = 14;
+		for (int32 k = 0; k < Panes; ++k)
+		{
+			const float Angle = 360.0f * k / Panes;
+			const FVector Dir = FRotator(0.0f, Angle, 0.0f).Vector();
+			if (FVector::DotProduct(Dir, Out) > 0.78f)
+			{
+				continue; // the cut-out
+			}
+			if (AActor* Pane = Shape(TEXT("Cube"), C + Dir * Radius + FVector(0, 0, 452), FVector(4.0f, 2.0f * PI * Radius / Panes + 2.0f, 760.0f),
+				FLinearColor(0.6f, 0.7f, 1.0f), FRotator(0.0f, Angle, 0.0f), false))
+			{
+				Paint(Pane, TEXT("/Game/Beach_house/Material/MI_glass"));
+			}
+		}
+		for (int32 Side = -1; Side <= 1; Side += 2)
+		{
+			const FVector Edge = FRotator(0.0f, Out.Rotation().Yaw + Side * 40.0f, 0.0f).Vector() * Radius;
+			Shape(TEXT("Cylinder"), C + Edge + FVector(0, 0, 452), FVector(14, 14, 760), Gold, FRotator::ZeroRotator, false);
+		}
+		// A lintel over the doorway.
+		Block(C + Out * (Radius - 4.0f) + FVector(0, 0, 330), FVector(150, 10, 14), Gold, Out.Rotation().Yaw + 90.0f, false);
+		Shape(TEXT("Cylinder"), C + FVector(0, 0, 80), FVector(240, 240, 24), Gold, FRotator::ZeroRotator, false);
+		Shape(TEXT("Cylinder"), C + FVector(0, 0, 826), FVector(260, 260, 40), Gold, FRotator::ZeroRotator, false);
+		// The beam (hidden until a pull lights it).
+		if (AActor* Beam = Shape(TEXT("Cylinder"), C + FVector(0, 0, 452), FVector(70, 70, 760), FLinearColor::White, FRotator::ZeroRotator, false))
+		{
+			Paint(Beam, TEXT("/Game/Synthwave_city/Material/MI_light"));
+			TubeBeamScale.Add(Beam->GetActorScale3D());
+			Beam->SetActorHiddenInGame(true);
+			TubeBeams.Add(Beam);
+		}
+		else
+		{
+			TubeBeamScale.Add(FVector::OneVector);
+			TubeBeams.Add(nullptr);
+		}
+		// The light inside, soft violet while it waits.
+		UPointLightComponent* Glow = NewObject<UPointLightComponent>(this);
+		Glow->SetupAttachment(GetRootComponent());
+		Glow->SetMobility(EComponentMobility::Movable);
+		Glow->SetWorldLocation(C + FVector(0, 0, 420));
+		Glow->SetIntensity(1200.0f);
+		Glow->SetAttenuationRadius(700.0f);
+		Glow->SetLightColor(Violet);
+		Glow->SetCastShadows(false);
+		Glow->RegisterComponent();
+		TubeLights.Add(Glow);
+
+		// The podium: a post with a slanted top and a lit screen.
+		const FVector P = PodiumCenter(i);
+		Shape(TEXT("Cylinder"), P + FVector(0, 0, 55), FVector(70, 70, 110), Plum, FRotator::ZeroRotator, true);
+		Block(P + FVector(0, 0, 118), FVector(130, 90, 14), Gold, 0.0f, false);
+		if (AActor* Screen = Shape(TEXT("Cube"), P + FVector(0, -6, 130), FVector(100, 60, 4), Violet, FRotator(0, 0, -22.0f), false))
+		{
+			Paint(Screen, TEXT("/Game/Synthwave_city/Material/MI_neon_1"));
+		}
+		Sign(P + FVector(0, -48, 72), 90.0f, TEXT("PRESS E"), FColor(255, 220, 150), 14.0f, false);
+	}
+	Sign(Mid + FVector(0, 262, 905), 90.0f, FString::Printf(TEXT("FRIEND IN A TUBE   -   %d tickets: a friend comes down to fight beside you"), DCCSummons::Price), FColor(225, 215, 240), 20.0f);
+}
+
+int32 ADCCArcadeLobby::PodiumNear(const FVector& Location) const
+{
+	for (int32 i = 0; i < TubeCount; ++i)
+	{
+		if (FVector::Dist2D(Location, PodiumCenter(i)) <= 190.0f && FMath::Abs(Location.Z - PodiumCenter(i).Z) < 300.0f)
+		{
+			return i;
+		}
+	}
+	return -1;
+}
+
+bool ADCCArcadeLobby::IsTubeBusy(int32 Tube) const
+{
+	return TubeStarted.IsValidIndex(Tube) && TubeStarted[Tube] > 0.0 && ServerTime() - TubeStarted[Tube] < 2.8;
+}
+
+bool ADCCArcadeLobby::StartTube(int32 Tube, uint8 Tier, bool bForce)
+{
+	if (TubeStarted.Num() != TubeCount)
+	{
+		TubeStarted.Init(0.0, TubeCount);
+		TubeTiers.Init(0, TubeCount);
+	}
+	if (!HasAuthority() || !TubeStarted.IsValidIndex(Tube) || (IsTubeBusy(Tube) && !bForce))
+	{
+		return false;
+	}
+	TubeStarted[Tube] = ServerTime();
+	TubeTiers[Tube] = Tier;
+	ForceNetUpdate();
+	return true;
+}
+
+void ADCCArcadeLobby::TickTubes()
+{
+	const double Now = ServerTime();
+	for (int32 i = 0; i < TubeLights.Num(); ++i)
+	{
+		UPointLightComponent* Glow = TubeLights[i].Get();
+		AActor* Beam = TubeBeams.IsValidIndex(i) ? TubeBeams[i].Get() : nullptr;
+		const double Started = TubeStarted.IsValidIndex(i) ? TubeStarted[i] : 0.0;
+		const float T = Started > 0.0 ? float(Now - Started) : -1.0f;
+		const bool bLit = T >= 0.0f && T < 2.8f;
+		if (Glow)
+		{
+			if (bLit)
+			{
+				// Ramps up in the rarity's colour, pulses while the friend comes down, flashes as they land.
+				const FLinearColor Colour = DCCSummons::TierColour(TubeTiers.IsValidIndex(i) ? TubeTiers[i] : 0);
+				const float Ramp = FMath::Clamp(T / 0.5f, 0.0f, 1.0f) * FMath::Clamp((2.8f - T) / 0.8f, 0.0f, 1.0f);
+				const float Pulse = 0.75f + 0.25f * FMath::Sin(T * 18.0f);
+				const float Flash = FMath::Max(0.0f, 1.0f - FMath::Abs(T - 1.45f) / 0.3f); // the friend hits the bottom
+				Glow->SetLightColor(Colour);
+				Glow->SetIntensity(1200.0f + Ramp * Pulse * 16000.0f + Flash * 40000.0f);
+			}
+			else
+			{
+				Glow->SetLightColor(FLinearColor(0.62f, 0.35f, 1.0f));
+				Glow->SetIntensity(1200.0f + 300.0f * FMath::Sin(Now * 1.3 + i));
+			}
+		}
+		if (Beam)
+		{
+			Beam->SetActorHiddenInGame(!bLit);
+			if (bLit)
+			{
+				// Thin to full width as it lights, back to a thread as it fades.
+				const float Width = FMath::Clamp(T / 0.4f, 0.05f, 1.0f) * FMath::Clamp((2.8f - T) / 0.9f, 0.05f, 1.0f);
+				const FVector Base = TubeBeamScale.IsValidIndex(i) ? TubeBeamScale[i] : FVector::OneVector;
+				Beam->SetActorScale3D(FVector(Base.X * Width, Base.Y * Width, Base.Z));
+			}
+		}
+	}
+}
+
 void ADCCArcadeLobby::ClientTick(float DeltaSeconds)
 {
+	TickTubes();
 	TickPads(DeltaSeconds);
 	// Each pad's board shows its game's record, kept current as people play.
 	for (int32 i = 0; i < RecordSigns.Num() && i < PadRecords.Num(); ++i)
@@ -368,6 +560,18 @@ void ADCCArcadeLobby::ServerTick(float DeltaSeconds)
 	}
 	RefreshTimer = 0.25f;
 
+	// The podium's odds: everyone's rarity from their popularity, refreshed now and then (it reads the profiles).
+	if (ServerTime() >= NextTiersAt)
+	{
+		NextTiersAt = ServerTime() + 10.0;
+		DCCSummons::ComputeTiers(FriendTiers);
+	}
+	if (TubeStarted.Num() != TubeCount)
+	{
+		TubeStarted.Init(0.0, TubeCount);
+		TubeTiers.Init(0, TubeCount);
+	}
+
 	const TArray<DCCArcade::FGame>& Games = DCCArcade::Games();
 	TArray<int32> Votes;
 	Votes.Init(0, Games.Num());
@@ -426,7 +630,7 @@ void ADCCArcadeLobby::ServerTick(float DeltaSeconds)
 		bAllVotedCountdown = false;
 	}
 
-	Title = TEXT("THE DEN  -  pick the next game");
+	Title = TEXT("THE SAFE ROOM  -  pick the next game");
 	Accent = FLinearColor(1.0f, 0.45f, 0.9f);
 	StatusLines.Reset();
 	// The HUD draws the Den as a strip of game logos with the players on each (ADCCHUD::DrawDenStrip); the records go
@@ -464,6 +668,9 @@ void ADCCArcadeLobby::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME(ADCCArcadeLobby, PadRecords);
 	DOREPLIFETIME(ADCCArcadeLobby, CountdownLine);
 	DOREPLIFETIME(ADCCArcadeLobby, LeadingPad);
+	DOREPLIFETIME(ADCCArcadeLobby, FriendTiers);
+	DOREPLIFETIME(ADCCArcadeLobby, TubeStarted);
+	DOREPLIFETIME(ADCCArcadeLobby, TubeTiers);
 }
 
 // ===========================================================================
@@ -476,7 +683,16 @@ ADCCArcadeArena::FSky ADCCArcadeClimb::GetSky() const
 	Sky.SunPitch = -35.0f;
 	Sky.SunIntensity = 4.0f; // was 9: auto exposure washed the crawlers out (Zoe, 2026-11-13)
 	Sky.FogColour = FLinearColor(0.6f, 0.7f, 0.85f);
-	Sky.FogDensity = 0.008f;
+	// Was 0.008, then SetupSky multiplies by 0.3, so the air was 0.0024 and the far range had no haze.
+	// 0.045 becomes 0.0135 after that multiply. FogStart keeps the rock itself clear.
+	Sky.FogDensity = 0.045f;
+	Sky.FogStart = 14000.0f;
+	static bool bLogged = false;
+	if (!bLogged)
+	{
+		bLogged = true;
+		UE_LOG(LogTemp, Log, TEXT("[DCC Range] far mountains were see-through: fog density 0.008 * 0.3 = 0.0024, and SM_mountain is a one-sided shell. Now density 0.045 (0.0135 in the volume), fog starts at 14000, plus a solid rock fill inside each shell."));
+	}
 	return Sky;
 }
 
@@ -695,8 +911,12 @@ void ADCCArcadeClimb::BuildMountain()
 			{
 				Slab->SetActorHiddenInGame(true);
 			}
-			const FVector RockBase = O + N * (HalfWidthAt(Z) + 150.0f) + T * Lateral + FVector(0, 0, Z - 200.0f);
-			if (!Prop(Outcrops[(Face + k) % 3], RockBase, N.Rotation().Yaw + (k % 2) * 180.0f, FVector(640, 980, 260), false, true))
+			// Was HalfWidth+150 and Fit (640, 980, 260) with bStretch, which pancaked the rock into a dirt band
+			// floating off the face. Uniform height, sunk into the wall. Collision slab above is unchanged.
+			const FVector RockBase = O + N * (HalfWidthAt(Z) + 20.0f) + T * Lateral + FVector(0, 0, Z - 90.0f);
+			UE_LOG(LogTemp, Log, TEXT("[DCC Slab] face %d ledge z=%.0f was floating at +150 stretch (640,980,260), now sunk at %s height 320"),
+				Face, Z, *RockBase.ToString());
+			if (!Prop(Outcrops[(Face + k) % 3], RockBase, N.Rotation().Yaw + (k % 2) * 180.0f, FVector(0, 0, 320), false, false))
 			{
 				// No rock pack installed: show the slab so the ledge is still visible.
 				Shape(TEXT("Sphere"), Center + FVector(0, 0, -40), FVector(N.X != 0 ? 340 : 660, N.Y != 0 ? 340 : 660, 150), Ledge, FRotator::ZeroRotator, false);
@@ -733,7 +953,11 @@ void ADCCArcadeClimb::BuildMountain()
 			{
 				Jut->SetActorHiddenInGame(true);
 			}
-			Prop(Outcrops[(Face + k + 1) % 3], Center + N * 10.0f - FVector(0, 0, 150.0f), N.Rotation().Yaw + 90.0f, FVector(740, 740, 420), false, true);
+			// Was a stretched pancake with nothing under it. Uniform rock, plus a second rock holding it up.
+			const FVector Over = Center + N * -30.0f - FVector(0, 0, 40.0f);
+			UE_LOG(LogTemp, Log, TEXT("[DCC Slab] face %d overhang z=%.0f was stretch (740,740,420) with no support at %s"), Face, Z, *Over.ToString());
+			Prop(Outcrops[(Face + k + 1) % 3], Over, N.Rotation().Yaw + 90.0f, FVector(0, 0, 380), false, false);
+			Prop(Outcrops[(Face + k) % 3], Center - FVector(0, 0, 220.0f), N.Rotation().Yaw, FVector(0, 0, 240), false, false);
 		}
 	}
 
@@ -777,7 +1001,7 @@ void ADCCArcadeClimb::BuildMountain()
 	for (int32 i = 0; i < 4; ++i)
 	{
 		const FVector Corner(i % 2 ? WideHalf + 150.0f : -WideHalf - 150.0f, i / 2 ? WideHalf + 150.0f : -WideHalf - 150.0f, 0.0f);
-		Prop(i % 2 ? RockA : RockB, O + Corner, i * 77.0f, FVector(900, 900, 700), true, true);
+		Prop(i % 2 ? RockA : RockB, O + Corner, i * 77.0f, FVector(0, 0, 700), true, false);
 	}
 	FRandomStream Scree(14115);
 	for (int32 i = 0; i < 40; ++i)
@@ -810,6 +1034,16 @@ void ADCCArcadeClimb::BuildMountain()
 	Prop(RangeA, O + FVector(-18000, -26000, -300), 140.0f, FVector(0, 0, 13000));
 	Prop(RangeB, O + FVector(12000, -30000, -300), 200.0f, FVector(0, 0, 10000));
 	Prop(RangeA, O + FVector(15000, 29000, -300), 300.0f, FVector(0, 0, 11000));
+	// Solid fill inside each shell so a hole in the one-sided mesh shows rock, not sky. No collision.
+	auto FillRange = [&](const FVector& Base, float Height)
+	{
+		Block(O + Base + FVector(0, 0, Height * 0.42f), FVector(Height * 0.7f, Height * 0.85f, Height * 0.72f), FLinearColor(0.34f, 0.33f, 0.31f), 0.0f, false);
+	};
+	FillRange(FVector(-30000, 0, -300), 16000.0f);
+	FillRange(FVector(-20000, 25000, -300), 12000.0f);
+	FillRange(FVector(-18000, -26000, -300), 13000.0f);
+	FillRange(FVector(12000, -30000, -300), 10000.0f);
+	FillRange(FVector(15000, 29000, -300), 11000.0f);
 
 	FRandomStream Woods(1859);
 	int32 Placed = 0;
@@ -2316,6 +2550,18 @@ void ADCCArcadeKart::BuildLocal()
 	DressUrbanClutter();
 	BuildStreetFun();
 	SpawnWalkers();
+
+	// Eight loose cans on the crossings. They are not the station pumps, and they do not touch the tab.
+	const FLinearColor CanGreen(0.20f, 0.85f, 0.28f);
+	for (int32 i = 0; i < 8; ++i)
+	{
+		const FVector At = Crossing((i % 4) - 1, (i / 4) * 2 - 1) + FVector(700.0f, 280.0f, 30.0f);
+		if (AActor* Can = Block(At, FVector(36.0f, 24.0f, 46.0f), CanGreen, 18.0f, false))
+		{
+			Can->Tags.Add(FName(*FString::Printf(TEXT("GasCan%d"), i)));
+		}
+	}
+	UE_LOG(LogTemp, Log, TEXT("[DCC Drive] gas cans: 8 placed, +28 fuel, cap 1.6x the rated tank"));
 }
 
 void ADCCArcadeKart::DressCity()
@@ -2859,7 +3105,10 @@ void ADCCArcadeKart::SeatPlayers()
 				Truck.ChopLine = DCCChopShop::GetLevel(ChopKey, DCCChopShop::Line);
 				Truck.ChopPit = DCCChopShop::GetLevel(ChopKey, DCCChopShop::PitCrew);
 			}
-			Truck.Fuel = DCCChopShop::TankCapacity(Truck.ChopTank);
+			const float Rated = DCCChopShop::TankCapacity(Truck.ChopTank);
+			Truck.Fuel = Rated * 1.6f;
+			UE_LOG(LogTemp, Log, TEXT("[DCC Drive] fuel: start %.0f -> %.0f (x1.6 of the rated tank, capacity stays %.0f)"),
+				Rated, Truck.Fuel, Rated);
 			Car->RallyPlate = Truck.Name;
 			// KMHR comes up as you sit down, already in the middle of Repo Rally.
 			// [T] tunes out, or back in on a random song, still mid-file.
@@ -3226,6 +3475,28 @@ void ADCCArcadeKart::TickCity(float DeltaSeconds)
 			}
 		}
 
+		if (GasCanBits != 0)
+		{
+			const float BonusCap = Cap * 1.6f;
+			for (int32 Can = 0; Can < 8; ++Can)
+			{
+				if ((GasCanBits & (1 << Can)) == 0)
+				{
+					continue;
+				}
+				const FVector At = Crossing((Can % 4) - 1, (Can / 4) * 2 - 1) + FVector(700.0f, 280.0f, 0.0f);
+				if (FVector::Dist2D(Car->GetActorLocation(), At) < 220.0f)
+				{
+					GasCanBits &= ~(1 << Can);
+					const float BeforeFuel = Truck.Fuel;
+					Truck.Fuel = FMath::Min(BonusCap, Truck.Fuel + 28.0f);
+					Tell(Car, TEXT("Gas can."));
+					UE_LOG(LogTemp, Log, TEXT("[DCC Drive] gas can %d fuel %.0f -> %.0f (cap %.0f)"),
+						Can, BeforeFuel, Truck.Fuel, BonusCap);
+				}
+			}
+		}
+
 		if (Truck.Fuel <= 0.0f && Truck.Cans > 0)
 		{
 			Truck.Cans = 0;
@@ -3483,7 +3754,13 @@ void ADCCArcadeKart::TickCity(float DeltaSeconds)
 			if (!Mark.bDocked && Dist < 240.0f)
 			{
 				Mark.bDocked = true;
-				Tell(TowerCar, FString::Printf(TEXT("%s is locked on. Drive it to the yard and [Q] to drop it."), *Mark.Name));
+				TowerCar->RallyTrick = 1;
+				TowerCar->RallyBalance = 0.0f;
+				TowerCar->RallyOffBalance = 0.0f;
+				TowerCar->RallyTrickUntil = Now + 3.5;
+				TowerCar->RallyClampUntil = Now + 1.5;
+				Tell(TowerCar, TEXT("CLAMPED! A and D hold the line."));
+				UE_LOG(LogTemp, Log, TEXT("[DCC Drive] clamp: camera 1.5s, struggle 3.5s"));
 				Radio(TowerCar, TEXT("RR_Disp_Bumper"));
 				if (Mark.bHeavy && !Mark.bHeavyTold)
 				{
@@ -3495,7 +3772,75 @@ void ADCCArcadeKart::TickCity(float DeltaSeconds)
 			}
 
 			float Drag = 1.0f;
-			if (Mark.bDocked)
+			if (Mark.bDocked && TowerCar->RallyTrick == 1)
+			{
+				const float Wander = Mark.Kind >= 1 ? 0.85f : 0.45f;
+				TowerCar->RallyBalance += FMath::Sin(static_cast<float>(Now) * (Mark.Kind >= 1 ? 3.2f : 1.8f)) * Wander * DeltaSeconds;
+				TowerCar->RallyBalance = FMath::Clamp(
+					TowerCar->RallyBalance - TowerCar->GetSteerInput() * 2.4f * DeltaSeconds, -1.6f, 1.6f);
+				if (FMath::Abs(TowerCar->RallyBalance) > 1.0f)
+				{
+					TowerCar->RallyOffBalance += DeltaSeconds;
+					if (TowerCar->RallyOffBalance > 0.35f)
+					{
+						UE_LOG(LogTemp, Log, TEXT("[DCC Drive] struggle lost balance %.2f"), TowerCar->RallyBalance);
+						Release(mi, true);
+						Tell(TowerCar, TEXT("It got away."));
+						continue;
+					}
+				}
+				else
+				{
+					TowerCar->RallyOffBalance = 0.0f;
+				}
+				if (Now >= TowerCar->RallyTrickUntil && TowerCar->RallyTrick == 1)
+				{
+					TowerCar->RallyTrick = 0;
+					TowerCar->RallyBalance = 0.0f;
+					Tell(TowerCar, TEXT("It's on the hitch."));
+					UE_LOG(LogTemp, Log, TEXT("[DCC Drive] struggle held"));
+				}
+			}
+
+			if (Mark.bDocked && TowerCar->RallyTrick == 2)
+			{
+				TowerCar->RallyMagnet = FMath::Clamp(
+					TowerCar->RallyMagnet + TowerCar->GetSteerInput() * 1.6f * DeltaSeconds, -1.0f, 1.0f);
+				TowerCar->RallySpin += DeltaSeconds * 220.0f;
+				const float Sign = TowerCar->RallyTilt >= 0.0f ? 1.0f : -1.0f;
+				TowerCar->RallyTilt += (Sign * 28.0f - TowerCar->RallyMagnet * 90.0f) * DeltaSeconds;
+				TowerCar->RallyTilt = FMath::Clamp(TowerCar->RallyTilt, -100.0f, 100.0f);
+				if (FMath::Abs(TowerCar->RallyTilt) < 25.0f)
+				{
+					TowerCar->RallyTrickScore += FMath::Max(1, FMath::RoundToInt(14.0f * DeltaSeconds));
+				}
+				const FVector Overhead = TowerCar->GetActorLocation()
+					+ FVector::UpVector * 280.0f
+					+ TowerCar->GetActorRightVector() * TowerCar->RallyMagnet * 80.0f;
+				Car->SetActorLocation(Overhead, false, nullptr, ETeleportType::TeleportPhysics);
+				Car->SetActorRotation(FRotator(
+					TowerCar->RallyTilt,
+					TowerCar->GetActorRotation().Yaw + TowerCar->RallySpin,
+					TowerCar->RallyMagnet * 18.0f));
+				if (FMath::Abs(TowerCar->RallyTilt) > 70.0f)
+				{
+					TowerCar->RallyOffBalance += DeltaSeconds;
+					if (TowerCar->RallyOffBalance > 0.35f)
+					{
+						UE_LOG(LogTemp, Log, TEXT("[DCC Drive] flip dropped tilt %.0f score %d"),
+							TowerCar->RallyTilt, TowerCar->RallyTrickScore);
+						TowerCar->RallyTrickScore = 0;
+						Release(mi, true);
+						Tell(TowerCar, TEXT("Lost it."));
+						continue;
+					}
+				}
+				else
+				{
+					TowerCar->RallyOffBalance = 0.0f;
+				}
+			}
+			else if (Mark.bDocked)
 			{
 				// A trailer, not a rigid boom (2026-11-14: "they just kind of clip into the side of a building").
 				// It used to be snapped to one point 7 m behind the truck, so every turn swung it straight through
@@ -3511,6 +3856,10 @@ void ADCCArcadeKart::TickCity(float DeltaSeconds)
 				const float TrailBack = Mark.bHeavy ? 640.0f : 250.0f;
 				FVector Want = Hitch - Trail * TrailBack;
 				Want.Z = Goal.Z;
+				if (TowerCar->RallyTrick == 1)
+				{
+					Want += TowerCar->GetActorRightVector() * TowerCar->RallyBalance * 180.0f;
+				}
 				FHitResult Hit;
 				Car->SetActorLocation(Want, true, &Hit);
 				if (Hit.bBlockingHit && !Hit.bStartPenetrating)
@@ -3721,6 +4070,13 @@ void ADCCArcadeKart::Release(int32 Slot, bool bTell)
 	FMark& Mark = Marks[Slot];
 	if (ADCCRover* TowerCar = Mark.Tower.Get())
 	{
+		TowerCar->RallyTrick = 0;
+		TowerCar->RallyBalance = 0.0f;
+		TowerCar->RallyTilt = 0.0f;
+		TowerCar->RallySpin = 0.0f;
+		TowerCar->RallyMagnet = 0.0f;
+		TowerCar->RallyTrickScore = 0;
+		TowerCar->RallyOffBalance = 0.0f;
 		if (bTell)
 		{
 			Tell(TowerCar, TEXT("Line cut. No drop, no pay."));
@@ -3769,6 +4125,19 @@ void ADCCArcadeKart::Deliver(int32 Slot)
 	const float TimePay = FMath::Max(0.0f, 40.0f - Seconds);
 	const float Clean = (100.0f - Damage) * 0.45f;
 	float Pay = (40.0f + TimePay + Clean) * Mark.PayMul;
+	if (TowerCar && TowerCar->RallyTrickMul > 1.01f)
+	{
+		Pay *= TowerCar->RallyTrickMul;
+		UE_LOG(LogTemp, Log, TEXT("[DCC Drive] flip pay x%.2f -> %.0f"), TowerCar->RallyTrickMul, Pay);
+		TowerCar->RallyTrickMul = 1.0f;
+	}
+	if (TowerCar)
+	{
+		TowerCar->RallyTrick = 0;
+		TowerCar->RallyTrickScore = 0;
+		TowerCar->RallyTilt = 0.0f;
+		TowerCar->RallySpin = 0.0f;
+	}
 	const bool bWreck = Damage >= 80.0f;
 	if (bWreck)
 	{
@@ -4180,6 +4549,53 @@ void ADCCArcadeKart::UseTool(ADCCRover* Car)
 			Deliver(Truck->HookedId);
 			return;
 		}
+		if (Mark.bDocked && Car->RallyTrick == 1)
+		{
+			Tell(Car, TEXT("Still fighting the line."));
+			return;
+		}
+		if (Mark.bDocked && Car->RallyTrick == 0)
+		{
+			Car->RallyTrick = 2;
+			Car->RallyTilt = 0.0f;
+			Car->RallyMagnet = 0.0f;
+			Car->RallySpin = 0.0f;
+			Car->RallyTrickScore = 0;
+			Car->RallyOffBalance = 0.0f;
+			Tell(Car, TEXT("Overhead. A and D on the magnet. Q banks a clean flip."));
+			UE_LOG(LogTemp, Log, TEXT("[DCC Drive] hoist"));
+			SyncKit(*Truck);
+			return;
+		}
+		if (Mark.bDocked && Car->RallyTrick == 2)
+		{
+			if (FMath::Abs(Car->RallyTilt) < 25.0f)
+			{
+				const int32 Score = Car->RallyTrickScore;
+				const float Bank = FMath::Clamp(Score / 100.0f, 0.15f, 2.5f);
+				Car->RallyTrickMul += Bank;
+				const float BonusCap = DCCChopShop::TankCapacity(Truck->ChopTank) * 1.6f;
+				const float BeforeFuel = Truck->Fuel;
+				Truck->Fuel = FMath::Min(BonusCap, Truck->Fuel + 12.0f);
+				Car->RallyTrick = 0;
+				Car->RallyTilt = 0.0f;
+				Car->RallySpin = 0.0f;
+				Car->RallyMagnet = 0.0f;
+				Car->RallyTrickScore = 0;
+				Tell(Car, FString::Printf(TEXT("Banked. Pay x%.2f. A little fuel."), Car->RallyTrickMul));
+				UE_LOG(LogTemp, Log, TEXT("[DCC Drive] bank score %d mul %.2f fuel %.0f -> %.0f"),
+					Score, Car->RallyTrickMul, BeforeFuel, Truck->Fuel);
+			}
+			else
+			{
+				UE_LOG(LogTemp, Log, TEXT("[DCC Drive] Q dropped tilt %.0f"), Car->RallyTilt);
+				Car->RallyTrickScore = 0;
+				Release(Truck->HookedId, true);
+				Tell(Car, TEXT("Too tilted. It fell."));
+			}
+			SyncKit(*Truck);
+			return;
+		}
 		Release(Truck->HookedId, true);
 		SyncKit(*Truck);
 		return;
@@ -4226,7 +4642,7 @@ void ADCCArcadeKart::FireHook(ADCCRover* Car, FVector Dir)
 	}
 	if (Truck->HookedId >= 0)
 	{
-		Tell(Car, TEXT("The magnet's already locked. Right mouse off, then [Q] drops it in the yard, or cuts it."));
+		Tell(Car, TEXT("The magnet's already locked. Right mouse off, then [Q] lifts it, or drops it in the yard."));
 		return;
 	}
 
@@ -4360,6 +4776,67 @@ void ADCCArcadeKart::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	DOREPLIFETIME(ADCCArcadeKart, Board);
 	DOREPLIFETIME(ADCCArcadeKart, FlagAt);
 	DOREPLIFETIME(ADCCArcadeKart, RallyWave);
+	DOREPLIFETIME(ADCCArcadeKart, GasCanBits);
+}
+
+void ADCCArcadeKart::DebugPose(const FString& What)
+{
+	FTruck* Truck = nullptr;
+	for (FTruck& One : Trucks)
+	{
+		if (One.bPlayer && One.Car.IsValid())
+		{
+			Truck = &One;
+			break;
+		}
+	}
+	if (!Truck || Marks.Num() == 0 || !Marks[0].Car.IsValid())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[DCC Drive] pose %s refused (truck %d marks %d)"),
+			*What, Truck ? 1 : 0, Marks.Num());
+		return;
+	}
+	FMark& Mark = Marks[0];
+	ADCCRover* Car = Truck->Car.Get();
+	ADCCRover* Tow = Mark.Car.Get();
+	Truck->HookedId = 0;
+	Mark.Tower = Car;
+	Mark.bDocked = true;
+	Tow->bRallyHeld = true;
+	Tow->StopAutoPilot();
+	const FString Kind = What.ToLower();
+	if (Kind.StartsWith(TEXT("flip")))
+	{
+		Car->RallyTrick = 2;
+		Car->RallyTilt = 8.0f;
+		Car->RallyMagnet = 0.25f;
+		Car->RallySpin = 40.0f;
+		Car->RallyTrickScore = 24;
+		Tow->SetActorLocation(Car->GetActorLocation() + FVector(40.0f, 0.0f, 280.0f));
+		Tow->SetActorRotation(FRotator(8.0f, Car->GetActorRotation().Yaw + 40.0f, 4.0f));
+	}
+	else if (Kind.StartsWith(TEXT("drop")))
+	{
+		Car->RallyTrick = 2;
+		Car->RallyTilt = 82.0f;
+		Car->RallyMagnet = -0.8f;
+		Car->RallySpin = 90.0f;
+		Car->RallyOffBalance = -3.0f;
+		Tow->SetActorLocation(Car->GetActorLocation() + FVector(120.0f, 0.0f, 180.0f));
+		Tow->SetActorRotation(FRotator(82.0f, Car->GetActorRotation().Yaw, -20.0f));
+	}
+	else
+	{
+		Car->RallyTrick = 1;
+		Car->RallyBalance = 0.35f;
+		Car->RallyTrickUntil = ServerTime() + 8.0;
+		Car->RallyClampUntil = ServerTime() + 2.0;
+		Tow->SetActorLocation(Car->GetActorLocation() - Car->GetActorForwardVector() * 520.0f
+			+ Car->GetActorRightVector() * 70.0f);
+	}
+	SyncKit(*Truck);
+	UE_LOG(LogTemp, Log, TEXT("[DCC Drive] pose %s trick %d tilt %.0f truck %s"),
+		*What, Car->RallyTrick, Car->RallyTilt, *Car->GetActorLocation().ToString());
 }
 
 void ADCCArcadeKart::RefreshBoard()
@@ -4450,6 +4927,34 @@ void ADCCArcadeKart::RefreshBoard()
 
 void ADCCArcadeKart::ClientTick(float DeltaSeconds)
 {
+	// Hide a taken can once, when the replicated bits change. A full actor scan every frame is the whole city.
+	{
+		static int32 ShownBits = 255;
+		if (ShownBits != GasCanBits)
+		{
+			ShownBits = GasCanBits;
+			if (UWorld* World = GetWorld())
+			{
+				for (TActorIterator<AActor> It(World); It; ++It)
+				{
+					for (const FName& Tag : It->Tags)
+					{
+						const FString Label = Tag.ToString();
+						if (!Label.StartsWith(TEXT("GasCan")))
+						{
+							continue;
+						}
+						const int32 Index = FCString::Atoi(*Label.RightChop(6));
+						if (Index >= 0 && Index < 8 && (GasCanBits & (1 << Index)) == 0)
+						{
+							It->SetActorHiddenInGame(true);
+							It->SetActorEnableCollision(false);
+						}
+					}
+				}
+			}
+		}
+	}
 	FDCCRallyAmbience::Tick(this, DeltaSeconds);
 	TickWalkers(DeltaSeconds);
 	const double Now = ServerTime();

@@ -41,6 +41,8 @@
 #include "Vehicles/DCCRover.h"
 #include "Progression/DCCAchievementComponent.h"
 #include "Equipment/DCCEquipmentComponent.h"
+#include "Characters/DCCAttackStyle.h"
+#include "Animation/AnimSequenceBase.h"
 #include "Classes/DCCClassComponent.h"
 #include "Onboarding/DCCOnboardingComponent.h"
 #include "Rooms/DCCTaleFloor.h"
@@ -555,6 +557,62 @@ void ADCCCharacterBase::Server_EquipInventoryItem_Implementation(int32 Index)
 	}
 }
 
+void ADCCCharacterBase::DCCUnequipSlot(uint8 Slot)
+{
+	if (HasAuthority())
+	{
+		Server_UnequipSlot_Implementation(Slot);
+	}
+	else
+	{
+		Server_UnequipSlot(Slot);
+	}
+}
+
+void ADCCCharacterBase::DCCPutSkillOnBelt(int32 Index)
+{
+	if (HasAuthority())
+	{
+		Server_PutSkillOnBelt_Implementation(Index);
+	}
+	else
+	{
+		Server_PutSkillOnBelt(Index);
+	}
+}
+
+void ADCCCharacterBase::DebugSwing()
+{
+	Multicast_PlayAttack(nullptr, false);
+}
+
+void ADCCCharacterBase::Server_UnequipSlot_Implementation(uint8 Slot)
+{
+	if (!Equipment)
+	{
+		UE_LOG(LogTemp, Log, TEXT("[DCC Equip] unequip slot %d refused: no equipment"), Slot);
+		return;
+	}
+	const EDCCEquipmentSlot Which = static_cast<EDCCEquipmentSlot>(Slot);
+	const FName Was = Equipment->GetEquippedId(Which);
+	const bool bRemoved = Equipment->Unequip(Which);
+	// Unequip drops the slot. It does not put the piece back in the bag. A cursed row refuses.
+	UE_LOG(LogTemp, Log, TEXT("[DCC Equip] unequip slot %d '%s' %s"),
+		Slot, *Was.ToString(), bRemoved ? TEXT("removed") : TEXT("refused (empty or cursed)"));
+}
+
+void ADCCCharacterBase::Server_PutSkillOnBelt_Implementation(int32 Index)
+{
+	if (!Skills || !Skills->KnownSkills.IsValidIndex(Index) || Index <= 0)
+	{
+		return;
+	}
+	const FDCCKnownSkill Moved = Skills->KnownSkills[Index];
+	Skills->KnownSkills.RemoveAt(Index);
+	Skills->KnownSkills.Insert(Moved, 0);
+	UE_LOG(LogTemp, Log, TEXT("[DCC Belt] %s moved to slot 1"), *Moved.SkillId.ToString());
+}
+
 void ADCCCharacterBase::OnPrimaryPressed()
 {
 	// The character menu owns the mouse while it is open, so a click meant for an
@@ -565,7 +623,7 @@ void ADCCCharacterBase::OnPrimaryPressed()
 	{
 		if (const ADCCHUD* DCCHUD = Cast<ADCCHUD>(PC->GetHUD()))
 		{
-			if (DCCHUD->IsMenuVisible())
+			if (DCCHUD->IsMenuVisible() || DCCHUD->IsSummonPanelOpen())
 			{
 				return;
 			}
@@ -2057,21 +2115,63 @@ void ADCCCharacterBase::TickStamina(float DeltaSeconds)
 			return;
 		}
 
-		// Off the side of the rock (2026-11-13: Zoe could climb sideways past the
-		// mountain's corner and hang on air). Nothing solid behind us at chest or
-		// waist height means there is no wall here any more: let go and fall.
+		// Around a corner instead of letting go (2026-11-18). An outside corner is a
+		// miss behind you: step along the way you are travelling and take the new face.
+		// An inside corner is a wall ahead whose normal is not this face.
 		if (HasAuthority() && ActiveClimbPoint->IsWallPlane())
 		{
 			FCollisionQueryParams WallQuery(SCENE_QUERY_STAT(DCCClimbEdge), false, this);
-			const float Reach = (GetCapsuleComponent() ? GetCapsuleComponent()->GetScaledCapsuleRadius() : 35.0f) + 90.0f;
+			const float Radius = GetCapsuleComponent() ? GetCapsuleComponent()->GetScaledCapsuleRadius() : 35.0f;
+			const float Reach = Radius + 90.0f;
 			const FVector At = GetActorLocation();
+			const FVector N = ActiveClimbPoint->WallNormal.GetSafeNormal();
 			FHitResult WallHit;
-			const bool bChest = GetWorld()->LineTraceSingleByChannel(WallHit, At + FVector(0, 0, 40), At + FVector(0, 0, 40) - ActiveClimbPoint->WallNormal * Reach, ECC_WorldStatic, WallQuery);
-			const bool bWaist = GetWorld()->LineTraceSingleByChannel(WallHit, At - FVector(0, 0, 30), At - FVector(0, 0, 30) - ActiveClimbPoint->WallNormal * Reach, ECC_WorldStatic, WallQuery);
+			const bool bChest = GetWorld()->LineTraceSingleByChannel(WallHit, At + FVector(0, 0, 40), At + FVector(0, 0, 40) - N * Reach, ECC_WorldStatic, WallQuery);
+			const bool bWaist = GetWorld()->LineTraceSingleByChannel(WallHit, At - FVector(0, 0, 30), At - FVector(0, 0, 30) - N * Reach, ECC_WorldStatic, WallQuery);
+			FVector Travel = GetVelocity();
+			Travel.Z = 0.0f;
+			Travel = FVector::VectorPlaneProject(Travel, N).GetSafeNormal();
+
+			auto AdoptFace = [&](const FVector& NewNormal, const FVector& Point)
+			{
+				ActiveClimbPoint->WallNormal = NewNormal.GetSafeNormal();
+				ActiveClimbPoint->WallPoint = Point;
+				const FVector Hold = ActiveClimbPoint->GetAttachLocationFor(this, GetActorLocation().Z);
+				SetActorLocation(Hold);
+				SetActorRotation(FRotator(0.0f, ActiveClimbPoint->WallNormal.Rotation().Yaw + 180.0f, 0.0f));
+				UE_LOG(LogTemp, Log, TEXT("[DCC Climb] wrapped onto a new face at %s"), *Point.ToString());
+			};
+
 			if (!bChest && !bWaist)
 			{
-				Server_ReleaseClimb_Implementation();
-				return;
+				bool bFound = false;
+				if (!Travel.IsNearlyZero())
+				{
+					const FVector Step = At + Travel * (Radius + 50.0f);
+					FHitResult Corner;
+					if (GetWorld()->LineTraceSingleByChannel(Corner, Step + Travel * 30.0f, Step - Travel * (Reach + 80.0f), ECC_WorldStatic, WallQuery)
+						&& FMath::Abs(Corner.ImpactNormal.Z) <= 0.5f)
+					{
+						AdoptFace(Corner.ImpactNormal, Corner.ImpactPoint);
+						bFound = true;
+					}
+				}
+				if (!bFound)
+				{
+					Server_ReleaseClimb_Implementation();
+					return;
+				}
+			}
+			else if (!Travel.IsNearlyZero())
+			{
+				FHitResult Ahead;
+				const FVector Chest = At + FVector(0, 0, 40);
+				if (GetWorld()->LineTraceSingleByChannel(Ahead, Chest, Chest + Travel * (Radius + 60.0f), ECC_WorldStatic, WallQuery)
+					&& FMath::Abs(Ahead.ImpactNormal.Z) <= 0.5f
+					&& FVector::DotProduct(Ahead.ImpactNormal.GetSafeNormal(), N) < 0.45f)
+				{
+					AdoptFace(Ahead.ImpactNormal, Ahead.ImpactPoint);
+				}
 			}
 		}
 
@@ -2559,6 +2659,21 @@ void ADCCCharacterBase::HandleInteractPressed()
 {
 	// A System window on screen owns E until it is read. Checked before death,
 	// menus and everything else, because the window is drawn over all of them.
+	// At a summoning tube's podium in the Den, E opens (or closes) the summon panel (2026-11-17).
+	if (IsLocallyControlled())
+	{
+		for (TActorIterator<ADCCArcadeLobby> It(GetWorld()); It; ++It)
+		{
+			const int32 Podium = It->PodiumNear(GetActorLocation());
+			const APlayerController* LocalPC = Cast<APlayerController>(GetController());
+			ADCCHUD* LocalHud = LocalPC ? Cast<ADCCHUD>(LocalPC->GetHUD()) : nullptr;
+			if (Podium >= 0 && LocalHud)
+			{
+				LocalHud->ToggleSummonPanel(Podium);
+				return;
+			}
+		}
+	}
 	if (IsLocallyControlled() && Onboarding && Onboarding->DismissActiveWindow())
 	{
 		return;
@@ -6941,7 +7056,29 @@ void ADCCCharacterBase::Multicast_PlayAttack_Implementation(ADCCCharacterBase* T
 {
 	// Runs on every machine, which is what finally makes swings visible: the
 	// attack itself resolves server-side, but the clip has to play locally.
-	PlayOneShotAnimation(AttackAnimation);
+	const FName Held = Equipment ? Equipment->GetEquippedId(EDCCEquipmentSlot::MainHand) : NAME_None;
+	const DCCAttackStyle::EStyle Style = DCCAttackStyle::FromId(Held);
+	FString Path;
+	float Rate = 1.0f;
+	bool bBorrowed = false;
+	DCCAttackStyle::ClipFor(Style, Path, Rate, bBorrowed);
+	UAnimationAsset* Clip = LoadObject<UAnimationAsset>(nullptr, *Path);
+	UE_LOG(LogTemp, Log, TEXT("[DCC Style] %s  %s  clip %s  rate %.2f  %s"),
+		*GetName(), DCCAttackStyle::Name(Style), *FPaths::GetBaseFilename(Path), Rate,
+		bBorrowed ? TEXT("borrowed until a Mixamo clip is dropped in") : TEXT("own clip"));
+	if (Clip)
+	{
+		float Length = 0.6f;
+		if (const UAnimSequenceBase* Sequence = Cast<UAnimSequenceBase>(Clip))
+		{
+			Length = FMath::Max(0.05f, Sequence->GetPlayLength());
+		}
+		PlayOneShotAnimation(Clip, Rate > 0.0f ? Length / Rate : Length);
+	}
+	else
+	{
+		PlayOneShotAnimation(AttackAnimation);
+	}
 	PlayCharacterSound(AttackSound);
 
 	BP_OnAttackPerformed(Target, bHit);

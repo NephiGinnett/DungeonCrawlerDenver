@@ -220,6 +220,43 @@ public:
 	UPROPERTY(Replicated)
 	bool bRallyInYard = false;
 
+	/** 0 none, 1 the tug of war just after the clamp, 2 the car is overhead. */
+	UPROPERTY(Replicated)
+	uint8 RallyTrick = 0;
+
+	UPROPERTY(Replicated)
+	float RallyBalance = 0.0f;
+
+	/** -1 to 1. Where the magnet is under the car while it is overhead. */
+	UPROPERTY(Replicated)
+	float RallyMagnet = 0.0f;
+
+	UPROPERTY(Replicated)
+	float RallySpin = 0.0f;
+
+	UPROPERTY(Replicated)
+	float RallyTilt = 0.0f;
+
+	UPROPERTY(Replicated)
+	int32 RallyTrickScore = 0;
+
+	/** Multiplies the next yard payout. 1 means no flip has been banked. */
+	UPROPERTY(Replicated)
+	float RallyTrickMul = 1.0f;
+
+	/** Server clock. Until then, this driver's camera sits on the clamp. Not a world slow-down. */
+	UPROPERTY(Replicated)
+	double RallyClampUntil = 0.0;
+
+	/** Server clock. The tug of war ends here if the line stayed centred. */
+	double RallyTrickUntil = 0.0;
+
+	/** How long the line has been off-centre. Server. */
+	float RallyOffBalance = 0.0f;
+
+	/** 1 gripped, 0 sliding. Comes back gradually when Shift is let go. */
+	float DriftGrip = 1.0f;
+
 	/** Local to the driver. Right mouse. The magnet reticle reads this. The shot carries its own direction, so this is not replicated. */
 	bool bHookAim = false;
 
@@ -238,6 +275,9 @@ public:
 
 	/** Server. Multiplies top speed until the arena says otherwise. Below 0.40 also cuts a boost. */
 	void SetRacePace(float Scale);
+
+	/** What A and D are doing right now. The rally reads this for the line and the magnet. */
+	float GetSteerInput() const { return SteerInput; }
 
 	/** Server. True if a studded-tire charge soaked this hit. */
 	bool TryAbsorb();

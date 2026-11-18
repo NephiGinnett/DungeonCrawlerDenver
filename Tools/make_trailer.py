@@ -3,6 +3,7 @@
     python Tools/make_trailer.py
     python Tools/make_trailer.py --start 20 --song "Content/Songs/Swept Away.mp3" --out D:/Builds/Fourteener_Trailer.mp4
     python Tools/make_trailer.py --rally
+    python Tools/make_trailer.py --gacha            # F.I.A.T. (Friend In A Tube): Marcel at the gacha
     python Tools/make_trailer.py --encode-only      # re-cut the last frames with new music, title or timing
 
 What it does:
@@ -81,6 +82,21 @@ HAUNT = {
     "res": (1920, 1080),
     "extra": ["-MineSeed=9001"],
     "bars": False,
+}
+# F.I.A.T., Friend In A Tube (2026-11-17): Marcel at the gacha in the Den. FREAKS, its big hit (62.1 s) on the button-mashing (13 s).
+GACHA = {
+    "game": "/Script/DungeonCrawlerDenver.DCCLobbyGameMode",
+    "command": "DCC.GachaTrailer",
+    "frames": Path(r"D:\Builds\GachaTrailerFrames"),
+    "length": 40.0,
+    "title": "DUNGEON CRAWLER DENVER",
+    "subtitle": "F.I.A.T.  -  FRIEND IN A TUBE.  100 tickets. one more pull.",
+    "title_in": 35.0,
+    "song": ROOT / "SourceArt" / "Audio" / "Freaks.mp3",
+    "start": 49.1,
+    "out": Path(r"D:\Builds\FIAT_Trailer.mp4"),
+    "log": "GachaTrailer.log",
+    "res": (1920, 1080),
 }
 TITLE_FADE = 2.5
 
@@ -180,13 +196,14 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--rally", action="store_true", help="Repo Rally ad instead of Fourteener")
     ap.add_argument("--haunt", action="store_true", help="Dead Air ad instead of Fourteener")
+    ap.add_argument("--gacha", action="store_true", help="the F.I.A.T. ad (Marcel in the Den)")
     ap.add_argument("--seed", type=int, default=None, help="Dead Air: mine layout seed")
     ap.add_argument("--song", default=None)
     ap.add_argument("--start", type=float, default=None, help="where in the song the ad's audio starts, seconds")
     ap.add_argument("--out", default=None)
     ap.add_argument("--encode-only", action="store_true")
     args = ap.parse_args()
-    spec = RALLY if args.rally else HAUNT if args.haunt else CLIMB
+    spec = RALLY if args.rally else HAUNT if args.haunt else GACHA if args.gacha else CLIMB
     if args.seed is not None:
         spec["extra"] = [f"-MineSeed={args.seed}"]
     song = args.song or spec["song"]

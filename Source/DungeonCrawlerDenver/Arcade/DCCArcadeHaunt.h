@@ -111,6 +111,14 @@ struct FDCCReelClip
 
 	UPROPERTY()
 	FString Title;
+
+	/** Views that made it out of the mine. Zero still gets a post. */
+	UPROPERTY()
+	int32 Views = 0;
+
+	/** The explanation card: ghosts, monsters, traps, notes, stories, views, likes, tickets. */
+	UPROPERTY()
+	FString Card;
 };
 
 /** A thrown lightstick: where it was thrown from, where it landed, and when (server clock). */
@@ -220,6 +228,7 @@ public:
 	const FDCCFootageEntry* FindEntry(const FString& Player) const;
 
 	virtual FName GetGameId() const override { return TEXT("Haunt"); }
+	virtual UDCCDungeonGrid* GetChaseGrid() const override { return Grid; }
 	/** A tag on the cage makes the stream: footage, once a round each, and an achievement. */
 	virtual void OnTagged(class ADCCCharacterBase* Painter, const FVector& At) override;
 

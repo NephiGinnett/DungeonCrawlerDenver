@@ -931,8 +931,19 @@ void ADCCArcadeHaunt::DebugGoTo(int32 RoomIndex, bool bDrift)
 		{
 			if (PC && PC->PlayerState)
 			{
-				FDCCFootageEntry& Entry = EntryFor(PC->PlayerState->GetPlayerName());
+				const FString Name = PC->PlayerState->GetPlayerName();
+				FDCCFootageEntry& Entry = EntryFor(Name);
 				Entry.Footage = FMath::Max(Entry.Footage, 40.0f);
+				// Four separated moments so a solo end-of-round still has four posts to show.
+				TArray<FShotMark>& Log = ShotLog.FindOrAdd(Name);
+				if (Log.Num() < 4)
+				{
+					const double T = ServerTime();
+					Log.Add({ T - 22.0, 8.0f, 2, FVector::ZeroVector });
+					Log.Add({ T - 16.0, 7.0f, 5, FVector::ZeroVector });
+					Log.Add({ T - 10.0, 6.0f, 9, FVector::ZeroVector });
+					Log.Add({ T - 4.0, 9.0f, 3, FVector::ZeroVector });
+				}
 			}
 		}
 		EndsAt = ServerTime();
@@ -2834,7 +2845,7 @@ void ADCCArcadeHaunt::Wrap()
 	for (const FDCCFootageEntry& Entry : Footage)
 	{
 		Line += FString::Printf(TEXT("%s%s %s"), Line.IsEmpty() ? TEXT("") : TEXT("     "), *Entry.Player,
-			Entry.Views > 0 ? *FString::Printf(TEXT("%s views"), *FText::AsNumber(Entry.Views).ToString()) : TEXT("(tape left in the mine)"));
+			Entry.Views > 0 ? *FString::Printf(TEXT("%s views"), *FText::AsNumber(Entry.Views).ToString()) : TEXT("posted"));
 	}
 	StatusLines.Add(Line);
 
@@ -2843,10 +2854,12 @@ void ADCCArcadeHaunt::Wrap()
 	{
 		if (ADCCEnemyCharacter* M = Monster.Get()) { M->Destroy(); }
 	}
+	// Every crawler gets a post. Views of 0 used to drop everyone but the host who made the cage.
 	Uploaders.Reset();
-	for (const FDCCFootageEntry& Entry : Footage)
+	for (APlayerController* PC : Players)
 	{
-		if (Entry.Views > 0) { Uploaders.Add(Entry.Player); }
+		const FString Name = PC && PC->PlayerState ? PC->PlayerState->GetPlayerName() : FString();
+		if (!Name.IsEmpty()) { Uploaders.AddUnique(Name); }
 	}
 	BuildReel();
 	ExtractStart = ServerTime();

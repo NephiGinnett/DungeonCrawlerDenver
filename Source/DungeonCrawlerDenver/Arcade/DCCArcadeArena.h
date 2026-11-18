@@ -94,6 +94,8 @@ public:
 
 	/** This game's id in DCCArcade::Games() ("Climb"...), for PLAY AGAIN. None for the lobby and the front door. */
 	virtual FName GetGameId() const { return NAME_None; }
+	/** The rooms' walking grid, for characters that cannot use a navmesh here (Gate Run, Dead Air). */
+	virtual class UDCCDungeonGrid* GetChaseGrid() const { return nullptr; }
 
 protected:
 	/** Server, before the PlayerStarts are placed (a seed, say, that decides where they go). */
@@ -112,6 +114,8 @@ protected:
 		float SkyIntensity = 1.0f;
 		FLinearColor FogColour = FLinearColor(0.45f, 0.55f, 0.7f);
 		float FogDensity = 0.01f;
+		/** Metres-ish before the haze starts. 0 leaves the fog as it was. Fourteener sets this so the climb stays clear. */
+		float FogStart = 0.0f;
 		/**
 		 * Character shade correction (2026-11-14, Zoe: characters "look like washed out grayscale characters because
 		 * they are so much brighter and fluorescent than their surroundings"). Every character in the arena gets

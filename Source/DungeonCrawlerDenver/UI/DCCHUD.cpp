@@ -1,4 +1,5 @@
 #include "UI/DCCHUD.h"
+#include "Arcade/DCCSummons.h"
 #include "UObject/StrongObjectPtr.h"
 #include "Arcade/DCCChopShop.h"
 #include "Engine/TextureRenderTarget2D.h"
@@ -63,6 +64,10 @@
 #include "Arcade/DCCArcade.h"
 #include "EngineUtils.h"
 #include "Session/DCCSession.h"
+#include "Session/DCCProfile.h"
+#include "Characters/DCCAttackStyle.h"
+#include "Misc/ConfigCacheIni.h"
+#include "GameFramework/GameUserSettings.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
 #include "TimerManager.h"
 #include "HAL/IConsoleManager.h"
@@ -89,9 +94,34 @@ namespace
 	constexpr float LineHeight = 20.0f;
 	constexpr float SectionGap = 14.0f;
 
-	const FLinearColor HeadingColour(1.0f, 0.82f, 0.35f);
-	const FLinearColor BodyColour(0.92f, 0.94f, 1.0f);
-	const FLinearColor DimColour(0.62f, 0.66f, 0.78f);
+	FLinearColor HeadingColour(1.0f, 0.82f, 0.35f);
+	FLinearColor BodyColour(0.92f, 0.94f, 1.0f);
+	FLinearColor DimColour(0.62f, 0.66f, 0.78f);
+	const FLinearColor HeadingDefault(1.0f, 0.82f, 0.35f);
+	const FLinearColor BodyDefault(0.92f, 0.94f, 1.0f);
+	const FLinearColor DimDefault(0.62f, 0.66f, 0.78f);
+
+	int32 UiStyle()
+	{
+		int32 Style = 0;
+		if (GConfig)
+		{
+			GConfig->GetInt(TEXT("DCCUi"), TEXT("Style"), Style, GGameUserSettingsIni);
+		}
+		return FMath::Clamp(Style, 0, 2);
+	}
+
+	void SetUiStyle(int32 Style)
+	{
+		Style = FMath::Clamp(Style, 0, 2);
+		if (GConfig)
+		{
+			GConfig->SetInt(TEXT("DCCUi"), TEXT("Style"), Style, GGameUserSettingsIni);
+			GConfig->Flush(false, GGameUserSettingsIni);
+		}
+		const TCHAR* Id = Style == 1 ? TEXT("UiNeon") : Style == 2 ? TEXT("UiTabletop") : TEXT("UiCrystal");
+		UE_LOG(LogTemp, Log, TEXT("[DCC Ui] style %d cosmetic %s (not gated)"), Style, Id);
+	}
 
 	/**
 	 * One line describing a rolled loot entry for the itemised submenu.
@@ -186,6 +216,51 @@ void ADCCHUD::NotifyHitBoxClick(FName BoxName)
 	if (AsString.StartsWith(TEXT("Set|")))
 	{
 		HandleSettingsClick(AsString.RightChop(4));
+		return;
+	}
+
+	if (AsString.StartsWith(TEXT("Belt|")))
+	{
+		const int32 Index = FCString::Atoi(*AsString.RightChop(5));
+		if (ADCCCharacterBase* Me = GetOwningCrawler())
+		{
+			Me->DCCPutSkillOnBelt(Index);
+		}
+		return;
+	}
+
+	if (AsString.StartsWith(TEXT("Soc|")))
+	{
+		const FString Rest = AsString.RightChop(4);
+		if (Rest == TEXT("Party")) { SocialView = 1; }
+		else if (Rest == TEXT("Allies")) { SocialView = 2; }
+		else if (Rest == TEXT("Back")) { SocialView = 0; SocialPost = -1; }
+		else if (Rest.StartsWith(TEXT("Up|")))
+		{
+			SocialPost = FCString::Atoi(*Rest.RightChop(3));
+			SocialView = 4;
+		}
+		else if (Rest.StartsWith(TEXT("Fr|")))
+		{
+			OpenSocialFriend(Rest.RightChop(3));
+		}
+		return;
+	}
+
+	// The summon panel (2026-11-17).
+	if (AsString == TEXT("Summon|Go") && SummonTube >= 0)
+	{
+		ADCCCharacterBase* Me = GetOwningCrawler();
+		if (Me && Me->Wallet)
+		{
+			Me->Wallet->Server_Summon(uint8(SummonTube));
+		}
+		ToggleSummonPanel(SummonTube); // close it: the tube is the show now
+		return;
+	}
+	if (AsString == TEXT("Summon|Close"))
+	{
+		if (SummonTube >= 0) { ToggleSummonPanel(SummonTube); }
 		return;
 	}
 
@@ -332,6 +407,18 @@ void ADCCHUD::NotifyHitBoxClick(FName BoxName)
 		return;
 	}
 
+	// Character tab UNEQUIP. The inventory list only ever equips, which is why a
+	// worn flare gun stayed on: nothing in the menu called Unequip.
+	if (AsString.StartsWith(TEXT("Off|")))
+	{
+		const int32 Slot = FCString::Atoi(*AsString.RightChop(4));
+		if (ADCCCharacterBase* Crawler = GetOwningCrawler())
+		{
+			Crawler->DCCUnequipSlot(static_cast<uint8>(Slot));
+		}
+		return;
+	}
+
 	// Stowed-drink rows: drinking one from the pack. Same server-authoritative
 	// "this call just asks" shape as Stow| above.
 	if (AsString.StartsWith(TEXT("Drink|")))
@@ -386,6 +473,7 @@ namespace
 		case EDCCMenuTab::Party:        return TEXT("Tab_Party");
 		case EDCCMenuTab::Achievements: return TEXT("Tab_Achievements");
 		case EDCCMenuTab::Chatter:      return TEXT("Tab_Chatter");
+		case EDCCMenuTab::Social:       return NAME_None;
 		default:                        return NAME_None;
 		}
 	}
@@ -417,6 +505,7 @@ void ADCCHUD::DrawHUD()
 		// A trailer is rolling: only the feed and the extraction, nothing of the hidden player's own HUD.
 		Super::DrawHUD();
 		DrawMineReel();
+		DrawSummonBanner();
 		return;
 	}
 	SyncShop(GetOwningCrawler());
@@ -428,6 +517,7 @@ void ADCCHUD::DrawHUD()
 		DrawSystemWindow(GetOwningCrawler());
 		// Last, so no panel covers a bubble (your own head sits right under the status panel).
 		DrawReactions();
+		DrawAchievementPopups();
 	}
 }
 
@@ -607,8 +697,51 @@ void ADCCHUD::DrawHUDContents()
 		}
 	}
 
-	// A dark backing panel, otherwise light text vanishes against the sky.
-	DrawRect(FLinearColor(0.02f, 0.03f, 0.06f, 0.78f), 16.0f, 16.0f, 460.0f, Canvas->SizeY - 32.0f);
+	// The menu look (crystal / neon / tabletop). Colours are restored before this function returns
+	// so the rest of the HUD keeps its own ink.
+	HeadingColour = HeadingDefault;
+	BodyColour = BodyDefault;
+	DimColour = DimDefault;
+	FLinearColor Panel(0.02f, 0.03f, 0.06f, 0.78f);
+	FLinearColor Hairline(0.95f, 0.82f, 0.40f, 0.0f);
+	switch (UiStyle())
+	{
+	case 1:
+		Panel = FLinearColor(0.05f, 0.02f, 0.12f, 0.88f);
+		Hairline = FLinearColor(1.0f, 0.35f, 0.85f, 0.95f);
+		HeadingColour = FLinearColor(1.0f, 0.45f, 0.85f);
+		BodyColour = FLinearColor(0.55f, 1.0f, 0.95f);
+		DimColour = FLinearColor(0.70f, 0.45f, 0.95f);
+		break;
+	case 2:
+		Panel = FLinearColor(0.76f, 0.62f, 0.40f, 0.94f);
+		Hairline = FLinearColor(0.25f, 0.14f, 0.05f, 0.9f);
+		HeadingColour = FLinearColor(0.22f, 0.12f, 0.05f);
+		BodyColour = FLinearColor(0.12f, 0.08f, 0.04f);
+		DimColour = FLinearColor(0.35f, 0.24f, 0.12f);
+		break;
+	default:
+		// Dark frosted glass (2026-11-18): the first crystal was a pale blue-white wash behind white text and could
+		// not be read. Deep blue-black, the frost is a soft band along the top (drawn below).
+		Panel = FLinearColor(0.035f, 0.06f, 0.11f, 0.84f);
+		Hairline = FLinearColor(0.80f, 0.90f, 1.0f, 0.90f);
+		HeadingColour = FLinearColor(0.98f, 0.99f, 1.0f);
+		BodyColour = FLinearColor(0.96f, 0.98f, 1.0f);
+		DimColour = FLinearColor(0.78f, 0.84f, 0.92f);
+		break;
+	}
+	DrawRect(Panel, 16.0f, 16.0f, 460.0f, Canvas->SizeY - 32.0f);
+	if (UiStyle() == 0)
+	{
+		// The frost: a light band fading down from the top edge, and a faint light rim down each side.
+		for (int32 k = 0; k < 6; ++k)
+		{
+			DrawRect(FLinearColor(0.70f, 0.82f, 1.0f, 0.07f * (1.0f - k / 6.0f)), 16.0f, 18.0f + k * 10.0f, 460.0f, 10.0f);
+		}
+		DrawRect(FLinearColor(0.70f, 0.82f, 1.0f, 0.18f), 16.0f, 16.0f, 1.0f, Canvas->SizeY - 32.0f);
+		DrawRect(FLinearColor(0.70f, 0.82f, 1.0f, 0.18f), 475.0f, 16.0f, 1.0f, Canvas->SizeY - 32.0f);
+	}
+	DrawRect(Hairline, 16.0f, 16.0f, 460.0f, 2.0f);
 
 	float Y = 28.0f;
 	const float X = 32.0f;
@@ -729,9 +862,17 @@ void ADCCHUD::DrawHUDContents()
 		Y = DrawSettingsTab(X, Y, Crawler);
 		break;
 
+	case EDCCMenuTab::Social:
+		Y = DrawSocial(X, Y, Crawler);
+		break;
+
 	default:
 		break;
 	}
+
+	HeadingColour = HeadingDefault;
+	BodyColour = BodyDefault;
+	DimColour = DimDefault;
 }
 
 void ADCCHUD::ShowNotice(const FText& Message, float Seconds)
@@ -1310,7 +1451,11 @@ void ADCCHUD::CycleMenuTab(int32 Delta)
 	for (int32 Tries = 0; Tries < Count; ++Tries)
 	{
 		Next = ((Next + (Tries == 0 ? Delta : Step)) % Count + Count) % Count;
-		if (IsMenuTabUnlocked(static_cast<EDCCMenuTab>(Next)))
+		const EDCCMenuTab Candidate = static_cast<EDCCMenuTab>(Next);
+		const bool bHiddenChat = Candidate == EDCCMenuTab::Chatter
+			|| Candidate == EDCCMenuTab::Allies
+			|| Candidate == EDCCMenuTab::Whispers;
+		if (!bHiddenChat && IsMenuTabUnlocked(Candidate))
 		{
 			break;
 		}
@@ -1339,6 +1484,7 @@ namespace
 		case EDCCMenuTab::Allies:       return TEXT("ALLIES");
 		case EDCCMenuTab::Whispers:     return TEXT("WHISPERS");
 		case EDCCMenuTab::Settings:     return TEXT("SETTINGS");
+		case EDCCMenuTab::Social:       return TEXT("SOCIAL");
 		default:                        return TEXT("");
 		}
 	}
@@ -1361,7 +1507,15 @@ float ADCCHUD::DrawMenuTabs(float X, float Y)
 	for (int32 Index = 0; Index < static_cast<int32>(EDCCMenuTab::MAX); ++Index)
 	{
 		const EDCCMenuTab Tab = static_cast<EDCCMenuTab>(Index);
+		if (Tab == EDCCMenuTab::Chatter || Tab == EDCCMenuTab::Allies || Tab == EDCCMenuTab::Whispers)
+		{
+			continue;
+		}
 		const FString Label = MenuTabName(Tab);
+		if (Label.IsEmpty())
+		{
+			continue;
+		}
 		const bool bActive = Tab == MenuTab;
 
 		// Width from the label rather than a fixed step, so renaming a tab cannot
@@ -1438,9 +1592,9 @@ float ADCCHUD::DrawMenuTabs(float X, float Y)
 
 float ADCCHUD::DrawEquipment(float X, float Y, ADCCCharacterBase* Crawler)
 {
-	UDCCEquipmentComponent* Equipment = Crawler->Equipment;
+	UDCCEquipmentComponent* Equipment = Crawler ? Crawler->Equipment : nullptr;
 
-	DrawText(TEXT("Equipment"), HeadingColour, X, Y);
+	DrawText(TEXT("EQUIPPED"), HeadingColour, X, Y);
 	Y += LineHeight;
 
 	if (!Equipment)
@@ -1454,17 +1608,50 @@ float ADCCHUD::DrawEquipment(float X, float Y, ADCCCharacterBase* Crawler)
 	for (int32 Index = 0; Index < static_cast<int32>(EDCCEquipmentSlot::MAX); ++Index)
 	{
 		const EDCCEquipmentSlot Slot = static_cast<EDCCEquipmentSlot>(Index);
-
 		const FName ItemId = Equipment->GetEquippedId(Slot);
-
 		FDCCEquipmentDef Def;
 		const bool bHas = !ItemId.IsNone() && Equipment->FindItem(ItemId, Def);
 
-		DrawText(FString::Printf(TEXT("  %-11s %s"),
-			SlotNames[Index],
-			bHas ? *Def.DisplayName.ToString() : TEXT("-")),
-			bHas ? BodyColour : DimColour, X, Y);
+		const FString Name = bHas ? Def.DisplayName.ToString() : TEXT("empty");
+		DrawText(FString::Printf(TEXT("%s"), SlotNames[Index]), bHas ? HeadingColour : DimColour, X, Y);
+
+		if (bHas)
+		{
+			float TW = 0.0f, TH = 0.0f;
+			const FString Button = TEXT("UNEQUIP");
+			GetTextSize(Button, TW, TH);
+			const float BW = TW + 14.0f;
+			const float BX = X + 420.0f - BW;
+			DrawRect(FLinearColor(0.30f, 0.32f, 0.42f, 0.7f), BX, Y - 1.0f, BW, LineHeight + 2.0f);
+			DrawRect(FLinearColor(0.05f, 0.06f, 0.10f, 0.95f), BX + 1.0f, Y, BW - 2.0f, LineHeight);
+			DrawText(Button, FLinearColor(0.95f, 0.86f, 0.45f), BX + 7.0f, Y);
+			AddHitBox(FVector2D(BX, Y - 1.0f), FVector2D(BW, LineHeight + 2.0f),
+				FName(*FString::Printf(TEXT("Off|%d"), Index)), true, 3);
+			DrawText(Name, BodyColour, X + 92.0f, Y);
+		}
+		else
+		{
+			DrawText(TEXT("empty"), DimColour, X + 92.0f, Y);
+		}
 		Y += LineHeight;
+
+		if (bHas)
+		{
+			TArray<FString> Bits;
+			auto AddBonus = [&Bits](int32 Amount, const TCHAR* Label)
+			{
+				if (Amount != 0) { Bits.Add(FString::Printf(TEXT("%+d %s"), Amount, Label)); }
+			};
+			AddBonus(Def.BonusStrength, TEXT("Str"));
+			AddBonus(Def.BonusIntelligence, TEXT("Int"));
+			AddBonus(Def.BonusConstitution, TEXT("Con"));
+			AddBonus(Def.BonusDexterity, TEXT("Dex"));
+			AddBonus(Def.BonusCharisma, TEXT("Cha"));
+			if (Def.WeaponDamageDie > 0) { Bits.Add(FString::Printf(TEXT("d%d"), Def.WeaponDamageDie)); }
+			if (Def.EvadeBonus != 0) { Bits.Add(FString::Printf(TEXT("%+d Evade"), Def.EvadeBonus)); }
+			DrawText(Bits.Num() > 0 ? FString::Join(Bits, TEXT(", ")) : TEXT("no listed bonus"), DimColour, X + 92.0f, Y);
+			Y += LineHeight;
+		}
 	}
 
 	return Y;
@@ -2879,51 +3066,69 @@ float ADCCHUD::DrawStats(float X, float Y, ADCCCharacterBase* Crawler)
 		return Y;
 	}
 
-	DrawText(TEXT("Stats"), HeadingColour, X, Y);
+	DrawText(TEXT("SCORES"), HeadingColour, X, Y);
 	Y += LineHeight;
 
-	UDCCRuleset* Ruleset = Stats->GetRuleset();
-	const UEnum* AbilityEnum = StaticEnum<EDCCAbility>();
-
-	for (int32 Index = 0; Index < static_cast<int32>(EDCCAbility::MAX); ++Index)
+	static const TCHAR* Short[] = { TEXT("STR"), TEXT("INT"), TEXT("CON"), TEXT("DEX"), TEXT("CHA") };
+	const float BoxW = 74.0f;
+	const float Gap = 6.0f;
+	for (int32 Index = 0; Index < static_cast<int32>(EDCCAbility::MAX) && Index < 5; ++Index)
 	{
 		const EDCCAbility Ability = static_cast<EDCCAbility>(Index);
 		const int32 Score = Stats->GetEnhanced().GetScore(Ability);
 		const int32 Modifier = Stats->GetAbilityModifier(Ability);
-
-		// Both numbers, because the ruleset uses them for different things - the
-		// score decides what you can lift, the modifier is what you add to a roll.
-		const FString Line = FString::Printf(TEXT("  %-14s %2d   (+%d)"),
-			AbilityEnum ? *AbilityEnum->GetDisplayNameTextByValue(Index).ToString() : TEXT("?"),
-			Score, Modifier);
-
-		DrawText(Line, BodyColour, X, Y);
-		Y += LineHeight;
+		const float BX = X + Index * (BoxW + Gap);
+		DrawRect(FLinearColor(0.05f, 0.06f, 0.09f, 0.72f), BX, Y, BoxW, 52.0f);
+		DrawText(Short[Index], DimColour, BX + 8.0f, Y + 2.0f, nullptr, 0.7f);
+		DrawText(FString::Printf(TEXT("%d"), Score), BodyColour, BX + 8.0f, Y + 16.0f, nullptr, 1.05f);
+		// A small token under the box for the banded modifier. Never a penalty.
+		const float CX = BX + BoxW * 0.5f - 11.0f;
+		const float CY = Y + 56.0f;
+		DrawRect(FLinearColor(0.95f, 0.82f, 0.35f, 0.95f), CX + 3.0f, CY, 16.0f, 22.0f);
+		DrawRect(FLinearColor(0.95f, 0.82f, 0.35f, 0.95f), CX, CY + 3.0f, 22.0f, 16.0f);
+		DrawText(FString::Printf(TEXT("+%d"), Modifier), FLinearColor(0.12f, 0.08f, 0.02f), CX + 2.0f, CY + 4.0f, nullptr, 0.7f);
 	}
+	Y += 84.0f;
 
-	Y += 4.0f;
-	DrawText(FString::Printf(TEXT("  Health   %d / %d"), Stats->CurrentHitPoints, Stats->MaxHitPoints), BodyColour, X, Y);
+	DrawText(FString::Printf(TEXT("Health  %d / %d"), Stats->CurrentHitPoints, Stats->MaxHitPoints), BodyColour, X, Y);
 	Y += LineHeight;
-	DrawText(FString::Printf(TEXT("  Mana     %d / %d"), Stats->CurrentManaPoints, Stats->MaxManaPoints), BodyColour, X, Y);
+	DrawText(FString::Printf(TEXT("Mana    %d / %d"), Stats->CurrentManaPoints, Stats->MaxManaPoints), BodyColour, X, Y);
 	Y += LineHeight;
-	DrawText(FString::Printf(TEXT("  Stamina  %.0f / %.0f"), Stats->CurrentStamina, Stats->MaxStamina), BodyColour, X, Y);
+	DrawText(FString::Printf(TEXT("Stamina %.0f / %.0f"), Stats->CurrentStamina, Stats->MaxStamina), BodyColour, X, Y);
 	Y += LineHeight;
 
+	UDCCRuleset* Ruleset = Stats->GetRuleset();
+	const int32 EquipmentEvadeBonus = Crawler->Equipment ? Crawler->Equipment->GetEvadeBonus() : 0;
+	const int32 Evade = Ruleset
+		? Ruleset->GetDefenceValue(Stats->GetEnhanced(), Stats->Level, EquipmentEvadeBonus)
+		: 0;
+	DrawText(FString::Printf(TEXT("Evade   %d"), Evade), BodyColour, X, Y);
+	Y += LineHeight;
+	DrawText(FString::Printf(TEXT("Level %d    XP %d"), Stats->Level, Stats->ExperiencePoints), HeadingColour, X, Y);
+	Y += LineHeight;
 	if (Ruleset)
 	{
-		// Surfaced because it is the number that makes Strength legible: it says
-		// exactly which props this character can pick up.
-		DrawText(FString::Printf(TEXT("  Can lift %.0f kg"),
-			Ruleset->GetCarryMassLimit(Stats->GetEnhanced())), DimColour, X, Y);
-		Y += LineHeight;
-
-		// The number a shield actually moves - surfaced so equipping one reads
-		// as something changing rather than a silent stat nobody can see.
-		const int32 EquipmentEvadeBonus = Crawler->Equipment ? Crawler->Equipment->GetEvadeBonus() : 0;
-		DrawText(FString::Printf(TEXT("  Evade    %d"),
-			Ruleset->GetDefenceValue(Stats->GetEnhanced(), Stats->Level, EquipmentEvadeBonus)), DimColour, X, Y);
+		DrawText(FString::Printf(TEXT("Can lift %.0f kg"), Ruleset->GetCarryMassLimit(Stats->GetEnhanced())), DimColour, X, Y);
 		Y += LineHeight;
 	}
+
+	const FName WeaponId = Crawler->Equipment
+		? Crawler->Equipment->GetEquippedId(EDCCEquipmentSlot::MainHand)
+		: NAME_None;
+	const DCCAttackStyle::EStyle Style = DCCAttackStyle::FromId(WeaponId);
+	FString ClipPath;
+	float Rate = 1.0f;
+	bool bBorrowed = true;
+	DCCAttackStyle::ClipFor(Style, ClipPath, Rate, bBorrowed);
+	Y += 4.0f;
+	DrawText(TEXT("WEAPON"), HeadingColour, X, Y);
+	Y += LineHeight;
+	DrawText(FString::Printf(TEXT("%s   %s%s"),
+		WeaponId.IsNone() ? TEXT("bare hands") : *WeaponId.ToString(),
+		DCCAttackStyle::Name(Style),
+		bBorrowed ? TEXT("  (stand-in clip)") : TEXT("")),
+		BodyColour, X, Y);
+	Y += LineHeight;
 
 	return Y;
 }
@@ -2964,12 +3169,20 @@ float ADCCHUD::DrawSkills(float X, float Y, ADCCCharacterBase* Crawler)
 
 		// The advancement mark is shown because it is otherwise invisible state
 		// that decides whether this skill can rank up at the next interval.
-		const FString Line = FString::Printf(TEXT("  %s %-22s Rank %-2d %s"),
-			*Slot, *Name, Known.Rank, Known.bAdvancementMark ? TEXT("*") : TEXT(""));
+		const int32 Mana = bResolved ? Definition.ManaCost : 0;
+		const float Cool = bResolved ? Definition.CooldownSeconds : 0.0f;
+		const FString Line = FString::Printf(TEXT("%s %s  R%d  %d mana  %.0fs %s"),
+			*Slot, *Name, Known.Rank, Mana, Cool, Known.bAdvancementMark ? TEXT("*") : TEXT(""));
 
 		const bool bArmed = Crawler->GetSelectedSkillId() == Known.SkillId;
 
 		DrawText(Line, bArmed ? HeadingColour : BodyColour, X, Y);
+		if (Index > 0)
+		{
+			AddHitBox(FVector2D(X + 330.0f, Y), FVector2D(52.0f, LineHeight),
+				FName(*FString::Printf(TEXT("Belt|%d"), Index)), true, 3);
+			DrawText(TEXT("BELT"), HeadingColour, X + 334.0f, Y);
+		}
 		Y += LineHeight;
 	}
 
@@ -4459,6 +4672,178 @@ float ADCCHUD::DrawAlliesTab(float X, float Y, ADCCCharacterBase* Crawler)
 	return Y;
 }
 
+void ADCCHUD::OpenSocialFriend(const FString& Name)
+{
+	SocialFriend = Name;
+	SocialView = 3;
+	WhisperTargetName = Name;
+	OpenMenuTab(EDCCMenuTab::Social);
+	UE_LOG(LogTemp, Log, TEXT("[DCC Social] thread %s"), *Name);
+}
+
+float ADCCHUD::DrawSocial(float X, float Y, ADCCCharacterBase* Crawler)
+{
+	auto Pretty = [](int32 N)
+	{
+		if (N >= 1000)
+		{
+			return FString::Printf(TEXT("%.1fK"), N / 1000.0f);
+		}
+		return FString::FromInt(N);
+	};
+	auto Button = [this](float BX, float BY, float W, const FString& Label, const FString& Command)
+	{
+		AddHitBox(FVector2D(BX, BY), FVector2D(W, 18.0f), FName(*Command), true, 3);
+		DrawRect(FLinearColor(0.10f, 0.12f, 0.16f, 0.9f), BX, BY, W, 18.0f);
+		DrawText(Label, HeadingColour, BX + 4.0f, BY);
+	};
+
+	const FString Key = Crawler && Crawler->GetPlayerState()
+		? DCCProfile::KeyFor(Crawler->GetPlayerState())
+		: FString();
+	const TArray<FDCCUpload>& Uploads = DCCProfile::GetUploads(Key);
+	int32 Views = 0;
+	int32 Likes = 0;
+	int32 Best = 0;
+	for (const FDCCUpload& Post : Uploads)
+	{
+		Views += Post.Views;
+		Likes += Post.Likes;
+		Best = FMath::Max(Best, Post.Views);
+	}
+	const int32 Subs = Views / 40 + Likes / 10;
+
+	DrawText(TEXT("CHANNEL"), HeadingColour, X, Y);
+	Y += LineHeight;
+	DrawText(FString::Printf(TEXT("%s subscribers"), *Pretty(Subs)), BodyColour, X, Y);
+	Y += LineHeight;
+	DrawText(FString::Printf(TEXT("%s views    best post %s"), *Pretty(Views), *Pretty(Best)), DimColour, X, Y);
+	Y += LineHeight + 4.0f;
+
+	Button(X, Y, 90.0f, TEXT("PARTY"), TEXT("Soc|Party"));
+	Button(X + 98.0f, Y, 90.0f, TEXT("ALLIES"), TEXT("Soc|Allies"));
+	if (SocialView != 0)
+	{
+		Button(X + 196.0f, Y, 70.0f, TEXT("BACK"), TEXT("Soc|Back"));
+	}
+	Y += LineHeight + 6.0f;
+
+	if (SocialView == 1)
+	{
+		DrawText(TEXT("Party"), HeadingColour, X, Y);
+		Y += LineHeight;
+		Y = DrawChannelMessages(X, Y, EDCCChatChannel::Party, Crawler, 8);
+		return DrawChatSendRow(X, Y, EDCCChatChannel::Party, Crawler, TEXT("Party"));
+	}
+	if (SocialView == 2)
+	{
+		DrawText(TEXT("Allies"), HeadingColour, X, Y);
+		Y += LineHeight;
+		Y = DrawChannelMessages(X, Y, EDCCChatChannel::Allies, Crawler, 8);
+		return DrawChatSendRow(X, Y, EDCCChatChannel::Allies, Crawler, TEXT("Allies"));
+	}
+	if (SocialView == 3 && !SocialFriend.IsEmpty())
+	{
+		DrawText(FString::Printf(TEXT("With %s"), *SocialFriend), HeadingColour, X, Y);
+		Y += LineHeight;
+		Y = DrawChannelMessages(X, Y, EDCCChatChannel::Whispers, Crawler, 8, SocialFriend);
+		return DrawChatSendRow(X, Y, EDCCChatChannel::Whispers, Crawler, TEXT("WhisperMsg"));
+	}
+	if (SocialView == 4 && Uploads.IsValidIndex(SocialPost))
+	{
+		const FDCCUpload& Post = Uploads[SocialPost];
+		DrawText(Post.Title.IsEmpty() ? TEXT("Untitled") : Post.Title, HeadingColour, X, Y);
+		Y += LineHeight;
+		DrawText(FString::Printf(TEXT("%d views   %d likes   %d comments"), Post.Views, Post.Likes, Post.Comments), BodyColour, X, Y);
+		Y += LineHeight;
+		if (!Post.Moment.IsEmpty())
+		{
+			DrawText(Post.Moment, DimColour, X, Y);
+			Y += LineHeight;
+		}
+		for (const FString& Line : Post.CommentLines)
+		{
+			DrawText(Line, BodyColour, X, Y);
+			Y += LineHeight;
+		}
+		if (Post.CommentLines.Num() == 0)
+		{
+			DrawText(TEXT("No comments yet."), DimColour, X, Y);
+			Y += LineHeight;
+		}
+		return Y;
+	}
+
+	DrawText(TEXT("UPLOADS"), HeadingColour, X, Y);
+	Y += LineHeight;
+	if (Uploads.Num() == 0)
+	{
+		DrawText(TEXT("Nothing uploaded yet."), DimColour, X, Y);
+		Y += LineHeight;
+	}
+	const int32 Shown = FMath::Min(Uploads.Num(), 8);
+	for (int32 i = 0; i < Shown; ++i)
+	{
+		const FDCCUpload& Post = Uploads[i];
+		const FString Title = Post.Title.IsEmpty() ? TEXT("Untitled") : Post.Title;
+		AddHitBox(FVector2D(X, Y), FVector2D(400.0f, LineHeight),
+			FName(*FString::Printf(TEXT("Soc|Up|%d"), i)), true, 2);
+		DrawText(FString::Printf(TEXT("%s   %s"), *Title, *Pretty(Post.Views)), BodyColour, X, Y);
+		Y += LineHeight;
+	}
+
+	Y += 4.0f;
+	DrawText(TEXT("FRIENDS"), HeadingColour, X, Y);
+	Y += LineHeight;
+	static const TCHAR* Roster[] = { TEXT("Zoe"), TEXT("Scott"), TEXT("CJ"), TEXT("Marcel"), TEXT("Vaughn"), TEXT("Kyle") };
+	TSet<FString> Names;
+	for (const TCHAR* One : Roster)
+	{
+		Names.Add(One);
+	}
+	if (UWorld* World = GetWorld())
+	{
+		for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+		{
+			if (APlayerState* PS = It->Get() ? It->Get()->PlayerState : nullptr)
+			{
+				if (!PS->GetPlayerName().IsEmpty())
+				{
+					Names.Add(PS->GetPlayerName());
+				}
+			}
+		}
+	}
+	for (const FString& Name : Names)
+	{
+		bool bOnline = false;
+		if (UWorld* World = GetWorld())
+		{
+			for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+			{
+				APlayerState* PS = It->Get() ? It->Get()->PlayerState : nullptr;
+				if (PS && PS->GetPlayerName().Equals(Name, ESearchCase::IgnoreCase))
+				{
+					bOnline = true;
+				}
+			}
+		}
+		int32 TheirViews = 0;
+		int32 TheirLikes = 0;
+		for (const FDCCUpload& Post : DCCProfile::GetUploads(Name))
+		{
+			TheirViews += Post.Views;
+			TheirLikes += Post.Likes;
+		}
+		const int32 TheirSubs = TheirViews / 40 + TheirLikes / 10;
+		AddHitBox(FVector2D(X, Y), FVector2D(400.0f, LineHeight), FName(*FString::Printf(TEXT("Soc|Fr|%s"), *Name)), true, 2);
+		DrawText(FString::Printf(TEXT("%s %s   %s"), bOnline ? TEXT("*") : TEXT("."), *Name, *Pretty(TheirSubs)),
+			bOnline ? BodyColour : DimColour, X, Y);
+		Y += LineHeight;
+	}
+	return Y;
+}
+
 float ADCCHUD::DrawWhispersTab(float X, float Y, ADCCCharacterBase* Crawler)
 {
 	DrawText(TEXT("Whispers  -  private, one name at a time"), HeadingColour, X, Y);
@@ -4583,7 +4968,11 @@ bool ADCCHUD::IsMenuTabUnlocked(EDCCMenuTab Tab) const
 	case EDCCMenuTab::Skills:       return IsHudFeatureUnlocked(EDCCHudFeature::MenuSkills);
 	case EDCCMenuTab::Inventory:    return IsHudFeatureUnlocked(EDCCHudFeature::MenuInventory);
 	case EDCCMenuTab::Feed:         return IsHudFeatureUnlocked(EDCCHudFeature::EventFeed);
+	case EDCCMenuTab::Chatter:
+	case EDCCMenuTab::Allies:
+	case EDCCMenuTab::Whispers:     return false;
 	case EDCCMenuTab::Settings:     return true; // your own keys are always yours to change
+	case EDCCMenuTab::Social:       return true;
 	default:                        return IsHudFeatureUnlocked(EDCCHudFeature::MenuSocial);
 	}
 }
@@ -5081,7 +5470,7 @@ void ADCCHUD::ApplyCursorForOpenPanels()
 
 	const bool bParty = IsSessionMenuOpen();
 	const bool bVoting = (RoundOver && RoundOver->IsInViewport()) || (CageVote && CageVote->IsInViewport()) || (StarterKit && StarterKit->IsInViewport());
-	const bool bWantsCursor = bParty || bShowMenu || bShowAdminPanel || bLootScreenOpen || bVoting;
+	const bool bWantsCursor = bParty || bShowMenu || bShowAdminPanel || bLootScreenOpen || bVoting || SummonTube >= 0;
 
 	PlayerOwner->bShowMouseCursor = bWantsCursor;
 	PlayerOwner->bEnableClickEvents = bWantsCursor;
@@ -5476,26 +5865,49 @@ void ADCCHUD::DrawRallyKit(const ADCCRover* Rover)
 	// While a car is on the line: one clear card, the key and what it does (2026-11-13, restyled 2026-11-14).
 	if (Canvas && Rover && Rover->RallyTow)
 	{
-		const bool bPays = Rover->bRallyTowDocked && Rover->bRallyInYard;
-		const FString Main = bPays ? TEXT("DROP IT") : Rover->bRallyTowDocked ? TEXT("BRING IT TO THE YARD") : TEXT("MAGNET LOCKED");
-		const FString Sub = bPays ? TEXT("In the yard - it pays.") : TEXT("Q cuts it loose. No pay outside the yard.");
+		const bool bPays = Rover->bRallyTowDocked && Rover->bRallyInYard && Rover->RallyTrick == 0;
+		const bool bStruggle = Rover->RallyTrick == 1;
+		const bool bFlip = Rover->RallyTrick == 2;
+		const FString Main = bStruggle ? TEXT("HOLD STEADY")
+			: bFlip ? (FMath::Abs(Rover->RallyTilt) < 25.0f ? TEXT("BANK IT") : TEXT("TOO TILTED"))
+			: bPays ? TEXT("DROP IT")
+			: Rover->bRallyTowDocked ? TEXT("LIFT IT")
+			: TEXT("MAGNET LOCKED");
+		const FString Sub = bStruggle ? TEXT("A and D. Let it settle onto the hitch.")
+			: bFlip ? FString::Printf(TEXT("Tilt %.0f   score %d   Q %s"), Rover->RallyTilt, Rover->RallyTrickScore,
+				FMath::Abs(Rover->RallyTilt) < 25.0f ? TEXT("banks it") : TEXT("drops it"))
+			: bPays ? TEXT("In the yard - it pays.")
+			: Rover->bRallyTowDocked ? TEXT("Q holds it overhead. A and D work the magnet.")
+			: TEXT("Q cuts it loose. No pay outside the yard.");
 		const FLinearColor Accent = bPays ? FLinearColor(0.45f, 1.0f, 0.6f) : FLinearColor(1.0f, 0.78f, 0.32f);
 		UFont* Big = GEngine->GetLargeFont();
 		float MW = 0.0f, MH = 0.0f, SW = 0.0f, SH = 0.0f;
 		RallyTextSize(Main, MW, MH, Big, 1.7f * US);
 		RallyTextSize(Sub, SW, SH, SmallF, 1.1f * US);
-		const float KeyW = bPays ? 40.0f * US : 0.0f;
+		const bool bShowQ = (bPays || Rover->bRallyTowDocked) && !bStruggle;
+		const float KeyW = bShowQ ? 40.0f * US : 0.0f;
 		const float W = FMath::Max(MW + KeyW, SW) + 40.0f * US;
-		const float H = MH + SH + 24.0f * US;
+		const float H = MH + SH + 24.0f * US + (bFlip ? 16.0f * US : 0.0f);
 		const float X = (Canvas->ClipX - W) * 0.5f, Y = Canvas->ClipY * 0.64f;
 		RallyPanel(X, Y, W, H, Accent);
 		float MX = X + (W - MW - KeyW) * 0.5f;
-		if (bPays)
+		if (bShowQ)
 		{
 			MX += RallyKey(MX, Y + 10.0f * US + (MH - 26.0f * US) * 0.5f, TEXT("Q"), US) + 10.0f * US;
 		}
 		RallyText(Main, Accent, MX, Y + 8.0f * US, Big, 1.7f * US);
 		RallyText(Sub, FLinearColor(0.85f, 0.83f, 0.92f), X + (W - SW) * 0.5f, Y + 12.0f * US + MH, SmallF, 1.1f * US);
+		if (bFlip)
+		{
+			const float BarX = X + 12.0f * US;
+			const float BarY = Y + H - 12.0f * US;
+			const float BarW = W - 24.0f * US;
+			DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.45f), BarX, BarY, BarW, 6.0f * US);
+			const float TiltMark = FMath::Clamp(Rover->RallyTilt / 70.0f, -1.0f, 1.0f);
+			const float MagnetMark = FMath::Clamp(Rover->RallyMagnet, -1.0f, 1.0f);
+			DrawRect(FLinearColor(1.0f, 0.82f, 0.25f), BarX + BarW * (0.5f + TiltMark * 0.5f) - 2.0f, BarY - 2.0f, 4.0f, 10.0f * US);
+			DrawRect(FLinearColor(0.30f, 0.90f, 1.0f), BarX + BarW * (0.5f + MagnetMark * 0.5f) - 2.0f, BarY - 2.0f, 4.0f, 10.0f * US);
+		}
 	}
 	// The kit text that used to sit here is the YOUR TRUCK panel now (DrawRallyTruck, 2026-11-14).
 	if (Canvas)
@@ -5876,6 +6288,7 @@ void ADCCHUD::DrawArcadeStatus()
 	if (const ADCCArcadeLobby* Lobby = Cast<ADCCArcadeLobby>(Arena))
 	{
 		DrawDenStrip(Lobby);
+		DrawSummon(Lobby);
 		return;
 	}
 
@@ -6092,6 +6505,19 @@ void ADCCHUD::DrawMineReel()
 	// Beside the phone: where you are in the feed, and how to flick.
 	DrawText(FString::Printf(TEXT("%d / %d"), Index + 1, Haunt->Reel.Num()), FLinearColor(1, 1, 1, 0.8f), PX + PW + 40, PY + PH * 0.5f - 20, Big, 1.0f);
 	DrawText(TEXT("scroll or arrows to flick"), FLinearColor(1, 1, 1, 0.55f), PX + PW + 40, PY + PH * 0.5f + 16, Small, 1.0f);
+	if (!Post.Card.IsEmpty())
+	{
+		TArray<FString> CardLines;
+		Post.Card.ParseIntoArray(CardLines, TEXT("\n"), false);
+		const float CardH = 16.0f + CardLines.Num() * 18.0f;
+		const float CardY = PY + PH - CardH - 8.0f;
+		DrawRect(FLinearColor(0.03f, 0.04f, 0.07f, 0.88f), PX + PW + 28.0f, CardY, 230.0f, CardH);
+		DrawRect(FLinearColor(0.95f, 0.78f, 0.28f, 0.95f), PX + PW + 28.0f, CardY, 230.0f, 2.0f);
+		for (int32 Line = 0; Line < CardLines.Num(); ++Line)
+		{
+			DrawText(CardLines[Line], FLinearColor(0.92f, 0.9f, 0.82f), PX + PW + 40.0f, CardY + 8.0f + Line * 18.0f, Small, 0.85f);
+		}
+	}
 }
 
 void ADCCHUD::DrawMineNote()
@@ -6126,6 +6552,7 @@ void ADCCHUD::DrawMineNote()
 				TEXT("Also on the belt: your LAMP, and LIGHTSTICKS (press the number, then click to throw)."),
 				TEXT("B: reactions, a photo pose, and the selfie camera that turns round to film your face."),
 				TEXT("Get back inside the cage before time runs out, or your tape stays down here. Nothing hurts you in the cage."),
+				TEXT("What you upload shows on the Social tab."),
 			};
 			UFont* Small = GEngine->GetSmallFont();
 			const float W = 640.0f, LH = 20.0f, X = (Canvas->SizeX - W) * 0.5f, Y = Canvas->SizeY * 0.58f;
@@ -6500,6 +6927,10 @@ void ADCCHUD::PollRemappableKeys()
 	{
 		return;
 	}
+	if (SummonTube >= 0 && PlayerOwner->WasInputKeyJustPressed(EKeys::Escape))
+	{
+		ToggleSummonPanel(SummonTube);
+	}
 	if (Pressed(DCCControls::Reactions))
 	{
 		Crawler->ToggleEmoteMenu();
@@ -6528,6 +6959,18 @@ float ADCCHUD::DrawSettingsTab(float X, float Y, ADCCCharacterBase* Crawler)
 		DrawRect(bHot ? FLinearColor(0.22f, 0.18f, 0.06f, 0.95f) : FLinearColor(0.08f, 0.10f, 0.14f, 0.95f), BX, BY, W, Row - 4.0f);
 		DrawText(Label, bHot ? FLinearColor(1.0f, 0.92f, 0.70f) : BodyColour, BX + 6.0f, BY + 1.0f);
 	};
+
+	DrawText(TEXT("LOOK"), HeadingColour, X, Y);
+	Y += LineHeight;
+	{
+		const int32 Style = UiStyle();
+		const TCHAR* Names[] = { TEXT("CRYSTAL"), TEXT("NEON"), TEXT("TABLETOP") };
+		for (int32 i = 0; i < 3; ++i)
+		{
+			Button(X + i * 112.0f, Y, 104.0f, Names[i], FString::Printf(TEXT("Style|%d"), i), Style == i);
+		}
+	}
+	Y += Row + 4.0f;
 
 	DrawText(TEXT("KEYS"), HeadingColour, X, Y);
 	Y += LineHeight;
@@ -6617,6 +7060,15 @@ void ADCCHUD::HandleSettingsClick(const FString& Command)
 			Crawler->Server_RequestReaction(Value);
 		}
 	}
+	else if (Kind == TEXT("Style"))
+	{
+		SetUiStyle(Index);
+		ShowNotice(Index == 1
+			? NSLOCTEXT("DCC", "UiNeon", "Neon Arcade.")
+			: Index == 2
+			? NSLOCTEXT("DCC", "UiTable", "Tabletop.")
+			: NSLOCTEXT("DCC", "UiCrystal", "Frosted crystal."));
+	}
 	else if (Kind == TEXT("Reset"))
 	{
 		for (uint8 a = 0; a < DCCControls::Count; ++a)
@@ -6636,6 +7088,243 @@ void ADCCHUD::HandleSettingsClick(const FString& Command)
 }
 
 // ---- The Den's vote strip (2026-11-16) ---------------------------------------------------------------------------
+
+// ---- The summoning tubes (2026-11-17, Arcade/DCCSummons.h) ----------------------------------------------------------
+
+void ADCCHUD::ToggleSummonPanel(int32 Tube)
+{
+	SummonTube = SummonTube == Tube ? -1 : Tube;
+	ApplyCursorForOpenPanels();
+}
+
+void ADCCHUD::ShowSummonResult(FName Friend, uint8 Tier, uint8 Variant, const FString& WeaponName)
+{
+	// Shown as the friend lands at the bottom of the tube (about 1.5 s), so the tube gets to be the reveal.
+	// Game time, not the wall clock: while an ad renders, the wall clock runs many times slower than the game.
+	FSummonBanner Banner;
+	Banner.Friend = Friend;
+	Banner.Tier = Tier;
+	Banner.Variant = Variant;
+	Banner.Weapon = WeaponName;
+	Banner.At = GetWorld() ? GetWorld()->GetTimeSeconds() + 1.45 : 0.0;
+	SummonBanners.Add(Banner);
+	if (SummonBanners.Num() > 8)
+	{
+		SummonBanners.RemoveAt(0);
+	}
+}
+
+void ADCCHUD::DrawSummonBanner()
+{
+	if (!Canvas || !GetWorld())
+	{
+		return;
+	}
+	UFont* Medium = GEngine->GetMediumFont();
+	UFont* Large = GEngine->GetLargeFont();
+	// The reveal banner: the friend's name in their rarity's colour, then what kind of pull it was.
+	// The newest banner whose friend has landed.
+	const double Now = GetWorld()->GetTimeSeconds();
+	const FSummonBanner* Shown = nullptr;
+	for (const FSummonBanner& B : SummonBanners)
+	{
+		if (B.At <= Now) { Shown = &B; }
+	}
+	const float Age = Shown ? float(Now - Shown->At) : -1.0f;
+	if (Shown && Age < 5.0f)
+	{
+		const FName SummonFriend = Shown->Friend;
+		const uint8 SummonTier = Shown->Tier;
+		const uint8 SummonVariant = Shown->Variant;
+		const FString& SummonWeapon = Shown->Weapon;
+		const FLinearColor C = DCCSummons::TierColour(SummonTier);
+		const float A = FMath::Clamp(Age / 0.25f, 0.0f, 1.0f) * FMath::Clamp((5.0f - Age) / 0.6f, 0.0f, 1.0f);
+		const float Pop = Age < 0.18f ? FMath::Lerp(1.6f, 1.0f, Age / 0.18f) : 1.0f;
+		const FString Name = SummonFriend.ToString().ToUpper();
+		const bool bShinyCard = SummonVariant == DCCSummons::Shiny;
+		const bool bShadowCard = SummonVariant == DCCSummons::Shadow;
+		float NW = 0.0f, NH = 0.0f;
+		GetTextSize(Name, NW, NH, Large, 2.2f * Pop);
+		const float BY = Canvas->SizeY * 0.2f;
+		const float CW = 620.0f, CX = Canvas->SizeX * 0.5f - CW * 0.5f, CY = BY - 18.0f, CH = NH + 74.0f;
+		const float NX = (Canvas->SizeX - NW) * 0.5f;
+		FString Line = FString(DCCSummons::TierName(SummonTier)).ToUpper();
+		if (!SummonWeapon.IsEmpty()) { Line += FString::Printf(TEXT("   armed with %s"), *SummonWeapon); }
+
+		if (bShinyCard)
+		{
+			// A Shiny card (2026-11-17, Zoe: "make the name card for those variants appropriately themed"): warm gold,
+			// a double gold rim that pulses, a glint sweeping across it, the name glowing, stars twinkling round it.
+			const float Pulse = 0.65f + 0.35f * FMath::Sin(Age * 7.0f);
+			DrawRect(FLinearColor(0.20f, 0.13f, 0.02f, 0.86f * A), CX, CY, CW, CH);
+			DrawRect(FLinearColor(1.0f, 0.82f, 0.30f, 0.95f * A * Pulse), CX, CY, CW, 5.0f);
+			DrawRect(FLinearColor(1.0f, 0.82f, 0.30f, 0.95f * A * Pulse), CX, CY + CH - 5.0f, CW, 5.0f);
+			DrawRect(FLinearColor(1.0f, 0.95f, 0.75f, 0.6f * A), CX, CY + 8.0f, CW, 1.0f);
+			DrawRect(FLinearColor(1.0f, 0.95f, 0.75f, 0.6f * A), CX, CY + CH - 9.0f, CW, 1.0f);
+			// The glint: a bright band crossing the card every 1.2 s.
+			const float Sweep = FMath::Fmod(Age, 1.2f) / 1.2f;
+			for (int32 k = 0; k < 6; ++k)
+			{
+				DrawRect(FLinearColor(1.0f, 1.0f, 0.9f, 0.10f * A * (1.0f - k / 6.0f)), CX + Sweep * (CW + 120.0f) - 120.0f + k * 8.0f, CY, 8.0f, CH);
+			}
+			// The name, with a gold glow behind it.
+			for (int32 k = 0; k < 8; ++k)
+			{
+				const FVector2D O = FVector2D(FMath::Cos(k * PI / 4.0f), FMath::Sin(k * PI / 4.0f)) * 3.0f;
+				DrawText(Name, FLinearColor(1.0f, 0.75f, 0.2f, 0.35f * A), NX + O.X, BY + O.Y, Large, 2.2f * Pop);
+			}
+			DrawText(Name, FLinearColor(1.0f, 0.97f, 0.82f, A), NX, BY, Large, 2.2f * Pop);
+			// Twinkling four-pointed stars round the name.
+			for (int32 k = 0; k < 10; ++k)
+			{
+				const float Twinkle = FMath::Max(0.0f, FMath::Sin(Age * 6.0f + k * 1.9f));
+				const float SX = CX + 24.0f + FMath::Fmod(k * 157.0f, CW - 48.0f);
+				const float SY = CY + 10.0f + FMath::Fmod(k * 37.0f, CH - 20.0f);
+				const float L = 4.0f + 9.0f * Twinkle;
+				DrawRect(FLinearColor(1.0f, 0.96f, 0.8f, A * Twinkle), SX - L, SY - 1.0f, L * 2.0f, 2.0f);
+				DrawRect(FLinearColor(1.0f, 0.96f, 0.8f, A * Twinkle), SX - 1.0f, SY - L, 2.0f, L * 2.0f);
+			}
+			Line = TEXT("*  S H I N Y  *   ") + Line;
+			float LW = 0.0f, LH = 0.0f;
+			GetTextSize(Line, LW, LH, Medium, 1.0f);
+			DrawText(Line, FLinearColor(1.0f, 0.86f, 0.4f, A), (Canvas->SizeX - LW) * 0.5f, BY + NH + 8.0f, Medium, 1.0f);
+		}
+		else if (bShadowCard)
+		{
+			// A Shadow card: near black, a violet edge, scanlines, and the name glitching in red and blue.
+			DrawRect(FLinearColor(0.012f, 0.0f, 0.025f, 0.92f * A), CX, CY, CW, CH);
+			DrawRect(FLinearColor(0.55f, 0.2f, 1.0f, 0.9f * A), CX, CY, 4.0f, CH);
+			DrawRect(FLinearColor(0.55f, 0.2f, 1.0f, 0.9f * A), CX + CW - 4.0f, CY, 4.0f, CH);
+			DrawRect(FLinearColor(0.55f, 0.2f, 1.0f, 0.5f * A), CX, CY + CH - 2.0f, CW, 2.0f);
+			for (float Y = CY; Y < CY + CH; Y += 5.0f)
+			{
+				DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.35f * A), CX, Y, CW, 2.0f);
+			}
+			// The glitch: the name doubled in magenta and cyan, jumping a little every few frames.
+			const float Jit = FMath::Sin(FMath::FloorToFloat(Age * 14.0f) * 12.9898f) * 4.0f;
+			DrawText(Name, FLinearColor(1.0f, 0.1f, 0.6f, 0.65f * A), NX - 4.0f + Jit, BY, Large, 2.2f * Pop);
+			DrawText(Name, FLinearColor(0.1f, 0.9f, 1.0f, 0.55f * A), NX + 4.0f - Jit, BY + 1.0f, Large, 2.2f * Pop);
+			DrawText(Name, FLinearColor(0.82f, 0.74f, 1.0f, A), NX, BY, Large, 2.2f * Pop);
+			Line = TEXT("//  S H A D O W  //   ") + Line;
+			float LW = 0.0f, LH = 0.0f;
+			GetTextSize(Line, LW, LH, Medium, 1.0f);
+			DrawText(Line, FLinearColor(0.72f, 0.5f, 1.0f, A), (Canvas->SizeX - LW) * 0.5f, BY + NH + 8.0f, Medium, 1.0f);
+		}
+		else
+		{
+			DrawRect(FLinearColor(0.02f, 0.01f, 0.04f, 0.72f * A), CX, CY, CW, CH);
+			DrawRect(FLinearColor(C.R, C.G, C.B, 0.9f * A), CX, CY, CW, 4.0f);
+			DrawText(Name, FLinearColor(C.R, C.G, C.B, A), NX, BY, Large, 2.2f * Pop);
+			float LW = 0.0f, LH = 0.0f;
+			GetTextSize(Line, LW, LH, Medium, 1.0f);
+			DrawText(Line, FLinearColor(1.0f, 0.95f, 0.85f, A), (Canvas->SizeX - LW) * 0.5f, BY + NH + 8.0f, Medium, 1.0f);
+		}
+	}
+
+}
+
+void ADCCHUD::DrawSummon(const ADCCArcadeLobby* Lobby)
+{
+	ADCCCharacterBase* Me = GetOwningCrawler();
+	if (!Lobby || !Me || !Canvas || !GetWorld())
+	{
+		return;
+	}
+	UFont* Small = GEngine->GetSmallFont();
+	UFont* Medium = GEngine->GetMediumFont();
+	UFont* Large = GEngine->GetLargeFont();
+	const int32 Podium = Lobby->PodiumNear(Me->GetActorLocation());
+	if (SummonTube >= 0 && Podium != SummonTube)
+	{
+		ToggleSummonPanel(SummonTube); // walked away
+	}
+
+	DrawSummonBanner();
+
+	// Standing at a podium with the panel closed: say how.
+	if (Podium >= 0 && SummonTube < 0)
+	{
+		const FString Prompt = FString::Printf(TEXT("E: SUMMON A FRIEND   (%d tickets)"), DCCSummons::Price);
+		float PW = 0.0f, PH = 0.0f;
+		GetTextSize(Prompt, PW, PH, Medium, 1.0f);
+		const float PX = (Canvas->SizeX - PW) * 0.5f, PY = Canvas->SizeY * 0.62f;
+		DrawRect(FLinearColor(0.02f, 0.02f, 0.05f, 0.8f), PX - 16.0f, PY - 8.0f, PW + 32.0f, PH + 16.0f);
+		DrawText(Prompt, FLinearColor(1.0f, 0.86f, 0.55f), PX, PY, Medium, 1.0f);
+	}
+	if (SummonTube < 0)
+	{
+		return;
+	}
+
+	// The panel: the odds, your tickets, your allies, and the button.
+	const FString MyName = Me->GetPlayerState() ? Me->GetPlayerState()->GetPlayerName() : FString();
+	const TArray<FName>& Friends = DCCSession::Roster();
+	const TArray<float> Odds = DCCSummons::FriendOdds(Lobby->FriendTiers, MyName);
+	int32 MyAllies = 0;
+	for (TActorIterator<ADCCSummonedAlly> It(GetWorld()); It; ++It)
+	{
+		MyAllies += It->SummonerName == MyName && It->IsAlive() ? 1 : 0;
+	}
+	const int32 Tickets = Me->Wallet ? Me->Wallet->Tickets : 0;
+	const float W = 520.0f, Row = 22.0f;
+	const float H = 250.0f + Friends.Num() * Row;
+	const float X = (Canvas->SizeX - W) * 0.5f, Y0 = (Canvas->SizeY - H) * 0.5f;
+	DrawRect(FLinearColor(1.0f, 0.75f, 0.25f, 0.8f), X - 2.0f, Y0 - 2.0f, W + 4.0f, H + 4.0f);
+	DrawRect(FLinearColor(0.05f, 0.03f, 0.08f, 0.96f), X, Y0, W, H);
+	float Y = Y0 + 14.0f;
+	DrawText(FString::Printf(TEXT("F.I.A.T.  -  FRIEND IN A TUBE  -  TUBE %d"), SummonTube + 1), FLinearColor(1.0f, 0.8f, 0.4f), X + 18.0f, Y, Medium, 1.0f);
+	Y += 30.0f;
+	DrawText(FString::Printf(TEXT("%d tickets a pull.  You have %d."), DCCSummons::Price, Tickets), BodyColour, X + 18.0f, Y, Small, 1.0f);
+	Y += Row;
+	DrawText(FString::Printf(TEXT("Allies with you: %d of %d. They follow you, and fight beside you in the Safe Room, Gate Run and Dead Air, until they go down."),
+		MyAllies, DCCSummons::MaxAllies), DimColour, X + 18.0f, Y, Small, 1.0f);
+	Y += Row + 8.0f;
+	DrawText(TEXT("WHO MIGHT COME DOWN   (rarity is popularity: views and wins)"), HeadingColour, X + 18.0f, Y, Small, 1.0f);
+	Y += Row;
+	for (int32 i = 0; i < Friends.Num(); ++i)
+	{
+		const uint8 Tier = Lobby->FriendTiers.IsValidIndex(i) ? Lobby->FriendTiers[i] : 0;
+		const bool bMe = Friends[i].ToString() == MyName;
+		const FLinearColor C = bMe ? DimColour : DCCSummons::TierColour(Tier);
+		DrawRect(FLinearColor(C.R, C.G, C.B, 0.85f), X + 18.0f, Y + 4.0f, 8.0f, 12.0f);
+		DrawText(Friends[i].ToString(), C, X + 34.0f, Y, Small, 1.0f);
+		DrawText(FString(DCCSummons::TierName(Tier)).ToUpper(), C, X + 150.0f, Y, Small, 1.0f);
+		DrawText(bMe ? FString(TEXT("(you)")) : FString::Printf(TEXT("%.1f%%"), Odds.IsValidIndex(i) ? Odds[i] * 100.0f : 0.0f), BodyColour, X + 280.0f, Y, Small, 1.0f);
+		DrawText(FString::Printf(TEXT("shiny %.0f%%"), DCCSummons::ShinyChance(Tier) * 100.0f), DimColour, X + 370.0f, Y, Small, 1.0f);
+		Y += Row;
+	}
+	Y += 4.0f;
+	DrawText(FString::Printf(TEXT("Shiny ones shimmer in their colour; %.0f%% come as Shadows. %.0f%% come armed with a weapon."),
+		DCCSummons::ShadowChance * 100.0f, DCCSummons::ArmedChance * 100.0f), DimColour, X + 18.0f, Y, Small, 1.0f);
+	Y += Row + 12.0f;
+
+	// The buttons.
+	const double Real = GetWorld()->GetRealTimeSeconds();
+	const bool bCan = Tickets >= DCCSummons::Price && MyAllies < DCCSummons::MaxAllies && !Lobby->IsTubeBusy(SummonTube);
+	const FString Go = MyAllies >= DCCSummons::MaxAllies ? FString(TEXT("YOUR PARTY IS FULL"))
+		: Lobby->IsTubeBusy(SummonTube) ? FString(TEXT("THE TUBE IS BUSY"))
+		: Tickets < DCCSummons::Price ? FString::Printf(TEXT("NEED %d TICKETS"), DCCSummons::Price)
+		: FString::Printf(TEXT("SUMMON  -  %d TICKETS"), DCCSummons::Price);
+	const float BW = 300.0f, BH = 40.0f;
+	const float BX = X + 18.0f;
+	const float Pulse = bCan ? 0.75f + 0.25f * FMath::Sin(Real * 5.0) : 0.3f;
+	DrawRect(FLinearColor(1.0f, 0.75f, 0.25f, Pulse), BX, Y, BW, BH);
+	DrawRect(FLinearColor(0.12f, 0.06f, 0.16f, 1.0f), BX + 2.0f, Y + 2.0f, BW - 4.0f, BH - 4.0f);
+	float GW = 0.0f, GH = 0.0f;
+	GetTextSize(Go, GW, GH, Medium, 1.0f);
+	DrawText(Go, bCan ? FLinearColor(1.0f, 0.88f, 0.55f) : DimColour, BX + (BW - GW) * 0.5f, Y + (BH - GH) * 0.5f, Medium, 1.0f);
+	if (bCan)
+	{
+		AddHitBox(FVector2D(BX, Y), FVector2D(BW, BH), TEXT("Summon|Go"), true, 4);
+	}
+	const float CX = X + W - 18.0f - 150.0f;
+	DrawRect(FLinearColor(0.4f, 0.4f, 0.5f, 0.8f), CX, Y, 150.0f, BH);
+	DrawRect(FLinearColor(0.08f, 0.08f, 0.12f, 1.0f), CX + 2.0f, Y + 2.0f, 146.0f, BH - 4.0f);
+	float CW = 0.0f, CH = 0.0f;
+	GetTextSize(TEXT("CLOSE"), CW, CH, Medium, 1.0f);
+	DrawText(TEXT("CLOSE"), BodyColour, CX + (150.0f - CW) * 0.5f, Y + (BH - CH) * 0.5f, Medium, 1.0f);
+	AddHitBox(FVector2D(CX, Y), FVector2D(150.0f, BH), TEXT("Summon|Close"), true, 4);
+}
 
 void ADCCHUD::DrawDenStrip(const ADCCArcadeLobby* Lobby)
 {

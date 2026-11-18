@@ -96,7 +96,7 @@ THE HOST (one person, usually Zoe)
      and click Allow. Many home networks count as Public, so Private alone
      can block your friends. If you missed it, fix it in Windows Security,
      Firewall, Allow an app: tick DungeonCrawlerDenver for Private and Public.
-  3. The Den opens and the party menu shows your invites.
+  3. The Safe Room opens and the party menu shows your invites.
      Click Copy invite and paste the message into the group chat.
      Internet: the game asks your router to open its port. If it can, this
        code works for friends anywhere, nothing else to install.
@@ -112,7 +112,7 @@ EVERYONE ELSE
      Windows Security, Firewall, Allow an app, tick DungeonCrawlerDenver for
      both Private and Public (and delete any Block rules for it).
 
-IN THE DEN
+IN THE SAFE ROOM
   Walk onto a coloured pad to vote for a game. Majority wins, and everyone goes.
   F2 opens the party menu again (invite, who's here, leave).
 

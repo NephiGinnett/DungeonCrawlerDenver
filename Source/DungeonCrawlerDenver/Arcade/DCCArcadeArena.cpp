@@ -1,4 +1,5 @@
 #include "Arcade/DCCArcadeArena.h"
+#include "Arcade/DCCSummons.h"
 #include "Arcade/DCCSpray.h"
 #include "PhysicsEngine/BodySetup.h"
 #include "Components/BoxComponent.h"
@@ -115,6 +116,7 @@ void ADCCArcadeArena::Tick(float DeltaSeconds)
 		return;
 	}
 	ServerTick(DeltaSeconds);
+	DCCSummons::TickArena(this); // the allies summoned in the Den follow their crawler into the next game
 
 	// Minigames respawn the dead: nothing else in the project does, and a
 	// player stuck with no body for the rest of a round is not a minigame.
@@ -337,6 +339,12 @@ void ADCCArcadeArena::SetupSky()
 		{
 			Component->SetFogDensity(Sky.FogDensity * 0.3f); // the old haze bleached everything past a few metres
 			Component->SetFogInscatteringColor(Sky.FogColour);
+			if (Sky.FogStart > 0.0f)
+			{
+				// StartDistance is ignored while volumetric fog is on, so the band would bleach the climb.
+				Component->SetVolumetricFog(false);
+				Component->SetStartDistance(Sky.FogStart);
+			}
 		}
 		LocalActors.Add(Fog);
 	}

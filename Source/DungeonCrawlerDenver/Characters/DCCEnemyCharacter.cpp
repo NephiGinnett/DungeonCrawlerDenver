@@ -362,6 +362,13 @@ ADCCCharacterBase* ADCCEnemyCharacter::FindFollowLeader() const
 	{
 		return nullptr;
 	}
+	if (ADCCCharacterBase* Mine = FollowOwner.Get())
+	{
+		if (Mine->IsAlive())
+		{
+			return Mine;
+		}
+	}
 
 	ADCCCharacterBase* Best = nullptr;
 	float BestDistanceSquared = TNumericLimits<float>::Max();
@@ -473,6 +480,25 @@ void ADCCEnemyCharacter::TickFollowLeader(ADCCCharacterBase* Leader, AAIControll
 		// Walk while close; run to catch up once the leader has got well ahead.
 		SetMovementSpeedOverride(Distance > FollowDistance * 3.0f ? 0.0f : FollowWalkSpeed);
 		FollowChaseGrid(Leader, FollowDistance * 0.8f);
+		return;
+	}
+
+	// No grid and no navmesh either (the Den is built at runtime): walk straight at the leader, same dead band.
+	if (bFollowStraight)
+	{
+		const float Distance = Leader ? FVector::Dist2D(GetActorLocation(), Leader->GetActorLocation()) : 0.0f;
+		if (!Leader || Distance <= FollowDistance * 0.6f)
+		{
+			bIsChasing = false;
+			return;
+		}
+		if (!bIsChasing && Distance <= FollowDistance * FollowResumeMultiplier * 0.6f)
+		{
+			return;
+		}
+		SetMovementSpeedOverride(Distance > FollowDistance * 3.0f ? 0.0f : FollowWalkSpeed);
+		AddMovementInput((Leader->GetActorLocation() - GetActorLocation()).GetSafeNormal2D(), 1.0f);
+		bIsChasing = true;
 		return;
 	}
 

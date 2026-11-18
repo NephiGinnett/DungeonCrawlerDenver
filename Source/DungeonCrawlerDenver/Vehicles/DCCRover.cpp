@@ -17,6 +17,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/FloatingPawnMovement.h"
+#include "GameFramework/GameStateBase.h"
 #include "GameFramework/PlayerController.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
@@ -24,6 +25,7 @@
 #include "Quests/DCCQuestComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "NiagaraComponent.h"
+#include "NiagaraFunctionLibrary.h"
 #include "NiagaraSystem.h"
 #include "Skills/DCCSkillComponent.h"
 #include "Stats/DCCStatsComponent.h"
@@ -215,6 +217,14 @@ void ADCCRover::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetim
 	DOREPLIFETIME(ADCCRover, RallyTow);
 	DOREPLIFETIME(ADCCRover, bRallyTowDocked);
 	DOREPLIFETIME(ADCCRover, bRallyInYard);
+	DOREPLIFETIME(ADCCRover, RallyTrick);
+	DOREPLIFETIME(ADCCRover, RallyBalance);
+	DOREPLIFETIME(ADCCRover, RallyMagnet);
+	DOREPLIFETIME(ADCCRover, RallySpin);
+	DOREPLIFETIME(ADCCRover, RallyTilt);
+	DOREPLIFETIME(ADCCRover, RallyTrickScore);
+	DOREPLIFETIME(ADCCRover, RallyTrickMul);
+	DOREPLIFETIME(ADCCRover, RallyClampUntil);
 	DOREPLIFETIME(ADCCRover, RallyHookRange);
 	DOREPLIFETIME_CONDITION(ADCCRover, RallyFuel, COND_OwnerOnly);
 	DOREPLIFETIME(ADCCRover, RadioTrackIndex);
@@ -965,7 +975,13 @@ void ADCCRover::UpdateWreckerCrane(float DeltaSeconds)
 	const FVector Rest = CraneBoom->GetComponentTransform().TransformPosition(RestLocal);
 	FVector Goal = Rest;
 	float Want = 0.0f;
-	if (bTowing)
+	if (RallyTrick == 2)
+	{
+		// The disc rides under the car the driver is holding up, shifted by the magnet.
+		Goal = GetActorLocation() + FVector::UpVector * 320.0f + GetActorRightVector() * RallyMagnet * 90.0f;
+		Want = 1.0f;
+	}
+	else if (bTowing)
 	{
 		const float Roof = RallyTow->Collision ? RallyTow->Collision->GetScaledBoxExtent().Z + 30.0f : 140.0f;
 		Goal = RallyTow->GetActorLocation() + FVector(0.0f, 0.0f, Roof);
@@ -1167,14 +1183,28 @@ void ADCCRover::Tick(float DeltaSeconds)
 		// Throttle winds SpeedRamp up over SecondsToReachCruise rather than
 		// jumping straight to top speed, so the rover accelerates instead of
 		// simply being fast the instant a key goes down.
-		const float RampRate = SecondsToReachCruise > 0.0f ? 1.0f / SecondsToReachCruise : 10.0f;
+		// Player wreckers carry weight. Traffic and autopilot keep the old ramp so the city still flows.
+		// Cruise seconds 5.8 -> 9.4. Coast multiplier 1.6 -> 0.48, so letting go keeps the line.
+		const bool bWeight = bWrecker && Driver && !bAutoPilotActive;
+		const float CruiseSeconds = bWeight ? 9.4f : SecondsToReachCruise;
+		const float CoastMul = bWeight ? 0.48f : 1.6f;
+		const float RampRate = CruiseSeconds > 0.0f ? 1.0f / CruiseSeconds : 10.0f;
 		if (!FMath::IsNearlyZero(ThrottleInput))
 		{
 			SpeedRamp = FMath::Clamp(SpeedRamp + RampRate * DeltaSeconds, 0.0f, 1.0f);
 		}
 		else
 		{
-			SpeedRamp = FMath::Clamp(SpeedRamp - RampRate * 1.6f * DeltaSeconds, 0.0f, 1.0f);
+			SpeedRamp = FMath::Clamp(SpeedRamp - RampRate * CoastMul * DeltaSeconds, 0.0f, 1.0f);
+		}
+		if (bWeight)
+		{
+			static bool bLoggedFeel = false;
+			if (!bLoggedFeel)
+			{
+				bLoggedFeel = true;
+				UE_LOG(LogTemp, Log, TEXT("[DCC Drive] weight: seconds to cruise 5.8 -> 9.4, coast mul 1.6 -> 0.48, steer 1.25 at a stop -> 0.38 at cruise (was the other way, floor 0.3 and growing), drift slide 0.55 instant -> 0.78 with grip return 1.6/s, turn scrub 0.12 -> 0.04 unless drifting."));
+			}
 		}
 
 		if (Movement)
@@ -1198,18 +1228,32 @@ void ADCCRover::Tick(float DeltaSeconds)
 		const float Speed = GetVelocity().Size();
 		// MinSteerScale floors this rather than letting it reach 0 at a dead
 		// stop - see the property's own comment for why.
-		const float SteerScale = FMath::Clamp(
-			FMath::Max(MinSteerScale, Speed / FMath::Max(1.0f, MaxCruiseSpeed * 0.30f)), 0.0f, 1.0f);
+		// A player truck turns tighter when it is slow and wider when it is fast.
+		const float Speed01 = FMath::Clamp(Speed / FMath::Max(1.0f, MaxCruiseSpeed), 0.0f, 1.0f);
+		const float SteerScale = bWeight
+			? FMath::Lerp(1.25f, 0.38f, Speed01)
+			: FMath::Clamp(FMath::Max(MinSteerScale, Speed / FMath::Max(1.0f, MaxCruiseSpeed * 0.30f)), 0.0f, 1.0f);
+		if (bWeight)
+		{
+			const float GripTarget = bDrifting ? 0.22f : 1.0f;
+			DriftGrip = FMath::FInterpConstantTo(DriftGrip, GripTarget, DeltaSeconds, bDrifting ? 0.55f : 1.6f);
+		}
+		else if (!bDrifting)
+		{
+			DriftGrip = 1.0f;
+		}
 		const float TurnRate = TurnRateDegreesPerSecond * (bDrifting ? DriftTurnMultiplier : 1.0f);
 
-		if (!FMath::IsNearlyZero(SteerInput))
+		// Struggle and the overhead flip both take A and D. The truck coasts.
+		if (!FMath::IsNearlyZero(SteerInput) && RallyTrick == 0)
 		{
 			AddActorWorldRotation(FRotator(0.0f,
 				SteerInput * TurnRate * SteerScale * DeltaSeconds, 0.0f));
-			// A hard corner scrubs a little speed, so the truck has to be pointed, not slid.
+			// A hard corner scrubs a little speed. A weighted truck keeps more of it unless it is drifting.
 			if (Speed > 800.0f)
 			{
-				SpeedRamp = FMath::Max(0.0f, SpeedRamp - FMath::Abs(SteerInput) * 0.12f * DeltaSeconds);
+				const float Scrub = (bWeight && DriftGrip > 0.6f) ? 0.04f : 0.12f;
+				SpeedRamp = FMath::Max(0.0f, SpeedRamp - FMath::Abs(SteerInput) * Scrub * DeltaSeconds);
 			}
 		}
 
@@ -1221,10 +1265,12 @@ void ADCCRover::Tick(float DeltaSeconds)
 
 			// Drifting keeps part of the OLD velocity direction, so the car
 			// slides wide through a turn instead of tracking its nose exactly.
-			if (bDrifting && Speed > 200.0f)
+			// Grip returns on its own after Shift comes up, so a long drift is a line you hold.
+			const float Slide = bWeight ? FMath::Lerp(0.0f, 0.78f, 1.0f - DriftGrip) : (bDrifting ? DriftSlide : 0.0f);
+			if (Slide > 0.04f && Speed > 200.0f)
 			{
 				const FVector Heading = GetVelocity().GetSafeNormal();
-				Direction = FMath::Lerp(Direction, Heading, DriftSlide).GetSafeNormal();
+				Direction = FMath::Lerp(Direction, Heading, Slide).GetSafeNormal();
 			}
 
 			AddMovementInput(Direction, Drive);
@@ -1265,6 +1311,16 @@ void ADCCRover::Tick(float DeltaSeconds)
 			CameraBoom->TargetArmLength = FMath::FInterpTo(CameraBoom->TargetArmLength, 260.0f, DeltaSeconds, 8.0f);
 			CameraBoom->SetRelativeLocation(FMath::VInterpTo(CameraBoom->GetRelativeLocation(), FVector(-20.0f, 0.0f, 280.0f), DeltaSeconds, 8.0f));
 			CameraBoom->SetRelativeRotation(FRotator(CameraPitch, CameraYawOffset, 0.0f));
+		}
+		else if (IsLocallyControlled() && GetWorld() && GetWorld()->GetGameState()
+			&& GetWorld()->GetGameState()->GetServerWorldTimeSeconds() < RallyClampUntil && Magnet)
+		{
+			// The clamp, on this screen only. The shift keeps running for everyone else.
+			const FVector From = GetActorLocation() + FVector(-120.0f, 80.0f, 260.0f);
+			const FVector To = Magnet->GetComponentLocation() - From;
+			CameraBoom->TargetArmLength = FMath::FInterpTo(CameraBoom->TargetArmLength, 420.0f, DeltaSeconds, 8.0f);
+			CameraBoom->SetRelativeLocation(FMath::VInterpTo(CameraBoom->GetRelativeLocation(), FVector(-120.0f, 80.0f, 260.0f), DeltaSeconds, 8.0f));
+			CameraBoom->SetRelativeRotation(FMath::RInterpTo(CameraBoom->GetRelativeRotation(), To.Rotation(), DeltaSeconds, 8.0f));
 		}
 		else if (RallyTow && IsLocallyControlled())
 		{
@@ -1518,6 +1574,43 @@ void ADCCRover::NotifyHit(UPrimitiveComponent* MyComp, AActor* Other, UPrimitive
 		return;
 	}
 
+	// A glancing blow on a player wrecker keeps going along the wall. Head-on still stops.
+	// Into is how square the velocity meets the surface. Under 0.62 is a scrape.
+	const FVector Vel = GetVelocity();
+	const float Into = FVector::DotProduct(Vel.GetSafeNormal(), -HitNormal);
+	if (bWrecker && Driver && !bAutoPilotActive && Into < 0.62f)
+	{
+		const FVector Tangential = FVector::VectorPlaneProject(Vel, HitNormal);
+		Movement->Velocity = Tangential * 0.82f + HitNormal * 80.0f;
+		const float Side = FVector::CrossProduct(GetActorForwardVector(), HitNormal).Z;
+		CameraYawTarget = FMath::Clamp(CameraYawTarget + FMath::Sign(Side) * 7.0f, -18.0f, 18.0f);
+		static double LastSpark = 0.0;
+		const double SparkNow = FPlatformTime::Seconds();
+		if (SparkNow - LastSpark > 0.12)
+		{
+			LastSpark = SparkNow;
+			static bool bTried = false;
+			static UNiagaraSystem* Sparks = nullptr;
+			if (!bTried)
+			{
+				bTried = true;
+				Sparks = LoadObject<UNiagaraSystem>(nullptr, TEXT("/Game/Legendary_Forge/Fx/Sparks/NS_sparks.NS_sparks"));
+			}
+			if (Sparks)
+			{
+				UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, Sparks, HitLocation, HitNormal.Rotation());
+			}
+		}
+		static bool bLoggedScrape = false;
+		if (!bLoggedScrape)
+		{
+			bLoggedScrape = true;
+			UE_LOG(LogTemp, Log, TEXT("[DCC Drive] scrape: into %.2f kept %.0f cm/s (head-on still stops at 0.62)"),
+				Into, Movement->Velocity.Size());
+		}
+		return;
+	}
+
 	// A real wall. Stop, shove gently back off it, and take the controls away
 	// for a moment so it reads as an impact rather than as the car sticking to
 	// the surface with the throttle still buried.
@@ -1609,6 +1702,12 @@ void ADCCRover::UpdateGroundAndAir(float DeltaSeconds)
 	if (Driver)
 	{
 		Params.AddIgnoredActor(Driver);
+	}
+	// A car on the magnet sits above the bed. Tracing it as "the ground" makes the
+	// truck climb onto the thing it is holding (seen: the wrecker rose to z 4332).
+	if (RallyTow)
+	{
+		Params.AddIgnoredActor(RallyTow);
 	}
 
 	// Traces from above the body so a rover that has clipped slightly into a
@@ -1839,6 +1938,10 @@ float ADCCRover::ProbeGroundAhead() const
 	if (Driver)
 	{
 		Params.AddIgnoredActor(Driver);
+	}
+	if (RallyTow)
+	{
+		Params.AddIgnoredActor(RallyTow);
 	}
 
 	if (World->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, Params))

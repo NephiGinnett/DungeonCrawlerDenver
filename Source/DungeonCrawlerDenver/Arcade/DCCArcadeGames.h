@@ -39,7 +39,36 @@ public:
 	/** Someone is standing on a game's pad right now (this machine's own view, so it is instant): the HUD's vote
 	 *  strip comes down while this is true and rolls back up when it is not. */
 	bool IsSomeoneOnAPad() const { return bSomeoneOnPad; }
+
+	// --- The summoning tubes (2026-11-17, Arcade/DCCSummons.h) -------------------------------------------------
+	static constexpr int32 TubeCount = 4;
+	FVector TubeCenter(int32 Tube) const { return GetActorLocation() + FVector((Tube - (TubeCount - 1) * 0.5f) * 600.0f, -1450.0f, 0.0f); }
+	/** Front and to the right of its tube, so whoever stands there watches the tube rather than standing in front of it. */
+	FVector PodiumCenter(int32 Tube) const { return TubeCenter(Tube) + FVector(250.0f, 300.0f, 0.0f); }
+	/** The podium a crawler at Location is standing at, or -1. */
+	int32 PodiumNear(const FVector& Location) const;
+	/** Which way a friend walks out of Tube: through the cut-out in the glass, toward the room. */
+	FVector TubeExit(int32 Tube) const { return FVector(0.0f, 1.0f, 0.0f); }
+	/** Server: light Tube for a pull of this rarity. False while it is still busy with the last one, unless bForce
+	 *  (the gacha ad lights the same tube again before the last pull has finished). */
+	bool StartTube(int32 Tube, uint8 Tier, bool bForce = false);
+	bool IsTubeBusy(int32 Tube) const;
+	/** Each friend's rarity, in DCCSession::Roster() order (the podium's odds table). */
+	UPROPERTY(Replicated)
+	TArray<uint8> FriendTiers;
+	/** When each tube last lit (server time; 0 = never) and the rarity it lit for. */
+	UPROPERTY(Replicated)
+	TArray<double> TubeStarted;
+	UPROPERTY(Replicated)
+	TArray<uint8> TubeTiers;
 private:
+	void BuildTubes();
+	void TickTubes();
+	/** Local: each tube's light and its energy beam. */
+	TArray<TWeakObjectPtr<class UPointLightComponent>> TubeLights;
+	TArray<TWeakObjectPtr<AActor>> TubeBeams;
+	TArray<FVector> TubeBeamScale;
+	double NextTiersAt = 0.0;
 	FVector PadCenter(int32 Index) const;
 	/** The prize counter: stand on it and the Den shop opens (on your machine only). */
 	FVector ShopPadCenter() const { return GetActorLocation() + FVector(2000.0f, -1050.0f, 0.0f); }
@@ -613,6 +642,8 @@ public:
 	bool IsShiftOn() const { return ShiftEndsAt > 0.0; }
 	/** Dev check (DCC.RallyTrouble): "brawler"/"shooter" spawns an owner by the first truck, "hurt" takes 30 hull. */
 	void DebugTrouble(const FString& What);
+	/** Dev check (DCC.RallyPose): "struggle", "flip" or "drop" puts the first mark on the first truck. */
+	void DebugPose(const FString& What);
 
 	// The board, the briefing and the shift report (2026-11-14, "nice full menus, clear organization").
 	// Filled on the server every tick in RefreshBoard; the HUD draws them (UI/DCCHUD_RallyMenus.cpp).
@@ -627,6 +658,10 @@ public:
 	/** 0 parked, 1 boxed, 2 running, 3 skittish: what the city is throwing at you now. */
 	UPROPERTY(Replicated)
 	int32 RallyWave = 0;
+
+	/** Bit i set means street gas can i is still there. Cleared on the server when a truck takes it. */
+	UPROPERTY(Replicated)
+	int32 GasCanBits = 255;
 private:
 	void RefreshBoard();
 };

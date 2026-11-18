@@ -7,6 +7,8 @@
 #include "Items/DCCInventoryComponent.h"
 #include "Combat/DCCGameState.h"
 #include "Engine/DataTable.h"
+#include "GameFramework/PlayerController.h"
+#include "UI/DCCHUD.h"
 #include "Net/UnrealNetwork.h"
 #include "UObject/ConstructorHelpers.h"
 
@@ -183,6 +185,61 @@ void UDCCAchievementComponent::Unlock(const FDCCAchievementDef& Achievement)
 
 	UE_LOG(LogTemp, Log, TEXT("DCCAchievement: %s unlocked '%s'."),
 		*GetNameSafe(Owner), *Achievement.AchievementId.ToString());
+
+	TArray<FString> Pay;
+	if (Achievement.ExperienceReward > 0)
+	{
+		Pay.Add(FString::Printf(TEXT("+%d XP"), Achievement.ExperienceReward));
+	}
+	if (Achievement.FavorReward != 0)
+	{
+		Pay.Add(FString::Printf(TEXT("%+d favor"), Achievement.FavorReward));
+	}
+	if (Achievement.LootBoxReward != EDCCLootBoxTier::None)
+	{
+		const TCHAR* Box = TEXT("loot box");
+		switch (Achievement.LootBoxReward)
+		{
+		case EDCCLootBoxTier::Bronze: Box = TEXT("Bronze loot box"); break;
+		case EDCCLootBoxTier::Silver: Box = TEXT("Silver loot box"); break;
+		case EDCCLootBoxTier::Gold: Box = TEXT("Gold loot box"); break;
+		case EDCCLootBoxTier::Platinum: Box = TEXT("Platinum loot box"); break;
+		case EDCCLootBoxTier::Legendary: Box = TEXT("Legendary loot box"); break;
+		case EDCCLootBoxTier::Celestial: Box = TEXT("Celestial loot box"); break;
+		default: break;
+		}
+		Pay.Add(Box);
+	}
+	const FString Reward = Pay.Num() > 0 ? FString::Join(Pay, TEXT("  ")) : TEXT("on the record");
+	Client_PushAchievement(Achievement.DisplayName.ToString(), Reward);
+}
+
+void UDCCAchievementComponent::Client_PushAchievement_Implementation(const FString& Title, const FString& Reward)
+{
+	APawn* Pawn = Cast<APawn>(GetOwner());
+	APlayerController* PC = Pawn ? Cast<APlayerController>(Pawn->GetController()) : nullptr;
+	if (!PC && GetWorld())
+	{
+		PC = GetWorld()->GetFirstPlayerController();
+	}
+	if (ADCCHUD* Hud = PC ? Cast<ADCCHUD>(PC->GetHUD()) : nullptr)
+	{
+		Hud->PushAchievement(Title, Reward);
+	}
+}
+
+void UDCCAchievementComponent::DebugAnnounce(const FString& Title, int32 Experience, int32 Favor)
+{
+	if (!GetOwner() || !GetOwner()->HasAuthority())
+	{
+		return;
+	}
+	FDCCAchievementDef Row;
+	Row.AchievementId = FName(*FString::Printf(TEXT("Dev_%s"), *Title));
+	Row.DisplayName = FText::FromString(Title);
+	Row.ExperienceReward = Experience;
+	Row.FavorReward = Favor;
+	Unlock(Row);
 }
 
 void UDCCAchievementComponent::GetPendingRewardIds(TArray<FName>& OutIds) const

@@ -106,6 +106,8 @@ namespace
 
 namespace DCCProfile
 {
+	static void UnionUploads(TArray<FDCCUpload>& Into, const TArray<FDCCUpload>& Extra);
+
 	FString KeyFor(const APlayerState* PlayerState)
 	{
 		return PlayerState ? PlayerState->GetPlayerName() : FString();
@@ -357,7 +359,7 @@ namespace DCCProfile
 		{
 			return false;
 		}
-		const bool bHostEmpty = Host->Stats.IsEmpty() && Host->Cosmetics.IsEmpty() && Host->Trophies.IsEmpty();
+		const bool bHostEmpty = Host->Stats.IsEmpty() && Host->Cosmetics.IsEmpty() && Host->Trophies.IsEmpty() && Host->Uploads.IsEmpty();
 		const int32 BaseRevision = Base ? Base->Revision : 0;
 		if (bHostEmpty || Host->Revision < BaseRevision)
 		{
@@ -370,6 +372,8 @@ namespace DCCProfile
 			{
 				Host->PasswordHash = Visitor->PasswordHash;
 			}
+			Host->Uploads = Visitor->Uploads;
+			if (Host->Uploads.Num() > 30) { Host->Uploads.SetNum(30); }
 			UE_LOG(LogTemp, Log, TEXT("[DCC Profile] %s: took their own copy (this PC's was %s)."), *Key, bHostEmpty ? TEXT("empty") : TEXT("older"));
 		}
 		else
@@ -410,6 +414,7 @@ namespace DCCProfile
 				const int32 Count = Host->Trophies.FindRef(Id) + Visitor->Trophies.FindRef(Id) - (Base ? Base->Trophies.FindRef(Id) : 0);
 				if (Count > 0) { Host->Trophies.Add(Id, Count); } else { Host->Trophies.Remove(Id); }
 			}
+			UnionUploads(Host->Uploads, Visitor->Uploads);
 			UE_LOG(LogTemp, Log, TEXT("[DCC Profile] %s: merged their changes since revision %d."), *Key, BaseRevision);
 		}
 		Host->Revision = FMath::Max(Host->Revision, Visitor->Revision) + 1;
@@ -433,6 +438,7 @@ namespace DCCProfile
 		Local->Cosmetics = Incoming->Cosmetics;
 		Local->Wearing = Incoming->Wearing;
 		Local->Trophies = Incoming->Trophies;
+		Local->Uploads = Incoming->Uploads;
 		Local->Revision = Incoming->Revision;
 		if (!Incoming->PasswordHash.IsEmpty())
 		{
@@ -445,6 +451,51 @@ namespace DCCProfile
 	bool TakeDirty(const FString& Key)
 	{
 		return !Key.IsEmpty() && Dirty().Remove(Key) > 0;
+	}
+
+	static void UnionUploads(TArray<FDCCUpload>& Into, const TArray<FDCCUpload>& Extra)
+	{
+		TSet<FString> Seen;
+		TArray<FDCCUpload> Merged;
+		auto Take = [&](const TArray<FDCCUpload>& List)
+		{
+			for (const FDCCUpload& Post : List)
+			{
+				if (Post.Id.IsEmpty() || Seen.Contains(Post.Id) || Merged.Num() >= 30)
+				{
+					continue;
+				}
+				Seen.Add(Post.Id);
+				Merged.Add(Post);
+			}
+		};
+		Take(Into);
+		Take(Extra);
+		Into = Merged;
+	}
+
+	void AddUpload(const APlayerState* PlayerState, const FDCCUpload& Post)
+	{
+		UDCCProfileSave* Profile = Open(KeyFor(PlayerState));
+		if (!Profile || Post.Id.IsEmpty())
+		{
+			return;
+		}
+		Profile->Uploads.RemoveAll([&Post](const FDCCUpload& Have) { return Have.Id == Post.Id; });
+		Profile->Uploads.Insert(Post, 0);
+		if (Profile->Uploads.Num() > 30)
+		{
+			Profile->Uploads.SetNum(30);
+		}
+		Write(Profile);
+		UE_LOG(LogTemp, Log, TEXT("[DCC Social] saved '%s' for %s (%d on file)"), *Post.Title, *Profile->PlayerKey, Profile->Uploads.Num());
+	}
+
+	const TArray<FDCCUpload>& GetUploads(const FString& Key)
+	{
+		static const TArray<FDCCUpload> Empty;
+		const UDCCProfileSave* Profile = Open(Key);
+		return Profile ? Profile->Uploads : Empty;
 	}
 }
 
@@ -468,7 +519,12 @@ static FAutoConsoleCommand GProfileDump(TEXT("DCC.Profile"), TEXT("DCC.Profile <
 		}
 		for (const FName& Id : Profile->Cosmetics) { UE_LOG(LogTemp, Display, TEXT("[DCC Profile] %s owns %s"), *Args[0], *Id.ToString()); }
 		for (const TPair<FName, int32>& T : Profile->Trophies) { UE_LOG(LogTemp, Display, TEXT("[DCC Profile] %s trophy %s x%d"), *Args[0], *T.Key.ToString(), T.Value); }
-		UE_LOG(LogTemp, Display, TEXT("[DCC Profile] %s revision %d, done"), *Args[0], Profile->Revision);
+		for (const FDCCUpload& Post : Profile->Uploads)
+		{
+			UE_LOG(LogTemp, Display, TEXT("[DCC Profile] %s upload %s | %s | %s | views %d likes %d"),
+				*Args[0], *Post.Game, *Post.Title, *Post.When, Post.Views, Post.Likes);
+		}
+		UE_LOG(LogTemp, Display, TEXT("[DCC Profile] %s revision %d, %d uploads, done"), *Args[0], Profile->Revision, Profile->Uploads.Num());
 	}));
 
 static FAutoConsoleCommand GProfileFix(TEXT("DCC.ProfileFix"), TEXT("DCC.ProfileFix <Key> <Game.Stat> <Value|->: (dev) set or remove one record."),

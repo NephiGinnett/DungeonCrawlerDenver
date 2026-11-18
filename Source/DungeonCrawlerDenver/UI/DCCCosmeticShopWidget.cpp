@@ -625,7 +625,7 @@ TSharedRef<SWidget> UDCCCosmeticShopWidget::RebuildWidget()
 			SNew(SHorizontalBox)
 			+ SHorizontalBox::Slot().FillWidth(1.0f).VAlign(VAlign_Center)
 			[
-				Header(NSLOCTEXT("DCC", "DenShopKicker", "SYSTEM  /  THE DEN"),
+				Header(NSLOCTEXT("DCC", "DenShopKicker", "SYSTEM  /  THE SAFE ROOM"),
 					TAttribute<FText>::CreateLambda([Self]() { return Self.IsValid() && Self->Tab == 2 ? NSLOCTEXT("DCC", "ChopTitle", "THE CHOP SHOP") : Self.IsValid() && Self->Tab == 3 ? NSLOCTEXT("DCC", "MineTitle", "MINE OUTFITTERS") : Self.IsValid() && Self->Tab == 4 ? NSLOCTEXT("DCC", "TradingTitle", "TRADING POST") : Self.IsValid() && Self->Tab == 5 ? NSLOCTEXT("DCC", "BountyTitle", "BOUNTY BOARD") : NSLOCTEXT("DCC", "DenShopTitle", "PRIZE COUNTER"); }),
 					TAttribute<FSlateColor>::CreateLambda([Self]() { return FSlateColor(Self.IsValid() ? TabColour(Self->Tab) : Gold); }))
 			]

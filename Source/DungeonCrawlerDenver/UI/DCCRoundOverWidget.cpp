@@ -69,7 +69,7 @@ TSharedRef<SWidget> UDCCRoundOverWidget::RebuildWidget()
 					+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
 					[
 						SNew(STextBlock).Font(Font(20)).ColorAndOpacity(FLinearColor::White)
-						.Text(bAgain ? NSLOCTEXT("DCC", "RoundAgain", "PLAY AGAIN") : NSLOCTEXT("DCC", "RoundDen", "BACK TO THE DEN"))
+						.Text(bAgain ? NSLOCTEXT("DCC", "RoundAgain", "PLAY AGAIN") : NSLOCTEXT("DCC", "RoundDen", "BACK TO THE SAFE ROOM"))
 					]
 					+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center)
 					[
@@ -110,7 +110,7 @@ TSharedRef<SWidget> UDCCRoundOverWidget::RebuildWidget()
 						const ADCCArcadeArena* A = Self.IsValid() ? Self->Arena.Get() : nullptr;
 						if (!A) { return FText::GetEmpty(); }
 						return FText::Format(NSLOCTEXT("DCC", "RoundDecide",
-							"What next? Majority wins, ties go to the Den.   {0} of {1} voted   -   {2} s"),
+							"What next? Majority wins, ties go to the Safe Room.   {0} of {1} voted   -   {2} s"),
 							FText::AsNumber(A->VotesAgain + A->VotesDen), FText::AsNumber(A->VotersExpected), FText::AsNumber(A->SecondsToDecide));
 					})
 				]

@@ -377,6 +377,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Replicated, Category = "DCC|AI")
 	bool bIsAlly = false;
 
+	/** An ally that follows this one crawler rather than the nearest (a summoned friend, 2026-11-17). Server. */
+	TWeakObjectPtr<ADCCCharacterBase> FollowOwner;
+	/** Follow in a straight line, for places with no grid and no navmesh (a summoned friend in the Den). */
+	bool bFollowStraight = false;
+
 	/** Dungeon-side unless bIsAlly flips it. Drives the whole faction check. */
 	virtual bool IsCrawler() const override { return bIsAlly; }
 

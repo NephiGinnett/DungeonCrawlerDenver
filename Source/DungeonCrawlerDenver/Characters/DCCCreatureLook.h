@@ -18,6 +18,8 @@ namespace DCCCreatureLook
 	/** See-through: the ghosts' hologram material in a colour, on every slot of the body. */
 	void Hologram(ADCCCharacterBase* Character, const FLinearColor& Colour, float Intensity, float Tiling = 12.0f);
 
+	/** A glowing shimmer over the regular body (the hologram material as an overlay, so the model shows through). */
+	void Shimmer(ADCCCharacterBase* Character, const FLinearColor& Colour, float Intensity);
 	/** A light that rides along on a character, at Height above its root. */
 	UPointLightComponent* Aura(ADCCCharacterBase* Character, const FLinearColor& Colour, float Intensity, float Radius, float Height);
 }

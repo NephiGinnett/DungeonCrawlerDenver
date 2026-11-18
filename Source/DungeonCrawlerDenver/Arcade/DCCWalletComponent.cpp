@@ -1,4 +1,7 @@
 #include "Arcade/DCCWalletComponent.h"
+#include "Combat/DCCGameState.h"
+#include "Characters/DCCAllyCharacters.h"
+#include "Arcade/DCCSummons.h"
 #include "Characters/DCCReactions.h"
 #include "UI/DCCHUD.h"
 #include "Session/DCCStarterKits.h"
@@ -939,4 +942,83 @@ void UDCCWalletComponent::Server_Grapple_Implementation()
 void UDCCWalletComponent::Client_GrappleThrown_Implementation(float Seconds)
 {
 	GrappleReadyLocal = GetWorld() ? GetWorld()->GetTimeSeconds() + Seconds : 0.0f;
+}
+
+// ---- The summoning tubes (2026-11-17, Arcade/DCCSummons.h) ----------------------------------------------------------
+
+void UDCCWalletComponent::Server_Summon_Implementation(uint8 Tube)
+{
+	DoSummon(Tube, false);
+}
+
+void UDCCWalletComponent::DoSummon(uint8 Tube, bool bFree)
+{
+	ADCCCharacterBase* Crawler = Cast<ADCCCharacterBase>(GetOwner());
+	UWorld* World = GetWorld();
+	if (!Crawler || !World || !Crawler->IsAlive())
+	{
+		return;
+	}
+	ADCCArcadeLobby* Lobby = nullptr;
+	for (TActorIterator<ADCCArcadeLobby> It(World); It; ++It) { Lobby = *It; break; }
+	if (!Lobby || Tube >= ADCCArcadeLobby::TubeCount || (!bFree && Lobby->PodiumNear(Crawler->GetActorLocation()) != int32(Tube)))
+	{
+		return; // only at that tube's podium
+	}
+	const FString Key = DCCProfile::KeyFor(Crawler->GetPlayerState());
+	TArray<DCCSummons::FSummon>& Mine = DCCSummons::Party().FindOrAdd(Key);
+	if (Mine.Num() >= DCCSummons::MaxAllies)
+	{
+		Client_Message(FString::Printf(TEXT("You already have %d allies with you. One has to fall before another comes down."), DCCSummons::MaxAllies), false);
+		return;
+	}
+	if (Lobby->IsTubeBusy(Tube))
+	{
+		Client_Message(TEXT("That tube is still busy. Give it a second."), false);
+		return;
+	}
+	if (!bFree && !DCCProfile::SpendTickets(Key, DCCSummons::Price))
+	{
+		Client_Message(FString::Printf(TEXT("A summon costs %d tickets. You have %d."), DCCSummons::Price, DCCProfile::GetTickets(Key)), false);
+		return;
+	}
+	Tickets = DCCProfile::GetTickets(Key);
+
+	TArray<uint8> Tiers = Lobby->FriendTiers;
+	if (Tiers.IsEmpty())
+	{
+		DCCSummons::ComputeTiers(Tiers);
+	}
+	const DCCSummons::FSummon Pull = DCCSummons::Roll(Tiers, Key, Crawler->Equipment ? Crawler->Equipment->EquipmentTable.Get() : nullptr);
+	if (Pull.Friend.IsNone())
+	{
+		if (!bFree) { DCCProfile::AddTickets(Key, DCCSummons::Price); } // nobody to summon: give the tickets back
+		Tickets = DCCProfile::GetTickets(Key);
+		return;
+	}
+	Lobby->StartTube(Tube, Pull.Tier);
+	if (ADCCSummonedAlly* Ally = DCCSummons::SpawnAlly(World, Pull, Crawler, Lobby->TubeCenter(Tube) + FVector(0, 0, 70.0f), 640.0f, Lobby->TubeExit(Tube)))
+	{
+		Mine.Add(Pull);
+		DCCSummons::Track(World, Key, Ally);
+	}
+	Client_SummonResult(Pull.Friend, Pull.Tier, Pull.Variant, Pull.Weapon);
+	ADCCGameState::Log(this, EDCCLogCategory::Announcement, FText::FromString(FString::Printf(TEXT("%s pulled a %s%s %s out of F.I.A.T."),
+		*Key, Pull.Variant ? *FString(DCCSummons::VariantName(Pull.Variant)).ToUpper().Append(TEXT(" ")) : TEXT(""), DCCSummons::TierName(Pull.Tier), *Pull.Friend.ToString())));
+}
+
+void UDCCWalletComponent::Client_SummonResult_Implementation(FName Friend, uint8 Tier, uint8 Variant, FName Weapon)
+{
+	const ADCCCharacterBase* Crawler = Cast<ADCCCharacterBase>(GetOwner());
+	const APlayerController* PC = Crawler ? Cast<APlayerController>(Crawler->GetController()) : nullptr;
+	if (ADCCHUD* Hud = PC ? Cast<ADCCHUD>(PC->GetHUD()) : nullptr)
+	{
+		FString WeaponName;
+		FDCCEquipmentDef Def;
+		if (!Weapon.IsNone() && Crawler->Equipment && Crawler->Equipment->FindItem(Weapon, Def))
+		{
+			WeaponName = Def.DisplayName.IsEmpty() ? Weapon.ToString() : Def.DisplayName.ToString();
+		}
+		Hud->ShowSummonResult(Friend, Tier, Variant, WeaponName);
+	}
 }

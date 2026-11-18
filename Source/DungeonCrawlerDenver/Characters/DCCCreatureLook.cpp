@@ -42,6 +42,21 @@ namespace DCCCreatureLook
 		Tint(Character, FLinearColor::White, FLinearColor::White, 0.0f);
 	}
 
+	void Shimmer(ADCCCharacterBase* Character, const FLinearColor& Colour, float Intensity)
+	{
+		USkeletalMeshComponent* Body = Character ? Character->GetMesh() : nullptr;
+		UMaterialInterface* Holo = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Cyberpunk_City/Materials/Master/M_hologram.M_hologram"));
+		if (!Body || !Holo)
+		{
+			return;
+		}
+		UMaterialInstanceDynamic* Sheen = UMaterialInstanceDynamic::Create(Holo, Character);
+		Sheen->SetVectorParameterValue(TEXT("Emissive Color"), Colour);
+		Sheen->SetScalarParameterValue(TEXT("Emissive Intensity"), Intensity);
+		Sheen->SetScalarParameterValue(TEXT("Tiling Hologram"), 18.0f);
+		Body->SetOverlayMaterial(Sheen);
+	}
+
 	UPointLightComponent* Aura(ADCCCharacterBase* Character, const FLinearColor& Colour, float Intensity, float Radius, float Height)
 	{
 		if (!Character || !Character->GetRootComponent())

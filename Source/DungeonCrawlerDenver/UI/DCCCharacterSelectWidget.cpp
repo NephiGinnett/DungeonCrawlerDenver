@@ -268,13 +268,13 @@ TSharedRef<SWidget> UDCCCharacterSelectWidget::RebuildWidget()
 		+ SVerticalBox::Slot().AutoHeight().Padding(0.0f, 0.0f, 0.0f, 10.0f)
 		[
 			BigButton(NSLOCTEXT("DCC", "MenuPlay", "PLAY"),
-				NSLOCTEXT("DCC", "MenuPlaySub", "Into the Den. Stand on a game to vote for it."),
+				NSLOCTEXT("DCC", "MenuPlaySub", "Into the Safe Room. Stand on a game to vote for it."),
 				Pink, 30, NotLeaving, [Self]() { if (Self.IsValid()) { Self->Play(); } })
 		]
 		+ SVerticalBox::Slot().AutoHeight().Padding(0.0f, 0.0f, 0.0f, 10.0f)
 		[
 			BigButton(NSLOCTEXT("DCC", "MenuHost", "HOST A PARTY"),
-				NSLOCTEXT("DCC", "MenuHostSub", "Open the Den to your friends. You get an invite to copy and send them."),
+				NSLOCTEXT("DCC", "MenuHostSub", "Open the Safe Room to your friends. You get an invite to copy and send them."),
 				Gold, 20, NotLeaving, [Self]() { if (Self.IsValid()) { Self->HostParty(); } })
 		]
 		+ SVerticalBox::Slot().AutoHeight().Padding(0.0f, 0.0f, 0.0f, 10.0f)
@@ -494,7 +494,7 @@ void UDCCCharacterSelectWidget::Play()
 		return;
 	}
 	bLeaving = DCCArcade::Travel(GetWorld(), TEXT("Lobby"));
-	SetMessage(bLeaving ? TEXT("Opening the Den...") : TEXT("Could not open the Den. Try again."), !bLeaving);
+	SetMessage(bLeaving ? TEXT("Opening the Safe Room...") : TEXT("Could not open the Safe Room. Try again."), !bLeaving);
 }
 
 void UDCCCharacterSelectWidget::HostParty()
@@ -513,7 +513,7 @@ void UDCCCharacterSelectWidget::HostParty()
 		return;
 	}
 	bLeaving = DCCArcade::Travel(GetWorld(), TEXT("Lobby"));
-	SetMessage(bLeaving ? TEXT("Hosting. Opening the Den...") : TEXT("Could not open the Den. Try again."), !bLeaving);
+	SetMessage(bLeaving ? TEXT("Hosting. Opening the Safe Room...") : TEXT("Could not open the Safe Room. Try again."), !bLeaving);
 }
 
 void UDCCCharacterSelectWidget::JoinParty()

@@ -113,11 +113,18 @@ public:
 	 */
 	static void RecordFor(AActor* Actor, EDCCAchievementStat Stat, int32 Amount = 1);
 
+	/** Dev only. Announces a card without waiting on a stat threshold. */
+	void DebugAnnounce(const FString& Title, int32 Experience, int32 Favor);
+
 protected:
 	/** Finds and unlocks anything the given stat's new total has crossed. */
 	void EvaluateUnlocks(EDCCAchievementStat Stat);
 
 	void Unlock(const FDCCAchievementDef& Achievement);
+
+	/** Owning client: the slide-in card. The server never draws a HUD. */
+	UFUNCTION(Client, Reliable)
+	void Client_PushAchievement(const FString& Title, const FString& Reward);
 
 	FDCCAchievementProgress& FindOrAddProgress(FName AchievementId);
 

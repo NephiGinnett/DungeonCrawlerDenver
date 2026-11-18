@@ -7,6 +7,44 @@
 class APlayerState;
 class UWorld;
 
+/** One post on a crawler's Social tab. Newest first on the profile, last 30. */
+USTRUCT()
+struct FDCCUpload
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	FString Id;
+
+	UPROPERTY()
+	FString Title;
+
+	UPROPERTY()
+	FString Moment;
+
+	UPROPERTY()
+	int32 Views = 0;
+
+	UPROPERTY()
+	int32 Likes = 0;
+
+	UPROPERTY()
+	int32 Comments = 0;
+
+	UPROPERTY()
+	int32 Shares = 0;
+
+	/** YYYY-MM-DD. */
+	UPROPERTY()
+	FString When;
+
+	UPROPERTY()
+	FString Game;
+
+	UPROPERTY()
+	TArray<FString> CommentLines;
+};
+
 /**
  * A player's records across every game in the arcade (2026-11-13).
  *
@@ -55,6 +93,10 @@ public:
 	 */
 	UPROPERTY()
 	int32 Revision = 0;
+
+	/** Dead Air posts and anything else the Social tab lists. Newest first, last 30. Never the dungeon save. */
+	UPROPERTY()
+	TArray<FDCCUpload> Uploads;
 };
 
 namespace DCCProfile
@@ -128,6 +170,10 @@ namespace DCCProfile
 	void AdoptFromHost(const TArray<uint8>& Merged);
 	/** True once after each write to Key's profile (the host's cue to send it back to that player). */
 	bool TakeDirty(const FString& Key);
+
+	/** Newest first. The same Id replaces itself and does not take a second slot. Capped at 30. */
+	void AddUpload(const APlayerState* PlayerState, const FDCCUpload& Post);
+	const TArray<FDCCUpload>& GetUploads(const FString& Key);
 
 	/** "CJ 7   Scott 4" for everyone currently connected, best first. Server only. */
 	FString Leaderboard(UWorld* World, FName Game, FName Stat, bool bHigherIsBetter, TFunction<FString(float)> Format);

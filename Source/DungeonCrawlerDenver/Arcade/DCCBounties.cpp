@@ -14,7 +14,7 @@ namespace DCCBounties
 		// Dead Air and Fourteener send you to each other: the mine is inside the mountain.
 		static const TArray<FBounty> Bounties = {
 			{ TEXT("FirstPrize"), TEXT("Dressed for It"), TEXT("Buy anything here at the Prize Counter. The camera adds ten pounds; a hat subtracts eleven."),
-				TEXT("THE DEN"), FLinearColor(1.0f, 0.83f, 0.42f), 20 },
+				TEXT("THE SAFE ROOM"), FLinearColor(1.0f, 0.83f, 0.42f), 16 },
 			{ TEXT("HighCamp"), TEXT("High Camp"), TEXT("Reach High Camp on Fourteener, 11,560 ft, where the mountain narrows."),
 				TEXT("FOURTEENER"), FLinearColor(0.55f, 0.8f, 1.0f), 30 },
 			{ TEXT("Souvenir"), TEXT("Souvenir"), TEXT("Carry a Fourteener artifact down alive. It goes in your trophy vault."),

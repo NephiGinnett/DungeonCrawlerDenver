@@ -104,3 +104,38 @@ class DUNGEONCRAWLERDENVER_API ADCCAlly_Vaughn : public ADCCEnemyCharacter
 public:
 	ADCCAlly_Vaughn();
 };
+
+/**
+ * A friend summoned from the Den's tubes (2026-11-17, Arcade/DCCSummons.h): a level 1 copy of one of the crew, in
+ * their own body (the onboarding look), following whoever summoned it. Rarer pulls can be Shiny (a glow in the
+ * rarity's colour) or Armed (a weapon in hand).
+ */
+UCLASS()
+class DUNGEONCRAWLERDENVER_API ADCCSummonedAlly : public ADCCEnemyCharacter
+{
+	GENERATED_BODY()
+
+public:
+	ADCCSummonedAlly();
+	virtual void BeginPlay() override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	UPROPERTY(ReplicatedUsing = OnRep_Summon)
+	FName Friend;
+	UPROPERTY(Replicated)
+	uint8 Tier = 0;
+	/** DCCSummons::EVariant: 0 plain, 1 Shiny, 2 Shadow. */
+	UPROPERTY(Replicated)
+	uint8 Variant = 0;
+	/** Which way it walks out of its tube (the cut-out in the glass). Server. */
+	FVector ExitDirection = FVector(0.0f, 1.0f, 0.0f);
+	/** Who summoned it (their player name), so each player's HUD can count their own allies. */
+	UPROPERTY(Replicated)
+	FString SummonerName;
+
+private:
+	UFUNCTION()
+	void OnRep_Summon();
+	void ApplySummonLook();
+	bool bSummonLookApplied = false;
+};

@@ -146,6 +146,15 @@ public:
 	/** The belt grappling hook (Fourteener). */
 	UFUNCTION(Server, Reliable)
 	void Server_Grapple();
+
+	/** A pull at a summoning tube's podium in the Den (2026-11-17, DCCSummons): 100 tickets, one friend comes down. */
+	UFUNCTION(Server, Reliable)
+	void Server_Summon(uint8 Tube);
+	/** Server: the pull itself. bFree skips the tickets and the podium check (dev tests, DCC.SummonFree). */
+	void DoSummon(uint8 Tube, bool bFree);
+	/** Who came down, for this player's reveal banner. */
+	UFUNCTION(Client, Reliable)
+	void Client_SummonResult(FName Friend, uint8 Tier, uint8 Variant, FName Weapon);
 	/** The server threw your hook: it is back in Seconds. The HUD counts down from here, on this PC's own clock. */
 	UFUNCTION(Client, Reliable)
 	void Client_GrappleThrown(float Seconds);

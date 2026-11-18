@@ -42,7 +42,7 @@ void ADCCArcadeFrontDoor::BuildLocal()
 	Block(O + FVector(700, 0, 500), FVector(40, 3000, 1000), FLinearColor(0.07f, 0.04f, 0.10f));
 	Block(O + FVector(680, 0, 40), FVector(10, 3000, 6), FLinearColor(1.0f, 0.45f, 0.9f));
 
-	Sign(O + FVector(670, 0, 620), 180.0f, TEXT("NOW ENTERING THE DEN"), FColor(255, 120, 230), 60.0f);
+	Sign(O + FVector(670, 0, 620), 180.0f, TEXT("NOW ENTERING THE SAFE ROOM"), FColor(255, 120, 230), 48.0f);
 
 	// Key light from the camera side, a warm rim from behind, a cool fill.
 	Light(O + FVector(-350, -120, 320), FLinearColor(1.0f, 0.92f, 0.85f), 9000.0f, 900.0f);
