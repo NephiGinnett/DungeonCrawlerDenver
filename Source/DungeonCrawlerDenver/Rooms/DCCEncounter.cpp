@@ -8,6 +8,7 @@
 #include "Progression/DCCAchievementComponent.h"
 #include "Quests/DCCQuestComponent.h"
 #include "Combat/DCCGameState.h"
+#include "Arcade/DCCArcade.h"
 #include "UI/DCCEventLogTypes.h"
 #include "Components/SceneComponent.h"
 #include "Net/UnrealNetwork.h"
@@ -492,6 +493,15 @@ void ADCCEncounter::AwardClearExperience()
 
 	if (bFloorCleared)
 	{
+		for (TActorIterator<ADCCCharacterBase> It(World); It; ++It)
+		{
+			ADCCCharacterBase* Character = *It;
+			if (Character && Character->IsPlayerControlled() && (Character->IsAlive() || Character->IsDowned()))
+			{
+				DCCArcade::CompleteSeriesQuest(Character->GetPlayerState(), TEXT("Crawler"), DCCArcade::SeriesQuestXp());
+			}
+		}
+
 		// The floor is the unit the books care about, so it gets the announcement
 		// voice rather than a line in the combat feed.
 		ADCCGameState::Log(this, EDCCLogCategory::Announcement, FText::Format(

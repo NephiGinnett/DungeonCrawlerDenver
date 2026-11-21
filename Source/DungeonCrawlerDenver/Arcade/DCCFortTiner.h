@@ -26,6 +26,7 @@ public:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void BeginPlay() override;
+	virtual void SayNextLine() override;
 
 	/** A speaker id from gen_fort_tiner_lines.py ("Dusty", "MaOre", "Gus", "Bea"). */
 	UPROPERTY(Replicated)
@@ -33,6 +34,8 @@ public:
 
 protected:
 	virtual void BuildScript() override;
+	/** Lines whose row contains "Summit" stay quiet until this machine's crawler has topped Fourteener. */
+	void SkipSummitLines();
 
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UDCCWalletComponent> Outfit;

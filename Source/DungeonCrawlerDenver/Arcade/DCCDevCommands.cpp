@@ -21,6 +21,7 @@
 #include "Arcade/DCCArcadeArena.h"
 #include "Arcade/DCCArcade.h"
 #include "Arcade/DCCArcadeGames.h"
+#include "Arcade/DCCCasino.h"
 #include "Arcade/DCCArcadeGate.h"
 #include "Arcade/DCCArcadeHaunt.h"
 #include "Items/DCCPickupVariants.h"
@@ -376,6 +377,56 @@ static FAutoConsoleCommandWithWorldAndArgs GDevOutfit(TEXT("DCC.Outfit"), TEXT("
 		});
 	}));
 
+static FAutoConsoleCommandWithWorldAndArgs GDevEsc(TEXT("DCC.Esc"), TEXT("DCC.Esc [delay]: (dev) press Esc for the local crawler."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		After(World, Args.Num() > 0 ? FCString::Atof(*Args[0]) : 0.0f, [](UWorld* W)
+		{
+			ADCCCharacterBase* Crawler = LocalCrawler(W);
+			if (!Crawler)
+			{
+				return;
+			}
+			APlayerController* PC = Cast<APlayerController>(Crawler->GetController());
+			ADCCHUD* Hud = PC ? Cast<ADCCHUD>(PC->GetHUD()) : nullptr;
+			const ADCCCasinoCascade* Casino = ADCCCasinoCascade::Get(W);
+			const int32 MenuBefore = Hud && Hud->IsMenuVisible() ? 1 : 0;
+			const int32 SideBefore = Crawler->HasSideMenu() ? 1 : 0;
+			const int32 SeatBefore = Casino && Casino->IsSeated(Crawler) ? 1 : 0;
+			Crawler->CloseInteraction();
+			const int32 MenuAfter = Hud && Hud->IsMenuVisible() ? 1 : 0;
+			const int32 SideAfter = Crawler->HasSideMenu() ? 1 : 0;
+			const int32 SeatAfter = Casino && Casino->IsSeated(Crawler) ? 1 : 0;
+			UE_LOG(LogTemp, Log, TEXT("[DCC Esc] menu %d->%d side %d->%d seat %d->%d"),
+				MenuBefore, MenuAfter, SideBefore, SideAfter, SeatBefore, SeatAfter);
+		});
+	}));
+
+static FAutoConsoleCommandWithWorldAndArgs GDevTab(TEXT("DCC.Tab"), TEXT("DCC.Tab [delay]: (dev) press Tab for the local crawler."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		After(World, Args.Num() > 0 ? FCString::Atof(*Args[0]) : 0.0f, [](UWorld* W)
+		{
+			ADCCCharacterBase* Crawler = LocalCrawler(W);
+			if (!Crawler)
+			{
+				return;
+			}
+			APlayerController* PC = Cast<APlayerController>(Crawler->GetController());
+			ADCCHUD* Hud = PC ? Cast<ADCCHUD>(PC->GetHUD()) : nullptr;
+			const ADCCCasinoCascade* Casino = ADCCCasinoCascade::Get(W);
+			const int32 MenuBefore = Hud && Hud->IsMenuVisible() ? 1 : 0;
+			const int32 SideBefore = Crawler->HasSideMenu() ? 1 : 0;
+			const int32 SeatBefore = Casino && Casino->IsSeated(Crawler) ? 1 : 0;
+			Crawler->ToggleCharacterMenu();
+			const int32 MenuAfter = Hud && Hud->IsMenuVisible() ? 1 : 0;
+			const int32 SideAfter = Crawler->HasSideMenu() ? 1 : 0;
+			const int32 SeatAfter = Casino && Casino->IsSeated(Crawler) ? 1 : 0;
+			UE_LOG(LogTemp, Log, TEXT("[DCC Tab] menu %d->%d side %d->%d seat %d->%d"),
+				MenuBefore, MenuAfter, SideBefore, SideAfter, SeatBefore, SeatAfter);
+		});
+	}));
+
 static FAutoConsoleCommandWithWorldAndArgs GDevInteract(TEXT("DCC.Interact"), TEXT("DCC.Interact [delay]: (dev) press E for the local crawler."),
 	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
 	{
@@ -628,8 +679,41 @@ static FAutoConsoleCommandWithWorldAndArgs GDevWhisper(TEXT("DCC.Whisper"), TEXT
 		});
 	}));
 
-// DCC.RallyPose <struggle|flip|drop> [delay]: (dev) put a mark on the first truck.
-static FAutoConsoleCommandWithWorldAndArgs GDevRallyPose(TEXT("DCC.RallyPose"), TEXT("DCC.RallyPose <struggle|flip|drop> [delay]: (dev) pose a tow."),
+// DCC.RallyTrick <1-4> [delay]: (dev) queue a trick on the local truck. 1 front, 2 barrel, 3 back, 4 corkscrew.
+static FAutoConsoleCommandWithWorldAndArgs GDevRallyTrick(TEXT("DCC.RallyTrick"), TEXT("DCC.RallyTrick <1-4> [delay]: (dev) queue an overhead trick."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		const uint8 Move = static_cast<uint8>(FMath::Clamp(Args.Num() > 0 ? FCString::Atoi(*Args[0]) : 1, 1, 4));
+		After(World, Args.Num() > 1 ? FCString::Atof(*Args[1]) : 0.0f, [Move](UWorld* W)
+		{
+			ADCCRover* Truck = nullptr;
+			if (APlayerController* PC = W ? W->GetFirstPlayerController() : nullptr)
+			{
+				Truck = Cast<ADCCRover>(PC->GetPawn());
+			}
+			if (!Truck)
+			{
+				for (TActorIterator<ADCCRover> It(W); It; ++It)
+				{
+					if (It->RallyTrick == 2 && It->Driver)
+					{
+						Truck = *It;
+						break;
+					}
+				}
+			}
+			if (!Truck)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("[DCC Drive] trick button %d: no truck"), Move);
+				return;
+			}
+			Truck->Server_RallyPickTrick(Move);
+			UE_LOG(LogTemp, Log, TEXT("[DCC Drive] trick button %d"), Move);
+		});
+	}));
+
+// DCC.RallyPose <struggle|flip|drop|road|ramp> [delay]: (dev) put a mark on the first truck.
+static FAutoConsoleCommandWithWorldAndArgs GDevRallyPose(TEXT("DCC.RallyPose"), TEXT("DCC.RallyPose <struggle|flip|drop|road|ramp> [delay]: (dev) pose a tow."),
 	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
 	{
 		const FString What = Args.Num() > 0 ? Args[0] : TEXT("flip");

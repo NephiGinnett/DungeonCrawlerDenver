@@ -19,10 +19,13 @@ class UDCCDungeonGrid;
  *    replicated seed on every machine. Its rank (E to S) comes from the room count and sets how hard it hits.
  *  - Rooms: FIGHT (clear it), TRIAL (step in the ring, survive three waves), VAULT (a pressure plate or a breaker
  *    panel opens it; the crowbar always works and costs Favor), TREASURE (a guarded chest), and the GATEKEEPER in
- *    the farthest room. Killing the Gatekeeper opens the way home. Step through to clear the gate.
+ *    the farthest room. The way home is already standing there, dark, and it lights when the Gatekeeper falls.
+ *    Step through to clear the gate.
  *  - More rooms (2026-11-15): DUEL (one named Champion), QUIET ROOM (empty, until someone reaches the middle and the
  *    shades come out of the walls), REST SHRINE (the Warden's light heals the whole party, once), and THE GAUNTLET
  *    (floor tiles light up in moving waves and burn; cross on the dark ones to the green pad).
+ *  - More rooms (2026-11-20): THE TOLL (hold the booth while the line arrives), THE OUTAGE (the lights go, then two
+ *    waves from the walls), THE CLOCK (three waves that do not wait), and THE HOLDING PEN (clear the ring; the fence burns).
  *  - The Gatekeeper's hall: pillars and fire, a boss bar, slams telegraphed by a red ring under whoever it picks,
  *    and shades called at two-thirds and one-third health.
  *  - The gate collapses when the clock runs out. Whatever was cleared still pays.
@@ -90,6 +93,8 @@ private:
 		bool bCleared = false;
 		int32 WavesLeft = 0;
 		double NextWaveAt = 0.0;
+		/** The toll booth: seconds someone has stood in the window. */
+		double Held = 0.0;
 		/** The gauntlet: where its tiles start, how many, and the pad that ends it. */
 		FVector TileMin = FVector::ZeroVector;
 		int32 TilesX = 0;
@@ -141,7 +146,8 @@ private:
 	static int32 RankFor(int32 Rooms);
 
 	void BuildDungeon();
-	void DrawPortal(const FVector& At, float Height, const FLinearColor& Colour, float Yaw);
+	/** The ring is the gate. Power is the shine, the lights and the sparks. The way home is placed dark and lit later. */
+	void DrawPortal(const FVector& At, float Height, const FLinearColor& Colour, float Yaw, bool bFrame = true, bool bPowered = true);
 	void SpawnRoomContent();
 	ADCCEnemyCharacter* SpawnFoe(TSubclassOf<ADCCEnemyCharacter> Class, const FVector& At, int32 RoomIndex, bool bBoss);
 	void SpawnWave(int32 RoomIndex, int32 Count);

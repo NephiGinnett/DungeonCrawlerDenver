@@ -1548,3 +1548,142 @@ Night is finished. Development Editor link succeeded (`UnrealEditor-DungeonCrawl
 - **B4 Slabs.** Ledge rocks are uniform height 320 and sunk into the face. Overhangs are unstretched and have a rock under them. The hidden collision slabs stay. Log `[DCC Slab]` for every face. Shot `climb_night` b01: rocks sit on the cliff, and one small object still reads as floating. Nobody climbed, so the wrap onto the next face was not seen. No before-shot of the old pancakes.
 - **B5 Sheet and looks.** `DrawStats`: STR INT CON DEX CHA, score in the box, banded modifier in a gold token (Zoe's were 14, 14, 16, 10, 12, all +4). Health, mana, stamina, evade, level, XP, can lift, and a WEAPON line. Skills show rank, mana, cooldown, and a BELT button that reorders the skill to the front of the belt. No new key. LOOK in Settings: CRYSTAL, NEON, TABLETOP, saved as `[DCCUi] Style` 0/1/2, ids UiCrystal, UiNeon, UiTabletop, not gated. Shot `menu_night`: crystal sheet and the three LOOK buttons, CRYSTAL lit. Shot `menu_follow`: skills with BELT on each row after the first, then tabletop parchment on the skills page and the character page (FireAxe, Overhead, stand-in clip, UNEQUIP). Log `[DCC Ui] style 2 cosmetic UiTabletop`. Neon was not clicked. Inventory was not opened in each look. The BELT button was not clicked. The test left LOOK on Tabletop. Click CRYSTAL to put the frost back.
 
+### 2026-11-18 (later): leave, practice swing, allies, bag
+
+Development Editor link succeeded. No numbered DLL.
+
+- **Safe Room button.** Tab menu quick row, and the F2 party menu. Two clicks inside 6 seconds. The whole party travels. Hidden in the Safe Room, on the front door, and in the pose bench. Log `bail_room`: `bail armed`, then `Zoe bailed back to the Safe Room`, then travel to the lobby. Second shot is the neon SAFE ROOM sign. The first shot is the rally work order, which covered the button row. The click still landed. Wrote `DCC_Zoe.sav`. `Profile_Zoe.sav` was not touched. F2 was not shot on its own. A second player was not in the test.
+- **Practice swing.** A left click with nobody in reach plays the weapon clip. No damage, no roll, no skill mark. A real hostile in range is still a real attack. Log `swing_bag`: `[DCC Swing] practice, no target and no damage`, axe overhead clip. The pose itself was not a clear frame. Cooldown, Climbing equipped, and a real fight were not checked.
+- **Gear back in the bag.** Taking a piece off, or equipping over it, puts the old piece in the bag. A full bag still takes that one piece. A missing gear row still comes back, named by its id. This covers the bench, the shop, and booth guns, not only the Tab button. The A2 note above (unequip does not bag the item) is the old behavior. Log `swing_bag`: `FireAxe back in the bag (9 now)`, then `ChefsKnife back in the bag (10 now)` and `unequip slot 0 'ChefsKnife' removed`. The inventory page showed both rows.
+- **Allies follow.** A summoned friend comes into every game and stands with you until they go down. A fall or a car can still lose one, and that death forgets them. Log `ally_follow`: free pull (no tickets) of Common Kyle with a Confetti Crossbow, then travel to Dead Air, then `Zoe's Kyle came along`. The cage shots show a second body at the right edge. The lobby frame caught the tube, not Kyle walking out. Wrote `DCC_Zoe.sav` again at 8:52 PM. `Profile_Zoe.sav` is still 11/17 9:07 PM.
+
+### 2026-11-18 (later): item cards once
+
+The flash cards were treating the save load as a fresh gain. A new space spawns an empty body, the HUD noted that empty bag, then the save filled it and every owned piece announced again. Cards now wait until that carry-in has sat still, remember those gear ids for the session, and flash an id only the first time it is gained or equipped after that. Log `item_cards`: lobby settled `8 in the bag, 1 worn`, travel to Dead Air, settled again with the same line, and no `[DCC Item] NEW ITEM` / `EQUIPPED` / `GOLD` lines. Travel rewrote `DCC_Zoe.sav` at 9:06 PM (same size). `Profile_Zoe.sav` was not touched. A brand-new pickup during play was not staged.
+
+### 2026-11-18 (later): yard run and trick chain
+
+While a mark is overhead, the truck drives itself along the streets to the turn-in yard and eases to a stop inside it. A and D stay on the magnet. A level hold (under 25 degrees) plays a flip on its own, about every couple of seconds: front flip, barrel roll, back flip, corkscrew, then it repeats. Space pops the next one early. The chain adds to the same payout Q already banks. Q while level banks it (then Q drops it if you are in the yard). Q while tilted, or a tilt past about 70, still drops the car. The chain pauses when you go past 25 and is lost if it falls. Log `rally_yard`: seated at the street crossing, `yard path dist 37947` down to `yard path in the lot, dist 6898`, and `trick 1 Front flip`. Nobody was on the magnet, so the tilt ran away and the log then says `flip dropped`. The 9:31:00 frame is the YARD RUN card on the neon street. The 9:31:12 frame is the car pitched over the truck, TOO TILTED, still rolling. A clean mid-flip pose was not a separate frame. Did not rewrite `DCC_Zoe.sav` or `Profile_Zoe.sav`.
+- **Itch.** `Tools/publish_itch.ps1` cooked and butler pushed build **2026-11-18.2135** to `zoebubble/dungeon-crawler-denver:windows` (butler build #2433612, 129.94 MiB patch). Zip: `D:\Builds\DungeonCrawlerDenver-2026-11-18.2135.zip`. The previous live build was 2026-11-18.0617.
+
+### 2026-11-18 (night): the yard run stops for parked cars
+
+The outer-lane probes no longer drive up a ramp. Log `rally_lane` held the road (Z stayed about 202) from the Ix=+1 crossing down to Y=33780, then `cap 0` forever in front of a parked car. Zoe stopped that test. A parked car does not move, so a full stop there never ends. Not rebuilt tonight. Next path is a curb crawl: ride the empty strip outside the parked cars (about 19 m off the centre, sidewalk furniture is out near 27 m), step further out to pass one car, and reverse a few metres instead of waiting. Side changes only near a crossing, and only to get off a skyway's ramp side.
+
+Queued from the same night. Built the next day. See the 2026-11-19 log. The yard curb crawl was not part of that build.
+
+### 2026-11-19: series, mountain, gates, bodies, phone, camp
+
+Development Editor link succeeded twice. The DLL is `UnrealEditor-DungeonCrawlerDenver.dll`, 8,074,240 bytes, 12:34 PM. No numbered DLL and no patch DLL. Not playtested. Not published. The yard path was not touched.
+
+- **Unlocks.** Fourteener, Neon Mile, and Dungeon Crawler Denver stay open. Dead Air and Stress Test open after `Climb.Summits` is at least 1. Gate Run and Repo Rally also need `Haunt.BestViews` above 0 and `Audit.BestDamage` above 0, so a wipe or a miss does not open them. A player named Zoe can stand on any pad. A locked pad does not count as a vote, the logo dims, and the wallet says why.
+- **Quest line.** For about the first 80 seconds of a round, a gold banner states the goal. Finishing it once writes `Quest.<game>` and grants XP: Fourteener +80 on top of the existing 150, and Dead Air, Stress Test, Gate Run, and Repo Rally +120. Repo Rally pays at the 10th delivered car. Neon Mile shows a line and pays no quest XP.
+- **Fourteener rocks.** The ledge slab and the overhang wedge are no longer hidden, and they take `Mi_rock_cliff_02`. This is the likely invisible stump. Nobody has climbed it since the link.
+- **Gate Run paint.** Plaza, rooms, walls, and the boss trim use concrete and tile materials already in the project. Fort Tiner's own gate was not repainted.
+- **Dead Air bodies.** Three stories, first and last note only, plus one loose note, spaced farther apart. Warm rim and a note light until this player has found that note (`Haunt.Found0/1/2`). First find is +12 XP. Filming one adds footage. Not seen in a round.
+- **Body cam.** While recording, the wheel zooms and the wheel click is the selfie. Food cycle stays on the wheel when the cam is off. A spray, an emote, a reaction, a death in frame, and a hit on the camera are meant to reach the reel. Not filmed in a round.
+- **Phone.** A friend's name on the Social page opens that profile's posts. Whisper is a button on that page. Posts exist only if that `Profile_<Name>.sav` is on this machine.
+- **Camp.** Fort Tiner's JSON has two new lines each from Dusty, Ma Ore, Gus, and Bea about the drones and the climb. After a summit, one more line each tells Vaughn finding the Lucky Tuesday under the pasture. Those four stay silent until `Climb.Summits` is at least 1. The first summit also puts a camp-radio line on the Fourteener alert for 20 seconds. This is talk and a radio call, not a staged scene of Vaughn walking into a hole.
+
+### 2026-11-19 (afternoon): combat swings and aimed shots
+
+Development Editor link succeeded. The DLL is `UnrealEditor-DungeonCrawlerDenver.dll`, 8,094,208 bytes, 2:05 PM. No numbered DLL and no patch DLL. Not playtested. Not published.
+
+- **Aim.** Right mouse still zooms a ranged weapon. Left click fires only while that button is held. A click without aim asks you to hold right mouse, and it does not shoot. A friend under the cursor still gets a greeting. Until you aim, the mark is small and reads "Hold right mouse to aim." While aiming, the crosshair tightens and turns red on a target.
+- **Swings.** From the two zips in `Content/Unsorted`: stab, outward slash, greatsword overhead, baseball strike, sword-and-shield impact, spell cast, and a wave. Axes and hammers idle, walk, and run with the greatsword. Swords use the sword-and-shield loops. Guns and throws still use the archery shot. Punches still use the boxing warm-up. Death stays a ragdoll.
+- **Left aside.** Sitting Talking, Sitting Laughing, and Female Standing Pose were not imported. They fit Elyra's Tales better than a fight.
+- **Import.** All 13 sequences saved under `/Game/DCC/Characters/Shared/AnimsFixed` and bound to `SK_DCCCrawler_Skeleton`. Not seen on a body.
+
+### 2026-11-20: startup crash in the skeleton check
+
+Development Editor link succeeded. The DLL is `UnrealEditor-DungeonCrawlerDenver.dll`, 8,093,184 bytes, 8:41 AM. No numbered DLL. A Den launch stayed up past the old crash and showed Zoe in the Safe Room. Not published.
+
+- **Crash.** After character select the first locomotion tick called `CanPlayOnThisSkeleton` on the hammer's greatsword idle and read address `0xffffffffffffffff` while building a soft object path. The same check had also been handed the nameplate and the capsule, which are not animations. A static clip cache was keeping raw `TObjectPtr`s the garbage collector does not see, so after a travel those slots could come back as components.
+- **Fix.** The check now ignores anything that is not a live animation and any skeleton pointer that is not a live `USkeleton`, and tries again next tick. Weapon clips are loaded fresh instead of cached. Retargeting refuses to write bone modes until `BoneTree` is the same length as the reference skeleton, because that write has no bounds check.
+
+### 2026-11-20: jobs, bleed-out, quests, gate rooms
+
+Development Editor link succeeded. The DLL is `UnrealEditor-DungeonCrawlerDenver.dll`, 8,125,952 bytes, 10:49 AM. No numbered DLL. Den and Gate Run were opened. Zoe did not pick a job and did not go down. `Profile_Zoe.sav` is still 11/19 1:34 PM and `DCC_Zoe.sav` is still 11/19 5:21 PM. Nothing was earned or spent.
+
+- **Classes.** The starter kit is the class. Seven Earth jobs, one per game: Repo Driver (melee), Ridge Hand (hits taken), Call Sign (spells), Line Coach (heals), Mile Runner (ranged shots), Gate Warden (a smaller mix of melee and soaking), Floor Walker (a little of swings, shots, spells, and heals). Each level up to 5 teaches the next real skill. The percent grows with level and covers that whole kind of action. The Character page lists them. She has not picked one, so the page showed the seven rows. Picking one is once, from that page or the dungeon cards, and it still grants the kit gear and 25 tickets.
+- **Bleed-out.** While downed, Space or the button on the down screen fails the death saves immediately. A tale floor can still rewrite that ending. Friends can still press E if you wait. Not staged, because that would record a death on Zoe.
+- **Quests.** Every game, including the dungeon, uses the same one-line banner and the same 100 XP. Neon Mile completes at 500 metres. The dungeon completes when a floor is cleared.
+- **Floors.** The Den and Neon Mile roads are 4 m synthwave tiles on the old collision slab. Stress Test is concrete tile. Rally asphalt was left flat.
+- **Gate Run.** Four new rooms: the Toll (hold the booth), the Outage (lights, then two waves), the Clock (three waves that stack), and the Holding Pen (clear the ring; the fence burns). A gate with two or more middle rooms always includes at least one of them, and a longer gate includes about half. Log `gate_rounds2`: rank D, 5 rooms, seed 36450, `start fight gauntlet clock boss`. She stayed in the plaza.
+- **Itch.** `Tools/publish_itch.ps1` cooked and butler pushed build **2026-11-20.1051** to `zoebubble/dungeon-crawler-denver:windows` (butler build #2448724, from #2433612, 132.49 MiB patch). Zip: `D:\Builds\DungeonCrawlerDenver-2026-11-20.1051.zip`. The previous live build was 2026-11-18.2135.
+
+### 2026-11-20 (afternoon): combat idle and walk stood upright again
+
+Selecting a crawler who is holding an axe, hammer, or sword played the new Mixamo loops, and those loops were leaning the body off the capsule. One-shot swings looked fine because the camera follows them. The skeleton asset and the body meshes were not part of it. `SK_DCCCrawler_Skeleton.uasset` is still 12,733 bytes from 11/13 9:01 PM.
+
+The 11/19 rebake divided the crawler's hip height by the Mixamo hip's Z. Mixamo's armature is pitched 90 degrees, so that Z is 0 and the hips landed billions of units away. Idle, walk, and run also kept the source combat stance, which is what skews a selected character once hip translation is stripped at runtime.
+
+`Tools/rebake_mixamo_batch.py` now scales by the longest hip axis (ratio about 0.70). The first repair turned every bone back to the bind pose. That bind pose is a T-pose (arms straight out), so a selected crawler slid around in it while the capsule still walked. The bake now turns the whole pose by one rotation, taken from the first frame's hips, so the hips stand upright and the arms keep the weapon hold. Attacks still keep the swing and the lunge. Walks step. `DCC.ImportCombatAnims` replaced all 13 sequences again at 3:07 PM, on `SK_DCCCrawler_Skeleton`.
+
+### 2026-11-20 (evening): greatsword hands were over the head
+
+The 3:07 PM greatsword idle put both wrists above the head. Mixamo's armature object is pitched 90 degrees, and the arm deltas were taken in that armature's own axes, so "arms down" landed as "arms forward and up." The source clip holds the sword low, in front of the hips, with the upper arms pointing down.
+
+`Tools/rebake_mixamo_batch.py` now takes those deltas after both poses are in the crawler's space. A locomotion clip whose wrists start above the shoulders fails the bake. On the rebaked idle the wrists are at 0.25 and 0.34 above the hips, shoulders at 0.61. They sit in front of the waist. These arms are shorter than Mixamo's, so the hands do not reach the thighs. Seen on CJ's mesh in Blender, front and side. `DCC.ImportCombatAnims` replaced all 13 sequences at 8:39 PM, each on `SK_DCCCrawler_Skeleton`, and saved them. Not seen in the running game. The editor was closed for the import.
+
+### 2026-11-20 (evening): loot boxes lean toward your skills
+
+Opening a box still rolls the tier's table. Gear whose weapon skill or handling skill the opener already knows is more likely, and the rest of the gear in that box gives up the difference, so the box does not get bigger. Gold and anything with no skill stay at the authored chance. Rank 5 is a bit over three times the pull of a skill they do not have. The event log adds "It leaned toward your Axe." when a box had a lean. Development Editor link succeeded. The DLL is `UnrealEditor-DungeonCrawlerDenver.dll`. No numbered DLL. Not opened in a box yet.
+
+### 2026-11-20 (evening): greatsword hold taken back off axes and hammers
+
+Zoe rejected the Mixamo greatsword idle, walk, and run. Axes, hammers, sledges, and mallets use the body's own loops again, the same ones they used before those clips were added. Sword-and-shield idle, walk, and run stay. The overhead swing stays `A_DCC_Overhead`. The greatsword assets are still on disk under `AnimsFixed` and are no longer selected. Development Editor link succeeded in 18.79 seconds. The DLL is `UnrealEditor-DungeonCrawlerDenver.dll`, 8,130,560 bytes, 3:52 PM. No numbered DLL. Not seen on a body yet.
+
+### 2026-11-20 (evening): Casino Cascade, off the Safe Room
+
+The Den is the Safe Room. The class is still `ADCCArcadeLobby`. The sign already said THE SAFE ROOM.
+
+Development Editor link succeeded. The DLL is `UnrealEditor-DungeonCrawlerDenver.dll`, 8,248,832 bytes, 5:00 PM. No numbered DLL. A `-game` look as Zoe opened the Safe Room, then `DCC.CasinoGo` stood her in the east doorway. Shots are in `Saved/TestShots/casino_room/`. She did not sit at a table. `Profile_Zoe.sav` is still 11/19 1:34 PM, 8,906 bytes.
+
+- **Room.** A ceiling covers the Safe Room and the casino, so the sky stays outside. The synthwave floor tiles are gone. Both rooms are carpet, with a gold square on every other tile. The east wall is a door. Casino Cascade is through it.
+- **Tables.** Skee-Ball, air hockey, roulette, blackjack, and a wheel. Six seats at each. A hand is whoever sat down. Two people can play blackjack. The rest of the room can keep voting. Someone in a seat does not count as a missing vote. If the vote does finish, the whole party still travels, seats included.
+- **People.** Lane, Puck, Vale, June, Otto, and Bud at the bar. E on one of them is Play game, Request rules, or Shop. Shop is Cascade Cola (2), House Red (4), and Legal Bud (6). Roulette, blackjack, and the wheel stake 5 tickets, or the house comps a broke crawler. Skee-Ball and air hockey do not stake. While you are sitting, the wheel and E run the table, Esc stands you up, and everyone else sees dots over your head.
+
+### 2026-11-20 (night): Casino Cascade, games on the walls
+
+The five games sit on the walls and the aisle from the door to the east wall stays open. Development Editor link succeeded. The DLL is `UnrealEditor-DungeonCrawlerDenver.dll`, 8,278,016 bytes, 9:46 PM. No numbered DLL. A `-game` look as Zoe used `DCC.CasinoGo` and `DCC.CasinoSpot` 0 through 4. Shots are in `Saved/TestShots/casino_pass3/`. She did not sit. `Profile_Zoe.sav` did not change (8,933 bytes, 6:45 PM).
+
+The installed packs have no skee-ball lane, air-hockey table, roulette wheel, or prize wheel. Those play surfaces are built in the room, and they move from the replicated hand (a skee ball, the puck, the roulette ball, the wheel). This look did not play a hand, so the throws and the paid spins were not on screen. Around them, the furniture is from the packs: the diner bar, stools, bottles, glasses, mugs and plates, beach ceiling lamps, the couch, plants, and the neon strips.
+
+- **Skee-Ball.** Six lanes on the north wall. Each has a ball waiting and a ring target (50 in the centre, out to 10). The sign says "Three balls. The rings pay 10 to 50." This is the one that reads from across the room.
+- **Air hockey.** Southwest, off the door. Wood cabinet, pale ice, gold and blue rails, a goal at each end, a puck and two mallets. Visible from the aisle. The shot puts it to the side of the frame.
+- **Roulette and blackjack.** Diner stools on the open side, a wood top, green felt. Vale's sign is "Red, black, or green. Five tickets." June's is "June deals. Five tickets, or the house comps." June's table reads. The roulette pockets are still small next to the sign.
+- **The wheel.** A large gold disc on the east wall, north of the CASINO CASCADE sign, with colored bars and Otto beside it. The bars lie flat on the disc and idle. They are not pie slices yet, and the pays are hard to read from the door.
+- **The bar.** Diner counter along the south wall, stools, bottles and glasses on the top, purple neon, and the BAR AND BUD sign. Bud stands at the open end.
+
+### 2026-11-20 (night): Play a casino game from the table
+
+Walk up to a game and press E. That sits you and opens the same panel as before. The next E confirms the highlighted row. The wheel changes the row. Esc stands you up. Looking at Lane, Puck, Vale, June, Otto, or Bud still opens their menu, so rules and Bud's drinks stay where they were. Standing in the aisle does not sit you. Sitting does not take tickets. Roulette, blackjack, and the wheel still stake 5 when the hand actually starts, or the house comps a broke crawler.
+
+Development Editor link succeeded. The DLL is `UnrealEditor-DungeonCrawlerDenver.dll`, 8,280,576 bytes, 10:08 PM. No numbered DLL. A `-game` look as Zoe stood in the doorway (no prompt), pressed E on a skee lane (the panel opened on Roll), scrolled to Leave, and stood back up. The lane then read `[E] Play Skee-Ball`. The middle of the room stayed quiet. At the wheel the prompt read `[E] Play The Wheel`. Shots are in `Saved/TestShots/casino_play/`. She did not roll and she did not stake. `Profile_Zoe.sav` did not change (8,933 bytes, 6:45 PM).
+
+The wheel and the roulette wheel still need a visual pass. This change does not touch them.
+
+### 2026-11-20 (late): Casino Cascade song, pit achievements, Esc and Tab
+
+`Content/Songs/Casino Cascade.mp3` is imported as `/Game/Songs/Casino_Cascade` (157.6 seconds). It is not on the Den playlist. The Den playlist (`Meet_the_Whoops`, `Swept_Away`, `Repo_Rally`, `Platinum_Dust_Mine`) plays at volume 0.10. Inside the pit, including the doorway, that track is muted and only Casino Cascade plays, at 0.34. Walking back into the Den stops the casino song and starts the next Den track.
+
+Development Editor link succeeded. The DLL is `UnrealEditor-DungeonCrawlerDenver.dll`, 8,302,080 bytes, 11:06 PM. No numbered DLL. A `-game` look as Zoe stood in the doorway, then teleported back to the Den. The log is `Saved/Logs/casino_song2.log`: Den volume 0.10, Casino Cascade on (158 s, 0.34), then song off and `Meet_the_Whoops` at 0.10. She did not sit and she did not stake. `Profile_Zoe.sav` was already 9,038 bytes at 10:25 PM before these runs, and it did not change.
+
+The prize disc now faces the room and spins as a wheel, and the roulette pockets are taller. A close standing look of the slices and pockets was not taken on this DLL.
+
+- **Achievements.** Six rows are added in code, so they count before the live DataTable is reimported. Tickets the house pays add up: On The Board at 25 (40 XP, 5 favor), Hot Table at 100 (80 XP, 10), The Room Noticed at 500 (150 XP, 20). Hands that beat the table: Against The House at 1 (40 XP, 8), Regular At The Pit at 10 (100 XP, 15). Skee-Ball scores pay tickets and do not count as a hand. One payout of 50 or more is The Loud One (80 XP, 20). A push does not count. None of these were earned in the test.
+- **Menus.** Esc and Tab close whatever is in front. The character sheet, the emote list, talk lists, the loot list, and the vendor list say so on the footer. A casino panel says "Esc or Tab to stand." If the sheet is open while you are seated, the first press closes the sheet and leaves you in the seat. The cosmetic shop, the gear bench, Bud's shop widget, and the party menu also take Esc and Tab in code. Those four screens were not opened in this look. The sheet and the emote list were: Esc closed the sheet, Tab closed the emote list without opening the sheet, and the next Tab opened it. Shots are in `Saved/TestShots/casino_song/`.
+
+### 2026-11-20 (late): friend build on itch
+
+`Tools/publish_itch.ps1` cooked, zipped, and pushed. Cook log: 0 errors, 30 warnings, AutomationTool ExitCode=0. Zip is `D:\Builds\DungeonCrawlerDenver-2026-11-20.2312.zip` (4,619,186,810 bytes). Butler reused 93% of the previous upload and sent a 137 MiB patch. The windows channel is build #2454381, version `2026-11-20.2312`, and itch has finished processing it. The main menu shows that stamp. A host on this build will refuse a join from `2026-11-20.1051`.
+
+### 2026-11-21: Gate Run's way home stands dark until the floor is clear
+
+The exit ring in the Gatekeeper's hall is built with the rooms (`DrawPortal` frame only). The shine, lights and sparks come on when `bExitOpen` is set, which is still the Gatekeeper going down. Stepping through still waits for that. A dull WAY HOME board marks the cold ring. Not seen in a run yet.
+
+### 2026-11-21: OBJECTIVES shows the starter quest lines
+
+The OBJECTIVES card reads `DCCArcade::BoardSteps`. A new profile gets THE ASCENT (leave Fort Tiner, then High Camp, then the summit), and beside it THE STRIP (just drive the Neon Mile) and THE RUN (take Departures). After a summit the card moves to THE TAPE and THE AUDIT, then THE GATE and THE YARD. Inside a game the card is only that game's current step, or a one-line handoff while the next door is still shut. A finished line goes quiet. Floor quests stay on the same card in the Den, the hub, and a live dungeon run. Repo Rally draws the card mid-left. The gold QUEST line for the first 80 seconds repeats the current step. Development Editor link succeeded. The DLL is `UnrealEditor-DungeonCrawlerDenver.dll`, 8,318,976 bytes, 1:35 AM. No numbered DLL. Not seen in a run yet.
+

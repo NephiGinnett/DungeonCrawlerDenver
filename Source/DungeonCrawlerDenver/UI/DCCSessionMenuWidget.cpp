@@ -1,4 +1,5 @@
 #include "UI/DCCSessionMenuWidget.h"
+#include "InputCoreTypes.h"
 #include "Session/DCCUPnP.h"
 
 #include "Characters/DCCCharacterBase.h"
@@ -294,14 +295,11 @@ TSharedRef<SWidget> UDCCSessionMenuWidget::RebuildWidget()
 						+ SHorizontalBox::Slot().AutoWidth().Padding(0, 0, 8, 0)
 						[
 							SNew(SBox)
-							.Visibility(Visible([](const UDCCSessionMenuWidget& W) { return !W.IsClient(); }))
+							.Visibility(Visible([](const UDCCSessionMenuWidget& W) { return W.CanBail(); }))
 							[
-								MenuButton(NSLOCTEXT("DCC", "PartyArcade", "Arcade lobby"), FOnClicked::CreateLambda([Self]()
+								MenuButton(NSLOCTEXT("DCC", "PartyBail", "Safe Room"), FOnClicked::CreateLambda([Self]()
 								{
-									if (Self.IsValid())
-									{
-										DCCArcade::Travel(Self->GetWorld(), TEXT("Lobby"));
-									}
+									if (Self.IsValid()) { Self->BailToLobby(); }
 									return FReply::Handled();
 								}))
 							]
@@ -336,7 +334,7 @@ TSharedRef<SWidget> UDCCSessionMenuWidget::RebuildWidget()
 						+ SHorizontalBox::Slot().FillWidth(1.0f)[ SNew(SSpacer) ]
 						+ SHorizontalBox::Slot().AutoWidth()
 						[
-							MenuButton(NSLOCTEXT("DCC", "PartyClose", "Close  (F2)"), FOnClicked::CreateLambda([Self]()
+							MenuButton(NSLOCTEXT("DCC", "PartyClose", "Close  (Esc)"), FOnClicked::CreateLambda([Self]()
 							{
 								if (Self.IsValid() && Self->OnCloseRequested) { Self->OnCloseRequested(); }
 								return FReply::Handled();
@@ -349,6 +347,17 @@ TSharedRef<SWidget> UDCCSessionMenuWidget::RebuildWidget()
 
 	Refresh();
 	return Root;
+}
+
+FReply UDCCSessionMenuWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
+{
+	const FKey Key = InKeyEvent.GetKey();
+	if ((Key == EKeys::Escape || Key == EKeys::Tab) && OnCloseRequested)
+	{
+		OnCloseRequested();
+		return FReply::Handled();
+	}
+	return Super::NativeOnKeyDown(InGeometry, InKeyEvent);
 }
 
 void UDCCSessionMenuWidget::ReleaseSlateResources(bool bReleaseChildren)
@@ -618,6 +627,34 @@ void UDCCSessionMenuWidget::StartRun()
 void UDCCSessionMenuWidget::Leave()
 {
 	DCCSession::Leave(GetOwningPlayer());
+}
+
+bool UDCCSessionMenuWidget::CanBail() const
+{
+	return DCCArcade::CanLeaveForLobby(GetWorld());
+}
+
+void UDCCSessionMenuWidget::BailToLobby()
+{
+	const UWorld* World = GetWorld();
+	const double Now = World ? World->GetRealTimeSeconds() : 0.0;
+	if (Now > BailArmedUntil)
+	{
+		BailArmedUntil = Now + 6.0;
+		Message = TEXT("Click Safe Room again. Everyone goes back.");
+		bMessageIsError = false;
+		return;
+	}
+	BailArmedUntil = 0.0;
+	if (APawn* Pawn = GetOwningPlayerPawn())
+	{
+		if (ADCCCharacterBase* Crawler = Cast<ADCCCharacterBase>(Pawn))
+		{
+			Crawler->Server_BailToLobby();
+			Message = TEXT("Heading back to the Safe Room.");
+			bMessageIsError = false;
+		}
+	}
 }
 
 void UDCCSessionMenuWidget::CopyInvite(const DCCSession::FHostAddress& Address)

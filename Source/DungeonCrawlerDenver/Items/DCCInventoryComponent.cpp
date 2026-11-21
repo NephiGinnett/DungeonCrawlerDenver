@@ -1,12 +1,126 @@
 #include "Items/DCCInventoryComponent.h"
 
 #include "Items/DCCPickup.h"
+#include "Items/DCCPickup_Equipment.h"
+#include "Items/DCCLootTypes.h"
+#include "Equipment/DCCEquipmentTypes.h"
 #include "Characters/DCCCharacterBase.h"
 #include "Equipment/DCCEquipmentComponent.h"
+#include "Skills/DCCSkillComponent.h"
 #include "Engine/World.h"
 #include "Engine/DataTable.h"
 #include "Net/UnrealNetwork.h"
 #include "UObject/ConstructorHelpers.h"
+
+namespace
+{
+	/** How much one known skill pulls a piece of gear. Unknown stays at 1. */
+	float SkillAffinity(const UDCCSkillComponent* Skills, FName SkillId)
+	{
+		if (!Skills || SkillId.IsNone() || !Skills->IsSkillKnown(SkillId))
+		{
+			return 1.0f;
+		}
+
+		// A skill they have only just touched is a small lean. Rank 5, the
+		// point an attack skill grows an extra die, is a little over three
+		// times the pull of a skill they do not have.
+		const int32 Rank = FMath::Max(0, Skills->GetSkillRank(SkillId));
+		return 1.25f + 0.4f * static_cast<float>(Rank);
+	}
+
+	float GearAffinity(const UDCCSkillComponent* Skills, const FDCCEquipmentDef& Def, FName& OutSkill, int32& OutRank)
+	{
+		float Best = 1.0f;
+		auto Consider = [&](FName SkillId)
+		{
+			const float Affinity = SkillAffinity(Skills, SkillId);
+			if (Affinity > Best)
+			{
+				Best = Affinity;
+				OutSkill = SkillId;
+				OutRank = Skills->GetSkillRank(SkillId);
+			}
+		};
+		Consider(Def.WeaponSkillId);
+		Consider(Def.HandlingSkillId);
+		return Best;
+	}
+
+	/**
+	 * Rewrite gear chances so the box prefers what this crawler can already use.
+	 *
+	 * The authored chances are the weights. After the skill pull, they are scaled
+	 * back so they still sum to the same total: the box is not more generous,
+	 * it is more particular. Gold rows have no equipment id and are left alone,
+	 * so a guaranteed coin stays guaranteed.
+	 */
+	void BiasLootBoxForSkills(TArray<FDCCLootDrop>& Entries, const ADCCCharacterBase* Opener, FName& OutSkill, int32& OutRank)
+	{
+		OutSkill = NAME_None;
+		OutRank = 0;
+		if (!Opener || !Opener->Skills || !Opener->Equipment || !Opener->Equipment->EquipmentTable)
+		{
+			return;
+		}
+
+		const UDCCSkillComponent* Skills = Opener->Skills;
+		const UDataTable* Gear = Opener->Equipment->EquipmentTable;
+		static const FString Context(TEXT("BiasLootBoxForSkills"));
+
+		struct FGearRoll
+		{
+			int32 Index = INDEX_NONE;
+			float Weight = 0.0f;
+		};
+
+		TArray<FGearRoll> Rolls;
+		float Authored = 0.0f;
+		float Weighted = 0.0f;
+		float BestAffinity = 1.0f;
+
+		for (int32 Index = 0; Index < Entries.Num(); ++Index)
+		{
+			const FDCCLootDrop& Drop = Entries[Index];
+			if (Drop.EquipmentItemId.IsNone() || Drop.Chance <= 0.0f)
+			{
+				continue;
+			}
+
+			const FDCCEquipmentDef* Def = Gear->FindRow<FDCCEquipmentDef>(Drop.EquipmentItemId, Context, false);
+			if (!Def)
+			{
+				continue;
+			}
+
+			FName Skill = NAME_None;
+			int32 Rank = 0;
+			const float Affinity = GearAffinity(Skills, *Def, Skill, Rank);
+			Rolls.Add({ Index, Drop.Chance * Affinity });
+			Authored += Drop.Chance;
+			Weighted += Drop.Chance * Affinity;
+			if (Affinity > BestAffinity)
+			{
+				BestAffinity = Affinity;
+				OutSkill = Skill;
+				OutRank = Rank;
+			}
+		}
+
+		if (Rolls.IsEmpty() || Weighted <= KINDA_SMALL_NUMBER || FMath::IsNearlyEqual(Authored, Weighted))
+		{
+			OutSkill = NAME_None;
+			OutRank = 0;
+			return;
+		}
+
+		const float Scale = Authored / Weighted;
+		for (const FGearRoll& Roll : Rolls)
+		{
+			Entries[Roll.Index].Chance = FMath::Clamp(Roll.Weight * Scale, 0.0f, 1.0f);
+		}
+	}
+}
 
 UDCCInventoryComponent::UDCCInventoryComponent()
 {
@@ -129,7 +243,12 @@ bool UDCCInventoryComponent::EquipItem(int32 Index)
 	// Equip refuses (returns false) when a cursed item already holds the slot -
 	// the record is left in place rather than lost, same "nothing is ever lost
 	// to a failed equip" rule DCCLoot::SpawnRolledLoot follows.
-	if (!CharacterOwner || !CharacterOwner->Equipment || !CharacterOwner->Equipment->Equip(Item.EquipmentItemId))
+	if (!CharacterOwner || !CharacterOwner->Equipment)
+	{
+		return false;
+	}
+	// Equip puts whatever already held the slot back in the bag. Doing it here too would add a second copy.
+	if (!CharacterOwner->Equipment->Equip(Item.EquipmentItemId))
 	{
 		return false;
 	}
@@ -137,6 +256,28 @@ bool UDCCInventoryComponent::EquipItem(int32 Index)
 	Items.RemoveAt(Index);
 	OnInventoryChanged.Broadcast(this);
 
+	return true;
+}
+
+bool UDCCInventoryComponent::AddGearRecord(FName EquipmentItemId)
+{
+	if (GetOwnerRole() != ROLE_Authority || EquipmentItemId.IsNone())
+	{
+		return false;
+	}
+	// Worn gear always fits, even when the bag is already full, and even when the row cannot be read.
+	// AddItemRecord would refuse a full bag, and the piece would vanish from the slot.
+	FDCCEquipmentDef Def;
+	const ADCCCharacterBase* CharacterOwner = Cast<ADCCCharacterBase>(GetOwner());
+	const bool bFound = CharacterOwner && CharacterOwner->Equipment && CharacterOwner->Equipment->FindItem(EquipmentItemId, Def);
+	FDCCInventoryItem Item;
+	Item.PickupClass = ADCCPickup_Equipment::StaticClass();
+	Item.DisplayName = (bFound && !Def.DisplayName.IsEmpty()) ? Def.DisplayName : FText::FromName(EquipmentItemId);
+	Item.MassKilograms = bFound ? Def.MassKilograms : 0.0f;
+	Item.EquipmentItemId = EquipmentItemId;
+	Items.Add(Item);
+	OnInventoryChanged.Broadcast(this);
+	UE_LOG(LogTemp, Log, TEXT("[DCC Equip] %s back in the bag (%d now)"), *EquipmentItemId.ToString(), Items.Num());
 	return true;
 }
 
@@ -421,7 +562,13 @@ bool UDCCInventoryComponent::TryOpenLootBox(EDCCLootBoxTier Tier, const FVector&
 	// make that true rather than relying on it.
 	--LootBoxCounts[Index];
 
-	DCCLoot::RollLootTable(Row->ItemEntries, OutResult.Items);
+	// The owner is the crawler whose skills matter. Looter only decides whether
+	// the payout goes into a bag or onto the floor, and a station open leaves
+	// it null on purpose.
+	const ADCCCharacterBase* Opener = Looter ? Looter : Cast<ADCCCharacterBase>(GetOwner());
+	TArray<FDCCLootDrop> Entries = Row->ItemEntries;
+	BiasLootBoxForSkills(Entries, Opener, LootBoxLeanSkill, LootBoxLeanRank);
+	DCCLoot::RollLootTable(Entries, OutResult.Items);
 	// With a looter, gear goes into their bag and gold into their purse (the
 	// loot box screen); without one, everything lands on the floor as before.
 	SpawnLootBoxItems(OutResult.Items, WorldLocation, Looter);

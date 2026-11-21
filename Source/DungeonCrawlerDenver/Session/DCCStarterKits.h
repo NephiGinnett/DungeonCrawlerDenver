@@ -5,10 +5,9 @@
 class ADCCCharacterBase;
 
 /**
- * Starter kits (2026-11-16, Zoe: "let them choose which starter set they want (magic, tank, healer, etc) out of 3-5
- * options and give them a good weapon, piece of equipment, and maybe a few tickets or a potion"). Offered once per
- * crawler, the first time they enter the World Dungeon (ADCCTaleFloor::JoinRun). The choice is a profile stat
- * ("Dungeon.StarterKit", 1-based), so it follows the crawler between PCs with the rest of the profile.
+ * Starter kits (2026-11-16). Offered once per crawler, the first time they enter the World Dungeon.
+ * The choice is a profile stat ("Dungeon.StarterKit", 1-based). The kit IS the basic class
+ * (Classes/DCCBasicClasses): one Denver job per minigame, same index, same order. Do not reorder.
  */
 namespace DCCStarterKits
 {

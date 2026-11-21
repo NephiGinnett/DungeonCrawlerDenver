@@ -162,6 +162,13 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "DCC|UI")
 	void ToggleMenu();
+
+	/**
+	 * Closes one open panel that is not the Tab sheet: loot boxes, a shop, the party menu,
+	 * the pose bench, the DM panel, or a F.I.A.T. tube. True when something closed.
+	 * Esc and Tab call this before they open or stand up.
+	 */
+	bool DismissOverlay();
 	/** Opens the Tab menu on a given page (dev command DCC.MenuTab). */
 	void OpenMenuTab(EDCCMenuTab Tab) { MenuTab = Tab; if (!bShowMenu) { ToggleMenu(); } }
 	/** Opens SOCIAL on one friend's whisper thread. */
@@ -464,11 +471,9 @@ protected:
 	void DrawSkillTargetingOverlay(ADCCCharacterBase* Crawler);
 
 	/**
-	 * Always-on objective tracker, top right.
-	 *
-	 * Deliberately opposite the feed rather than inside the Tab menu: a goal you
-	 * have to open a menu to remember is a goal the party forgets. It draws over
-	 * the world because that is the price of it being useful.
+	 * The OBJECTIVES card. Starter lines come from DCCArcade::BoardSteps.
+	 * Floor quests sit under the same header in the Den, the hub, and a live
+	 * dungeon run. Repo Rally draws the card mid-left, off THE BOARD and CREW.
 	 */
 	void DrawQuestTracker();
 
@@ -509,6 +514,9 @@ protected:
 	 * separate on ADCCCharacterBase (see NPCInteractionTarget's comment).
 	 */
 	void DrawNPCInteractionMenu(ADCCCharacterBase* Crawler);
+
+	/** Casino Cascade: the hand you are sitting, and the dots over everyone who is. */
+	void DrawCasino(ADCCCharacterBase* Crawler);
 
 	/**
 	 * Somebody else's gear, opened from the conversation menu.
@@ -645,7 +653,7 @@ protected:
 	/** Social page: uploads, channel numbers, friends, and the party / allies / whisper threads. */
 	float DrawSocial(float X, float Y, ADCCCharacterBase* Crawler);
 
-	/** 0 home, 1 party thread, 2 allies thread, 3 one friend, 4 one post. */
+	/** 0 home, 1 party, 2 allies, 3 whisper, 4 your post, 5 a friend's posts, 6 one of theirs. */
 	int32 SocialView = 0;
 	int32 SocialPost = -1;
 	FString SocialFriend;
@@ -696,6 +704,9 @@ protected:
 
 private:
 	bool bShowMenu = false;
+
+	/** Real time until which a second SAFE ROOM click leaves the game. 0 means it is not armed. */
+	double BailArmedUntil = 0.0;
 
 	struct FAchieveToast
 	{
@@ -786,6 +797,8 @@ private:
 
 	/** Cursor and input mode for whatever is open right now (Tab menu, DM panel, party menu). */
 	void ApplyCursorForOpenPanels();
+	/** True while the downed screen is showing a clickable bleed-out button. */
+	bool bCursorForDowned = false;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UDCCLootScreenInput> LootScreenInput;
@@ -895,6 +908,8 @@ private:
 
 	/** The arcade's top-centre panel: whichever game's arena is loaded (Arcade/DCCArcadeArena). */
 	void DrawArcadeStatus();
+	/** The gold QUEST line. Same banner in every game, including the dungeon. */
+	void DrawSeriesQuestBanner(FName GameId);
 
 	/** Dead Air's body-cam overlay while the local crawler is recording (Arcade/DCCArcadeHaunt). */
 	void DrawBodyCam();
@@ -970,6 +985,12 @@ private:
 	TArray<int32> SeenLootBoxes;
 	TMap<uint8, FName> SeenEquipped;
 	int32 SeenGold = 0;
+	/** False until the gear this pawn arrived with has been noted, so a travel cannot replay those cards. */
+	bool bItemToastSettled = false;
+	bool bItemToastSawCarryIn = false;
+	double ItemToastWatchStart = 0.0;
+	double ItemToastStableSince = 0.0;
+	uint32 ItemToastSignature = 0;
 
 	UPROPERTY(EditDefaultsOnly, Category = "DCC|UI", meta = (ClampMin = "1.0"))
 	float QuestCompleteBannerDurationSeconds = 4.0f;

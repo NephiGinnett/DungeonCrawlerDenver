@@ -70,7 +70,7 @@ public class DungeonCrawlerDenver : ModuleRules
 		// retargets the mannequin clips onto the NPC Forge skeleton (2026-11-14).
 		if (Target.bBuildEditor)
 		{
-			PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd", "IKRig", "IKRigEditor" });
+			PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd", "AssetTools", "IKRig", "IKRigEditor" });
 		}
 
 		PublicIncludePaths.AddRange(new string[] {

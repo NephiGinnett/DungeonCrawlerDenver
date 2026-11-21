@@ -1,10 +1,21 @@
 #include "Characters/DCCAttackStyle.h"
 
+#include "Animation/AnimationAsset.h"
+
 namespace DCCAttackStyle
 {
-	static const TCHAR* SlashPath = TEXT("/Game/DCC/Characters/Shared/AnimsFixed/A_DCC_DW_ChargedSlash.A_DCC_DW_ChargedSlash");
+	static const TCHAR* StabPath = TEXT("/Game/DCC/Characters/Shared/AnimsFixed/A_DCC_Stab.A_DCC_Stab");
+	static const TCHAR* SlashPath = TEXT("/Game/DCC/Characters/Shared/AnimsFixed/A_DCC_Slash.A_DCC_Slash");
+	static const TCHAR* OverheadPath = TEXT("/Game/DCC/Characters/Shared/AnimsFixed/A_DCC_Overhead.A_DCC_Overhead");
+	static const TCHAR* BluntPath = TEXT("/Game/DCC/Characters/Shared/AnimsFixed/A_DCC_Blunt.A_DCC_Blunt");
 	static const TCHAR* PunchPath = TEXT("/Game/DCC/Characters/Shared/AnimsFixed/A_DCC_OA_BoxingWarmup.A_DCC_OA_BoxingWarmup");
 	static const TCHAR* ShootPath = TEXT("/Game/DCC/Characters/Shared/AnimsFixed/A_DCC_AO_ArcheryShot.A_DCC_AO_ArcheryShot");
+	static const TCHAR* SNSIdle = TEXT("/Game/DCC/Characters/Shared/AnimsFixed/A_DCC_SNS_Idle.A_DCC_SNS_Idle");
+	static const TCHAR* SNSWalk = TEXT("/Game/DCC/Characters/Shared/AnimsFixed/A_DCC_SNS_Walk.A_DCC_SNS_Walk");
+	static const TCHAR* SNSRun = TEXT("/Game/DCC/Characters/Shared/AnimsFixed/A_DCC_SNS_Run.A_DCC_SNS_Run");
+	static const TCHAR* HitPath = TEXT("/Game/DCC/Characters/Shared/AnimsFixed/A_DCC_Hit.A_DCC_Hit");
+	static const TCHAR* CastPath = TEXT("/Game/DCC/Characters/Shared/AnimsFixed/A_DCC_Cast.A_DCC_Cast");
+	static const TCHAR* WavePath = TEXT("/Game/DCC/Characters/Shared/AnimsFixed/A_DCC_Wave.A_DCC_Wave");
 
 	EStyle FromId(FName ItemId)
 	{
@@ -38,27 +49,63 @@ namespace DCCAttackStyle
 
 	void ClipFor(EStyle Style, FString& OutPath, float& OutRate, bool& bBorrowed)
 	{
-		bBorrowed = true;
+		bBorrowed = false;
 		OutRate = 1.0f;
 		switch (Style)
 		{
 		case Stab:
-			OutPath = SlashPath;
-			OutRate = 1.45f;
+			OutPath = StabPath;
 			break;
 		case Slash:
-		case Overhead:
-		case Blunt:
 			OutPath = SlashPath;
+			break;
+		case Overhead:
+			OutPath = OverheadPath;
+			break;
+		case Blunt:
+			OutPath = BluntPath;
 			break;
 		case Shoot:
 		case Throw:
+			bBorrowed = true;
 			OutPath = ShootPath;
 			break;
 		case Punch:
 		default:
+			bBorrowed = true;
 			OutPath = PunchPath;
 			break;
 		}
 	}
+
+	UAnimationAsset* FindClip(const TCHAR* Path)
+	{
+		// No static TObjectPtr cache. That map is invisible to GC, so after a
+		// travel the old clip can be collected and the next lookup hands back
+		// whatever reused the slot (a nameplate, the capsule). LoadObject is
+		// already cheap once the package is in memory.
+		return LoadObject<UAnimationAsset>(nullptr, Path);
+	}
+
+	void WeaponLoops(EStyle Style, UAnimationAsset*& Idle, UAnimationAsset*& Walk, UAnimationAsset*& Run)
+	{
+		Idle = Walk = Run = nullptr;
+		// The Mixamo greatsword idle, walk, and run put the hands in a bad hold
+		// on this body. Axes and hammers go back to the loops they used before
+		// those clips existed. The overhead swing is still A_DCC_Overhead.
+		if (Style != Slash)
+		{
+			return;
+		}
+		const TCHAR* IdlePath = SNSIdle;
+		const TCHAR* WalkPath = SNSWalk;
+		const TCHAR* RunPath = SNSRun;
+		Idle = FindClip(IdlePath);
+		Walk = FindClip(WalkPath);
+		Run = FindClip(RunPath);
+	}
+
+	UAnimationAsset* HitClip() { return FindClip(HitPath); }
+	UAnimationAsset* CastClip() { return FindClip(CastPath); }
+	UAnimationAsset* WaveClip() { return FindClip(WavePath); }
 }

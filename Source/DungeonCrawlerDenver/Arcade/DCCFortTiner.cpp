@@ -1,6 +1,9 @@
 #include "Arcade/DCCFortTiner.h"
 
 #include "Arcade/DCCWalletComponent.h"
+#include "Session/DCCProfile.h"
+#include "Engine/Engine.h"
+#include "GameFramework/PlayerController.h"
 #include "Animation/AnimationAsset.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/SkeletalMesh.h"
@@ -154,4 +157,28 @@ void ADCCFortTinerNPC::BuildScript()
 		Entry.DisplaySeconds = FMath::Max(5.0f, Words.Num() / 3.0f);
 		Script.Add(Entry);
 	}
+}
+
+void ADCCFortTinerNPC::SkipSummitLines()
+{
+	const UWorld* World = GetWorld();
+	const APlayerController* PC = World && GEngine ? GEngine->GetFirstLocalPlayerController(World) : nullptr;
+	const APlayerState* State = PC ? PC->PlayerState : nullptr;
+	if (State && DCCProfile::Get(State, TEXT("Climb"), TEXT("Summits")) >= 1.0f)
+	{
+		return;
+	}
+	int32 Guard = Script.Num();
+	while (Guard-- > 0 && Script.IsValidIndex(NextLineIndex)
+		&& Script[NextLineIndex].LineId.ToString().Contains(TEXT("Summit")))
+	{
+		++NextLineIndex;
+	}
+}
+
+void ADCCFortTinerNPC::SayNextLine()
+{
+	// The mine lines stay in the script. They are not said until this crawler has been to the top.
+	SkipSummitLines();
+	Super::SayNextLine();
 }

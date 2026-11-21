@@ -31,6 +31,7 @@ public:
 
 protected:
 	virtual TSharedRef<SWidget> RebuildWidget() override;
+	virtual FReply NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 	int32 SeenUPnPVersion = -1;
 	virtual void ReleaseSlateResources(bool bReleaseChildren) override;
@@ -56,6 +57,11 @@ private:
 	void JoinFromClipboard();
 	void StartRun();
 	void Leave();
+	/** Not the Safe Room, the front door, or the pose bench. */
+	bool CanBail() const;
+	/** First click asks. The second click takes the party back to the Safe Room. */
+	void BailToLobby();
+	double BailArmedUntil = 0.0;
 	void CopyInvite(const DCCSession::FHostAddress& Address);
 	void RebuildInviteList();
 

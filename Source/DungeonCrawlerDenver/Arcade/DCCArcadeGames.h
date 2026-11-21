@@ -7,7 +7,7 @@
 class ADCCRover;
 class APlayerState;
 
-/** The Den: the arcade lobby. Stand on a game's pad to vote for it. */
+/** The Den. Players call it the Safe Room. Stand on a game's pad to vote for it. */
 UCLASS()
 class DUNGEONCRAWLERDENVER_API ADCCArcadeLobby : public ADCCArcadeArena
 {
@@ -15,6 +15,7 @@ class DUNGEONCRAWLERDENVER_API ADCCArcadeLobby : public ADCCArcadeArena
 	GENERATED_BODY()
 protected:
 	virtual void BuildLocal() override;
+	virtual void ServerBegin() override;
 	virtual void ServerTick(float DeltaSeconds) override;
 	virtual void ClientTick(float DeltaSeconds) override;
 	virtual void GetStartTransforms(TArray<FTransform>& Out) const override;
@@ -75,13 +76,19 @@ private:
 	/** The Chop Shop (2026-11-14): the same counter screen, opened on its upgrades tab. */
 	FVector ChopPadCenter() const { return GetActorLocation() + FVector(-2000.0f, -1050.0f, 0.0f); }
 	bool bWasOnShopPad = false;
-	/** The Den's music (2026-11-16): our songs in turn, low, until the Den has its own track. Local. */
+	/** The Den's music (2026-11-16): our songs in turn, quiet. Silent inside Casino Cascade. Local. */
 	TWeakObjectPtr<class UAudioComponent> DenSong;
 	double NextDenSong = 0.0;
 	int32 DenSongIndex = -1;
+	/** Casino Cascade's own track. Plays only while the local pawn is in the pit. */
+	TWeakObjectPtr<class UAudioComponent> CasinoSong;
+	bool bLoggedDenVolume = false;
+	bool bCasinoSongWarned = false;
 	bool bWasOnChopPad = false;
 	double CountdownEndsAt = -1.0;
 	bool bAllVotedCountdown = false;
+	/** When a locked pad last told this player to step off. */
+	TMap<TWeakObjectPtr<APlayerState>, double> LockedToldAt;
 	bool bLeaving = false;
 	float RefreshTimer = 0.0f;
 	/** The pads press down under whoever stands on them (2026-11-16, Zoe: "make it so that the platforms depress when

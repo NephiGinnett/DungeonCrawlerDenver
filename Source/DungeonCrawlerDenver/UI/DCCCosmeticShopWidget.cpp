@@ -142,7 +142,7 @@ UDCCWalletComponent* UDCCCosmeticShopWidget::GetWallet() const
 
 FReply UDCCCosmeticShopWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
 {
-	if (InKeyEvent.GetKey() == EKeys::Escape && OnCloseRequested)
+	if ((InKeyEvent.GetKey() == EKeys::Escape || InKeyEvent.GetKey() == EKeys::Tab) && OnCloseRequested)
 	{
 		OnCloseRequested();
 		return FReply::Handled();

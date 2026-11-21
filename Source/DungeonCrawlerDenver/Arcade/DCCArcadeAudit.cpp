@@ -8,6 +8,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerState.h"
 #include "Session/DCCProfile.h"
+#include "Arcade/DCCArcade.h"
 #include "UObject/ConstructorHelpers.h"
 
 ADCCAuditConstruct::ADCCAuditConstruct()
@@ -91,10 +92,21 @@ void ADCCArcadeAudit::BuildLocal()
 	const FLinearColor Amber(1.0f, 0.5f, 0.12f);
 
 	Block(FVector(0, 200, -20), FVector(4200, 3400, 40), Floor);
-	Block(FVector(0, 1880, 280), FVector(4200, 40, 560), Wall);
-	Block(FVector(0, -1480, 280), FVector(4200, 40, 560), Wall);
-	Block(FVector(2080, 200, 280), FVector(40, 3400, 560), Wall);
-	Block(FVector(-2080, 200, 280), FVector(40, 3400, 560), Wall);
+	// 4 m tiles on the slab, so the concrete does not stretch across the whole room.
+	for (float X = -2000.0f; X <= 2000.0f; X += 400.0f)
+	{
+		for (float Y = -1400.0f; Y <= 1800.0f; Y += 400.0f)
+		{
+			if (AActor* Tile = Block(FVector(X, Y, 2.0f), FVector(396.0f, 396.0f, 4.0f), FLinearColor::White, 0.0f, false))
+			{
+				Paint(Tile, TEXT("/Game/Abandonned_Brutalist/Materials/MI_concrete_tile"));
+			}
+		}
+	}
+	if (AActor* North = Block(FVector(0, 1880, 280), FVector(4200, 40, 560), Wall)) { Paint(North, TEXT("/Game/Ice_Station/Materials/MI_concrete_block")); }
+	if (AActor* South = Block(FVector(0, -1480, 280), FVector(4200, 40, 560), Wall)) { Paint(South, TEXT("/Game/Ice_Station/Materials/MI_concrete_block1")); }
+	if (AActor* East = Block(FVector(2080, 200, 280), FVector(40, 3400, 560), Wall)) { Paint(East, TEXT("/Game/Abandonned_Brutalist/Materials/MI_concrete_01")); }
+	if (AActor* West = Block(FVector(-2080, 200, 280), FVector(40, 3400, 560), Wall)) { Paint(West, TEXT("/Game/Abandonned_Brutalist/Materials/MI_concrete_01")); }
 
 	// The mark. Non-colliding, so an aim trace reaches the construct and not the paint.
 	const FVector Mark(0.0f, 500.0f, 0.0f);
@@ -314,6 +326,7 @@ void ADCCArcadeAudit::Wrap()
 		if (Personal > 0)
 		{
 			DCCProfile::RecordBest(PC->PlayerState, TEXT("Audit"), TEXT("BestDamage"), static_cast<float>(Personal));
+			DCCArcade::CompleteSeriesQuest(PC->PlayerState, TEXT("Audit"), DCCArcade::SeriesQuestXp());
 		}
 		DCCProfile::RecordBest(PC->PlayerState, TEXT("Audit"), TEXT("BestParty"), static_cast<float>(PartyDamage));
 		UDCCWalletComponent::AwardTickets(PC->PlayerState, Tickets, TEXT("stress test"));

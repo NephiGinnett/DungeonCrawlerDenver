@@ -1,4 +1,5 @@
 #include "Arcade/DCCArcadeHaunt.h"
+#include "Arcade/DCCArcade.h"
 #include "Characters/DCCReactions.h"
 #include "Progression/DCCAchievementComponent.h"
 #include "Characters/DCCEnemyCharacter_DeadAir.h"
@@ -1111,10 +1112,40 @@ int32 ADCCArcadeHaunt::NotesReadInStory(int32 Story) const
 	return N;
 }
 
+namespace
+{
+	int32 FoundWord(const FString& Key, int32 Word)
+	{
+		return FMath::RoundToInt(DCCProfile::GetForKey(Key, TEXT("Haunt"), *FString::Printf(TEXT("Found%d"), Word)));
+	}
+
+	bool NoteFound(const FString& Key, int32 Note)
+	{
+		if (Key.IsEmpty() || Note < 0)
+		{
+			return false;
+		}
+		const int32 Word = Note / 16;
+		const int32 Bit = Note % 16;
+		return (FoundWord(Key, Word) & (1 << Bit)) != 0;
+	}
+
+	void MarkNote(const FString& Key, int32 Note)
+	{
+		if (Key.IsEmpty() || Note < 0 || NoteFound(Key, Note))
+		{
+			return;
+		}
+		const int32 Word = Note / 16;
+		const int32 Bit = Note % 16;
+		DCCProfile::SetForKey(Key, TEXT("Haunt"), *FString::Printf(TEXT("Found%d"), Word), float(FoundWord(Key, Word) | (1 << Bit)));
+	}
+}
+
 void ADCCArcadeHaunt::PlaceBodies()
 {
-	// Three of the five stories each round (all their notes), and three loose notes. From the seed, so every
-	// machine puts the same body in the same place.
+	// Three of the five stories, but only the first and last note of each, plus one loose note.
+	// Every note used to be a body, and the lair was a carpet of them (2026-11-19).
 	FRandomStream R(Seed * 11 + 5);
 	const TArray<DCCMineNotes::FNote>& Notes = DCCMineNotes::Notes();
 	TArray<int32> Pick = { 0, 1, 2, 3, 4 };
@@ -1125,10 +1156,22 @@ void ADCCArcadeHaunt::PlaceBodies()
 	for (int32 n = 0; n < Notes.Num(); ++n)
 	{
 		if (Notes[n].Story < 0) { Loose.Add(n); }
-		else if (StoriesHere.Contains(Notes[n].Story)) { Chosen.Add(n); }
+	}
+	for (int32 Story : StoriesHere)
+	{
+		int32 First = INDEX_NONE;
+		int32 Last = INDEX_NONE;
+		for (int32 n = 0; n < Notes.Num(); ++n)
+		{
+			if (Notes[n].Story != Story) { continue; }
+			if (First == INDEX_NONE) { First = n; }
+			Last = n;
+		}
+		if (First != INDEX_NONE) { Chosen.Add(First); }
+		if (Last != INDEX_NONE && Last != First) { Chosen.Add(Last); }
 	}
 	for (int32 i = Loose.Num() - 1; i > 0; --i) { Loose.Swap(i, R.RandRange(0, i)); }
-	for (int32 i = 0; i < 4 && i < Loose.Num(); ++i) { Chosen.Add(Loose[i]); }
+	if (Loose.Num() > 0) { Chosen.Add(Loose[0]); }
 
 	// Places: any open cell that is not the cage, not a stope centre, and not next to another body.
 	TArray<FIntPoint> Cells;
@@ -1146,16 +1189,16 @@ void ADCCArcadeHaunt::PlaceBodies()
 	}
 	for (int32 n : Chosen)
 	{
-		for (int32 Try = 0; Try < 40 && Cells.Num() > 0; ++Try)
+		for (int32 Try = 0; Try < 80 && Cells.Num() > 0; ++Try)
 		{
 			const int32 Index = R.RandRange(0, Cells.Num() - 1);
 			const FIntPoint Cell = Cells[Index];
 			bool bCrowded = false;
 			for (const FBody& Other : Bodies)
 			{
-				bCrowded |= FVector::Dist2D(Other.At, Grid->CellCenter(Cell)) < TileSize * 2.5f;
+				bCrowded |= FVector::Dist2D(Other.At, Grid->CellCenter(Cell)) < TileSize * 6.0f;
 			}
-			if (bCrowded && Try < 39)
+			if (bCrowded && Try < 79)
 			{
 				continue;
 			}
@@ -1213,8 +1256,8 @@ AActor* ADCCArcadeHaunt::SpawnBody(const FVector& Feet, float Yaw, int32 BodyInd
 		{
 			UMaterialInstanceDynamic* Dust = UMaterialInstanceDynamic::Create(Shade, Body);
 			Dust->SetVectorParameterValue(TEXT("Tint"), FLinearColor(0.42f, 0.4f, 0.37f, 1.0f));
-			Dust->SetVectorParameterValue(TEXT("Edge"), FLinearColor(0.6f, 0.58f, 0.55f, 1.0f));
-			Dust->SetScalarParameterValue(TEXT("RimStrength"), 0.15f);
+			Dust->SetVectorParameterValue(TEXT("Edge"), FLinearColor(1.0f, 0.82f, 0.45f, 1.0f));
+			Dust->SetScalarParameterValue(TEXT("RimStrength"), 0.7f);
 			Skin->SetOverlayMaterial(Dust);
 		}
 	}
@@ -1226,13 +1269,55 @@ AActor* ADCCArcadeHaunt::SpawnBody(const FVector& Feet, float Yaw, int32 BodyInd
 	UPointLightComponent* Glow = NewObject<UPointLightComponent>(Body, TEXT("NoteGlow"));
 	Glow->SetupAttachment(Root);
 	Glow->SetRelativeLocation(FVector(0, 0, 40));
-	Glow->SetIntensity(350.0f);
-	Glow->SetAttenuationRadius(260.0f);
+	Glow->SetIntensity(900.0f);
+	Glow->SetAttenuationRadius(520.0f);
 	Glow->SetLightColor(FLinearColor(1.0f, 0.85f, 0.6f));
 	Glow->SetCastShadows(false);
 	Glow->RegisterComponent();
 	LocalActors.Add(Body);
 	return Body;
+}
+
+void ADCCArcadeHaunt::RefreshBodyGlow()
+{
+	const APlayerController* PC = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr;
+	const FString Key = PC && PC->PlayerState ? PC->PlayerState->GetPlayerName() : FString();
+	const APawn* Pawn = PC ? PC->GetPawn() : nullptr;
+	for (const FBody& Body : Bodies)
+	{
+		AActor* Visual = Body.Visual.Get();
+		if (!Visual)
+		{
+			continue;
+		}
+		if (Pawn && FVector::Dist2D(Pawn->GetActorLocation(), Body.At) < 230.0f)
+		{
+			SeenBodies.Add(Body.Note);
+		}
+		const bool bOff = SeenBodies.Contains(Body.Note) || NoteFound(Key, Body.Note);
+		if (UPointLightComponent* Light = Visual->FindComponentByClass<UPointLightComponent>())
+		{
+			Light->SetVisibility(!bOff);
+		}
+		if (USkeletalMeshComponent* Skin = Visual->FindComponentByClass<USkeletalMeshComponent>())
+		{
+			if (UMaterialInstanceDynamic* Dust = Cast<UMaterialInstanceDynamic>(Skin->GetOverlayMaterial()))
+			{
+				Dust->SetScalarParameterValue(TEXT("RimStrength"), bOff ? 0.05f : 0.7f);
+				Dust->SetVectorParameterValue(TEXT("Edge"), bOff ? FLinearColor(0.45f, 0.43f, 0.4f, 1.0f) : FLinearColor(1.0f, 0.82f, 0.45f, 1.0f));
+			}
+		}
+	}
+}
+
+void ADCCArcadeHaunt::GrantFootage(const FString& Name, float Amount)
+{
+	if (!HasAuthority() || Name.IsEmpty() || Amount <= 0.0f)
+	{
+		return;
+	}
+	EntryFor(Name).Footage += Amount;
+	UE_LOG(LogTemp, Log, TEXT("[DCC Cam] %s +%.0f footage"), *Name, Amount);
 }
 
 void ADCCArcadeHaunt::ReadNotes()
@@ -1244,7 +1329,7 @@ void ADCCArcadeHaunt::ReadNotes()
 	const TArray<DCCMineNotes::FStory>& Stories = DCCMineNotes::Stories();
 	for (APlayerController* PC : Players)
 	{
-		const ADCCCharacterBase* Crawler = Cast<ADCCCharacterBase>(PC ? PC->GetPawn() : nullptr);
+		ADCCCharacterBase* Crawler = Cast<ADCCCharacterBase>(PC ? PC->GetPawn() : nullptr);
 		const FString Name = PC && PC->PlayerState ? PC->PlayerState->GetPlayerName() : FString();
 		if (!Crawler || Name.IsEmpty() || !Crawler->IsAlive())
 		{
@@ -1257,7 +1342,9 @@ void ADCCArcadeHaunt::ReadNotes()
 				continue;
 			}
 			ReadBy.FindOrAdd(Name).Add(b);
-			const DCCMineNotes::FNote& Note = Notes[Bodies[b].Note];
+			const int32 NoteId = Bodies[b].Note;
+			const bool bFirstEver = !NoteFound(Name, NoteId);
+			const DCCMineNotes::FNote& Note = Notes[NoteId];
 			FDCCFootageEntry& Entry = EntryFor(Name);
 			Entry.NoteTitle = Note.Story >= 0 ? FString::Printf(TEXT("%s  (%d / %d)"), Stories[Note.Story].Title,
 				NotesReadInStory(Note.Story) + (NotesRead.Contains(b) ? 0 : 1), NotesInStory(Note.Story)) : FString(TEXT("A note"));
@@ -1266,7 +1353,20 @@ void ADCCArcadeHaunt::ReadNotes()
 			// The audience loves a reading. Only on camera.
 			if (Entry.bRecording)
 			{
-				Entry.Footage += 25.0f;
+				Entry.Footage += bFirstEver ? 45.0f : 25.0f;
+			}
+			if (bFirstEver)
+			{
+				MarkNote(Name, NoteId);
+				SeenBodies.Add(NoteId);
+				if (Crawler->Stats)
+				{
+					Crawler->Stats->AddExperience(12);
+				}
+				if (Crawler->Wallet)
+				{
+					Crawler->Wallet->Tell(TEXT("You found someone.  +12 XP"));
+				}
 			}
 			if (!NotesRead.Contains(b))
 			{
@@ -1376,6 +1476,10 @@ void ADCCArcadeHaunt::TickRocksServer()
 void ADCCArcadeHaunt::OnTagged(ADCCCharacterBase* Painter, const FVector& At)
 {
 	const APlayerState* State = Painter ? Painter->GetPlayerState() : nullptr;
+	if (State && Painter->bRecordingFootage)
+	{
+		GrantFootage(State->GetPlayerName(), 20.0f);
+	}
 	// The bars, the gate and the floor of it: anywhere within a stride of the cage box counts.
 	if (!State || !VanBox.IsValid || !VanBox.ExpandBy(FVector(160.0f, 160.0f, 120.0f)).IsInside(At))
 	{
@@ -2482,6 +2586,7 @@ void ADCCArcadeHaunt::ClientTick(float DeltaSeconds)
 {
 	EnsureGrid();
 	BuildHouse();
+	RefreshBodyGlow();
 
 	const float Time = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
 
@@ -2647,6 +2752,33 @@ void ADCCArcadeHaunt::Score(float DeltaSeconds)
 		Last = Crawler->Stats->CurrentHitPoints;
 	}
 
+	// A kill used to vanish from the reel the frame the monster died. Keep the spot lit for a few seconds.
+	{
+		TSet<TWeakObjectPtr<ADCCEnemyCharacter>> StillAlive;
+		for (const TWeakObjectPtr<ADCCEnemyCharacter>& MonsterPtr : Monsters)
+		{
+			if (ADCCEnemyCharacter* Monster = MonsterPtr.Get(); Monster && Monster->IsAlive())
+			{
+				StillAlive.Add(Monster);
+				MonsterLiveAt.Add(Monster, Monster->GetActorLocation());
+			}
+		}
+		TArray<TWeakObjectPtr<ADCCEnemyCharacter>> Gone;
+		for (const TPair<TWeakObjectPtr<ADCCEnemyCharacter>, FVector>& Pair : MonsterLiveAt)
+		{
+			if (!StillAlive.Contains(Pair.Key))
+			{
+				DeathFlashes.Add(TPair<FVector, double>(Pair.Value, Now));
+				Gone.Add(Pair.Key);
+			}
+		}
+		for (const TWeakObjectPtr<ADCCEnemyCharacter>& Key : Gone)
+		{
+			MonsterLiveAt.Remove(Key);
+		}
+		DeathFlashes.RemoveAll([Now](const TPair<FVector, double>& Flash) { return Now - Flash.Value > 3.5; });
+	}
+
 	TArray<APlayerController*> Players;
 	GetPlayers(Players);
 	for (APlayerController* PC : Players)
@@ -2761,6 +2893,17 @@ void ADCCArcadeHaunt::Score(float DeltaSeconds)
 			const bool bAttacking = Victim && FVector::Dist(Victim->GetActorLocation(), Monster->GetActorLocation()) < 450.0f;
 			Note(Rate(Monster->GetActorLocation() + FVector(0, 0, 40), bAttacking ? 25.0f : 10.0f, Monster), bAttacking ? 5 : 4, Monster->GetActorLocation());
 		}
+		for (const TPair<FVector, double>& Flash : DeathFlashes)
+		{
+			if (Now - Flash.Value < 3.5)
+			{
+				Note(Rate(Flash.Key + FVector(0, 0, 80), 50.0f, nullptr), 5, Flash.Key);
+			}
+		}
+		if (const double* SelfHurt = LastHurtAt.Find(Camera); SelfHurt && Now - *SelfHurt < 2.5)
+		{
+			Note(36.0f, 13, Eye + Look * 90.0f);
+		}
 		for (TActorIterator<ADCCCharacterBase> It(World); It; ++It)
 		{
 			const ADCCCharacterBase* Mate = *It;
@@ -2828,6 +2971,7 @@ void ADCCArcadeHaunt::Wrap()
 		if (Entry.Views > 0)
 		{
 			DCCProfile::RecordBest(PC->PlayerState, TEXT("Haunt"), TEXT("BestViews"), static_cast<float>(Entry.Views));
+			DCCArcade::CompleteSeriesQuest(PC->PlayerState, TEXT("Haunt"), DCCArcade::SeriesQuestXp());
 			DCCProfile::Add(PC->PlayerState, TEXT("Haunt"), TEXT("TotalViews"), static_cast<float>(Entry.Views));
 			UDCCWalletComponent::AwardTickets(PC->PlayerState, FMath::Max(1, Entry.Views / 100), TEXT("footage uploaded"));
 		}

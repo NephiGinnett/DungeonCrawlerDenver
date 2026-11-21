@@ -16,6 +16,7 @@
 #include "HAL/IConsoleManager.h"
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
+#include "UI/DCCItemVisuals.h"
 
 namespace
 {
@@ -103,6 +104,7 @@ namespace DCCSave
 		{
 			UE_LOG(LogTemp, Log, TEXT("[DCC Save] No save for %s yet; starting fresh."), *Key);
 			Save(Crawler);
+			DCCItemToast::NoteCarryIn(Crawler);
 			return;
 		}
 
@@ -153,6 +155,7 @@ namespace DCCSave
 				NSLOCTEXT("DCC", "SaveWelcomeBack", "Welcome back, {0}. Level {1}, {2} gold, {3} sealed {3}|plural(one=box,other=boxes). The System kept your seat warm. It charged you for that."),
 				FText::FromString(Key), FText::AsNumber(Crawler->Stats->Level), FText::AsNumber(Crawler->Stats->Gold), FText::AsNumber(Boxes)));
 		}
+		DCCItemToast::NoteCarryIn(Crawler);
 	}
 
 	bool Save(ADCCCharacterBase* Crawler)

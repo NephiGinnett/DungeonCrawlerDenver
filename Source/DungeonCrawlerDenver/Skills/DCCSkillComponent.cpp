@@ -1,6 +1,7 @@
 #include "Skills/DCCSkillComponent.h"
 
 #include "Characters/DCCCharacterBase.h"
+#include "Classes/DCCBasicClasses.h"
 #include "Stats/DCCStatsComponent.h"
 #include "Stats/DCCRuleset.h"
 #include "Engine/World.h"
@@ -759,7 +760,15 @@ FDCCSkillResult UDCCSkillComponent::ActivateSkillInternal(const FDCCSkillDef& Sk
 			{
 				// Rolled per target rather than once and shared, so an AoE reads
 				// like several separate hits instead of a flat number.
-				const int32 Magnitude = FMath::Max(1, FMath::RandRange(1, FMath::Max(1, Skill.PowerDie)) + AbilityModifier);
+				int32 Magnitude = FMath::Max(1, FMath::RandRange(1, FMath::Max(1, Skill.PowerDie)) + AbilityModifier);
+				if (const ADCCCharacterBase* Caster = GetOwningCharacter())
+				{
+					const int32 Bonus = DCCBasicClasses::SpellPercent(Caster);
+					if (Bonus > 0)
+					{
+						Magnitude = FMath::Max(1, FMath::RoundToInt(Magnitude * (100 + Bonus) / 100.0f));
+					}
+				}
 				TargetStats->ApplyDamage(Magnitude);
 				if (ADCCCharacterBase* Caster = GetOwningCharacter())
 				{
@@ -771,7 +780,15 @@ FDCCSkillResult UDCCSkillComponent::ActivateSkillInternal(const FDCCSkillDef& Sk
 			}
 			case EDCCSkillArchetype::Heal:
 			{
-				const int32 Magnitude = FMath::Max(1, FMath::RandRange(1, FMath::Max(1, Skill.PowerDie)) + AbilityModifier);
+				int32 Magnitude = FMath::Max(1, FMath::RandRange(1, FMath::Max(1, Skill.PowerDie)) + AbilityModifier);
+				if (const ADCCCharacterBase* Caster = GetOwningCharacter())
+				{
+					const int32 Bonus = DCCBasicClasses::HealPercent(Caster);
+					if (Bonus > 0)
+					{
+						Magnitude = FMath::Max(1, FMath::RoundToInt(Magnitude * (100 + Bonus) / 100.0f));
+					}
+				}
 				TargetStats->Heal(Magnitude);
 				Result.TotalMagnitude += Magnitude;
 				Result.AffectedActors.Add(Affected);

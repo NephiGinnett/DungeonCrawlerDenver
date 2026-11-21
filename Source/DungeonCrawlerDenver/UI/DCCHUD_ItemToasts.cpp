@@ -11,6 +11,12 @@
 // slots, gold) against what it saw last frame. Whatever is new becomes a card.
 // That covers every way an item arrives (ground pickups, chests, corpses, tale
 // floor payouts, achievement rewards) without any of them knowing about the HUD.
+//
+// A new space spawns a new body, and the save fills the bag a moment later.
+// The first frames are empty, so a baseline taken immediately would announce
+// every item you already own. Cards wait until that carry-in has settled,
+// remember those gear ids for the rest of the session, and only then announce
+// a gain or an equip. Each gear id gets one card.
 
 #include "UI/DCCHUD.h"
 #include "UI/DCCItemVisuals.h"
@@ -22,10 +28,12 @@
 #include "Items/DCCInventoryComponent.h"
 #include "Items/DCCLootBoxTypes.h"
 #include "Items/DCCPickup.h"
+#include "Onboarding/DCCOnboardingComponent.h"
 #include "Stats/DCCStatsComponent.h"
 #include "Engine/Canvas.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
+#include "GameFramework/PlayerState.h"
 
 namespace DCCItemToast
 {
@@ -197,26 +205,246 @@ namespace DCCItemToast
 		}
 		return Card;
 	}
+
+	TSet<TWeakObjectPtr<const ADCCCharacterBase>>& CarryInPawns()
+	{
+		static TSet<TWeakObjectPtr<const ADCCCharacterBase>> Set;
+		return Set;
+	}
+
+	/** Gear ids that have already had their one card, per crawler, for this session. Survives a travel. */
+	TMap<FString, TSet<FName>>& AnnouncedGear()
+	{
+		static TMap<FString, TSet<FName>> Map;
+		return Map;
+	}
+
+	FString PlayerKey(const ADCCCharacterBase* Crawler)
+	{
+		if (!Crawler)
+		{
+			return FString();
+		}
+		if (Crawler->Onboarding && !Crawler->Onboarding->CrawlerId.IsNone())
+		{
+			return Crawler->Onboarding->CrawlerId.ToString();
+		}
+		const APlayerState* PlayerState = Crawler->GetPlayerState();
+		return PlayerState ? PlayerState->GetPlayerName() : FString();
+	}
+
+	void RememberGear(const FString& Key, FName ItemId)
+	{
+		if (!Key.IsEmpty() && !ItemId.IsNone())
+		{
+			AnnouncedGear().FindOrAdd(Key).Add(ItemId);
+		}
+	}
+
+	/** True the first time this gear id should flash. Later gains and equips stay quiet. */
+	bool ClaimGearCard(const FString& Key, FName ItemId)
+	{
+		if (ItemId.IsNone() || Key.IsEmpty())
+		{
+			return false;
+		}
+		TSet<FName>& Seen = AnnouncedGear().FindOrAdd(Key);
+		if (Seen.Contains(ItemId))
+		{
+			return false;
+		}
+		Seen.Add(ItemId);
+		return true;
+	}
+
+	void RememberCarried(const ADCCCharacterBase* Crawler)
+	{
+		const FString Key = PlayerKey(Crawler);
+		const UDCCInventoryComponent* Inventory = Crawler ? Crawler->Inventory.Get() : nullptr;
+		const UDCCEquipmentComponent* Equipment = Crawler ? Crawler->Equipment.Get() : nullptr;
+		if (Inventory)
+		{
+			for (const FDCCInventoryItem& Item : Inventory->Items)
+			{
+				RememberGear(Key, Item.EquipmentItemId);
+			}
+		}
+		if (Equipment)
+		{
+			for (const FDCCEquippedItem& Entry : Equipment->Equipped)
+			{
+				RememberGear(Key, Entry.ItemId);
+			}
+		}
+	}
+
+	uint32 CarrySignature(const ADCCCharacterBase* Crawler)
+	{
+		uint32 Hash = 0;
+		const UDCCInventoryComponent* Inventory = Crawler ? Crawler->Inventory.Get() : nullptr;
+		const UDCCEquipmentComponent* Equipment = Crawler ? Crawler->Equipment.Get() : nullptr;
+		if (Inventory)
+		{
+			Hash = HashCombine(Hash, GetTypeHash(Inventory->Items.Num()));
+			for (const FDCCInventoryItem& Item : Inventory->Items)
+			{
+				Hash = HashCombine(Hash, GetTypeHash(Item.EquipmentItemId));
+				Hash = HashCombine(Hash, GetTypeHash(Item.DisplayName.ToString()));
+			}
+			for (const FDCCStowedConsumable& Stack : Inventory->StowedConsumables)
+			{
+				Hash = HashCombine(Hash, GetTypeHash(Stack.ItemId));
+				Hash = HashCombine(Hash, GetTypeHash(Stack.Quantity));
+			}
+			for (const int32 Count : Inventory->LootBoxCounts)
+			{
+				Hash = HashCombine(Hash, GetTypeHash(Count));
+			}
+		}
+		if (Equipment)
+		{
+			for (const FDCCEquippedItem& Entry : Equipment->Equipped)
+			{
+				Hash = HashCombine(Hash, GetTypeHash(static_cast<uint8>(Entry.Slot)));
+				Hash = HashCombine(Hash, GetTypeHash(Entry.ItemId));
+			}
+		}
+		if (Crawler && Crawler->Stats)
+		{
+			Hash = HashCombine(Hash, GetTypeHash(Crawler->Stats->Gold));
+		}
+		return Hash;
+	}
+
+	void NoteCarryIn(const ADCCCharacterBase* Crawler)
+	{
+		if (Crawler)
+		{
+			CarryInPawns().Add(Crawler);
+		}
+	}
+
+	bool HasCarryIn(const ADCCCharacterBase* Crawler)
+	{
+		TSet<TWeakObjectPtr<const ADCCCharacterBase>>& Set = CarryInPawns();
+		for (auto It = Set.CreateIterator(); It; ++It)
+		{
+			if (!It->IsValid())
+			{
+				It.RemoveCurrent();
+			}
+		}
+		return Crawler && Set.Contains(TWeakObjectPtr<const ADCCCharacterBase>(Crawler));
+	}
 }
 
 void ADCCHUD::WatchForNewItems(ADCCCharacterBase* Crawler)
 {
 	using namespace DCCItemToast;
 
-	UDCCInventoryComponent* Inventory = Crawler ? Crawler->Inventory.Get() : nullptr;
-	UDCCEquipmentComponent* Equipment = Crawler ? Crawler->Equipment.Get() : nullptr;
+	UWorld* World = GetWorld();
+	const double Now = World ? World->GetRealTimeSeconds() : 0.0;
 
-	// A new body (spawn, respawn, possession) is a new baseline: everything it
-	// already carries is old news, not a pile of cards.
-	// The loot box screen shows its own reveal; cards on top of it would be noise.
-	const bool bBaseline = ItemToastWatched.Get() != Crawler || bLootScreenOpen;
+	// A new body (spawn, respawn, travel) has not settled yet. Whatever it
+	// already carries is old news, once the save or the first replication lands.
 	if (ItemToastWatched.Get() != Crawler)
 	{
 		ItemToastWatched = Crawler;
 		ItemToastQueue.Reset();
+		bItemToastSettled = false;
+		bItemToastSawCarryIn = false;
+		ItemToastWatchStart = Now;
+		ItemToastStableSince = Now;
+		ItemToastSignature = 0;
+		SeenItemCount = 0;
+		SeenConsumables.Reset();
+		SeenLootBoxes.Reset();
+		SeenEquipped.Reset();
+		SeenGold = 0;
 	}
 	if (!Crawler)
 	{
+		return;
+	}
+
+	UDCCInventoryComponent* Inventory = Crawler->Inventory.Get();
+	UDCCEquipmentComponent* Equipment = Crawler->Equipment.Get();
+
+	auto Snapshot = [&]()
+	{
+		if (Inventory)
+		{
+			SeenItemCount = Inventory->Items.Num();
+			SeenConsumables.Reset();
+			for (const FDCCStowedConsumable& Stack : Inventory->StowedConsumables)
+			{
+				SeenConsumables.FindOrAdd(Stack.ItemId) += Stack.Quantity;
+			}
+			SeenLootBoxes = Inventory->LootBoxCounts;
+		}
+		if (Equipment)
+		{
+			SeenEquipped.Reset();
+			for (const FDCCEquippedItem& Entry : Equipment->Equipped)
+			{
+				SeenEquipped.Add(static_cast<uint8>(Entry.Slot), Entry.ItemId);
+			}
+		}
+		if (Crawler->Stats)
+		{
+			SeenGold = Crawler->Stats->Gold;
+		}
+	};
+
+	const uint32 Signature = CarrySignature(Crawler);
+	if (Signature != ItemToastSignature)
+	{
+		ItemToastSignature = Signature;
+		ItemToastStableSince = Now;
+	}
+	if (HasCarryIn(Crawler) && !bItemToastSawCarryIn)
+	{
+		bItemToastSawCarryIn = true;
+		ItemToastStableSince = Now;
+	}
+
+	if (!bItemToastSettled)
+	{
+		Snapshot();
+		const bool bStable = (Now - ItemToastStableSince) >= 0.35;
+		const double Elapsed = Now - ItemToastWatchStart;
+		const bool bNonEmpty = (Inventory && (Inventory->Items.Num() > 0 || Inventory->StowedConsumables.Num() > 0))
+			|| (Equipment && Equipment->Equipped.Num() > 0)
+			|| (Crawler->Stats && Crawler->Stats->Gold > 0);
+		bool bReady = false;
+		if (Crawler->HasAuthority())
+		{
+			// Host: the save apply is the moment the carried gear is real.
+			bReady = bItemToastSawCarryIn && bStable;
+			if (!bReady && Elapsed > 8.0 && bStable)
+			{
+				bReady = true;
+			}
+		}
+		else
+		{
+			// Client: there is no save apply here. Wait until the replicated bag sits still.
+			bReady = bStable && ((bNonEmpty && Elapsed > 0.4) || Elapsed > 5.0);
+		}
+		if (bReady)
+		{
+			RememberCarried(Crawler);
+			bItemToastSettled = true;
+			UE_LOG(LogTemp, Log, TEXT("[DCC Item] carry-in settled for %s (%d in the bag, %d worn). Already carried stays quiet."),
+				*PlayerKey(Crawler), SeenItemCount, SeenEquipped.Num());
+		}
+		return;
+	}
+
+	// The loot box screen shows its own reveal. Fold those gains into the baseline.
+	if (bLootScreenOpen)
+	{
+		Snapshot();
 		return;
 	}
 
@@ -224,14 +452,18 @@ void ADCCHUD::WatchForNewItems(ADCCCharacterBase* Crawler)
 	if (Inventory)
 	{
 		const int32 Count = Inventory->Items.Num();
-		if (!bBaseline && Count > SeenItemCount)
+		if (Count > SeenItemCount)
 		{
+			const FString Key = PlayerKey(Crawler);
 			for (int32 i = SeenItemCount; i < Count; ++i)
 			{
 				const FDCCInventoryItem& Item = Inventory->Items[i];
 				if (!Item.EquipmentItemId.IsNone())
 				{
-					PushItemToast(ForEquipment(Equipment, Item.EquipmentItemId, /*bEquipped=*/false, NAME_None));
+					if (ClaimGearCard(Key, Item.EquipmentItemId))
+					{
+						PushItemToast(ForEquipment(Equipment, Item.EquipmentItemId, /*bEquipped=*/false, NAME_None));
+					}
 					continue;
 				}
 
@@ -263,7 +495,6 @@ void ADCCHUD::WatchForNewItems(ADCCCharacterBase* Crawler)
 		{
 			Consumables.FindOrAdd(Stack.ItemId) += Stack.Quantity;
 		}
-		if (!bBaseline)
 		{
 			for (const TPair<FName, int32>& Pair : Consumables)
 			{
@@ -314,7 +545,6 @@ void ADCCHUD::WatchForNewItems(ADCCCharacterBase* Crawler)
 
 		// Loot boxes, by tier.
 		const TArray<int32>& Boxes = Inventory->LootBoxCounts;
-		if (!bBaseline)
 		{
 			for (int32 Tier = 1; Tier < Boxes.Num(); ++Tier)
 			{
@@ -341,30 +571,30 @@ void ADCCHUD::WatchForNewItems(ADCCCharacterBase* Crawler)
 	// Equipped slots. A slot that now holds something different was just equipped.
 	if (Equipment)
 	{
-		TMap<uint8, FName> Now;
+		TMap<uint8, FName> EquippedNow;
 		for (const FDCCEquippedItem& Entry : Equipment->Equipped)
 		{
-			Now.Add(static_cast<uint8>(Entry.Slot), Entry.ItemId);
+			EquippedNow.Add(static_cast<uint8>(Entry.Slot), Entry.ItemId);
 		}
-		if (!bBaseline)
 		{
-			for (const TPair<uint8, FName>& Pair : Now)
+			const FString Key = PlayerKey(Crawler);
+			for (const TPair<uint8, FName>& Pair : EquippedNow)
 			{
 				const FName Before = SeenEquipped.FindRef(Pair.Key);
-				if (!Pair.Value.IsNone() && Pair.Value != Before)
+				if (!Pair.Value.IsNone() && Pair.Value != Before && ClaimGearCard(Key, Pair.Value))
 				{
 					PushItemToast(ForEquipment(Equipment, Pair.Value, /*bEquipped=*/true, Before));
 				}
 			}
 		}
-		SeenEquipped = MoveTemp(Now);
+		SeenEquipped = MoveTemp(EquippedNow);
 	}
 
 	// Gold. Several coins in a row fold into one card instead of a stack of them.
 	if (Crawler->Stats)
 	{
 		const int32 Gold = Crawler->Stats->Gold;
-		if (!bBaseline && Gold > SeenGold)
+		if (Gold > SeenGold)
 		{
 			FDCCItemToastCard Card;
 			Card.Header = TEXT("GOLD");
@@ -422,6 +652,14 @@ void ADCCHUD::PushItemToast(FDCCItemToastCard&& Card)
 	if (ItemToastQueue.Num() >= MaxQueued)
 	{
 		ItemToastQueue.RemoveAt(0);
+	}
+	if (Card.GoldAmount > 0)
+	{
+		UE_LOG(LogTemp, Log, TEXT("[DCC Item] GOLD: +%d"), Card.GoldAmount);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Log, TEXT("[DCC Item] %s: %s"), *Card.Header, *Card.Name);
 	}
 	ItemToastQueue.Add(MoveTemp(Card));
 }

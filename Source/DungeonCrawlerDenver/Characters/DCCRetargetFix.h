@@ -10,8 +10,9 @@ namespace DCCRetarget
 	/**
 	 * Translation retargeting so shared clips stop forcing one body's bone
 	 * lengths onto another (the "backwards S spine"): root = AnimationScaled,
-	 * every other bone = Skeleton. Returns how many bones changed. Safe at
-	 * runtime: animation decompression reads these modes every evaluation.
+	 * every other bone = Skeleton. Returns how many bones changed, or -1 when
+	 * the skeleton's bone tree is not ready to write. Safe at runtime:
+	 * animation decompression reads these modes every evaluation.
 	 */
 	int32 Apply(USkeleton* Skeleton);
 

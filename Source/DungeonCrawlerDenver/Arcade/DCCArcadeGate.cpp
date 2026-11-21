@@ -31,6 +31,7 @@
 #include "Puzzles/DCCPressurePlate.h"
 #include "Rooms/DCCDungeonGrid.h"
 #include "Session/DCCProfile.h"
+#include "Arcade/DCCArcade.h"
 #include "Stats/DCCStatsComponent.h"
 #include "UI/DCCEventLogTypes.h"
 
@@ -60,6 +61,10 @@ namespace
 		if (Role == TEXT("ambush")) { return FLinearColor(0.3f, 0.8f, 0.75f); }
 		if (Role == TEXT("shrine")) { return FLinearColor(0.5f, 1.0f, 0.8f); }
 		if (Role == TEXT("gauntlet")) { return FLinearColor(1.0f, 0.42f, 0.2f); }
+		if (Role == TEXT("toll")) { return FLinearColor(1.0f, 0.78f, 0.2f); }
+		if (Role == TEXT("outage")) { return FLinearColor(0.9f, 0.2f, 0.15f); }
+		if (Role == TEXT("clock")) { return FLinearColor(0.45f, 0.85f, 1.0f); }
+		if (Role == TEXT("pen")) { return FLinearColor(0.85f, 0.45f, 0.25f); }
 		return GateCyan; // start
 	}
 
@@ -74,6 +79,10 @@ namespace
 		if (Role == TEXT("ambush")) { return TEXT("QUIET ROOM"); }
 		if (Role == TEXT("shrine")) { return TEXT("REST SHRINE  -  stand in the Warden's light"); }
 		if (Role == TEXT("gauntlet")) { return TEXT("THE GAUNTLET  -  dark tiles only, to the green pad"); }
+		if (Role == TEXT("toll")) { return TEXT("THE TOLL  -  hold the booth. The line is already mad."); }
+		if (Role == TEXT("outage")) { return TEXT("THE OUTAGE  -  reach the middle. The lights go first."); }
+		if (Role == TEXT("clock")) { return TEXT("THE CLOCK  -  three waves, and they do not wait"); }
+		if (Role == TEXT("pen")) { return TEXT("THE HOLDING PEN  -  clear the ring. The fence burns."); }
 		return TEXT("GATE ENTRY");
 	}
 
@@ -88,6 +97,10 @@ namespace
 		if (Role == TEXT("ambush")) { return 120; }
 		if (Role == TEXT("shrine")) { return 40; }
 		if (Role == TEXT("gauntlet")) { return 150; }
+		if (Role == TEXT("toll")) { return 140; }
+		if (Role == TEXT("outage")) { return 140; }
+		if (Role == TEXT("clock")) { return 170; }
+		if (Role == TEXT("pen")) { return 150; }
 		return 0;
 	}
 }
@@ -116,28 +129,40 @@ FName ADCCArcadeGate::RoleFor(int32 InSeed, int32 Index, int32 Count)
 	{
 		return TEXT("boss");
 	}
-	// The middle rooms: one of each special kind first (when there is room for them), shuffled, then fights and
-	// the odd extra. Rooms after the start are in no particular order around the map, so this is not a fixed walk.
-	const int32 Middle = Count - 2;
-	TArray<FName> Plan;
-	// Up to eight middle rooms (a ten-room S gate), so each kind appears once before anything repeats.
-	if (Middle >= 2) { Plan.Add(TEXT("vault")); }
-	if (Middle >= 3) { Plan.Add(TEXT("duel")); }
-	if (Middle >= 4) { Plan.Add(TEXT("gauntlet")); }
-	if (Middle >= 5) { Plan.Add(TEXT("shrine")); }
-	if (Middle >= 6) { Plan.Add(TEXT("ambush")); }
-	if (Middle >= 7) { Plan.Add(TEXT("trial")); }
-	if (Middle >= 8) { Plan.Add(TEXT("treasure")); }
-	while (Plan.Num() < Middle)
-	{
-		Plan.Add(Plan.Num() % 2 ? TEXT("ambush") : TEXT("fight"));
-	}
+	// Half the middle rooms (at least one, once there are two) are the newer rounds: toll, outage, clock, pen.
+	// The rest stay the older set. Shuffled, and the same seed builds the same list on every machine.
+	const int32 Middle = FMath::Max(0, Count - 2);
+	TArray<FName> Fresh = { TEXT("toll"), TEXT("outage"), TEXT("clock"), TEXT("pen") };
+	TArray<FName> Older = {
+		TEXT("vault"), TEXT("duel"), TEXT("gauntlet"), TEXT("shrine"),
+		TEXT("ambush"), TEXT("trial"), TEXT("treasure"), TEXT("fight"),
+	};
 	FRandomStream R(InSeed * 13 + 7);
-	for (int32 i = Plan.Num() - 1; i > 0; --i)
+	auto Shuffle = [&R](TArray<FName>& List)
 	{
-		Plan.Swap(i, R.RandRange(0, i));
+		for (int32 i = List.Num() - 1; i > 0; --i)
+		{
+			List.Swap(i, R.RandRange(0, i));
+		}
+	};
+	Shuffle(Fresh);
+	Shuffle(Older);
+	const int32 NewCount = FMath::Min(Fresh.Num(), Middle >= 2 ? FMath::Max(1, Middle / 2) : 0);
+	TArray<FName> Plan;
+	for (int32 i = 0; i < NewCount; ++i)
+	{
+		Plan.Add(Fresh[i]);
 	}
-	return Plan[Index - 1];
+	for (int32 i = 0; Plan.Num() < Middle && i < Older.Num(); ++i)
+	{
+		Plan.Add(Older[i]);
+	}
+	for (int32 i = NewCount; Plan.Num() < Middle && i < Fresh.Num(); ++i)
+	{
+		Plan.Add(Fresh[i]);
+	}
+	Shuffle(Plan);
+	return Plan.IsValidIndex(Index - 1) ? Plan[Index - 1] : TEXT("fight");
 }
 
 void ADCCArcadeGate::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -182,9 +207,16 @@ void ADCCArcadeGate::PrepareServer()
 
 // ---- the plaza (every machine) ------------------------------------------------------------------------------------
 
-void ADCCArcadeGate::DrawPortal(const FVector& At, float Height, const FLinearColor& Colour, float Yaw)
+void ADCCArcadeGate::DrawPortal(const FVector& At, float Height, const FLinearColor& Colour, float Yaw, bool bFrame, bool bPowered)
 {
-	Prop(TEXT("/Game/Alien_Portal/Meshes/Portal/SM_portal"), At, Yaw, FVector(0, 0, Height));
+	if (bFrame)
+	{
+		Prop(TEXT("/Game/Alien_Portal/Meshes/Portal/SM_portal"), At, Yaw, FVector(0, 0, Height));
+	}
+	if (!bPowered)
+	{
+		return;
+	}
 	Prop(TEXT("/Game/Alien_Portal/Meshes/SM_portal_FX"), At, Yaw, FVector(0, 0, Height));
 	// The shine: a ring of light, and the pack's sparks rising through it.
 	Light(At + FVector(0, 0, Height * 0.5f), Colour, 60000.0f, Height * 2.5f);
@@ -200,13 +232,16 @@ void ADCCArcadeGate::BuildLocal()
 {
 	// A dark plaza under a violet sky, ringed with broken towers, the gate hanging at the north end.
 	const FLinearColor Stone(0.05f, 0.045f, 0.07f);
-	Block(FVector(0, 0, -20), FVector(9000, 9000, 40), Stone);
+	Paint(Block(FVector(0, 0, -20), FVector(9000, 9000, 40), Stone), TEXT("/Game/Abandonned_Brutalist/Materials/MI_concrete_tile"));
 	for (int32 i = 0; i < 18; ++i)
 	{
 		const float A = i * (2.0f * PI / 18.0f);
 		const FVector At(FMath::Cos(A) * 5200.0f, FMath::Sin(A) * 5200.0f, 0.0f);
 		const float H = 1600.0f + (i * 37 % 11) * 380.0f;
-		Block(At + FVector(0, 0, H * 0.5f), FVector(700, 700, H), FLinearColor(0.035f, 0.03f, 0.05f), i * 23.0f);
+		const TCHAR* TowerMat = (i % 3 == 0) ? TEXT("/Game/Ice_Station/Materials/MI_concrete_block")
+			: (i % 3 == 1) ? TEXT("/Game/Ice_Station/Materials/MI_concrete_block1")
+			: TEXT("/Game/Abandonned_Brutalist/Materials/MI_concrete_01");
+		Paint(Block(At + FVector(0, 0, H * 0.5f), FVector(700, 700, H), FLinearColor(0.035f, 0.03f, 0.05f), i * 23.0f), TowerMat);
 	}
 	DrawPortal(EntryPortal(), 1200.0f, Violet, 0.0f);
 	Sign(EntryPortal() + FVector(0, -500, 1450), -90.0f, TEXT("A GATE HAS OPENED"), FColor(200, 160, 255), 90.0f);
@@ -221,10 +256,11 @@ void ADCCArcadeGate::ClientTick(float DeltaSeconds)
 	{
 		BuildDungeon();
 	}
+	// The ring was placed with the rooms. This is only the power coming on.
 	if (bDungeonBuilt && bExitOpen && !bExitDrawn && Rooms.Num() > 0)
 	{
 		bExitDrawn = true;
-		DrawPortal(Rooms.Last().Center + FVector(0, 0, 0), 700.0f, GateCyan, 0.0f);
+		DrawPortal(Rooms.Last().Center, 700.0f, GateCyan, 0.0f, false, true);
 	}
 	const double Now = ServerTime();
 
@@ -319,7 +355,8 @@ void ADCCArcadeGate::DressRoom(int32 RoomIndex)
 		{
 			const float A = k * (2.0f * PI / 8.0f) + PI / 8.0f;
 			const FVector P = State.Center + FVector(FMath::Cos(A) * R, FMath::Sin(A) * R, 0.0f);
-			Shape(TEXT("Cylinder"), P + FVector(0, 0, WallHeight * 0.5f), FVector(90, 90, WallHeight), FLinearColor(0.08f, 0.05f, 0.12f));
+			Paint(Shape(TEXT("Cylinder"), P + FVector(0, 0, WallHeight * 0.5f), FVector(90, 90, WallHeight), FLinearColor(0.08f, 0.05f, 0.12f)),
+				TEXT("/Game/Ice_Station/Materials/MI_trim_2_metal"));
 			if (k % 2 == 0)
 			{
 				Prop(TEXT("/Game/Legendary_Forge/Meshes/Brasero/SM_brasero_01"), P + (State.Center - P).GetSafeNormal2D() * 140.0f, 0.0f, FVector(0, 0, 120), true);
@@ -416,6 +453,41 @@ void ADCCArcadeGate::DressRoom(int32 RoomIndex)
 		}
 		Block(State.Goal + FVector(0, 0, 5), FVector(TileSize - 14.0f, TileSize - 14.0f, 8.0f), FLinearColor(0.2f, 1.0f, 0.4f), 0.0f, false);
 		Light(State.Goal + FVector(0, 0, 200), FLinearColor(0.3f, 1.0f, 0.5f), 5000.0f, 600.0f);
+	}
+	else if (State.Role == TEXT("toll"))
+	{
+		// A booth window and the ring you have to hold.
+		Shape(TEXT("Cylinder"), State.Center + FVector(0, 0, 3), FVector(440, 440, 4), Colour * 0.7f, FRotator::ZeroRotator, false);
+		Block(State.Center + FVector(0, 280, 90), FVector(280, 40, 180), FLinearColor(0.12f, 0.09f, 0.05f), 0.0f, true);
+		Block(State.Center + FVector(0, 280, 200), FVector(300, 16, 24), Colour, 0.0f, false);
+		Light(State.Center + FVector(0, 200, 220), Colour, 4000.0f, 500.0f);
+	}
+	else if (State.Role == TEXT("outage"))
+	{
+		// A dead break room. The emergency light is the only thing still on.
+		Prop(TEXT("/Game/Cave_Camp/Meshes/Props_02/SM_crate_group_02"), State.Center + FVector(-280, 180, 0), 30.0f, FVector(0, 0, 120), true);
+		Prop(TEXT("/Game/Cave_Camp/Meshes/Props_02/SM_table_group_01"), State.Center + FVector(220, -180, 0), -15.0f, FVector(0, 0, 110), true);
+		Shape(TEXT("Cylinder"), State.Center + FVector(0, 0, 8), FVector(80, 80, 16), FLinearColor(0.8f, 0.1f, 0.08f), FRotator::ZeroRotator, false);
+		Light(State.Center + FVector(0, 0, 160), FLinearColor(0.9f, 0.15f, 0.1f), 1800.0f, 700.0f);
+	}
+	else if (State.Role == TEXT("clock"))
+	{
+		// A pillar the waves are timed against, and a ring so the room reads as a clock.
+		Shape(TEXT("Cylinder"), State.Center + FVector(0, 0, 3), FVector(520, 520, 4), Colour * 0.55f, FRotator::ZeroRotator, false);
+		Shape(TEXT("Cylinder"), State.Center + FVector(0, 0, 160), FVector(70, 70, 320), FLinearColor(0.08f, 0.1f, 0.14f), FRotator::ZeroRotator, true);
+		Light(State.Center + FVector(0, 0, 360), Colour, 5000.0f, 700.0f);
+	}
+	else if (State.Role == TEXT("pen"))
+	{
+		// A low fence. Inside is the fight. Outside, once it starts, the fence burns.
+		Shape(TEXT("Cylinder"), State.Center + FVector(0, 0, 3), FVector(560, 560, 4), Colour * 0.45f, FRotator::ZeroRotator, false);
+		for (int32 k = 0; k < 10; ++k)
+		{
+			const float A = k * (2.0f * PI / 10.0f);
+			const FVector P = State.Center + FVector(FMath::Cos(A) * 300.0f, FMath::Sin(A) * 300.0f, 0.0f);
+			Block(P + FVector(0, 0, 50), FVector(28, 28, 100), FLinearColor(0.25f, 0.12f, 0.06f), A * 180.0f / PI, true);
+		}
+		Light(State.Center + FVector(0, 0, 240), Colour, 4500.0f, 600.0f);
 	}
 }
 
@@ -598,7 +670,8 @@ void ADCCArcadeGate::BuildDungeon()
 		{
 			if (Grid->IsOpen(X, Y) && Grid->RoomIndexAt(X, Y) == -1)
 			{
-				Block(O + FVector((X + 0.5f) * Tile, (Y + 0.5f) * Tile, -20.0f), FVector(Tile, Tile, 40.0f), CorridorColour);
+				Paint(Block(O + FVector((X + 0.5f) * Tile, (Y + 0.5f) * Tile, -20.0f), FVector(Tile, Tile, 40.0f), CorridorColour),
+					TEXT("/Game/Ice_Station/Materials/MI_floor_tile2"));
 			}
 		}
 	}
@@ -610,12 +683,28 @@ void ADCCArcadeGate::BuildDungeon()
 		State.Role = RoomRole;
 		State.Center = Grid->CellCenter(Room.Center());
 		const FLinearColor Colour = RoleColour(RoomRole);
-		Block(O + FVector((Room.X + Room.W * 0.5f) * Tile, (Room.Y + Room.H * 0.5f) * Tile, -20.0f),
-			FVector(Room.W * Tile, Room.H * Tile, 40.0f), FLinearColor(0.07f, 0.06f, 0.09f) + Colour * 0.04f);
+		const TCHAR* FloorMat = TEXT("/Game/Ice_Station/Materials/MI_floor_tile");
+		if (RoomRole == TEXT("boss")) { FloorMat = TEXT("/Game/Ice_Station/Materials/MI_floor_tile4"); }
+		else if (RoomRole == TEXT("duel")) { FloorMat = TEXT("/Game/Abandonned_Brutalist/Materials/MI_stones"); }
+		else if (RoomRole == TEXT("shrine")) { FloorMat = TEXT("/Game/Ice_Station/Materials/MI_floor_tile1"); }
+		else if (RoomRole == TEXT("gauntlet")) { FloorMat = TEXT("/Game/Ice_Station/Materials/MI_floor_tile3"); }
+		else if (RoomRole == TEXT("ambush") || RoomRole == TEXT("toll")) { FloorMat = TEXT("/Game/Abandonned_Brutalist/Materials/MI_concrete_tile"); }
+		else if (RoomRole == TEXT("outage")) { FloorMat = TEXT("/Game/Abandonned_Brutalist/Materials/MI_concrete_01"); }
+		else if (RoomRole == TEXT("clock")) { FloorMat = TEXT("/Game/Ice_Station/Materials/MI_floor_tile3"); }
+		else if (RoomRole == TEXT("pen")) { FloorMat = TEXT("/Game/Abandonned_Brutalist/Materials/MI_stones"); }
+		Paint(Block(O + FVector((Room.X + Room.W * 0.5f) * Tile, (Room.Y + Room.H * 0.5f) * Tile, -20.0f),
+			FVector(Room.W * Tile, Room.H * Tile, 40.0f), FLinearColor(0.07f, 0.06f, 0.09f) + Colour * 0.04f), FloorMat);
 		// A glowing inlay round the room's middle, so a room reads as a room from the doorway.
 		Block(State.Center + FVector(0, 0, 2), FVector(Room.W * Tile - 500.0f, 30.0f, 4.0f), Colour * 0.8f, 0.0f, false);
 		Block(State.Center + FVector(0, 0, 2), FVector(30.0f, Room.H * Tile - 500.0f, 4.0f), Colour * 0.8f, 0.0f, false);
-		Light(State.Center + FVector(0, 0, 460), Colour, 9000.0f, FMath::Max(Room.W, Room.H) * Tile);
+		if (RoomRole == TEXT("outage"))
+		{
+			Light(State.Center + FVector(0, 0, 460), FLinearColor(0.45f, 0.08f, 0.06f), 1400.0f, FMath::Max(Room.W, Room.H) * Tile);
+		}
+		else
+		{
+			Light(State.Center + FVector(0, 0, 460), Colour, 9000.0f, FMath::Max(Room.W, Room.H) * Tile);
+		}
 		Sign(State.Center + FVector(0, 0, 420), 0.0f, RoleSign(RoomRole), Colour.ToFColor(true), RoomRole == TEXT("boss") ? 60.0f : 34.0f);
 		if (RoomRole == TEXT("trial"))
 		{
@@ -649,16 +738,18 @@ void ADCCArcadeGate::BuildDungeon()
 	for (const FRun& Run : Horizontal)
 	{
 		const float X0 = O.X + Run.A * Tile, X1 = O.X + Run.B * Tile, Yw = O.Y + Run.Line * Tile;
-		Block(FVector((X0 + X1) * 0.5f, Yw, WallHeight * 0.5f), FVector(X1 - X0 + 40.0f, 40.0f, WallHeight), WallColour);
+		Paint(Block(FVector((X0 + X1) * 0.5f, Yw, WallHeight * 0.5f), FVector(X1 - X0 + 40.0f, 40.0f, WallHeight), WallColour),
+			TEXT("/Game/Ice_Station/Materials/MI_trim_01_interior"));
 	}
 	for (const FRun& Run : Vertical)
 	{
 		const float Y0 = O.Y + Run.A * Tile, Y1 = O.Y + Run.B * Tile, Xw = O.X + Run.Line * Tile;
-		Block(FVector(Xw, (Y0 + Y1) * 0.5f, WallHeight * 0.5f), FVector(40.0f, Y1 - Y0 + 40.0f, WallHeight), WallColour);
+		Paint(Block(FVector(Xw, (Y0 + Y1) * 0.5f, WallHeight * 0.5f), FVector(40.0f, Y1 - Y0 + 40.0f, WallHeight), WallColour),
+			TEXT("/Game/Ice_Station/Materials/MI_trim_01_interior2"));
 	}
 	// Inside a gate there is no sky: a lid over the whole layout, so the rooms are lit only by their own glow.
-	Block(O + FVector(GridSize * Tile * 0.5f, GridSize * Tile * 0.5f, WallHeight + 20.0f), FVector(GridSize * Tile + 400.0f, GridSize * Tile + 400.0f, 40.0f),
-		FLinearColor(0.02f, 0.015f, 0.04f));
+	Paint(Block(O + FVector(GridSize * Tile * 0.5f, GridSize * Tile * 0.5f, WallHeight + 20.0f), FVector(GridSize * Tile + 400.0f, GridSize * Tile + 400.0f, 40.0f),
+		FLinearColor(0.02f, 0.015f, 0.04f)), TEXT("/Game/Abandonned_Brutalist/Materials/MI_concrete_01"));
 	// A thin violet glow along the foot of every wall.
 	for (const FRun& Run : Horizontal)
 	{
@@ -676,7 +767,20 @@ void ADCCArcadeGate::BuildDungeon()
 			Paint(Strip, TEXT("/Game/Synthwave_city/Material/MI_neon_1"));
 		}
 	}
-	UE_LOG(LogTemp, Log, TEXT("[DCC Gate] Rank %s gate, %d rooms (seed %d)."), RankName(RankFor(Count)), Count, Seed);
+	FString Roles;
+	for (const FRoomState& State : Rooms)
+	{
+		if (!Roles.IsEmpty()) { Roles += TEXT(" "); }
+		Roles += State.Role.ToString();
+	}
+	// The way home stands in the Gatekeeper's hall for the whole run. Dark until that room is clear.
+	if (Rooms.Num() > 0)
+	{
+		const FVector ExitAt = Rooms.Last().Center;
+		DrawPortal(ExitAt, 700.0f, GateCyan, 0.0f, true, false);
+		Sign(ExitAt + FVector(0.0f, -420.0f, 240.0f), -90.0f, TEXT("WAY HOME"), FColor(150, 140, 170), 32.0f);
+	}
+	UE_LOG(LogTemp, Log, TEXT("[DCC Gate] Rank %s gate, %d rooms (seed %d): %s"), RankName(RankFor(Count)), Count, Seed, *Roles);
 }
 
 // ---- the run (server) ---------------------------------------------------------------------------------------------
@@ -902,9 +1006,13 @@ void ADCCArcadeGate::SpawnRoomContent()
 		{
 			SpawnVault(i, ((Seed + i) % 2) == 0);
 		}
-		else if (State.Role == TEXT("trial"))
+		else if (State.Role == TEXT("trial") || State.Role == TEXT("clock"))
 		{
 			State.WavesLeft = 3;
+		}
+		else if (State.Role == TEXT("outage"))
+		{
+			State.WavesLeft = 2;
 		}
 		else if (State.Role == TEXT("boss"))
 		{
@@ -985,8 +1093,11 @@ void ADCCArcadeGate::ClearRoom(int32 RoomIndex, const TCHAR* Why)
 	Score += RolePoints(State.Role);
 	// Every room pays as it falls, not just the end of the run.
 	{
-		const int32 Base = State.Role == TEXT("boss") ? 12 : State.Role == TEXT("trial") ? 6 : State.Role == TEXT("duel") ? 5
-			: State.Role == TEXT("gauntlet") ? 5 : State.Role == TEXT("vault") ? 4 : State.Role == TEXT("fight") || State.Role == TEXT("ambush") ? 3
+		const int32 Base = State.Role == TEXT("boss") ? 12
+			: (State.Role == TEXT("trial") || State.Role == TEXT("clock")) ? 6
+			: (State.Role == TEXT("duel") || State.Role == TEXT("gauntlet") || State.Role == TEXT("pen")) ? 5
+			: (State.Role == TEXT("vault") || State.Role == TEXT("toll") || State.Role == TEXT("outage")) ? 4
+			: (State.Role == TEXT("fight") || State.Role == TEXT("ambush")) ? 3
 			: State.Role == TEXT("shrine") ? 1 : 2;
 		PayParty(Base + RankIndex, FString::Printf(TEXT("gate %s"), *State.Role.ToString()));
 	}
@@ -1072,10 +1183,19 @@ void ADCCArcadeGate::DebugClearRoom(int32 RoomIndex)
 		{
 			Door->Unlock();
 		}
-		if (Rooms[i].Role == TEXT("trial") && !Rooms[i].bStarted)
+		if ((Rooms[i].Role == TEXT("trial") || Rooms[i].Role == TEXT("clock") || Rooms[i].Role == TEXT("outage")) && !Rooms[i].bStarted)
 		{
 			Rooms[i].bStarted = true;
 			Rooms[i].WavesLeft = 0;
+		}
+		if (Rooms[i].Role == TEXT("toll"))
+		{
+			Rooms[i].bStarted = true;
+			Rooms[i].Held = 100.0;
+		}
+		if (Rooms[i].Role == TEXT("pen"))
+		{
+			Rooms[i].bStarted = true;
 		}
 	}
 }
@@ -1143,6 +1263,29 @@ void ADCCArcadeGate::ServerTick(float DeltaSeconds)
 			SpawnShades(RoomIndex, FMath::Min(3 + RankIndex / 2 + FMath::Max(0, Players.Num() - 1) / 2, 8));
 			Say(this, TEXT("It was too quiet. The walls were never empty."));
 		}
+		// The clock starts the moment someone is in the room. The waves do not wait.
+		if (Rooms.IsValidIndex(RoomIndex) && Rooms[RoomIndex].Role == TEXT("clock") && !Rooms[RoomIndex].bStarted)
+		{
+			Rooms[RoomIndex].bStarted = true;
+			Rooms[RoomIndex].NextWaveAt = Now;
+			Say(this, TEXT("The clock starts. Three waves. They do not wait for you to finish."));
+		}
+		// The outage waits until someone reaches the middle, then the lights go.
+		if (Rooms.IsValidIndex(RoomIndex) && Rooms[RoomIndex].Role == TEXT("outage") && !Rooms[RoomIndex].bStarted
+			&& FVector::Dist2D(At, Rooms[RoomIndex].Center) < 320.0f)
+		{
+			Rooms[RoomIndex].bStarted = true;
+			Rooms[RoomIndex].NextWaveAt = Now;
+			Say(this, TEXT("The lights go. Something in the walls was waiting for that."));
+		}
+		// The pen shuts when someone steps into the ring.
+		if (Rooms.IsValidIndex(RoomIndex) && Rooms[RoomIndex].Role == TEXT("pen") && !Rooms[RoomIndex].bStarted
+			&& FVector::Dist2D(At, Rooms[RoomIndex].Center) < 260.0f)
+		{
+			Rooms[RoomIndex].bStarted = true;
+			SpawnWave(RoomIndex, FMath::Min(3 + RankIndex / 2 + FMath::Max(0, Players.Num() - 1) / 2, 7));
+			Say(this, TEXT("The pen is shut. Stay inside the ring. The fence is worse."));
+		}
 		// The shrine: the Warden's light heals everyone who came into the gate, once.
 		if (Rooms.IsValidIndex(RoomIndex) && Rooms[RoomIndex].Role == TEXT("shrine") && !Rooms[RoomIndex].bCleared
 			&& FVector::Dist2D(At, Rooms[RoomIndex].Center) < 260.0f)
@@ -1167,6 +1310,42 @@ void ADCCArcadeGate::ServerTick(float DeltaSeconds)
 		}
 	}
 
+	// The toll: one person in the window keeps the count. Leaving pauses it.
+	for (int32 i = 0; i < Rooms.Num(); ++i)
+	{
+		FRoomState& State = Rooms[i];
+		if (State.bCleared || State.Role != TEXT("toll") || !Grid)
+		{
+			continue;
+		}
+		bool bHolding = false;
+		for (APlayerController* PC : Players)
+		{
+			ADCCCharacterBase* Crawler = PC ? Cast<ADCCCharacterBase>(PC->GetPawn()) : nullptr;
+			if (!Crawler || !Crawler->IsAlive())
+			{
+				continue;
+			}
+			const FIntPoint Cell = Grid->CellOf(Crawler->GetActorLocation());
+			if (Grid->RoomIndexAt(Cell.X, Cell.Y) == i && FVector::Dist2D(Crawler->GetActorLocation(), State.Center) < 220.0f)
+			{
+				bHolding = true;
+				break;
+			}
+		}
+		if (!bHolding)
+		{
+			continue;
+		}
+		if (!State.bStarted)
+		{
+			State.bStarted = true;
+			SpawnWave(i, FMath::Min(2 + RankIndex / 2 + FMath::Max(0, Players.Num() - 1) / 2, 6));
+			Say(this, TEXT("The booth is open. Hold the window. The line is already mad."));
+		}
+		State.Held += DeltaSeconds;
+	}
+
 	// Trial waves, and rooms that have run out of foes.
 	for (int32 i = 0; i < Rooms.Num(); ++i)
 	{
@@ -1175,17 +1354,53 @@ void ADCCArcadeGate::ServerTick(float DeltaSeconds)
 		{
 			continue;
 		}
-		if (State.Role == TEXT("trial") && State.bStarted && State.WavesLeft > 0 && Now >= State.NextWaveAt)
+		const bool bTimedWaves = State.Role == TEXT("trial") || State.Role == TEXT("clock") || State.Role == TEXT("outage");
+		if (bTimedWaves && State.bStarted && State.WavesLeft > 0 && Now >= State.NextWaveAt)
 		{
 			const int32 Wave = 4 - State.WavesLeft;
-			SpawnWave(i, FMath::Min(1 + Wave + RankIndex / 2 + FMath::Max(0, Players.Num() - 1) / 2, 7));
+			const int32 Count = FMath::Min(1 + Wave + RankIndex / 2 + FMath::Max(0, Players.Num() - 1) / 2, 7);
+			if (State.Role == TEXT("outage"))
+			{
+				SpawnShades(i, FMath::Max(2, Count));
+			}
+			else
+			{
+				SpawnWave(i, Count);
+			}
 			--State.WavesLeft;
-			State.NextWaveAt = Now + 9.0;
+			State.NextWaveAt = Now + (State.Role == TEXT("clock") ? 5.5 : State.Role == TEXT("outage") ? 7.0 : 9.0);
 			continue;
+		}
+		// The pen's fence burns anyone in the room who is not inside the ring.
+		if (State.Role == TEXT("pen") && State.bStarted)
+		{
+			for (APlayerController* PC : Players)
+			{
+				ADCCCharacterBase* Crawler = PC ? Cast<ADCCCharacterBase>(PC->GetPawn()) : nullptr;
+				if (!Crawler || !Crawler->IsAlive() || !Crawler->Stats || !Grid)
+				{
+					continue;
+				}
+				const FVector At = Crawler->GetActorLocation();
+				const FIntPoint Cell = Grid->CellOf(At);
+				if (Grid->RoomIndexAt(Cell.X, Cell.Y) != i || FVector::Dist2D(At, State.Center) <= 280.0f)
+				{
+					continue;
+				}
+				double& Next = NextBurnAt.FindOrAdd(PC);
+				if (Now >= Next)
+				{
+					Next = Now + 0.5;
+					Crawler->Stats->ApplyDamage(2 + RankIndex, EDCCDamageType::Fire);
+				}
+			}
 		}
 		const bool bFightingRoom = State.Role == TEXT("fight") || State.Role == TEXT("boss") || State.Role == TEXT("treasure")
 			|| State.Role == TEXT("duel") || (State.Role == TEXT("ambush") && State.bStarted)
-			|| (State.Role == TEXT("trial") && State.bStarted && State.WavesLeft == 0);
+			|| (State.Role == TEXT("pen") && State.bStarted)
+			|| (State.Role == TEXT("toll") && State.bStarted && State.Held >= 8.0)
+			|| ((State.Role == TEXT("trial") || State.Role == TEXT("clock") || State.Role == TEXT("outage"))
+				&& State.bStarted && State.WavesLeft == 0);
 		if (!bFightingRoom)
 		{
 			continue;
@@ -1201,8 +1416,16 @@ void ADCCArcadeGate::ServerTick(float DeltaSeconds)
 		}
 		if (!bAnyStanding)
 		{
-			ClearRoom(i, State.Role == TEXT("trial") ? TEXT("Trial survived") : State.Role == TEXT("treasure") ? TEXT("Treasure room clear")
-				: State.Role == TEXT("duel") ? TEXT("The Champion is down") : State.Role == TEXT("ambush") ? TEXT("Ambush survived") : TEXT("Room clear"));
+			const TCHAR* Why = TEXT("Room clear");
+			if (State.Role == TEXT("trial")) { Why = TEXT("Trial survived"); }
+			else if (State.Role == TEXT("treasure")) { Why = TEXT("Treasure room clear"); }
+			else if (State.Role == TEXT("duel")) { Why = TEXT("The Champion is down"); }
+			else if (State.Role == TEXT("ambush")) { Why = TEXT("Ambush survived"); }
+			else if (State.Role == TEXT("toll")) { Why = TEXT("Booth held"); }
+			else if (State.Role == TEXT("outage")) { Why = TEXT("The lights came back"); }
+			else if (State.Role == TEXT("clock")) { Why = TEXT("Clock ran out"); }
+			else if (State.Role == TEXT("pen")) { Why = TEXT("Pen cleared"); }
+			ClearRoom(i, Why);
 		}
 	}
 	TickRoomsServer(Now, Players);
@@ -1243,9 +1466,9 @@ void ADCCArcadeGate::RefreshStatus()
 	}
 	const float Left = FMath::Max(0.0f, static_cast<float>(EndsAt - Now));
 	StatusLines.Add(FString::Printf(TEXT("%d:%02d left     rooms %d / %d     score %d"), FMath::FloorToInt(Left / 60.0f), FMath::FloorToInt(Left) % 60, Cleared, Total, Score));
-	StatusLines.Add(bExitOpen ? TEXT("The exit is open in the Gatekeeper's room. Step through.")
+	StatusLines.Add(bExitOpen ? TEXT("The way home is lit in the Gatekeeper's room. Step through.")
 		: bBossDown ? TEXT("")
-		: TEXT("Fights, champions, vaults, a gauntlet, a shrine. The Gatekeeper waits in the farthest room."));
+		: TEXT("The way home stands dark in the farthest room. It lights when the Gatekeeper is down."));
 }
 
 void ADCCArcadeGate::Wrap(bool bCleared)
@@ -1282,6 +1505,7 @@ void ADCCArcadeGate::Wrap(bool bCleared)
 		if (bCleared)
 		{
 			DCCProfile::Add(PC->PlayerState, TEXT("Gate"), TEXT("Clears"), 1.0f);
+			DCCArcade::CompleteSeriesQuest(PC->PlayerState, TEXT("Gate"), DCCArcade::SeriesQuestXp());
 			DCCProfile::RecordBest(PC->PlayerState, TEXT("Gate"), TEXT("BestRank"), static_cast<float>(RankIndex));
 		}
 		UDCCWalletComponent::AwardTickets(PC->PlayerState, Tickets, TEXT("gate run"));

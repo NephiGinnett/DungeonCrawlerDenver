@@ -7,6 +7,7 @@
 class APlayerController;
 class UStaticMesh;
 class UMaterialInterface;
+class ADCCCasinoCascade;
 
 /**
  * Base for an arcade game's world. The GameMode spawns one in InitGame on an
@@ -22,6 +23,8 @@ UCLASS(Abstract)
 class DUNGEONCRAWLERDENVER_API ADCCArcadeArena : public AActor
 {
 	GENERATED_BODY()
+
+	friend class ADCCCasinoCascade;
 
 public:
 	ADCCArcadeArena();

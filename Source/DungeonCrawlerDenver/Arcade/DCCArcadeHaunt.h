@@ -231,6 +231,8 @@ public:
 	virtual UDCCDungeonGrid* GetChaseGrid() const override { return Grid; }
 	/** A tag on the cage makes the stream: footage, once a round each, and an achievement. */
 	virtual void OnTagged(class ADCCCharacterBase* Painter, const FVector& At) override;
+	/** Footage for a spray or an emote while the body cam is rolling. */
+	void GrantFootage(const FString& Name, float Amount);
 
 	/** Dev (DCC.MineGo): every player to stope RoomIndex, or (bDrift) to a straight stretch of tunnel, facing along it.
 	 *  RoomIndex -1 faces the first ghost miner; -2 stands next to the first body with a note. */
@@ -394,6 +396,9 @@ private:
 		FVector At = FVector::ZeroVector;
 		TWeakObjectPtr<AActor> Visual;
 	};
+	/** Note indices this machine's player has already walked up to, so the outline stays off. */
+	TSet<int32> SeenBodies;
+	void RefreshBodyGlow();
 	TArray<FBody> Bodies;
 	void PlaceBodies();
 	AActor* SpawnBody(const FVector& Feet, float Yaw, int32 BodyIndex);
@@ -530,6 +535,9 @@ private:
 	TArray<TWeakObjectPtr<ADCCEnemyCharacter>> Monsters;
 	TMap<TWeakObjectPtr<ADCCCharacterBase>, int32> LastHealth;
 	TMap<TWeakObjectPtr<ADCCCharacterBase>, double> LastHurtAt;
+	/** Where a monster last stood while alive, and a few seconds of its death for the reel. */
+	TMap<TWeakObjectPtr<ADCCEnemyCharacter>, FVector> MonsterLiveAt;
+	TArray<TPair<FVector, double>> DeathFlashes;
 	TSet<TWeakObjectPtr<ADCCCharacterBase>> Penalised;
 
 	FBox VanBox = FBox(ForceInit);

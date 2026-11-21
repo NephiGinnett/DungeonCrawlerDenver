@@ -52,7 +52,7 @@ namespace
 	{
 		// 1 lamp, 2 ghost, 12 story ghost. 4/5/6 monsters. 7-11 traps.
 		if (Label == 1 || Label == 2 || Label == 12) { return 0; }
-		if (Label >= 4 && Label <= 6) { return 1; }
+		if (Label >= 4 && Label <= 6 || Label == 13) { return 1; }
 		if (Label >= 7 && Label <= 11) { return 2; }
 		return -1;
 	}
@@ -74,6 +74,7 @@ FString ADCCArcadeHaunt::LabelTitle(uint8 Label)
 	case 10: return TEXT("THE PLANKS GAVE WAY");
 	case 11: return TEXT("LIGHTS OUT");
 	case 12: return TEXT("THE STORY'S GHOST");
+	case 13: return TEXT("IT HIT THE CAMERA");
 	default: return TEXT("FOUND FOOTAGE");
 	}
 }

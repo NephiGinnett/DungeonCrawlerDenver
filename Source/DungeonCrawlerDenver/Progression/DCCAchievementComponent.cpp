@@ -12,6 +12,71 @@
 #include "Net/UnrealNetwork.h"
 #include "UObject/ConstructorHelpers.h"
 
+namespace
+{
+	/** Casino Cascade rows. They live here so a win counts before anyone reimports the DataTable. */
+	void AppendCasinoAchievements(TArray<FDCCAchievementDef>& Out)
+	{
+		auto Add = [&Out](const TCHAR* Id, const TCHAR* Name, const TCHAR* Line, EDCCAchievementStat Stat, int32 Threshold, int32 Experience, int32 Favor)
+		{
+			for (const FDCCAchievementDef& Existing : Out)
+			{
+				if (Existing.AchievementId == Id)
+				{
+					return;
+				}
+			}
+			FDCCAchievementDef Row;
+			Row.AchievementId = Id;
+			Row.DisplayName = FText::FromString(Name);
+			Row.Announcement = FText::FromString(Line);
+			Row.Stat = Stat;
+			Row.Threshold = Threshold;
+			Row.ExperienceReward = Experience;
+			Row.FavorReward = Favor;
+			Out.Add(Row);
+		};
+
+		Add(TEXT("OnTheBoard"), TEXT("On The Board"),
+			TEXT("The house paid twenty-five tickets. Someone in the booth wrote the name on a card."),
+			EDCCAchievementStat::CasinoTicketsWon, 25, 40, 5);
+		Add(TEXT("HotTable"), TEXT("Hot Table"),
+			TEXT("One hundred tickets, out of the pit and into a pocket. The floor manager is smiling. That is not a good sign."),
+			EDCCAchievementStat::CasinoTicketsWon, 100, 80, 10);
+		Add(TEXT("TheRoomNoticed"), TEXT("The Room Noticed"),
+			TEXT("Five hundred tickets. Casino Cascade has started introducing them as a regular. They did not agree to this."),
+			EDCCAchievementStat::CasinoTicketsWon, 500, 150, 20);
+		Add(TEXT("AgainstTheHouse"), TEXT("Against The House"),
+			TEXT("A table lost. The audience made a noise. The house will remember the noise."),
+			EDCCAchievementStat::CasinoWins, 1, 40, 8);
+		Add(TEXT("RegularAtThePit"), TEXT("Regular At The Pit"),
+			TEXT("Ten hands, taken off the house. June has stopped explaining the rules."),
+			EDCCAchievementStat::CasinoWins, 10, 100, 15);
+		Add(TEXT("TheLoudOne"), TEXT("The Loud One"),
+			TEXT("One spin paid fifty or more. The wheel is still moving in the replay. So is the chat."),
+			EDCCAchievementStat::CasinoJackpot, 1, 80, 20);
+	}
+
+	void CollectAchievements(const UDataTable* Table, TArray<FDCCAchievementDef>& Out)
+	{
+		Out.Reset();
+		if (Table)
+		{
+			static const FString Context(TEXT("DCCAchievementComponent"));
+			TArray<FDCCAchievementDef*> Rows;
+			Table->GetAllRows<FDCCAchievementDef>(Context, Rows);
+			for (const FDCCAchievementDef* Row : Rows)
+			{
+				if (Row)
+				{
+					Out.Add(*Row);
+				}
+			}
+		}
+		AppendCasinoAchievements(Out);
+	}
+}
+
 UDCCAchievementComponent::UDCCAchievementComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
@@ -126,29 +191,22 @@ FDCCAchievementProgress& UDCCAchievementComponent::FindOrAddProgress(FName Achie
 
 void UDCCAchievementComponent::EvaluateUnlocks(EDCCAchievementStat Stat)
 {
-	if (!AchievementTable)
-	{
-		return;
-	}
-
 	const int32 Total = GetStatTotal(Stat);
 
-	static const FString Context(TEXT("DCCAchievementComponent::EvaluateUnlocks"));
+	TArray<FDCCAchievementDef> Rows;
+	CollectAchievements(AchievementTable, Rows);
 
-	TArray<FDCCAchievementDef*> Rows;
-	AchievementTable->GetAllRows<FDCCAchievementDef>(Context, Rows);
-
-	for (const FDCCAchievementDef* Row : Rows)
+	for (const FDCCAchievementDef& Row : Rows)
 	{
-		if (!Row || Row->Stat != Stat)
+		if (Row.Stat != Stat)
 		{
 			continue;
 		}
 
-		FDCCAchievementProgress& Entry = FindOrAddProgress(Row->AchievementId);
+		FDCCAchievementProgress& Entry = FindOrAddProgress(Row.AchievementId);
 		Entry.Progress = Total;
 
-		if (Entry.bUnlocked || Total < Row->Threshold)
+		if (Entry.bUnlocked || Total < Row.Threshold)
 		{
 			continue;
 		}
@@ -156,7 +214,7 @@ void UDCCAchievementComponent::EvaluateUnlocks(EDCCAchievementStat Stat)
 		Entry.bUnlocked = true;
 		Entry.UnlockedAtSeconds = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
 
-		Unlock(*Row);
+		Unlock(Row);
 	}
 }
 
@@ -294,13 +352,15 @@ void UDCCAchievementComponent::Server_ClaimReward_Implementation(FName Achieveme
 	// Not unlocked, or already opened - either way there is nothing to pay.
 	// Re-checked here rather than trusted from the client, same reason every
 	// other server entry point in this project re-checks its own gate.
-	if (!Entry || !Entry->bUnlocked || Entry->bRewardClaimed || !AchievementTable)
+	if (!Entry || !Entry->bUnlocked || Entry->bRewardClaimed)
 	{
 		return;
 	}
 
-	static const FString Context(TEXT("DCCAchievementClaim"));
-	const FDCCAchievementDef* Row = AchievementTable->FindRow<FDCCAchievementDef>(AchievementId, Context, false);
+	TArray<FDCCAchievementDef> Rows;
+	CollectAchievements(AchievementTable, Rows);
+	const FDCCAchievementDef* Row = Rows.FindByPredicate(
+		[AchievementId](const FDCCAchievementDef& Candidate) { return Candidate.AchievementId == AchievementId; });
 	if (!Row)
 	{
 		return;
@@ -373,25 +433,18 @@ void UDCCAchievementComponent::GetVisibleAchievements(TArray<FDCCAchievementDef>
 {
 	OutAchievements.Reset();
 
-	if (!AchievementTable)
-	{
-		return;
-	}
+	TArray<FDCCAchievementDef> Rows;
+	CollectAchievements(AchievementTable, Rows);
 
-	static const FString Context(TEXT("DCCAchievementComponent::GetVisibleAchievements"));
-
-	TArray<FDCCAchievementDef*> Rows;
-	AchievementTable->GetAllRows<FDCCAchievementDef>(Context, Rows);
-
-	for (const FDCCAchievementDef* Row : Rows)
+	for (const FDCCAchievementDef& Row : Rows)
 	{
 		// A secret stays off the list until it fires, so the surprise survives a
 		// player reading the menu before they have earned anything.
-		if (!Row || (Row->bSecret && !IsUnlocked(Row->AchievementId)))
+		if (Row.bSecret && !IsUnlocked(Row.AchievementId))
 		{
 			continue;
 		}
 
-		OutAchievements.Add(*Row);
+		OutAchievements.Add(Row);
 	}
 }

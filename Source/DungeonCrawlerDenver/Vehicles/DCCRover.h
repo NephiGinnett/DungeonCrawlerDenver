@@ -254,6 +254,58 @@ public:
 	/** How long the line has been off-centre. Server. */
 	float RallyOffBalance = 0.0f;
 
+	/** Tricks landed during this overhead hold. The card and the payout read it. */
+	UPROPERTY(Replicated)
+	int32 RallyTrickChain = 0;
+
+	/** 0 a flat spin, 1 front flip, 2 barrel roll, 3 back flip, 4 corkscrew. */
+	UPROPERTY(Replicated)
+	uint8 RallyTrickMove = 0;
+
+	/** 0 to 1 through the current flip. Server. Everyone else sees the car's rotation. */
+	float RallyTrickPhase = 1.0f;
+
+	/** Seconds the car has stayed level since the last trick. Server. */
+	float RallyCleanHold = 0.0f;
+
+	/** The driver pressed a trick button. The rally tick starts it once the car is level. Server. */
+	bool bRallyTrickPop = false;
+
+	/** 1 front flip, 2 barrel roll, 3 back flip, 4 corkscrew. 0 lets the chain pick. Server. */
+	uint8 RallyTrickQueued = 0;
+
+	/** Dev pose only. Holds the tilt while A and D are idle, so a path test can cross the city. */
+	bool bRallyDevHold = false;
+
+	/** Server log throttle for the yard run. */
+	double RallyYardLogAt = 0.0;
+
+	bool bRallyYardNoted = false;
+
+	/** What the card calls the move that is playing. */
+	const TCHAR* RallyTrickLabel() const
+	{
+		switch (RallyTrickMove)
+		{
+		case 1: return TEXT("Front flip");
+		case 2: return TEXT("Barrel roll");
+		case 3: return TEXT("Back flip");
+		case 4: return TEXT("Corkscrew");
+		default: return TEXT("Spin");
+		}
+	}
+
+	/** Zeros the chain. The hoist, a bank, a drop and a cut all call this. */
+	void ClearOverheadTrick();
+
+	/**
+	 * While the car is overhead, pick a street waypoint toward the turn-in yard.
+	 * The lane stays off the centreline, where the kickers and skyway ramps are.
+	 * Throttle and steer here are the truck's. They are not SteerInput, which stays A and D for the magnet.
+	 * OutLane is the signed offset from the street centre, in centimetres.
+	 */
+	bool ComputeYardDrive(float& OutThrottle, float& OutSteer, float& OutSpeedCap, float& OutDist, float& OutLane) const;
+
 	/** 1 gripped, 0 sliding. Comes back gradually when Shift is let go. */
 	float DriftGrip = 1.0f;
 
@@ -313,6 +365,10 @@ public:
 	 */
 	UFUNCTION(Server, Unreliable)
 	void Server_DriveSync(FVector_NetQuantize10 Location, FRotator Rotation, FVector_NetQuantize10 Velocity, float Throttle, float Steer);
+
+	/** Overhead balance. 1 front flip, 2 barrel, 3 back flip, 4 corkscrew. Ignored when the car is too tilted. */
+	UFUNCTION(Server, Reliable)
+	void Server_RallyPickTrick(uint8 Move);
 
 	UFUNCTION(Client, Reliable)
 	void Client_ForceTransform(FVector_NetQuantize10 Location, FRotator Rotation);
@@ -957,6 +1013,9 @@ protected:
 	 *  press for CanEngageFlight() (a one-shot action) alongside the level
 	 *  VerticalInput it also drives - see the poll block at the top of Tick(). */
 	bool bWasSpaceDownLastTick = false;
+	bool bWasShiftDownLastTick = false;
+	bool bWasCtrlDownLastTick = false;
+	bool bWasMouseDownLastTick = false;
 
 	bool bAirborne = false;
 	bool bClimbingStep = false;

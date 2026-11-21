@@ -31,6 +31,7 @@
 #include "Stats/DCCStatsComponent.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Math/RotationMatrix.h"
+#include "CollisionQueryParams.h"
 
 ADCCRover::ADCCRover()
 {
@@ -224,6 +225,8 @@ void ADCCRover::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetim
 	DOREPLIFETIME(ADCCRover, RallyTilt);
 	DOREPLIFETIME(ADCCRover, RallyTrickScore);
 	DOREPLIFETIME(ADCCRover, RallyTrickMul);
+	DOREPLIFETIME(ADCCRover, RallyTrickChain);
+	DOREPLIFETIME(ADCCRover, RallyTrickMove);
 	DOREPLIFETIME(ADCCRover, RallyClampUntil);
 	DOREPLIFETIME(ADCCRover, RallyHookRange);
 	DOREPLIFETIME_CONDITION(ADCCRover, RallyFuel, COND_OwnerOnly);
@@ -286,11 +289,24 @@ void ADCCRover::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 	PlayerInputComponent->BindAxisKey(EKeys::MouseY, this, &ADCCRover::CameraPitchLook);
 }
 
-void ADCCRover::DriftPressed()  { bDrifting = true; }
+void ADCCRover::DriftPressed()
+{
+	// Overhead, Shift is a barrel roll. The tick poll sends it. Drift would roll the truck under the magnet.
+	if (RallyTrick == 2)
+	{
+		return;
+	}
+	bDrifting = true;
+}
 void ADCCRover::DriftReleased() { bDrifting = false; }
 
 void ADCCRover::BoostPressed()
 {
+	// Overhead, left click is a corkscrew. The tick poll sends it.
+	if (RallyTrick == 2)
+	{
+		return;
+	}
 	// A dedicated trigger now - see the LMB binding comment in
 	// SetupPlayerInputComponent for why this is no longer sharing Space with
 	// climb/flight-engage. CanEngageFlight()/EngageFlight() moved to the
@@ -1011,6 +1027,397 @@ void ADCCRover::UpdateWreckerCrane(float DeltaSeconds)
 	}
 }
 
+void ADCCRover::ClearOverheadTrick()
+{
+	RallyTrickChain = 0;
+	RallyTrickMove = 0;
+	RallyTrickPhase = 1.0f;
+	RallyCleanHold = 0.0f;
+	bRallyTrickPop = false;
+	RallyTrickQueued = 0;
+	bRallyDevHold = false;
+}
+
+bool ADCCRover::ComputeYardDrive(float& OutThrottle, float& OutSteer, float& OutSpeedCap, float& OutDist, float& OutLane) const
+{
+	OutThrottle = 0.0f;
+	OutSteer = 0.0f;
+	OutSpeedCap = 0.0f;
+	OutDist = 0.0f;
+	OutLane = 0.0f;
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return false;
+	}
+	const ADCCArcadeKart* Kart = nullptr;
+	for (TActorIterator<ADCCArcadeKart> It(World); It; ++It)
+	{
+		Kart = *It;
+		break;
+	}
+	if (!Kart)
+	{
+		return false;
+	}
+
+	const float S = ADCCArcadeKart::StreetSpacing;
+	const int32 Radius = ADCCArcadeKart::StreetRadius;
+	const float RoadHalf = ADCCArcadeKart::RoadHalf;
+	const FVector Origin = Kart->GetActorLocation();
+	const FVector2D Local(GetActorLocation().X - Origin.X, GetActorLocation().Y - Origin.Y);
+	const FVector2D Yard = ADCCArcadeKart::YardOffset();
+	const float DistYard = FVector2D::Distance(Local, Yard);
+	OutDist = DistYard;
+
+	const int32 NearIx = FMath::Clamp(FMath::RoundToInt(Local.X / S), -Radius, Radius);
+	const int32 NearIy = FMath::Clamp(FMath::RoundToInt(Local.Y / S), -Radius, Radius);
+	const float StreetX = static_cast<float>(NearIx) * S;
+	const float StreetY = static_cast<float>(NearIy) * S;
+	const float DistVert = FMath::Abs(Local.X - StreetX);
+	const float DistHoriz = FMath::Abs(Local.Y - StreetY);
+	const float Edge = -static_cast<float>(Radius) * S;
+
+	// Kickers sit about 5 m off the centreline and are 8 m wide, so a centreline path drives up them.
+	// The truck follows a ramp because its own ground trace does. These probes drop a line through
+	// static geometry only, so a parked car or a ramp reads as raised and a moving car does not
+	// change the lane the two machines agree on. Anything more than knee-high is in the way.
+	const float StreetZ = Origin.Z + 16.0f;
+	auto RiseAt = [&](const FVector2D& At) -> float
+	{
+		FCollisionQueryParams Params(TEXT("YardGround"), false, this);
+		if (RallyTow)
+		{
+			Params.AddIgnoredActor(RallyTow);
+		}
+		if (Driver)
+		{
+			Params.AddIgnoredActor(Driver);
+		}
+		const FVector Start(Origin.X + At.X, Origin.Y + At.Y, StreetZ + 900.0f);
+		const FVector End(Start.X, Start.Y, StreetZ - 200.0f);
+		FHitResult Hit;
+		if (!World->LineTraceSingleByChannel(Hit, Start, End, ECC_WorldStatic, Params))
+		{
+			return 5000.0f;
+		}
+		return Hit.ImpactPoint.Z - StreetZ;
+	};
+	auto PointBad = [&](int32 Axis, int32 Index, float Along, float Offset) -> bool
+	{
+		const float Street = static_cast<float>(Index) * S;
+		const FVector2D Side = Axis == 0 ? FVector2D(0.0f, 1.0f) : FVector2D(1.0f, 0.0f);
+		const FVector2D Center = Axis == 0 ? FVector2D(Along, Street + Offset) : FVector2D(Street + Offset, Along);
+		const float Shoulders[] = { -200.0f, 0.0f, 200.0f };
+		for (const float Shoulder : Shoulders)
+		{
+			const float Rise = RiseAt(Center + Side * Shoulder);
+			if (Rise > 40.0f || Rise < -150.0f)
+			{
+				return true;
+			}
+		}
+		return false;
+	};
+	// How many centimetres toward the yard (decreasing along) stay under the truck.
+	// A parked box is only 620 long, so the step has to be shorter than that.
+	auto OpenAhead = [&](int32 Axis, int32 Index, float FromAlong, float Dist, float Offset) -> float
+	{
+		if (Dist < 80.0f)
+		{
+			return Dist;
+		}
+		if (PointBad(Axis, Index, FromAlong, Offset) || PointBad(Axis, Index, FromAlong - 450.0f, Offset))
+		{
+			return 0.0f;
+		}
+		const int32 Steps = FMath::Clamp(FMath::CeilToInt(Dist / 320.0f), 1, 40);
+		for (int32 Step = 1; Step <= Steps; ++Step)
+		{
+			const float Along = FromAlong - Dist * (static_cast<float>(Step) / static_cast<float>(Steps));
+			if (PointBad(Axis, Index, Along, Offset))
+			{
+				const float Prev = FromAlong - Dist * (static_cast<float>(Step - 1) / static_cast<float>(Steps));
+				return FMath::Max(0.0f, FromAlong - Prev);
+			}
+		}
+		return Dist;
+	};
+	// The straight slide from one offset to another. The truck steers toward the end of this
+	// line, so the body stays on the line's start side. Both ends are sampled.
+	auto CorridorBad = [&](int32 Axis, int32 Index, float FromAlong, float ToAlong, float FromOff, float ToOff) -> bool
+	{
+		const float Span = FMath::Max(FMath::Abs(ToAlong - FromAlong), 1.0f);
+		const int32 Steps = FMath::Clamp(FMath::CeilToInt(Span / 300.0f), 1, 30);
+		for (int32 Step = 0; Step <= Steps; ++Step)
+		{
+			const float T = static_cast<float>(Step) / static_cast<float>(Steps);
+			if (PointBad(Axis, Index, FMath::Lerp(FromAlong, ToAlong, T), FMath::Lerp(FromOff, ToOff, T)))
+			{
+				return true;
+			}
+		}
+		return false;
+	};
+
+	// ClearSign is the side that leaves a skyway's ramp and pillars alone. The spans match
+	// BuildStreetFun, padded so the truck is already in the lane before the ramp starts.
+	auto SkywayClearSign = [](int32 Axis, int32 Index, float Along, float& ClearSign) -> bool
+	{
+		if (Axis == 0 && Index == 1 && Along >= -16000.0f && Along <= 34000.0f)
+		{
+			ClearSign = -1.0f;
+			return true;
+		}
+		if (Axis == 0 && Index == -1 && Along >= -6000.0f && Along <= 54000.0f)
+		{
+			ClearSign = 1.0f;
+			return true;
+		}
+		if (Axis == 1 && Index == 1 && Along >= -36000.0f && Along <= 16000.0f)
+		{
+			ClearSign = 1.0f;
+			return true;
+		}
+		return false;
+	};
+
+	auto PreferSign = [&](int32 Axis, int32 Index, float Along) -> float
+	{
+		float Sky = 1.0f;
+		if (SkywayClearSign(Axis, Index, Along, Sky))
+		{
+			return Sky;
+		}
+		const int32 Seg = FMath::Clamp(FMath::FloorToInt(Along / S), -Radius, Radius - 1);
+		// Same toward-zero remainder the ramp builder uses. Do not wrap negatives to positive.
+		const int32 Band = (Index + Seg) % 4;
+		const float Kicker = Band < 2 ? -1.0f : 1.0f;
+		return -Kicker;
+	};
+
+	const bool bOnVertRoad = DistVert <= RoadHalf + 250.0f;
+	const bool bOnHorizRoad = DistHoriz <= RoadHalf + 250.0f;
+	bool bFollowVert;
+	if (bOnVertRoad && bOnHorizRoad)
+	{
+		// A crossing. Keep the street the nose is already on, so the lane change does not hop grids.
+		const FVector Fwd = GetActorForwardVector();
+		bFollowVert = FMath::Abs(Fwd.Y) >= FMath::Abs(Fwd.X);
+	}
+	else
+	{
+		bFollowVert = bOnVertRoad || (!bOnHorizRoad && DistVert <= DistHoriz);
+	}
+	// Reach the south rim, then the west rim, then the lot. Turning only happens at the rim.
+	if (bFollowVert && NearIx > -Radius && (Local.Y - Edge) < 1400.0f && bOnVertRoad)
+	{
+		bFollowVert = false;
+	}
+	else if (!bFollowVert && NearIy > -Radius && (Local.X - Edge) < 1400.0f && bOnHorizRoad)
+	{
+		bFollowVert = true;
+	}
+
+	const int32 Axis = bFollowVert ? 1 : 0;
+	int32 Index = bFollowVert ? NearIx : NearIy;
+	if (bFollowVert && (Local.X - Edge) < 1400.0f)
+	{
+		Index = -Radius;
+	}
+	else if (!bFollowVert && (Local.Y - Edge) < 1400.0f)
+	{
+		Index = -Radius;
+	}
+	const float AlongNow = Axis == 0 ? Local.X : Local.Y;
+	const float Street = static_cast<float>(Index) * S;
+	const float AcrossNow = Axis == 0 ? (Local.Y - Street) : (Local.X - Street);
+	const bool bOnThisRoad = FMath::Abs(AcrossNow) <= RoadHalf + 400.0f;
+
+	FVector2D Way = Yard;
+	bool bClear = true;
+	bool bCutting = false;
+	float LaneRoom = 11000.0f;
+	const bool bNearLot = DistYard < 14000.0f && NearIx <= -2 && NearIy <= -2;
+	if (bNearLot && RiseAt(Yard) < 40.0f)
+	{
+		bCutting = true;
+		OutLane = 0.0f;
+	}
+	else
+	{
+		// Look far enough that a skyway ramp is in view before the truck has to leave its lane.
+		// A lane change is a shallow slide along a probed line. It is not a diagonal across the
+		// kicker and the parked cars. If that line is blocked, stay put or stop.
+		const float Horizon = 11000.0f;
+		const float Travel = bOnThisRoad && AlongNow > Edge + 800.0f ? -1.0f : 0.0f;
+		const float RunTo = Travel < 0.0f ? FMath::Max(Edge, AlongNow - Horizon) : AlongNow;
+		const float WantSign = PreferSign(Axis, Index, RunTo);
+		const bool bInLane = FMath::Abs(AcrossNow) >= 1150.0f && FMath::Abs(AcrossNow) <= 1900.0f;
+		const float Hold = bInLane
+			? FMath::Sign(AcrossNow) * FMath::Clamp(FMath::Abs(AcrossNow), 1280.0f, 1840.0f)
+			: (FMath::Abs(AcrossNow) < 450.0f ? 0.0f : FMath::Clamp(AcrossNow, -1840.0f, 1840.0f));
+		float Offset = WantSign * 1620.0f;
+		float TargetAlong = AlongNow - 200.0f;
+		bClear = false;
+		LaneRoom = 0.0f;
+
+		if (Travel < 0.0f)
+		{
+			const float HoldOpen = OpenAhead(Axis, Index, AlongNow, Horizon, Hold);
+			float Sky = 1.0f;
+			const bool bSky = SkywayClearSign(Axis, Index, RunTo, Sky) || SkywayClearSign(Axis, Index, AlongNow, Sky);
+			const float Mags[] = { 1620.0f, 1740.0f, 1500.0f, 1840.0f, 1360.0f };
+			auto Allowed = [&](float Off) -> bool
+			{
+				if (!bSky)
+				{
+					return true;
+				}
+				// Pillars on the deck's side reach about 12 m off centre. Only the far lane is open there.
+				return FMath::Sign(Off) == Sky || FMath::Abs(Off) >= 1580.0f;
+			};
+			auto Take = [&](float Off, float AimAlong, float Room)
+			{
+				Offset = Off;
+				TargetAlong = AimAlong;
+				LaneRoom = Room;
+				bClear = true;
+			};
+			auto TrySide = [&](float Sign) -> bool
+			{
+				for (const float Mag : Mags)
+				{
+					const float Off = Sign * Mag;
+					if (!Allowed(Off))
+					{
+						continue;
+					}
+					// Already in this lane. A real change is to the other side, or out of the centre.
+					if (FMath::Abs(Off - Hold) < 280.0f)
+					{
+						continue;
+					}
+					// In a lane, the turn lingers there, so the slide has to finish before whatever
+					// is ahead. Mid-crossing, the corridor itself is the check.
+					const float Budget = bInLane ? HoldOpen : 8000.0f;
+					if (Budget < 600.0f)
+					{
+						continue;
+					}
+					const float Delta = FMath::Abs(Off - Hold);
+					float Forward = Delta / FMath::Tan(FMath::DegreesToRadians(22.0f));
+					if (Forward > Budget - 400.0f)
+					{
+						Forward = Budget - 400.0f;
+					}
+					if (Forward < 450.0f)
+					{
+						continue;
+					}
+					if (FMath::RadiansToDegrees(FMath::Atan2(Delta, Forward)) > 38.0f)
+					{
+						continue;
+					}
+					const float To = FMath::Max(Edge, AlongNow - Forward);
+					if (CorridorBad(Axis, Index, AlongNow, To, Hold, Off))
+					{
+						continue;
+					}
+					const float Need = FMath::Min(4200.0f, Forward);
+					if (OpenAhead(Axis, Index, AlongNow, Need, Off) < Need - 100.0f)
+					{
+						continue;
+					}
+					Take(Off, To, bInLane ? FMath::Min(HoldOpen, 2800.0f) : 2800.0f);
+					return true;
+				}
+				return false;
+			};
+
+			const bool bHoldGood = bInLane && HoldOpen >= Horizon - 50.0f && FMath::Sign(Hold) == WantSign;
+			if (bHoldGood)
+			{
+				Take(Hold, RunTo, Horizon);
+			}
+			else if (!TrySide(WantSign) && !TrySide(-WantSign))
+			{
+				if (HoldOpen > 900.0f)
+				{
+					// No clear slide yet. Roll along the line already under the truck and look again.
+					Take(Hold, AlongNow - FMath::Max(400.0f, HoldOpen - 700.0f), HoldOpen);
+				}
+				else
+				{
+					// Blocked. Point down the street and do not roll into it.
+					Take(FMath::Abs(Hold) > 400.0f ? Hold : WantSign * 1620.0f, AlongNow - 200.0f, 0.0f);
+					bClear = false;
+					LaneRoom = 0.0f;
+				}
+			}
+		}
+		else
+		{
+			Offset = bInLane ? Hold : WantSign * 1620.0f;
+			TargetAlong = AlongNow;
+			LaneRoom = 2000.0f;
+			bClear = true;
+		}
+		OutLane = Offset;
+		Way = Axis == 0 ? FVector2D(TargetAlong, Street + Offset) : FVector2D(Street + Offset, TargetAlong);
+	}
+
+	const FVector2D To = Way - Local;
+	const float Dist = To.Size();
+	if (DistYard < 900.0f || (Dist < 80.0f && DistYard < 1600.0f))
+	{
+		return true;
+	}
+
+	const float DesiredYaw = FVector(To.X, To.Y, 0.0f).Rotation().Yaw;
+	const float YawError = FMath::FindDeltaAngleDegrees(GetActorRotation().Yaw, DesiredYaw);
+	OutSteer = FMath::Clamp(YawError / 28.0f, -1.0f, 1.0f);
+
+	const float Turn = FMath::Abs(YawError);
+	if (DistYard < 2800.0f)
+	{
+		OutSpeedCap = 480.0f;
+		OutThrottle = 0.35f;
+	}
+	else if (DistYard < 8000.0f || Turn > 40.0f)
+	{
+		OutSpeedCap = Turn > 55.0f ? 1100.0f : 1600.0f;
+		OutThrottle = 0.65f;
+	}
+	else
+	{
+		OutSpeedCap = 2800.0f;
+		OutThrottle = 1.0f;
+	}
+	if (!bCutting)
+	{
+		const float LatErr = FMath::Abs(AcrossNow - OutLane);
+		if (!bClear)
+		{
+			// A blocked stretch is a stop. Creeping is how the truck climbed a parked car.
+			OutSteer = 0.0f;
+			OutSpeedCap = 0.0f;
+			OutThrottle = 0.0f;
+		}
+		else if (LatErr > 500.0f)
+		{
+			// Shallow slide into the next lane. Slow enough that the body stays on the probed line.
+			OutSpeedCap = FMath::Min(OutSpeedCap, 1000.0f);
+		}
+		else if (LatErr > 350.0f || LaneRoom < 2200.0f)
+		{
+			OutSpeedCap = FMath::Min(OutSpeedCap, 800.0f);
+		}
+	}
+	return true;
+}
+
 void ADCCRover::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
@@ -1096,14 +1503,27 @@ void ADCCRover::Tick(float DeltaSeconds)
 				- (PC->IsInputKeyDown(EKeys::A) ? 1.0f : 0.0f);
 
 			const bool bSpaceDown = PC->IsInputKeyDown(EKeys::SpaceBar);
-			VerticalInput = (bSpaceDown ? 1.0f : 0.0f)
-				- (PC->IsInputKeyDown(EKeys::LeftControl) ? 1.0f : 0.0f);
+			const bool bShiftDown = PC->IsInputKeyDown(EKeys::LeftShift);
+			const bool bCtrlDown = PC->IsInputKeyDown(EKeys::LeftControl);
+			const bool bMouseDown = PC->IsInputKeyDown(EKeys::LeftMouseButton);
+			VerticalInput = (bSpaceDown ? 1.0f : 0.0f) - (bCtrlDown ? 1.0f : 0.0f);
 
-			if (bSpaceDown && !bWasSpaceDownLastTick && CanEngageFlight())
+			// Overhead, these four pick a trick. A and D stay on the magnet. Flight stays airborne-only.
+			if (RallyTrick == 2)
+			{
+				if (bSpaceDown && !bWasSpaceDownLastTick) { Server_RallyPickTrick(1); }
+				if (bShiftDown && !bWasShiftDownLastTick) { Server_RallyPickTrick(2); }
+				if (bCtrlDown && !bWasCtrlDownLastTick) { Server_RallyPickTrick(3); }
+				if (bMouseDown && !bWasMouseDownLastTick) { Server_RallyPickTrick(4); }
+			}
+			else if (bSpaceDown && !bWasSpaceDownLastTick && CanEngageFlight())
 			{
 				EngageFlight();
 			}
 			bWasSpaceDownLastTick = bSpaceDown;
+			bWasShiftDownLastTick = bShiftDown;
+			bWasCtrlDownLastTick = bCtrlDown;
+			bWasMouseDownLastTick = bMouseDown;
 		}
 	}
 	else if (bAutoPilotActive && HasAuthority())
@@ -1179,6 +1599,41 @@ void ADCCRover::Tick(float DeltaSeconds)
 
 	if (bControllable)
 	{
+		// Overhead balance takes A and D for the magnet, so SteerInput is not the wheel.
+		// The truck drives itself to the yard on a separate throttle and steer. Struggle still coasts.
+		float YardThrottle = 0.0f;
+		float YardSteer = 0.0f;
+		float YardCap = 0.0f;
+		float YardDist = 0.0f;
+		float YardLane = 0.0f;
+		const bool bYardDrive = RallyTrick == 2 && Driver
+			&& (IsLocallyControlled() || HasAuthority())
+			&& ComputeYardDrive(YardThrottle, YardSteer, YardCap, YardDist, YardLane);
+		if (bYardDrive)
+		{
+			bDrifting = false;
+		}
+		if (RallyTrick != 2)
+		{
+			bRallyYardNoted = false;
+		}
+		else if (bYardDrive && HasAuthority() && GetWorld())
+		{
+			const double Clock = GetWorld()->GetTimeSeconds();
+			if (Clock >= RallyYardLogAt)
+			{
+				RallyYardLogAt = Clock + 1.0;
+				UE_LOG(LogTemp, Log, TEXT("[DCC Drive] yard path dist %.0f cap %.0f lane %.0f at %s"),
+					YardDist, YardCap, YardLane, *GetActorLocation().ToCompactString());
+				if (!bRallyYardNoted && YardDist < 7200.0f)
+				{
+					bRallyYardNoted = true;
+					UE_LOG(LogTemp, Log, TEXT("[DCC Drive] yard path in the lot, dist %.0f"), YardDist);
+				}
+			}
+		}
+		const float UsedThrottle = bYardDrive ? YardThrottle : ThrottleInput;
+
 		// --- speed ramp ----------------------------------------------------
 		// Throttle winds SpeedRamp up over SecondsToReachCruise rather than
 		// jumping straight to top speed, so the rover accelerates instead of
@@ -1189,7 +1644,7 @@ void ADCCRover::Tick(float DeltaSeconds)
 		const float CruiseSeconds = bWeight ? 9.4f : SecondsToReachCruise;
 		const float CoastMul = bWeight ? 0.48f : 1.6f;
 		const float RampRate = CruiseSeconds > 0.0f ? 1.0f / CruiseSeconds : 10.0f;
-		if (!FMath::IsNearlyZero(ThrottleInput))
+		if (!FMath::IsNearlyZero(UsedThrottle))
 		{
 			SpeedRamp = FMath::Clamp(SpeedRamp + RampRate * DeltaSeconds, 0.0f, 1.0f);
 		}
@@ -1222,6 +1677,18 @@ void ADCCRover::Tick(float DeltaSeconds)
 			Movement->MaxSpeed = SpeedScale * (bBoosting
 				? BoostSpeed
 				: FMath::Max(320.0f, MaxCruiseSpeed * FMath::Max(SpeedRamp, 0.06f)));
+			if (bYardDrive)
+			{
+				Movement->MaxSpeed = FMath::Max(0.0f, YardCap);
+				if (YardCap <= 1.0f)
+				{
+					Movement->StopMovementImmediately();
+				}
+				else if (Movement->Velocity.Size() > YardCap)
+				{
+					Movement->Velocity = Movement->Velocity.GetClampedToMaxSize(YardCap);
+				}
+			}
 		}
 
 		// --- steering ------------------------------------------------------
@@ -1244,29 +1711,33 @@ void ADCCRover::Tick(float DeltaSeconds)
 		}
 		const float TurnRate = TurnRateDegreesPerSecond * (bDrifting ? DriftTurnMultiplier : 1.0f);
 
-		// Struggle and the overhead flip both take A and D. The truck coasts.
-		if (!FMath::IsNearlyZero(SteerInput) && RallyTrick == 0)
+		// Struggle takes A and D, so the truck coasts. Overhead, the yard steer turns it
+		// and SteerInput stays on the magnet.
+		const float Wheel = bYardDrive ? YardSteer : SteerInput;
+		if (!FMath::IsNearlyZero(Wheel) && (bYardDrive || RallyTrick == 0))
 		{
 			AddActorWorldRotation(FRotator(0.0f,
-				SteerInput * TurnRate * SteerScale * DeltaSeconds, 0.0f));
+				Wheel * TurnRate * SteerScale * DeltaSeconds, 0.0f));
 			// A hard corner scrubs a little speed. A weighted truck keeps more of it unless it is drifting.
-			if (Speed > 800.0f)
+			if (!bYardDrive && Speed > 800.0f)
 			{
 				const float Scrub = (bWeight && DriftGrip > 0.6f) ? 0.04f : 0.12f;
-				SpeedRamp = FMath::Max(0.0f, SpeedRamp - FMath::Abs(SteerInput) * Scrub * DeltaSeconds);
+				SpeedRamp = FMath::Max(0.0f, SpeedRamp - FMath::Abs(Wheel) * Scrub * DeltaSeconds);
 			}
 		}
 
 		// --- throttle ------------------------------------------------------
-		if (!FMath::IsNearlyZero(ThrottleInput) || bBoosting)
+		if (!FMath::IsNearlyZero(UsedThrottle) || (bBoosting && !bYardDrive))
 		{
-			const float Drive = bBoosting ? 1.0f : ThrottleInput;
+			const float Drive = (!bYardDrive && bBoosting) ? 1.0f : UsedThrottle;
 			FVector Direction = GetActorForwardVector();
 
 			// Drifting keeps part of the OLD velocity direction, so the car
 			// slides wide through a turn instead of tracking its nose exactly.
 			// Grip returns on its own after Shift comes up, so a long drift is a line you hold.
-			const float Slide = bWeight ? FMath::Lerp(0.0f, 0.78f, 1.0f - DriftGrip) : (bDrifting ? DriftSlide : 0.0f);
+			// The yard run tracks the street, so it does not slide.
+			const float Slide = bYardDrive ? 0.0f
+				: (bWeight ? FMath::Lerp(0.0f, 0.78f, 1.0f - DriftGrip) : (bDrifting ? DriftSlide : 0.0f));
 			if (Slide > 0.04f && Speed > 200.0f)
 			{
 				const FVector Heading = GetVelocity().GetSafeNormal();
@@ -2472,6 +2943,16 @@ void ADCCRover::StopAutoPilot()
 	// Deliberately NOT clearing AutoPilotLapsCompleted: ADCCRaceTrack reads it
 	// after the finish to decide the placings, and a race is only over once
 	// somebody crossed the line. StartAutoPilotRoute zeroes it for the next run.
+}
+
+void ADCCRover::Server_RallyPickTrick_Implementation(uint8 Move)
+{
+	if (RallyTrick != 2 || !Driver || Move < 1 || Move > 4)
+	{
+		return;
+	}
+	RallyTrickQueued = Move;
+	bRallyTrickPop = true;
 }
 
 void ADCCRover::Server_DriveSync_Implementation(FVector_NetQuantize10 Location, FRotator Rotation, FVector_NetQuantize10 Velocity, float Throttle, float Steer)

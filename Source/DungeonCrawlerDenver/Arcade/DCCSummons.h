@@ -20,8 +20,8 @@ class UDataTable;
  *  - Variants (2026-11-17, Zoe: "shining variants and shadow versions, just the regular models but with a shiny
  *    overlay"): Shiny (a glowing overlay in the rarity's colour; likelier the rarer the friend), Shadow (a dark overlay
  *    with lit edges and a violet light), and, on top of either, Armed (comes holding a weapon).
- *  - The ally is a level 1 copy of that friend. It follows whoever summoned it, in the Den and into Gate Run and Dead
- *    Air, until it goes down. At most MaxAllies each. Kept in memory on the host for as long as the party plays.
+ *  - The ally is a level 1 copy of that friend. It follows whoever summoned it, in the Safe Room and into every
+ *    game, until it goes down. At most MaxAllies each. Kept in memory on the host for as long as the party plays.
  */
 namespace DCCSummons
 {
@@ -66,6 +66,8 @@ namespace DCCSummons
 	ADCCSummonedAlly* SpawnAlly(UWorld* World, const FSummon& Summon, ADCCCharacterBase* Owner, const FVector& Where, float DropHeight,
 		const FVector& Exit = FVector(0.0f, 1.0f, 0.0f));
 
-	/** Server, every arena tick: bring each player's allies into games that allow them, and forget the ones that went down. */
+	/** Server. Spawn each player's summoned allies beside them, in whatever game they just entered. Safe to call often. */
+	void BringAlong(UWorld* World);
+	/** Server, every arena tick. */
 	void TickArena(ADCCArcadeArena* Arena);
 }

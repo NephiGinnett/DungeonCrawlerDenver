@@ -95,6 +95,12 @@ enum class EDCCNPCInteractionOption : uint8
 	 */
 	RaceBet,
 
+	/** Casino Cascade staff. Sits the crawler at that employee's table. */
+	PlayGame,
+
+	/** Casino Cascade staff. The rules, spoken once. The menu stays open. */
+	RequestRules,
+
 	Leave,
 
 	MAX UMETA(Hidden)

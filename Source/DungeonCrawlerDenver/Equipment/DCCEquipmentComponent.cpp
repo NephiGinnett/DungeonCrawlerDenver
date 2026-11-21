@@ -1,6 +1,7 @@
 #include "Equipment/DCCEquipmentComponent.h"
 
 #include "Characters/DCCCharacterBase.h"
+#include "Items/DCCInventoryComponent.h"
 #include "Items/DCCPickup.h"
 #include "Stats/DCCStatsComponent.h"
 #include "Combat/DCCGameState.h"
@@ -112,6 +113,22 @@ FName UDCCEquipmentComponent::GetEquippedId(EDCCEquipmentSlot Slot) const
 	return NAME_None;
 }
 
+namespace
+{
+	// A piece you were wearing always fits in the bag, even when the bag was already full.
+	// Equipping over it, or taking it off, must not delete it.
+	void ReturnWornToBag(AActor* Owner, FName ItemId)
+	{
+		ADCCCharacterBase* Crawler = Cast<ADCCCharacterBase>(Owner);
+		if (!Crawler || !Crawler->Inventory || ItemId.IsNone())
+		{
+			UE_LOG(LogTemp, Log, TEXT("[DCC Equip] %s had nowhere to go back to"), *ItemId.ToString());
+			return;
+		}
+		Crawler->Inventory->AddGearRecord(ItemId);
+	}
+}
+
 bool UDCCEquipmentComponent::Equip(FName ItemId)
 {
 	AActor* Owner = GetOwner();
@@ -153,11 +170,17 @@ bool UDCCEquipmentComponent::Equip(FName ItemId)
 	}
 
 	// One item per slot: replacing is the normal case, so it is handled here
-	// rather than making every caller unequip first.
+	// rather than making every caller unequip first. The piece that was there
+	// goes back to the bag. Callers used to drop it on the floor of the function.
+	const FName Previous = GetEquippedId(Item.Slot);
 	Equipped.RemoveAll([&Item](const FDCCEquippedItem& Existing)
 	{
 		return Existing.Slot == Item.Slot;
 	});
+	if (!Previous.IsNone() && Previous != ItemId)
+	{
+		ReturnWornToBag(Owner, Previous);
+	}
 
 	FDCCEquippedItem Entry;
 	Entry.Slot = Item.Slot;
@@ -207,6 +230,7 @@ bool UDCCEquipmentComponent::Unequip(EDCCEquipmentSlot Slot)
 
 	// Same reasoning as Equip: spill before removing, or a container's contents
 	// are simply gone the moment the container itself is taken off.
+	const FName Was = GetEquippedId(Slot);
 	for (const FDCCEquippedItem& Existing : Equipped)
 	{
 		if (Existing.Slot == Slot && !Existing.Contents.IsEmpty())
@@ -214,6 +238,9 @@ bool UDCCEquipmentComponent::Unequip(EDCCEquipmentSlot Slot)
 			SpillContainerContents(Existing);
 		}
 	}
+
+	// Into the bag before the slot forgets it, so a failed record cannot lose the piece.
+	ReturnWornToBag(Owner, Was);
 
 	const int32 Removed = Equipped.RemoveAll([Slot](const FDCCEquippedItem& Existing)
 	{

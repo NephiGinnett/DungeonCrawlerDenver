@@ -519,6 +519,8 @@ public:
 	TArray<uint8> ReactionChoices;
 	bool bReactionChoicesSent = false;
 	uint8 GetReaction() const { return ActiveReaction; }
+	/** Right mouse held on a ranged weapon. Local. Left click fires only while this is true. */
+	bool IsAiming() const { return bIsAiming; }
 	float GetReactionStart() const { return ReactionStartTime; }
 	uint8 ActiveReaction = 0;
 	float ReactionStartTime = -100.0f;
@@ -818,6 +820,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DCC|Interaction")
 	void CloseInteraction();
 
+	/** Talk, loot, vendor, emote, and the interaction list. Not the Tab sheet, and not a casino seat. */
+	bool HasSideMenu() const;
+	void CloseSideMenus();
+	void LeaveCasinoSeat();
+
 	// -------------------------------------------------------------------------
 	// NPC MENU - "E on a non-combat NPC" (ADCCDialogueNPC and its ADCCVendorNPC
 	// subclass), not layered onto InteractionTarget above for the same reason
@@ -831,6 +838,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "DCC|Interaction")
 	ADCCDialogueNPC* GetNPCInteractionTarget() const { return NPCInteractionTarget; }
 
+	/** True when the crosshair is on a speaker, so E opens their menu instead of a casino seat. */
+	bool IsDialogueNPCUnderCursor() const { return FindDialogueNPCUnderCursor() != nullptr; }
+
 	UFUNCTION(BlueprintPure, Category = "DCC|Interaction")
 	const TArray<EDCCNPCInteractionOption>& GetNPCInteractionOptions() const { return NPCInteractionOptions; }
 
@@ -840,6 +850,9 @@ public:
 	/** False: the top menu (Talk/Shop/Quests/Leave). True: the offered-quests sub-page. */
 	UFUNCTION(BlueprintPure, Category = "DCC|Interaction")
 	bool IsNPCShowingQuests() const { return bNPCShowingQuests; }
+
+	/** Casino Cascade's drink list, on the same menu. Three drinks, then Back. */
+	bool IsCasinoShopOpen() const { return bCasinoShopOpen; }
 
 	/**
 	 * NPCInteractionTarget's OfferedQuestIds, filtered down to ones not
@@ -1032,6 +1045,14 @@ public:
 	/** Seconds until the next death-save roll. 0 when not downed. */
 	UFUNCTION(BlueprintPure, Category = "DCC|Downed")
 	float GetTimeUntilNextDeathSave() const;
+
+	/**
+	 * The downed crawler chose not to wait. The next death-save is a failure
+	 * right now, and the usual ending follows: a tale-floor rewrite if one is
+	 * left, otherwise the body stays down. Space, or the button on the down screen.
+	 */
+	UFUNCTION(Server, Reliable)
+	void Server_BleedOut();
 
 	/**
 	 * Server only. Starts the revive channel on Target - the one mechanic
@@ -1277,6 +1298,10 @@ public:
 
 	/** Dev. Plays the attack clip for whatever is in the main hand. */
 	void DebugSwing();
+
+	/** Any player, from the menu. Takes the whole party back to the Safe Room. */
+	UFUNCTION(Server, Reliable)
+	void Server_BailToLobby();
 
 	/**
 	 * Drinks one stowed consumable from this crawler's own pack - the Tab
@@ -1859,7 +1884,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Combat", meta = (ClampMin = "0.1", ClampMax = "1.0"))
 	float AimZoomFactor = 0.7f;
 
-	void ReleaseClimbIfClimbing() { if (IsClimbing()) { ReleaseClimb(); } }
+	void ReleaseClimbIfClimbing();
 
 	void AcceptPrompt() { ConfirmPendingClimb(true); }
 	void DeclinePrompt() { ConfirmPendingClimb(false); }
@@ -2200,14 +2225,17 @@ protected:
 	/** Server-side: swing now, or park the intent if the world is paused. */
 	void ResolveOrQueueAttack();
 
+	/** Server-side. The main-hand swing, with nobody to hit. No roll, no damage, no skill mark. */
+	void PracticeSwing();
+
 	/** Server-side: cast now, or park the intent if the world is paused. */
 	void ResolveOrQueueSkill(FName SkillId, AActor* Target);
 
 	/**
 	 * Server-side: re-validates NominatedTarget (alive, hostile, in range -
 	 * never trusted outright) then fires now, or parks the intent if the
-	 * world is paused. A target that fails validation still fires - see
-	 * PerformAttack(nullptr) - same as missing with a melee swing.
+	 * world is paused. A target that fails validation still plays the swing,
+	 * with no roll and no damage.
 	 */
 	void ResolveOrQueueRangedAttack(ADCCCharacterBase* NominatedTarget);
 
@@ -2388,6 +2416,15 @@ public:
 	void Server_RequestRaceBet(ADCCDialogueNPC_RaceBookie* Bookie);
 	void Server_RequestRaceBet_Implementation(ADCCDialogueNPC_RaceBookie* Bookie);
 
+	/**
+	 * Casino Cascade. The client names the verb. The server checks the seat.
+	 * 1 sit at a table (Arg is the employee's post). 2 the highlighted row.
+	 * 3 stand up. 4 buy a drink (Arg is the drink).
+	 */
+	UFUNCTION(Server, Reliable)
+	void Server_CasinoAction(uint8 Action, int32 Arg);
+	void Server_CasinoAction_Implementation(uint8 Action, int32 Arg);
+
 	/** Translates one consumable's Effects into calls on this character's own Stats. Server only. */
 	void ApplyConsumableEffects(const TArray<FDCCConsumableEffect>& Effects);
 
@@ -2414,6 +2451,9 @@ public:
 
 	/** False: top menu. True: the offered-quests submenu owns NPCInteractionIndex instead. */
 	bool bNPCShowingQuests = false;
+
+	/** Casino staff shop: three drinks and Back, using NPCInteractionIndex. */
+	bool bCasinoShopOpen = false;
 
 	/** Local only - inspecting somebody's kit changes nothing about the world. */
 	UPROPERTY(Transient)
@@ -2768,6 +2808,11 @@ public:
 	bool bFacingCamera = false;
 	bool bFacingCameraWasControlRotation = true;
 	void TickFacingCamera(float DeltaSeconds);
+	/** Body cam zoom. Local FOV only, and only while the cam is rolling. */
+	void NudgeBodyCamZoom(int32 Delta);
+	void RestoreBodyCamZoom();
+	float BodyCamBaseFOV = 90.0f;
+	bool bBodyCamZoomed = false;
 
 	UFUNCTION(Server, Reliable)
 	void Server_SetRecording(bool bRecording);

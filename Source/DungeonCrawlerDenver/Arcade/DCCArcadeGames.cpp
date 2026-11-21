@@ -41,6 +41,7 @@
 #include "Arcade/DCCFireworks.h"
 #include "Arcade/DCCClimbAmbience.h"
 #include "Arcade/DCCDenDecor.h"
+#include "Arcade/DCCCasino.h"
 #include "Arcade/DCCChopShop.h"
 #include "Arcade/DCCRallyAmbience.h"
 #include "Stats/DCCStatsComponent.h"
@@ -94,11 +95,10 @@ void ADCCArcadeLobby::BuildLocal()
 	const int32 PadCount = DCCArcade::Games().Num();
 	const float L = FMath::Max(2600.0f, (PadCount - 1) * 500.0f + 1100.0f), W = 1700.0f, H = 900.0f;
 	Block(O + FVector(0, 0, -20), FVector(L * 2, W * 2, 40), FLinearColor(0.06f, 0.04f, 0.10f));
-	Block(O + FVector(0, 0, 1), FVector(L * 2 - 300, 300, 4), FLinearColor(0.5f, 0.1f, 0.6f));
-	Block(O + FVector(0, W + 20, H * 0.5f), FVector(L * 2 + 80, 40, H), FLinearColor(0.08f, 0.06f, 0.12f));
-	Block(O + FVector(0, -W - 20, H * 0.5f), FVector(L * 2 + 80, 40, H), FLinearColor(0.08f, 0.06f, 0.12f));
-	Block(O + FVector(L + 20, 0, H * 0.5f), FVector(40, W * 2, H), FLinearColor(0.08f, 0.06f, 0.12f));
-	Block(O + FVector(-L - 20, 0, H * 0.5f), FVector(40, W * 2, H), FLinearColor(0.08f, 0.06f, 0.12f));
+	// Carpet, the ceiling, and the east door into Casino Cascade are Dress(), at the end of this function.
+	if (AActor* North = Block(O + FVector(0, W + 20, H * 0.5f), FVector(L * 2 + 80, 40, H), FLinearColor(0.08f, 0.06f, 0.12f))) { Paint(North, TEXT("/Game/Synthwave_city/Material/MI_synthwave_wall")); }
+	if (AActor* South = Block(O + FVector(0, -W - 20, H * 0.5f), FVector(L * 2 + 80, 40, H), FLinearColor(0.08f, 0.06f, 0.12f))) { Paint(South, TEXT("/Game/Synthwave_city/Material/MI_synthwave_wall1")); }
+	if (AActor* West = Block(O + FVector(-L - 20, 0, H * 0.5f), FVector(40, W * 2, H), FLinearColor(0.08f, 0.06f, 0.12f))) { Paint(West, TEXT("/Game/Synthwave_city/Material/MI_synthwave_wall3")); }
 
 	// Text faces +X at yaw 0; the north wall's signs turn to face the room (-Y).
 	Sign(O + FVector(0, W - 40, 780), -90.0f, TEXT("THE SAFE ROOM"), FColor(255, 120, 230), 90.0f);
@@ -228,6 +228,19 @@ void ADCCArcadeLobby::BuildLocal()
 	Light(Chop + FVector(-300, -360, 320), FLinearColor(1.0f, 0.5f, 0.2f), 2500.0f, 500.0f);
 
 	BuildTubes();
+	ADCCCasinoCascade::Dress(this);
+}
+
+void ADCCArcadeLobby::ServerBegin()
+{
+	UWorld* World = GetWorld();
+	if (!World || !HasAuthority())
+	{
+		return;
+	}
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	World->SpawnActor<ADCCCasinoCascade>(GetActorLocation(), FRotator::ZeroRotator, Params);
 }
 
 void ADCCArcadeLobby::TickPads(float DeltaSeconds)
@@ -497,29 +510,89 @@ void ADCCArcadeLobby::ClientTick(float DeltaSeconds)
 			}
 		}
 	}
-	// The Den's playlist: the songs already in the game, one after another, low, with a breath between them.
+	// The Den's playlist, quiet. Inside Casino Cascade only that room's song plays.
 	if (UWorld* MusicWorld = GetWorld(); MusicWorld && MusicWorld->GetNetMode() != NM_DedicatedServer)
 	{
+		constexpr float DenMusicVolume = 0.10f;
+		constexpr float CasinoMusicVolume = 0.34f;
 		const double Now = MusicWorld->GetTimeSeconds();
-		if (Now >= NextDenSong && (!DenSong.IsValid() || !DenSong->IsPlaying()))
+		if (!bLoggedDenVolume)
 		{
-			static const TCHAR* Playlist[] = {
-				TEXT("/Game/Songs/Meet_the_Whoops.Meet_the_Whoops"), TEXT("/Game/Songs/Swept_Away.Swept_Away"),
-				TEXT("/Game/Songs/Repo_Rally.Repo_Rally"), TEXT("/Game/Songs/Platinum_Dust_Mine.Platinum_Dust_Mine"),
-			};
-			if (DenSongIndex < 0)
+			bLoggedDenVolume = true;
+			UE_LOG(LogTemp, Log, TEXT("[DCC Den] music volume %.2f"), DenMusicVolume);
+		}
+		bool bInCasino = false;
+		const APlayerController* MusicPC = MusicWorld->GetFirstPlayerController();
+		const APawn* MusicPawn = MusicPC && MusicPC->IsLocalController() ? MusicPC->GetPawn() : nullptr;
+		if (MusicPawn)
+		{
+			if (const ADCCCasinoCascade* Casino = ADCCCasinoCascade::Get(MusicWorld))
 			{
-				DenSongIndex = FMath::RandRange(0, UE_ARRAY_COUNT(Playlist) - 1);
+				bInCasino = Casino->Contains(MusicPawn->GetActorLocation());
 			}
-			NextDenSong = Now + 5.0;
-			for (int32 Try = 0; Try < UE_ARRAY_COUNT(Playlist); ++Try)
+		}
+		if (bInCasino)
+		{
+			if (DenSong.IsValid() && DenSong->IsPlaying())
 			{
-				DenSongIndex = (DenSongIndex + 1) % UE_ARRAY_COUNT(Playlist);
-				if (USoundBase* Song = LoadObject<USoundBase>(nullptr, Playlist[DenSongIndex]))
+				DenSong->SetVolumeMultiplier(0.0f);
+			}
+			// Hold the playlist so a finished Den song does not start under the pit.
+			if (NextDenSong < Now + 60.0)
+			{
+				NextDenSong = Now + 3600.0;
+			}
+			if (!CasinoSong.IsValid() || !CasinoSong->IsPlaying())
+			{
+				if (USoundBase* Song = LoadObject<USoundBase>(nullptr, TEXT("/Game/Songs/Casino_Cascade.Casino_Cascade")))
 				{
-					DenSong = UGameplayStatics::SpawnSound2D(MusicWorld, Song, 0.22f, 1.0f, 0.0f, nullptr, false, true);
-					NextDenSong = Now + FMath::Max(20.0f, Song->GetDuration()) + 4.0;
-					break;
+					CasinoSong = UGameplayStatics::SpawnSound2D(MusicWorld, Song, CasinoMusicVolume, 1.0f, 0.0f, nullptr, false, true);
+					UE_LOG(LogTemp, Log, TEXT("[DCC Casino] song on (%s, %.0f s, volume %.2f)"),
+						*Song->GetName(), Song->GetDuration(), CasinoMusicVolume);
+				}
+				else if (!bCasinoSongWarned)
+				{
+					bCasinoSongWarned = true;
+					UE_LOG(LogTemp, Warning, TEXT("[DCC Casino] /Game/Songs/Casino_Cascade is not imported."));
+				}
+			}
+		}
+		else
+		{
+			if (CasinoSong.IsValid() && CasinoSong->IsPlaying())
+			{
+				CasinoSong->Stop();
+				UE_LOG(LogTemp, Log, TEXT("[DCC Casino] song off"));
+			}
+			if (DenSong.IsValid() && DenSong->IsPlaying())
+			{
+				DenSong->SetVolumeMultiplier(DenMusicVolume);
+			}
+			if (NextDenSong > Now + 60.0)
+			{
+				NextDenSong = Now;
+			}
+			if (Now >= NextDenSong && (!DenSong.IsValid() || !DenSong->IsPlaying()))
+			{
+				static const TCHAR* Playlist[] = {
+					TEXT("/Game/Songs/Meet_the_Whoops.Meet_the_Whoops"), TEXT("/Game/Songs/Swept_Away.Swept_Away"),
+					TEXT("/Game/Songs/Repo_Rally.Repo_Rally"), TEXT("/Game/Songs/Platinum_Dust_Mine.Platinum_Dust_Mine"),
+				};
+				if (DenSongIndex < 0)
+				{
+					DenSongIndex = FMath::RandRange(0, UE_ARRAY_COUNT(Playlist) - 1);
+				}
+				NextDenSong = Now + 5.0;
+				for (int32 Try = 0; Try < UE_ARRAY_COUNT(Playlist); ++Try)
+				{
+					DenSongIndex = (DenSongIndex + 1) % UE_ARRAY_COUNT(Playlist);
+					if (USoundBase* Song = LoadObject<USoundBase>(nullptr, Playlist[DenSongIndex]))
+					{
+						DenSong = UGameplayStatics::SpawnSound2D(MusicWorld, Song, DenMusicVolume, 1.0f, 0.0f, nullptr, false, true);
+						NextDenSong = Now + FMath::Max(20.0f, Song->GetDuration()) + 4.0;
+						UE_LOG(LogTemp, Log, TEXT("[DCC Den] song %s at volume %.2f"), *Song->GetName(), DenMusicVolume);
+						break;
+					}
 				}
 			}
 		}
@@ -587,14 +660,36 @@ void ADCCArcadeLobby::ServerTick(float DeltaSeconds)
 		{
 			continue;
 		}
+		// A seat at Casino Cascade is not a vote, and it does not hold the room's countdown.
+		if (const ADCCCasinoCascade* Casino = ADCCCasinoCascade::Get(GetWorld()))
+		{
+			if (Casino->IsSeatedState(PC->PlayerState))
+			{
+				continue;
+			}
+		}
 		++Present;
 		for (int32 i = 0; i < Games.Num(); ++i)
 		{
 			const FVector D = Pawn->GetActorLocation() - PadCenter(i);
 			if (FMath::Abs(D.X) <= 350.0f && FMath::Abs(D.Y) <= 350.0f)
 			{
-				++Votes[i];
-				++Voted;
+				if (DCCArcade::IsSeriesOpen(PC->PlayerState, Games[i].Id))
+				{
+					++Votes[i];
+					++Voted;
+				}
+				else if (ADCCCharacterBase* Crawler = Cast<ADCCCharacterBase>(PC->GetPawn()))
+				{
+					double& Told = LockedToldAt.FindOrAdd(PC->PlayerState);
+					if (ServerTime() >= Told && Crawler->Wallet)
+					{
+						Told = ServerTime() + 5.0;
+						Crawler->Wallet->Tell(DCCArcade::SeriesLockLine(PC->PlayerState, Games[i].Id));
+						UE_LOG(LogTemp, Log, TEXT("[DCC Quest] %s stood on locked %s"),
+							*DCCProfile::KeyFor(PC->PlayerState), *Games[i].Id.ToString());
+					}
+				}
 				break;
 			}
 		}
@@ -907,9 +1002,11 @@ void ADCCArcadeClimb::BuildMountain()
 			// see it, then crawls out, around and over (ADCCCharacterBase::BeginLedgeCrawl).
 			// 4.2 m deep since 2026-11-13 (was 3.2): a longer, harder crawl out and over.
 			// Bigger again (2026-11-13): 5.6 m deep, 9 m wide.
+			// The slab is what you stand on. It used to be hidden, and the decorative rock
+			// did not cover it, so climbers met a stump they could not see (2026-11-19).
 			if (AActor* Slab = Block(Center + N * 70.0f + FVector(0, 0, -80.0f), FVector(N.X != 0 ? 560 : 900, N.Y != 0 ? 560 : 900, 200), Ledge))
 			{
-				Slab->SetActorHiddenInGame(true);
+				Paint(Slab, CliffMat);
 			}
 			// Was HalfWidth+150 and Fit (640, 980, 260) with bStretch, which pancaked the rock into a dirt band
 			// floating off the face. Uniform height, sunk into the wall. Collision slab above is unchanged.
@@ -951,7 +1048,7 @@ void ADCCArcadeClimb::BuildMountain()
 			// 2.2 m square rolled 45 degrees: juts 1.6 m and leaves 2.4 m over the ledge below, room to stand.
 			if (AActor* Jut = Shape(TEXT("Cube"), Center + N * 20.0f, FVector(720, 220, 220), Ledge, FRotator(0.0f, T.Rotation().Yaw, 45.0f), true))
 			{
-				Jut->SetActorHiddenInGame(true);
+				Paint(Jut, CliffMat);
 			}
 			// Was a stretched pancake with nothing under it. Uniform rock, plus a second rock holding it up.
 			const FVector Over = Center + N * -30.0f - FVector(0, 0, 40.0f);
@@ -2358,6 +2455,12 @@ void ADCCArcadeClimb::ServerTick(float DeltaSeconds)
 				if (Crawler->Wallet)
 				{
 					Crawler->Wallet->Tell(TEXT("SUMMIT!  +150 climbing XP"));
+				}
+				if (DCCArcade::CompleteSeriesQuest(PlayerState, TEXT("Climb"), DCCArcade::SeriesQuestXp()))
+				{
+					// First time up: the camp finds the mine while you are still on the peak.
+					HazardLine = TEXT("Camp radio: Vaughn followed a drone into a mine under the pasture. Ask Fort Tiner.");
+					HazardLineUntil = ServerTime() + 20.0;
 				}
 			}
 		}
@@ -3806,29 +3909,80 @@ void ADCCArcadeKart::TickCity(float DeltaSeconds)
 			{
 				TowerCar->RallyMagnet = FMath::Clamp(
 					TowerCar->RallyMagnet + TowerCar->GetSteerInput() * 1.6f * DeltaSeconds, -1.0f, 1.0f);
-				TowerCar->RallySpin += DeltaSeconds * 220.0f;
+				const bool bLevel = FMath::Abs(TowerCar->RallyTilt) < 25.0f;
+				const bool bPop = TowerCar->bRallyTrickPop;
 				const float Sign = TowerCar->RallyTilt >= 0.0f ? 1.0f : -1.0f;
 				TowerCar->RallyTilt += (Sign * 28.0f - TowerCar->RallyMagnet * 90.0f) * DeltaSeconds;
 				TowerCar->RallyTilt = FMath::Clamp(TowerCar->RallyTilt, -100.0f, 100.0f);
-				if (FMath::Abs(TowerCar->RallyTilt) < 25.0f)
+				if (TowerCar->bRallyDevHold && FMath::IsNearlyZero(TowerCar->GetSteerInput()))
 				{
-					TowerCar->RallyTrickScore += FMath::Max(1, FMath::RoundToInt(14.0f * DeltaSeconds));
+					TowerCar->RallyTilt = FMath::Clamp(TowerCar->RallyTilt, -10.0f, 10.0f);
+				}
+				if (bLevel)
+				{
+					if (TowerCar->RallyTrickPhase < 1.0f)
+					{
+						TowerCar->RallyTrickPhase = FMath::Min(1.0f, TowerCar->RallyTrickPhase + DeltaSeconds / 0.8f);
+					}
+					if (TowerCar->RallyTrickPhase >= 1.0f)
+					{
+						TowerCar->RallyCleanHold += DeltaSeconds;
+					}
+					const float Rate = 14.0f + 8.0f * static_cast<float>(TowerCar->RallyTrickChain);
+					TowerCar->RallyTrickScore += FMath::Max(1, FMath::RoundToInt(Rate * DeltaSeconds));
+					if (TowerCar->RallyTrickPhase >= 1.0f && (bPop || TowerCar->RallyCleanHold >= 1.4f))
+					{
+						static const uint8 Moves[] = { 1, 2, 3, 4 };
+						const bool bPicked = bPop && TowerCar->RallyTrickQueued >= 1 && TowerCar->RallyTrickQueued <= 4;
+						TowerCar->RallyTrickChain += 1;
+						TowerCar->RallyTrickMove = bPicked
+							? TowerCar->RallyTrickQueued
+							: Moves[(TowerCar->RallyTrickChain - 1) & 3];
+						TowerCar->RallyTrickPhase = 0.0f;
+						TowerCar->RallyCleanHold = 0.0f;
+						TowerCar->bRallyTrickPop = false;
+						TowerCar->RallyTrickQueued = 0;
+						TowerCar->RallyTrickScore += (bPicked ? 20 : 8) + 4 * TowerCar->RallyTrickChain;
+						UE_LOG(LogTemp, Log, TEXT("[DCC Drive] trick %d %s pick %d score %d"),
+							TowerCar->RallyTrickChain, TowerCar->RallyTrickLabel(), bPicked ? 1 : 0, TowerCar->RallyTrickScore);
+					}
+				}
+				else if (bPop)
+				{
+					TowerCar->bRallyTrickPop = false;
+					TowerCar->RallyTrickQueued = 0;
+					Tell(TowerCar, TEXT("Too tilted to trick."));
+				}
+				const bool bFlipping = TowerCar->RallyTrickPhase < 1.0f && TowerCar->RallyTrickMove != 0;
+				TowerCar->RallySpin += DeltaSeconds * (bFlipping ? 40.0f : 220.0f);
+				float ExtraPitch = 0.0f;
+				float ExtraRoll = 0.0f;
+				if (bFlipping)
+				{
+					const float Arc = TowerCar->RallyTrickPhase * 360.0f;
+					switch (TowerCar->RallyTrickMove)
+					{
+					case 1: ExtraPitch = Arc; break;
+					case 2: ExtraRoll = Arc; break;
+					case 3: ExtraPitch = -Arc; break;
+					default: ExtraPitch = Arc; ExtraRoll = Arc; break;
+					}
 				}
 				const FVector Overhead = TowerCar->GetActorLocation()
 					+ FVector::UpVector * 280.0f
 					+ TowerCar->GetActorRightVector() * TowerCar->RallyMagnet * 80.0f;
 				Car->SetActorLocation(Overhead, false, nullptr, ETeleportType::TeleportPhysics);
 				Car->SetActorRotation(FRotator(
-					TowerCar->RallyTilt,
+					TowerCar->RallyTilt + ExtraPitch,
 					TowerCar->GetActorRotation().Yaw + TowerCar->RallySpin,
-					TowerCar->RallyMagnet * 18.0f));
+					TowerCar->RallyMagnet * 18.0f + ExtraRoll));
 				if (FMath::Abs(TowerCar->RallyTilt) > 70.0f)
 				{
 					TowerCar->RallyOffBalance += DeltaSeconds;
 					if (TowerCar->RallyOffBalance > 0.35f)
 					{
-						UE_LOG(LogTemp, Log, TEXT("[DCC Drive] flip dropped tilt %.0f score %d"),
-							TowerCar->RallyTilt, TowerCar->RallyTrickScore);
+						UE_LOG(LogTemp, Log, TEXT("[DCC Drive] flip dropped tilt %.0f score %d chain %d"),
+							TowerCar->RallyTilt, TowerCar->RallyTrickScore, TowerCar->RallyTrickChain);
 						TowerCar->RallyTrickScore = 0;
 						Release(mi, true);
 						Tell(TowerCar, TEXT("Lost it."));
@@ -4077,6 +4231,7 @@ void ADCCArcadeKart::Release(int32 Slot, bool bTell)
 		TowerCar->RallyMagnet = 0.0f;
 		TowerCar->RallyTrickScore = 0;
 		TowerCar->RallyOffBalance = 0.0f;
+		TowerCar->ClearOverheadTrick();
 		if (bTell)
 		{
 			Tell(TowerCar, TEXT("Line cut. No drop, no pay."));
@@ -4137,6 +4292,7 @@ void ADCCArcadeKart::Deliver(int32 Slot)
 		TowerCar->RallyTrickScore = 0;
 		TowerCar->RallyTilt = 0.0f;
 		TowerCar->RallySpin = 0.0f;
+		TowerCar->ClearOverheadTrick();
 	}
 	const bool bWreck = Damage >= 80.0f;
 	if (bWreck)
@@ -4150,6 +4306,10 @@ void ADCCArcadeKart::Deliver(int32 Slot)
 		Tower->Score += Pay;
 		Tower->Ledger += 18.0f;
 		++Tower->Nabs;
+		if (Tower->bPlayer && Tower->Nabs == 10 && TowerCar)
+		{
+			DCCArcade::CompleteSeriesQuest(TowerCar->GetPlayerState(), TEXT("Kart"), DCCArcade::SeriesQuestXp());
+		}
 		if (Tower->BestNab <= 0.0f || Seconds < Tower->BestNab)
 		{
 			Tower->BestNab = Seconds;
@@ -4544,14 +4704,48 @@ void ADCCArcadeKart::UseTool(ADCCRover* Car)
 	if (Truck->HookedId >= 0 && Marks.IsValidIndex(Truck->HookedId))
 	{
 		FMark& Mark = Marks[Truck->HookedId];
-		if (Mark.bDocked && InYard(Car))
-		{
-			Deliver(Truck->HookedId);
-			return;
-		}
 		if (Mark.bDocked && Car->RallyTrick == 1)
 		{
 			Tell(Car, TEXT("Still fighting the line."));
+			return;
+		}
+		if (Mark.bDocked && Car->RallyTrick == 2)
+		{
+			// Banking comes before the yard drop, so a truck that drove itself in can still cash the chain.
+			// The next Q, once the car is back on the hitch, is the drop.
+			if (FMath::Abs(Car->RallyTilt) < 25.0f)
+			{
+				const int32 Score = Car->RallyTrickScore;
+				const int32 Chain = Car->RallyTrickChain;
+				const float Bank = FMath::Clamp(Score / 100.0f + Chain * 0.12f, 0.15f, 3.5f);
+				Car->RallyTrickMul += Bank;
+				const float BonusCap = DCCChopShop::TankCapacity(Truck->ChopTank) * 1.6f;
+				const float BeforeFuel = Truck->Fuel;
+				Truck->Fuel = FMath::Min(BonusCap, Truck->Fuel + 12.0f);
+				Car->RallyTrick = 0;
+				Car->RallyTilt = 0.0f;
+				Car->RallySpin = 0.0f;
+				Car->RallyMagnet = 0.0f;
+				Car->RallyTrickScore = 0;
+				Car->ClearOverheadTrick();
+				Tell(Car, FString::Printf(TEXT("Banked. Pay x%.2f. Chain %d. %s"), Car->RallyTrickMul, Chain,
+					InYard(Car) ? TEXT("Q drops it in the yard.") : TEXT("Drive it in, or lift it again.")));
+				UE_LOG(LogTemp, Log, TEXT("[DCC Drive] bank score %d chain %d mul %.2f fuel %.0f -> %.0f"),
+					Score, Chain, Car->RallyTrickMul, BeforeFuel, Truck->Fuel);
+			}
+			else
+			{
+				UE_LOG(LogTemp, Log, TEXT("[DCC Drive] Q dropped tilt %.0f chain %d"), Car->RallyTilt, Car->RallyTrickChain);
+				Car->RallyTrickScore = 0;
+				Release(Truck->HookedId, true);
+				Tell(Car, TEXT("Too tilted. It fell."));
+			}
+			SyncKit(*Truck);
+			return;
+		}
+		if (Mark.bDocked && InYard(Car))
+		{
+			Deliver(Truck->HookedId);
 			return;
 		}
 		if (Mark.bDocked && Car->RallyTrick == 0)
@@ -4562,37 +4756,9 @@ void ADCCArcadeKart::UseTool(ADCCRover* Car)
 			Car->RallySpin = 0.0f;
 			Car->RallyTrickScore = 0;
 			Car->RallyOffBalance = 0.0f;
-			Tell(Car, TEXT("Overhead. A and D on the magnet. Q banks a clean flip."));
+			Car->ClearOverheadTrick();
+			Tell(Car, TEXT("Overhead. The truck takes the outer lane to the yard. A and D hold it level. Space front flip, Shift barrel, Ctrl back flip, left click corkscrew. Q banks it."));
 			UE_LOG(LogTemp, Log, TEXT("[DCC Drive] hoist"));
-			SyncKit(*Truck);
-			return;
-		}
-		if (Mark.bDocked && Car->RallyTrick == 2)
-		{
-			if (FMath::Abs(Car->RallyTilt) < 25.0f)
-			{
-				const int32 Score = Car->RallyTrickScore;
-				const float Bank = FMath::Clamp(Score / 100.0f, 0.15f, 2.5f);
-				Car->RallyTrickMul += Bank;
-				const float BonusCap = DCCChopShop::TankCapacity(Truck->ChopTank) * 1.6f;
-				const float BeforeFuel = Truck->Fuel;
-				Truck->Fuel = FMath::Min(BonusCap, Truck->Fuel + 12.0f);
-				Car->RallyTrick = 0;
-				Car->RallyTilt = 0.0f;
-				Car->RallySpin = 0.0f;
-				Car->RallyMagnet = 0.0f;
-				Car->RallyTrickScore = 0;
-				Tell(Car, FString::Printf(TEXT("Banked. Pay x%.2f. A little fuel."), Car->RallyTrickMul));
-				UE_LOG(LogTemp, Log, TEXT("[DCC Drive] bank score %d mul %.2f fuel %.0f -> %.0f"),
-					Score, Car->RallyTrickMul, BeforeFuel, Truck->Fuel);
-			}
-			else
-			{
-				UE_LOG(LogTemp, Log, TEXT("[DCC Drive] Q dropped tilt %.0f"), Car->RallyTilt);
-				Car->RallyTrickScore = 0;
-				Release(Truck->HookedId, true);
-				Tell(Car, TEXT("Too tilted. It fell."));
-			}
 			SyncKit(*Truck);
 			return;
 		}
@@ -4802,16 +4968,45 @@ void ADCCArcadeKart::DebugPose(const FString& What)
 	Truck->HookedId = 0;
 	Mark.Tower = Car;
 	Mark.bDocked = true;
+	Car->bRallyDevHold = false;
 	Tow->bRallyHeld = true;
 	Tow->StopAutoPilot();
 	const FString Kind = What.ToLower();
-	if (Kind.StartsWith(TEXT("flip")))
+	const bool bRamps = Kind.StartsWith(TEXT("ramp"));
+	if (Kind.StartsWith(TEXT("flip")) || Kind.StartsWith(TEXT("road")) || bRamps)
 	{
+		if (Kind.StartsWith(TEXT("road")) || bRamps)
+		{
+			// Seat the driver, then put the truck on a street so the yard run has somewhere to go.
+			// "ramp" starts on the north-south skyway street, facing the yard, so the run has to pass the deck.
+			if (UWorld* World = GetWorld())
+			{
+				if (APlayerController* PC = World->GetFirstPlayerController())
+				{
+					if (ADCCCharacterBase* Crawler = Cast<ADCCCharacterBase>(PC->GetPawn()))
+					{
+						Car->EnterRover(Crawler);
+					}
+				}
+			}
+			const FVector Far = bRamps ? Crossing(1, 2) : Crossing(-2, -1);
+			Car->SetActorLocation(Far);
+			Car->SetActorRotation(FRotator(0.0f, -90.0f, 0.0f));
+			if (Car->Movement)
+			{
+				Car->Movement->StopMovementImmediately();
+			}
+			UE_LOG(LogTemp, Log, TEXT("[DCC Drive] pose %s driver %s at %s"),
+				bRamps ? TEXT("ramp") : TEXT("road"),
+				Car->Driver ? *Car->Driver->GetName() : TEXT("none"), *Far.ToCompactString());
+		}
 		Car->RallyTrick = 2;
 		Car->RallyTilt = 8.0f;
 		Car->RallyMagnet = 0.25f;
 		Car->RallySpin = 40.0f;
 		Car->RallyTrickScore = 24;
+		Car->ClearOverheadTrick();
+		Car->bRallyDevHold = bRamps;
 		Tow->SetActorLocation(Car->GetActorLocation() + FVector(40.0f, 0.0f, 280.0f));
 		Tow->SetActorRotation(FRotator(8.0f, Car->GetActorRotation().Yaw + 40.0f, 4.0f));
 	}
@@ -5208,7 +5403,10 @@ void ADCCArcadeNeon::BuildScenery(int32 Index, const FVector& O)
 		{
 			const FVector Base = O + FVector(Deco.FRandRange(200.0f, L - 200.0f), Side * (RoadHalfWidth + Deco.FRandRange(700.0f, 1400.0f)), 0.0f);
 			const float Height = Deco.FRandRange(600.0f, 900.0f);
-			Block(Base + FVector(0, 0, Height * 0.5f), FVector(50.0f, 50.0f, Height), FLinearColor(0.12f, 0.05f, 0.15f), 0.0f, false);
+			if (AActor* Trunk = Block(Base + FVector(0, 0, Height * 0.5f), FVector(50.0f, 50.0f, Height), FLinearColor(0.12f, 0.05f, 0.15f), 0.0f, false))
+			{
+				Paint(Trunk, TEXT("/Game/Synthwave_city/Material/MI_tree_bark"));
+			}
 			const float Spin = Deco.FRandRange(0.0f, 60.0f);
 			for (int32 f = 0; f < 3; ++f)
 			{
@@ -5221,7 +5419,11 @@ void ADCCArcadeNeon::BuildScenery(int32 Index, const FVector& O)
 		{
 			const FVector Size(Deco.FRandRange(600.0f, 1400.0f), Deco.FRandRange(600.0f, 1400.0f), Deco.FRandRange(1500.0f, 5500.0f));
 			const FVector Base = O + FVector(Deco.FRandRange(0.0f, L), Side * Deco.FRandRange(5200.0f, 8000.0f), 0.0f);
-			Block(Base + FVector(0, 0, Size.Z * 0.5f), Size, FLinearColor(0.05f, 0.025f, 0.09f), 0.0f, false);
+			if (AActor* Tower = Block(Base + FVector(0, 0, Size.Z * 0.5f), Size, FLinearColor(0.05f, 0.025f, 0.09f), 0.0f, false))
+			{
+				Paint(Tower, (k % 2) ? TEXT("/Game/Synthwave_city/Material/MI_synthwave_wall")
+					: TEXT("/Game/Synthwave_city/Material/MI_synthwave_wall1"));
+			}
 			Block(Base + FVector(0, 0, Size.Z + 20.0f), FVector(Size.X + 20.0f, Size.Y + 20.0f, 40.0f), (Deco.FRand() < 0.5f ? Cyan : Magenta) * 2.0f, 0.0f, false);
 		}
 	}
@@ -5250,6 +5452,18 @@ void ADCCArcadeNeon::BuildChunk(int32 Index)
 	const FVector O = GetActorLocation() + FVector(Index * ChunkLength, 0, 0);
 	const FVector Mid = O + FVector(ChunkLength * 0.5f, 0, -15.0f);
 	Block(Mid, FVector(ChunkLength + 2, RoadHalfWidth * 2, 30), FLinearColor(0.03f, 0.02f, 0.06f));
+	// 4 m tiles so the synthwave floor does not smear across the whole stretch.
+	static const TCHAR* RoadMat = TEXT("/Game/Synthwave_city/Material/MI_synthwave_floor");
+	for (float X = 0.0f; X < ChunkLength; X += 400.0f)
+	{
+		for (float Y = -RoadHalfWidth + 200.0f; Y < RoadHalfWidth; Y += 400.0f)
+		{
+			if (AActor* Tile = Block(O + FVector(X + 200.0f, Y, 2.0f), FVector(396.0f, 396.0f, 4.0f), FLinearColor::White, 0.0f, false))
+			{
+				Paint(Tile, RoadMat);
+			}
+		}
+	}
 	Block(Mid + FVector(0, RoadHalfWidth - 20, 25), FVector(ChunkLength + 2, 40, 20), FLinearColor(1.0f, 0.2f, 0.9f) * 2.0f);
 	Block(Mid + FVector(0, -RoadHalfWidth + 20, 25), FVector(ChunkLength + 2, 40, 20), FLinearColor(0.1f, 0.9f, 1.0f) * 2.0f);
 	for (int32 Dash = 0; Dash < 4; ++Dash)
@@ -5369,6 +5583,10 @@ void ADCCArcadeNeon::Crash(ADCCRover* Car, const TCHAR* Why)
 	{
 		DCCProfile::RecordBest(PlayerState, TEXT("Neon"), TEXT("BestDistance"), FMath::RoundToFloat(Metres));
 		DCCProfile::Add(PlayerState, TEXT("Neon"), TEXT("Runs"), 1.0f);
+		if (Metres >= 500.0f)
+		{
+			DCCArcade::CompleteSeriesQuest(PlayerState, TEXT("Neon"), DCCArcade::SeriesQuestXp());
+		}
 		// A ticket for every 25 m of the run, paid at the crash.
 		UDCCWalletComponent::AwardTickets(PlayerState, FMath::FloorToInt(Metres / 25.0f), FString::Printf(TEXT("%d m on Neon Mile"), FMath::RoundToInt(Metres)));
 	}
@@ -5432,8 +5650,13 @@ void ADCCArcadeNeon::ServerTick(float DeltaSeconds)
 	{
 		if (APlayerState* PlayerState = It->GetPlayerState())
 		{
+			const float Metres = FMath::Max(0.0f, (It->GetActorLocation().X - GetActorLocation().X) / 100.0f);
 			Now.Add(FString::Printf(TEXT("%s %s m"), *PlayerName(PlayerState),
-				*FText::AsNumber(FMath::Max(0, FMath::RoundToInt((It->GetActorLocation().X - GetActorLocation().X) / 100.0f))).ToString()));
+				*FText::AsNumber(FMath::RoundToInt(Metres)).ToString()));
+			if (Metres >= 500.0f)
+			{
+				DCCArcade::CompleteSeriesQuest(PlayerState, TEXT("Neon"), DCCArcade::SeriesQuestXp());
+			}
 		}
 	}
 	const float Elapsed = static_cast<float>(ServerTime() - StartedAt);
@@ -5456,6 +5679,10 @@ void ADCCArcadeNeon::ServerTick(float DeltaSeconds)
 			{
 				const float Metres = FMath::Max(0.0f, (It->GetActorLocation().X - GetActorLocation().X) / 100.0f);
 				DCCProfile::RecordBest(PlayerState, TEXT("Neon"), TEXT("BestDistance"), FMath::RoundToFloat(Metres));
+				if (Metres >= 500.0f)
+				{
+					DCCArcade::CompleteSeriesQuest(PlayerState, TEXT("Neon"), DCCArcade::SeriesQuestXp());
+				}
 				if (!bPaid)
 				{
 					UDCCWalletComponent::AwardTickets(PlayerState, FMath::FloorToInt(Metres / 25.0f), FString::Printf(TEXT("%d m on Neon Mile"), FMath::RoundToInt(Metres)));

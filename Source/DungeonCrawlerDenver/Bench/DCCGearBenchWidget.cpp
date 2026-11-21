@@ -949,7 +949,7 @@ FReply UDCCGearBenchWidget::NativeOnMouseWheel(const FGeometry& InGeometry, cons
 FReply UDCCGearBenchWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
 {
 	const FKey Key = InKeyEvent.GetKey();
-	if (Key == EKeys::F3 || Key == EKeys::Escape)
+	if (Key == EKeys::F3 || Key == EKeys::Escape || Key == EKeys::Tab)
 	{
 		RequestClose();
 		return FReply::Handled();

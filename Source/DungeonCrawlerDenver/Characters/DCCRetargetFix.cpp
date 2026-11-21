@@ -33,6 +33,7 @@
 #include "Engine/SkeletalMesh.h"
 #include "HAL/IConsoleManager.h"
 #include "ReferenceSkeleton.h"
+#include "UObject/UnrealType.h"
 
 namespace
 {
@@ -41,15 +42,37 @@ namespace
 
 namespace DCCRetarget
 {
+	int32 BoneTreeCount(const USkeleton* Skeleton)
+	{
+		// BoneTree is protected. Its length has to match the reference skeleton
+		// before anyone writes a retarget mode: SetBoneTranslationRetargetingMode
+		// indexes BoneTree with no bounds check, and on the first ticks after a
+		// body swap the tree can still be empty while GetNum() already is not.
+		const FArrayProperty* Prop = FindFProperty<FArrayProperty>(USkeleton::StaticClass(), TEXT("BoneTree"));
+		if (!Prop || !Skeleton)
+		{
+			return INDEX_NONE;
+		}
+		FScriptArrayHelper Helper(Prop, Prop->ContainerPtrToValuePtr<void>(Skeleton));
+		return Helper.Num();
+	}
+
 	int32 Apply(USkeleton* Skeleton)
 	{
-		if (!Skeleton)
+		if (!Skeleton || Skeleton->HasAnyFlags(RF_NeedPostLoad | RF_NeedInitialization))
 		{
 			return 0;
 		}
 		const FReferenceSkeleton& Ref = Skeleton->GetReferenceSkeleton();
+		const int32 BoneCount = Ref.GetNum();
+		// -1 means "not ready", so the caller tries again. 0 means the modes
+		// were already right. Writing past BoneTree is an out-of-bounds store.
+		if (BoneCount <= 0 || BoneTreeCount(Skeleton) != BoneCount)
+		{
+			return -1;
+		}
 		int32 Changed = 0;
-		for (int32 BoneIndex = 0; BoneIndex < Ref.GetNum(); ++BoneIndex)
+		for (int32 BoneIndex = 0; BoneIndex < BoneCount; ++BoneIndex)
 		{
 			// Index 0 is the root of the hierarchy (Hips on every Meshy rig).
 			const EBoneTranslationRetargetingMode::Type Wanted = BoneIndex == 0
@@ -73,18 +96,34 @@ namespace DCCRetarget
 
 	void EnsureForMesh(const USkeletalMeshComponent* Mesh)
 	{
+		static bool bDone = false;
+		if (bDone)
+		{
+			return;
+		}
+
 		const USkeletalMesh* Asset = Mesh ? Mesh->GetSkeletalMeshAsset() : nullptr;
 		// The skeleton is shared engine data; the mesh only hands it out as const.
 		USkeleton* Skeleton = Asset ? const_cast<USkeleton*>(Asset->GetSkeleton()) : nullptr;
-		if (Skeleton && Skeleton->GetPathName() == DefaultCrawlerSkeleton)
+		const UPTRINT Address = reinterpret_cast<UPTRINT>(Skeleton);
+		if (Address < 0x10000 || (Address & (sizeof(void*) - 1)) != 0 || !Skeleton->IsValidLowLevelFast(false))
 		{
-			const int32 Changed = Apply(Skeleton);
-			static bool bReported = false;
-			if (!bReported && Changed == 0)
-			{
-				UE_LOG(LogTemp, Display, TEXT("[DCC Retarget] %s already had crawler retargeting set; nothing changed."), *Skeleton->GetName());
-			}
-			bReported = true;
+			return;
+		}
+		if (Skeleton->GetPathName() != DefaultCrawlerSkeleton)
+		{
+			return;
+		}
+
+		const int32 Changed = Apply(Skeleton);
+		if (Changed < 0)
+		{
+			return;
+		}
+		bDone = true;
+		if (Changed == 0)
+		{
+			UE_LOG(LogTemp, Display, TEXT("[DCC Retarget] %s already had crawler retargeting set; nothing changed."), *Skeleton->GetName());
 		}
 	}
 }

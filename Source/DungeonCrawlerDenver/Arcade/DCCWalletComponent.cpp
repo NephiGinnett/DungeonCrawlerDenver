@@ -422,16 +422,17 @@ void UDCCWalletComponent::StowHeadGear()
 		return;
 	}
 	const FName HeadId = Crawler->Equipment->GetEquippedId(EDCCEquipmentSlot::Head);
-	FDCCEquipmentDef Def;
-	if (HeadId.IsNone() || !Crawler->Equipment->FindItem(HeadId, Def))
+	if (HeadId.IsNone())
 	{
 		return;
 	}
-	// Into the bag first, so a full bag leaves the gear on rather than losing it.
-	if (Crawler->Inventory->AddItemRecord(ADCCPickup_Equipment::StaticClass(), Def.DisplayName, Def.MassKilograms, HeadId)
-		&& Crawler->Equipment->Unequip(EDCCEquipmentSlot::Head))
+	FDCCEquipmentDef Def;
+	const bool bFound = Crawler->Equipment->FindItem(HeadId, Def);
+	const FString Name = (bFound && !Def.DisplayName.IsEmpty()) ? Def.DisplayName.ToString() : HeadId.ToString();
+	// Unequip puts it in the bag. Adding it here first would leave two copies.
+	if (Crawler->Equipment->Unequip(EDCCEquipmentSlot::Head))
 	{
-		Client_Message(FString::Printf(TEXT("Your %s went in your bag."), *Def.DisplayName.ToString()), true);
+		Client_Message(FString::Printf(TEXT("Your %s went in your bag."), *Name), true);
 	}
 }
 

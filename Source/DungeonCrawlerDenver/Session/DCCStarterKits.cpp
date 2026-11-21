@@ -7,23 +7,29 @@
 #include "Items/DCCInventoryComponent.h"
 #include "Session/DCCProfile.h"
 #include "Session/DCCSaveSystem.h"
+#include "Classes/DCCBasicClasses.h"
 #include "Skills/DCCSkillComponent.h"
 
 namespace DCCStarterKits
 {
 	const TArray<FKit>& All()
 	{
+		// Index is the saved pick. Renames stay in the old slots. New jobs go on the end.
 		static const TArray<FKit> Kits = {
-			{ TEXT("BRUISER"), TEXT("Hit hard, up close. A wall sword, a tray to block with, and an apron that has seen worse."),
-				FLinearColor(1.0f, 0.45f, 0.3f), { TEXT("WallSword"), TEXT("ServiceTray"), TEXT("GreaseApron") }, {}, TEXT("BandageRollMostlySterile"), 2, 25 },
-			{ TEXT("TANK"), TEXT("Stand in front. A skillet, a shield and a hi-vis vest: hard to hurt, hard to miss."),
+			{ TEXT("Repo Driver"), TEXT("Repo Rally. A wall sword, a tray and an apron. Up close, every swing hits harder."),
+				FLinearColor(1.0f, 0.72f, 0.15f), { TEXT("WallSword"), TEXT("ServiceTray"), TEXT("GreaseApron") }, {}, TEXT("BandageRollMostlySterile"), 2, 25 },
+			{ TEXT("Ridge Hand"), TEXT("Fourteener. A skillet, a shield and a hi-vis vest. You take less of every hit."),
 				FLinearColor(0.4f, 0.75f, 1.0f), { TEXT("CastIronSkillet"), TEXT("FeatureWallShield"), TEXT("HighVisibilitySafetyVest") }, {}, TEXT("TraumaKitParamedic"), 1, 25 },
-			{ TEXT("MAGIC"), TEXT("Burn things from across the room. Static Burst, a flare gun, and a blazer that makes you smarter."),
+			{ TEXT("Call Sign"), TEXT("Dead Air. Static Burst, a flare gun and a blazer. Your spells hit harder."),
 				FLinearColor(0.7f, 0.45f, 1.0f), { TEXT("FlareGunEmergency"), TEXT("ManagersBlazer"), TEXT("Torch") }, { TEXT("StaticBurst") }, TEXT("EnergyTonic"), 2, 25 },
-			{ TEXT("HEALER"), TEXT("Keep the crew standing. First Aid, a stack of kits, and a bar gun for keeping your distance."),
+			{ TEXT("Line Coach"), TEXT("Stress Test. First Aid, kits and a bar gun. Your heals land bigger."),
 				FLinearColor(0.4f, 1.0f, 0.6f), { TEXT("SodaGun"), TEXT("HighVisibilitySafetyVest"), TEXT("NameTagDave") }, { TEXT("FirstAid") }, TEXT("FirstAidKitCompliant"), 3, 25 },
-			{ TEXT("RANGER"), TEXT("Pick them off. A confetti crossbow, a sun hat, and a folder full of complaints to hide behind."),
-				FLinearColor(1.0f, 0.85f, 0.35f), { TEXT("ConfettiCrossbow"), TEXT("PatioSunHat"), TEXT("ComplaintFolderOverstuffed") }, {}, TEXT("EnergyTonic"), 1, 25 },
+			{ TEXT("Mile Runner"), TEXT("Neon Mile. A confetti crossbow, a sun hat and a folder. Ranged shots get sharper."),
+				FLinearColor(1.0f, 0.35f, 0.7f), { TEXT("ConfettiCrossbow"), TEXT("PatioSunHat"), TEXT("ComplaintFolderOverstuffed") }, {}, TEXT("EnergyTonic"), 1, 25 },
+			{ TEXT("Gate Warden"), TEXT("Gate Run. A fire axe, a tray and a vest. Swings hit harder, and hits land softer."),
+				FLinearColor(0.35f, 0.85f, 1.0f), { TEXT("FireAxe"), TEXT("ServiceTray"), TEXT("HighVisibilitySafetyVest") }, {}, TEXT("BandageRollMostlySterile"), 2, 25 },
+			{ TEXT("Floor Walker"), TEXT("The dungeon. A mallet, a torch and an apron. A little more on swings, shots, spells and heals."),
+				FLinearColor(0.95f, 0.8f, 0.45f), { TEXT("TenderiserMallet"), TEXT("Torch"), TEXT("GreaseApron") }, {}, TEXT("EnergyTonic"), 2, 25 },
 		};
 		return Kits;
 	}
@@ -63,6 +69,7 @@ namespace DCCStarterKits
 		{
 			UDCCWalletComponent::AwardTickets(Crawler->GetPlayerState(), Kit.Tickets, TEXT("starter kit"));
 		}
+		DCCBasicClasses::ApplyLearned(Crawler);
 		DCCSave::Save(Crawler);
 		if (Crawler->Wallet)
 		{

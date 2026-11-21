@@ -42,10 +42,6 @@ namespace DCCSummons
 			}
 		}
 
-		bool AllowsAllies(const ADCCArcadeArena* Arena)
-		{
-			return Cast<ADCCArcadeLobby>(Arena) || Arena->GetGameId() == TEXT("Gate") || Arena->GetGameId() == TEXT("Haunt");
-		}
 	}
 
 	const TCHAR* TierName(uint8 Tier)
@@ -290,10 +286,9 @@ namespace DCCSummons
 		return Ally;
 	}
 
-	void TickArena(ADCCArcadeArena* Arena)
+	void BringAlong(UWorld* World)
 	{
-		UWorld* World = Arena ? Arena->GetWorld() : nullptr;
-		if (!World || !Arena->HasAuthority())
+		if (!World || World->GetNetMode() == NM_Client)
 		{
 			return;
 		}
@@ -303,13 +298,14 @@ namespace DCCSummons
 			APlayerController* PC = It->Get();
 			ADCCCharacterBase* Owner = Cast<ADCCCharacterBase>(PC ? PC->GetPawn() : nullptr);
 			const FString Name = PC && PC->PlayerState ? PC->PlayerState->GetPlayerName() : FString();
-			TArray<FSummon>* List = Party().Find(Name);
-			if (!List || List->IsEmpty() || Name.IsEmpty())
+			TArray<FSummon>* List = Name.IsEmpty() ? nullptr : Party().Find(Name);
+			if (!List || List->IsEmpty())
 			{
 				continue;
 			}
 			TArray<TWeakObjectPtr<ADCCSummonedAlly>>& Here = Spawned().FindOrAdd(Name);
-			// Forget the ones that went down: an ally lasts until it falls.
+			// A death forgets that ally. A missing body (the last game unloaded it, or the spawn failed) does not:
+			// that slot is filled again below, in place, so the lists stay paired.
 			for (int32 i = FMath::Min(Here.Num(), List->Num()) - 1; i >= 0; --i)
 			{
 				ADCCSummonedAlly* Ally = Here[i].Get();
@@ -324,17 +320,44 @@ namespace DCCSummons
 					Ally->FollowOwner = Owner; // a respawned body
 				}
 			}
-			// Bring in the rest, beside their summoner, once that crawler is standing in this game.
-			if (!Owner || !Owner->IsAlive() || !AllowsAllies(Arena))
+			if (!Owner || !Owner->IsAlive())
 			{
 				continue;
+			}
+			auto Beside = [Owner](int32 i)
+			{
+				return Owner->GetActorRightVector() * (i % 2 ? -160.0f : 160.0f) - Owner->GetActorForwardVector() * 120.0f;
+			};
+			for (int32 i = 0; i < FMath::Min(Here.Num(), List->Num()); ++i)
+			{
+				if (Here[i].IsValid())
+				{
+					continue;
+				}
+				if (ADCCSummonedAlly* Born = SpawnAlly(World, (*List)[i], Owner, Owner->GetActorLocation() - FVector(0, 0, 90.0f) + Beside(i), 0.0f))
+				{
+					Here[i] = Born;
+					UE_LOG(LogTemp, Log, TEXT("[DCC Summon] %s's %s came along"), *Name, *(*List)[i].Friend.ToString());
+				}
 			}
 			while (Here.Num() < List->Num())
 			{
 				const int32 i = Here.Num();
-				const FVector Side = Owner->GetActorRightVector() * (i % 2 ? -160.0f : 160.0f) - Owner->GetActorForwardVector() * 120.0f;
-				Here.Add(SpawnAlly(World, (*List)[i], Owner, Owner->GetActorLocation() - FVector(0, 0, 90.0f) + Side, 0.0f));
+				ADCCSummonedAlly* Born = SpawnAlly(World, (*List)[i], Owner, Owner->GetActorLocation() - FVector(0, 0, 90.0f) + Beside(i), 0.0f);
+				Here.Add(Born);
+				if (Born)
+				{
+					UE_LOG(LogTemp, Log, TEXT("[DCC Summon] %s's %s came along"), *Name, *(*List)[i].Friend.ToString());
+				}
 			}
+		}
+	}
+
+	void TickArena(ADCCArcadeArena* Arena)
+	{
+		if (Arena && Arena->HasAuthority())
+		{
+			BringAlong(Arena->GetWorld());
 		}
 	}
 }

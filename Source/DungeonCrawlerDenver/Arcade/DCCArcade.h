@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 
 class UWorld;
+class APlayerState;
 
 /**
  * The Den: one host, several games (2026-11-13). Players gather in the lobby,
@@ -64,6 +65,40 @@ namespace DCCArcade
 	/** True when the loaded level is one of the arcade's own games or the lobby. */
 	bool IsArcadeWorld(const UWorld* World);
 
+	/**
+	 * True in a game you can leave. False in the Safe Room, on the front door,
+	 * and in the pose bench, which are already home.
+	 */
+	bool CanLeaveForLobby(const UWorld* World);
+
 	/** "1,234 m", "1:02.5" and so on. */
 	FString FormatRecord(const FGame& Game, float Value);
+
+	/**
+	 * Series lock (2026-11-19). Fourteener is open. A summit opens Dead Air and Stress Test.
+	 * Filming Dead Air and landing a hit in Stress Test opens Gate Run and Repo Rally.
+	 * Neon Mile and Dungeon Crawler Denver stay open. Zoe can vote for any of them.
+	 */
+	bool IsSeriesOpen(const APlayerState* Player, FName GameId);
+	/** Why a pad refused this player. Empty when the game is open. */
+	FString SeriesLockLine(const APlayerState* Player, FName GameId);
+	/** The one-line goal shown on entering a game. Empty for the lobby. Every game, including the dungeon, has one. */
+	FString SeriesQuestLine(FName GameId);
+
+	/**
+	 * What the OBJECTIVES panel should say (2026-11-21). Each entry is the current step of a short line.
+	 * GameId None is the Den and the front door: the main line, plus a simple start for any line not begun.
+	 * A game id is just that game's step, or the handoff into the next line once its own step is done.
+	 */
+	struct FBoardStep
+	{
+		FString Line;
+		FString Now;
+		FString Then;
+	};
+	void BoardSteps(const APlayerState* Player, FName GameId, TArray<FBoardStep>& Out);
+	/** The same payout for every series quest. */
+	int32 SeriesQuestXp();
+	/** Marks Quest.<GameId> and grants Xp once. True the first time. */
+	bool CompleteSeriesQuest(APlayerState* Player, FName GameId, int32 Xp);
 }

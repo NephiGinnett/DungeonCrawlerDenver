@@ -24,3 +24,9 @@ AssetRecovery,AssetRecovery,Asset Recovery Specialist,"Thirty containers cleared
 WelcomeAboard,WelcomeAboard,Welcome Aboard,"You have entered the World Dungeon. Your consent was implied by your feet.",EnteredWorldDungeon,1,25,5,False
 PropertyDefacement,PropertyDefacement,Property Defacement,"Your tag is on the cage. The Lucky Tuesday has not been vandalized by a living person since 1893. The chat would like to thank you personally.",TaggedTheCage,1,50,10,False
 ProofOfSummit,ProofOfSummit,Proof of Summit,"Your tag is on the top of Fourteener. The mountain has been informed. It does not care. Everyone else does.",TaggedTheSummit,1,100,15,False
+OnTheBoard,OnTheBoard,On The Board,"The house paid twenty-five tickets. Someone in the booth wrote the name on a card.",CasinoTicketsWon,25,40,5,False
+HotTable,HotTable,Hot Table,"One hundred tickets, out of the pit and into a pocket. The floor manager is smiling. That is not a good sign.",CasinoTicketsWon,100,80,10,False
+TheRoomNoticed,TheRoomNoticed,The Room Noticed,"Five hundred tickets. Casino Cascade has started introducing them as a regular. They did not agree to this.",CasinoTicketsWon,500,150,20,False
+AgainstTheHouse,AgainstTheHouse,Against The House,"A table lost. The audience made a noise. The house will remember the noise.",CasinoWins,1,40,8,False
+RegularAtThePit,RegularAtThePit,Regular At The Pit,"Ten hands, taken off the house. June has stopped explaining the rules.",CasinoWins,10,100,15,False
+TheLoudOne,TheLoudOne,The Loud One,"One spin paid fifty or more. The wheel is still moving in the replay. So is the chat.",CasinoJackpot,1,80,20,False

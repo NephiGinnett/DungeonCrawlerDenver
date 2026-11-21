@@ -16,14 +16,17 @@ TSharedRef<SWidget> UDCCStarterKitWidget::RebuildWidget()
 	TWeakObjectPtr<UDCCStarterKitWidget> Self(this);
 	auto Font = [](int32 Size, bool bBold) { return FCoreStyle::GetDefaultFontStyle(bBold ? "Bold" : "Regular", Size); };
 
-	TSharedRef<SHorizontalBox> Cards = SNew(SHorizontalBox);
+	// Two rows. Seven jobs do not fit on one line, and a wrap box fights the slate layout.
+	TSharedRef<SHorizontalBox> Top = SNew(SHorizontalBox);
+	TSharedRef<SHorizontalBox> Bottom = SNew(SHorizontalBox);
 	const TArray<DCCStarterKits::FKit>& Kits = DCCStarterKits::All();
 	for (int32 i = 0; i < Kits.Num(); ++i)
 	{
 		const DCCStarterKits::FKit& Kit = Kits[i];
-		Cards->AddSlot().AutoWidth().Padding(8.0f, 0.0f)
+		SHorizontalBox& Row = i < 4 ? Top.Get() : Bottom.Get();
+		Row.AddSlot().AutoWidth().Padding(6.0f, 6.0f)
 		[
-			SNew(SBox).WidthOverride(200.0f).HeightOverride(230.0f)
+			SNew(SBox).WidthOverride(210.0f).HeightOverride(200.0f)
 			[
 				SNew(SButton)
 				.IsFocusable(false)
@@ -80,9 +83,10 @@ TSharedRef<SWidget> UDCCStarterKitWidget::RebuildWidget()
 				+ SVerticalBox::Slot().AutoHeight().HAlign(HAlign_Center).Padding(0.0f, 4.0f, 0.0f, 18.0f)
 				[
 					SNew(STextBlock).Font(Font(12, false)).ColorAndOpacity(FLinearColor(0.8f, 0.8f, 0.85f))
-					.Text(NSLOCTEXT("DCC", "KitPick", "Pick a starter kit. It is equipped now, and it is yours to keep."))
+					.Text(NSLOCTEXT("DCC", "KitPickJobs", "Pick a job. The gear is yours, and each level teaches the next line."))
 				]
-				+ SVerticalBox::Slot().AutoHeight()[ Cards ]
+				+ SVerticalBox::Slot().AutoHeight()[ Top ]
+				+ SVerticalBox::Slot().AutoHeight().Padding(0.0f, 4.0f, 0.0f, 0.0f)[ Bottom ]
 			]
 		];
 }

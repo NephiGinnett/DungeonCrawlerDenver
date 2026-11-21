@@ -5,7 +5,10 @@
 #include "Items/DCCLootContainer.h"
 #include "Engine/OverlapResult.h"
 #include "Arcade/DCCClimbItems.h"
+#include "Arcade/DCCArcade.h"
 #include "Arcade/DCCArcadeGames.h"
+#include "Arcade/DCCCasino.h"
+#include "Arcade/DCCSummons.h"
 #include "Arcade/DCCArcadeHaunt.h"
 #include "Arcade/DCCSpray.h"
 #include "GameFramework/PlayerState.h"
@@ -44,6 +47,7 @@
 #include "Characters/DCCAttackStyle.h"
 #include "Animation/AnimSequenceBase.h"
 #include "Classes/DCCClassComponent.h"
+#include "Classes/DCCBasicClasses.h"
 #include "Onboarding/DCCOnboardingComponent.h"
 #include "Rooms/DCCTaleFloor.h"
 #include "Bench/DCCBenchData.h"
@@ -234,6 +238,9 @@ void ADCCCharacterBase::PossessedBy(AController* NewController)
 	{
 		Stats->SetIsPlayerCharacter(true);
 
+		// Lessons the class has already earned. Safe to repeat: a known skill is left alone.
+		DCCBasicClasses::ApplyLearned(this);
+
 		// dcc.AutoQuickPlay 1: skip the bedroom and drop straight onto floor 1.
 		ADCCTaleFloor::ScheduleQuickPlay(this);
 	}
@@ -278,6 +285,14 @@ void ADCCCharacterBase::BeginPlay()
 
 	// Gear bench bone nudges (F3) apply on top of every animation, every frame.
 	DCCBench::BindBoneNudges(GetMesh());
+
+	if (UAnimationAsset* Wave = DCCAttackStyle::WaveClip())
+	{
+		if (!EmoteAnimations.Contains(Wave))
+		{
+			EmoteAnimations.Add(Wave);
+		}
+	}
 
 	// Captured before anything can ragdoll. Reviving reattaches the mesh to the
 	// capsule and needs the offset it had at rest - read it back after a ragdoll
@@ -586,6 +601,19 @@ void ADCCCharacterBase::DebugSwing()
 	Multicast_PlayAttack(nullptr, false);
 }
 
+void ADCCCharacterBase::Server_BailToLobby_Implementation()
+{
+	UWorld* World = GetWorld();
+	if (!World || !IsPlayerControlled() || !DCCArcade::CanLeaveForLobby(World))
+	{
+		UE_LOG(LogTemp, Log, TEXT("[DCC Arcade] bail refused"));
+		return;
+	}
+	const FString Who = DisplayName.IsEmpty() ? GetName() : DisplayName.ToString();
+	UE_LOG(LogTemp, Warning, TEXT("[DCC Arcade] %s bailed back to the Safe Room"), *Who);
+	DCCArcade::Travel(World, TEXT("Lobby"));
+}
+
 void ADCCCharacterBase::Server_UnequipSlot_Implementation(uint8 Slot)
 {
 	if (!Equipment)
@@ -595,8 +623,8 @@ void ADCCCharacterBase::Server_UnequipSlot_Implementation(uint8 Slot)
 	}
 	const EDCCEquipmentSlot Which = static_cast<EDCCEquipmentSlot>(Slot);
 	const FName Was = Equipment->GetEquippedId(Which);
+	// Unequip itself puts the piece back in the bag, full bag or not. A cursed row still refuses.
 	const bool bRemoved = Equipment->Unequip(Which);
-	// Unequip drops the slot. It does not put the piece back in the bag. A cursed row refuses.
 	UE_LOG(LogTemp, Log, TEXT("[DCC Equip] unequip slot %d '%s' %s"),
 		Slot, *Was.ToString(), bRemoved ? TEXT("removed") : TEXT("refused (empty or cursed)"));
 }
@@ -643,6 +671,15 @@ void ADCCCharacterBase::OnPrimaryPressed()
 	if (bHasDied)
 	{
 		return;
+	}
+
+	// A seat at Casino Cascade owns the hands. The table's own button is E.
+	if (const ADCCCasinoCascade* Casino = ADCCCasinoCascade::Get(GetWorld()))
+	{
+		if (Casino->IsSeated(this))
+		{
+			return;
+		}
 	}
 
 	// Climbing wins: while on a wall the button is the climb, not a swing.
@@ -704,38 +741,30 @@ void ADCCCharacterBase::OnPrimaryPressed()
 		return;
 	}
 
-	// A friendly under the crosshair turns the click into a greeting. Checked
-	// before the attack because IsHostileTo already refuses to swing at an ally,
-	// so this consumes a click that would otherwise have done nothing at all.
-	if (TryFistBumpUnderCursor())
-	{
-		return;
-	}
-
-	// Hitting is the default action with nothing armed: a hostile in range
-	// always wins the click over climbing, so an ordinary attack click near a
-	// cave wall - which describes most of this game's combat rooms - is never
-	// mistaken for a climb attempt. Climbing is only probed for when there is
-	// nothing to fight, which is also the one situation where "the click did
-	// nothing" would otherwise be true instead of a swing-and-miss.
-	// Climbing needs the skill equipped now (2026-11-13); a wall under the cursor
-	// with nothing to fight just says how.
-	if (!FindNearestHostileInRange() && HintEquipClimbingIfWall())
-	{
-		return;
-	}
-
-	// A ranged weapon fires at whatever the camera is pointed at instead of
-	// auto-targeting the nearest hostile in a radius - see AttemptRangedAttack's
-	// own comment for why that split exists. GetAttackRangeOverride() > 0 is
-	// the same "is this thing ranged" signal GetEffectiveAttackRange already
-	// keys off - every melee row in DT_DCCEquipment leaves it at 0.
-	if (Equipment && Equipment->GetAttackRangeOverride() > 0.0f)
+	// A ranged weapon is aimed with the right mouse and fired with the left.
+	// Holding aim and clicking shoots along the camera. Clicking without aim
+	// does not hip-fire. A friend under the cursor still gets a greeting.
+	const bool bRanged = Equipment && Equipment->GetAttackRangeOverride() > 0.0f;
+	if (bRanged && bIsAiming)
 	{
 		AttemptRangedAttack();
 		return;
 	}
 
+	if (TryFistBumpUnderCursor())
+	{
+		return;
+	}
+
+	if (bRanged)
+	{
+		ShowLocalNotice(NSLOCTEXT("DCC", "AimThenFire", "Hold right mouse to aim, then left click to fire."));
+		return;
+	}
+
+	// Nothing in reach still swings. A click outside a fight practices the motion:
+	// the clip plays, and there is no roll, no damage, and no skill mark.
+	// Climbing stays the hold, and only while Climbing is equipped.
 	AttemptAttackNearest();
 }
 
@@ -1657,9 +1686,14 @@ void ADCCCharacterBase::TickClimbCamera(float DeltaSeconds)
 
 int32 ADCCCharacterBase::ModifyIncomingDamage(int32 Damage, ADCCCharacterBase* Attacker)
 {
-	if (Damage <= 0 || !Wallet)
+	if (Damage <= 0)
 	{
 		return Damage;
+	}
+	const float ClassScale = DCCBasicClasses::DamageTakenScale(this);
+	if (!Wallet)
+	{
+		return FMath::Max(1, FMath::RoundToInt(Damage * ClassScale));
 	}
 	const FName Plate = Wallet->WornIn(DCCCosmetics::Shoulders);
 	float Keep = 1.0f;
@@ -1667,7 +1701,7 @@ int32 ADCCCharacterBase::ModifyIncomingDamage(int32 Damage, ADCCCharacterBase* A
 	else if (Plate == FName(TEXT("SpikedPauldrons"))) { Keep = 0.70f; }
 	else if (Plate == FName(TEXT("PitBossPlate"))) { Keep = 0.55f; }
 	(void)Attacker;
-	return FMath::Max(1, FMath::RoundToInt(Damage * Keep));
+	return FMath::Max(1, FMath::RoundToInt(Damage * Keep * ClassScale));
 }
 
 void ADCCCharacterBase::Landed(const FHitResult& Hit)
@@ -2660,6 +2694,22 @@ void ADCCCharacterBase::HandleInteractPressed()
 	// A System window on screen owns E until it is read. Checked before death,
 	// menus and everything else, because the window is drawn over all of them.
 	// At a summoning tube's podium in the Den, E opens (or closes) the summon panel (2026-11-17).
+	// A Casino Cascade seat owns E before the podium: the row on screen is the game.
+	if (IsLocallyControlled())
+	{
+		if (ADCCCasinoCascade* Casino = ADCCCasinoCascade::Get(GetWorld()))
+		{
+			if (Casino->IsSeated(this))
+			{
+				if (Onboarding && Onboarding->DismissActiveWindow())
+				{
+					return;
+				}
+				Casino->LocalConfirm(this);
+				return;
+			}
+		}
+	}
 	if (IsLocallyControlled())
 	{
 		for (TActorIterator<ADCCArcadeLobby> It(GetWorld()); It; ++It)
@@ -2826,6 +2876,31 @@ void ADCCCharacterBase::HandleInteractPressed()
 	{
 		HandleNPCInteractionConfirm();
 		return;
+	}
+
+	// Standing at a casino game: E sits you down. The play panel is the next press.
+	// Looking at Lane, Puck, Vale, June, Otto, or Bud still opens their menu.
+	if (IsLocallyControlled())
+	{
+		if (ADCCCasinoCascade* Casino = ADCCCasinoCascade::Get(GetWorld()))
+		{
+			if (!Casino->IsSeated(this) && !FindDialogueNPCUnderCursor())
+			{
+				const int32 Table = Casino->ClosestTable(GetActorLocation());
+				if (Table >= 0)
+				{
+					if (HasAuthority())
+					{
+						Server_CasinoAction_Implementation(1, Table);
+					}
+					else
+					{
+						Server_CasinoAction(1, Table);
+					}
+					return;
+				}
+			}
+		}
 	}
 
 	// Not talking yet: an ally under the crosshair starts a conversation.
@@ -3335,6 +3410,17 @@ void ADCCCharacterBase::BuildNPCInteractionOptions()
 		return;
 	}
 
+	// Casino staff sell a seat, the rules, and a drink. The rest of the menu is for other rooms.
+	if (Cast<ADCCCasinoStaff>(NPCInteractionTarget.Get()))
+	{
+		NPCInteractionOptions.Add(EDCCNPCInteractionOption::PlayGame);
+		NPCInteractionOptions.Add(EDCCNPCInteractionOption::RequestRules);
+		NPCInteractionOptions.Add(EDCCNPCInteractionOption::Shop);
+		NPCInteractionOptions.Add(EDCCNPCInteractionOption::Leave);
+		NPCInteractionIndex = FMath::Clamp(NPCInteractionIndex, 0, NPCInteractionOptions.Num() - 1);
+		return;
+	}
+
 	NPCInteractionOptions.Add(EDCCNPCInteractionOption::Talk);
 
 	// Only a shopkeeper gets the Shop row - a plain ADCCDialogueNPC has
@@ -3402,7 +3488,11 @@ void ADCCCharacterBase::GetOfferableQuestIds(TArray<FName>& OutIds) const
 void ADCCCharacterBase::CycleNPCInteractionMenu(int32 Delta)
 {
 	int32 Count;
-	if (bNPCShowingQuests)
+	if (bCasinoShopOpen)
+	{
+		Count = ADCCCasinoCascade::DrinkCount + 1;
+	}
+	else if (bNPCShowingQuests)
 	{
 		// +1 for the trailing "Back" row, same convention as the loot menu's
 		// itemised page.
@@ -3429,6 +3519,7 @@ void ADCCCharacterBase::CloseNPCInteraction()
 	NPCInteractionOptions.Reset();
 	NPCInteractionIndex = 0;
 	bNPCShowingQuests = false;
+	bCasinoShopOpen = false;
 }
 
 void ADCCCharacterBase::HandleNPCInteractionConfirm()
@@ -3444,6 +3535,25 @@ void ADCCCharacterBase::HandleNPCInteractionConfirm()
 	if (FVector::Dist(GetActorLocation(), Speaker->GetActorLocation()) > InteractionRange)
 	{
 		CloseNPCInteraction();
+		return;
+	}
+
+	if (bCasinoShopOpen)
+	{
+		if (NPCInteractionIndex >= ADCCCasinoCascade::DrinkCount)
+		{
+			bCasinoShopOpen = false;
+			NPCInteractionIndex = 0;
+			return;
+		}
+		if (HasAuthority())
+		{
+			Server_CasinoAction_Implementation(4, NPCInteractionIndex);
+		}
+		else
+		{
+			Server_CasinoAction(4, NPCInteractionIndex);
+		}
 		return;
 	}
 
@@ -3497,7 +3607,35 @@ void ADCCCharacterBase::HandleNPCInteractionConfirm()
 		BuildNPCInteractionOptions();
 		return;
 
+	case EDCCNPCInteractionOption::PlayGame:
+		if (const ADCCCasinoStaff* Staff = Cast<ADCCCasinoStaff>(Speaker))
+		{
+			if (HasAuthority())
+			{
+				Server_CasinoAction_Implementation(1, Staff->Post);
+			}
+			else
+			{
+				Server_CasinoAction(1, Staff->Post);
+			}
+		}
+		CloseNPCInteraction();
+		return;
+
+	case EDCCNPCInteractionOption::RequestRules:
+		if (ADCCCasinoStaff* Staff = Cast<ADCCCasinoStaff>(Speaker))
+		{
+			Staff->SayRules();
+		}
+		return;
+
 	case EDCCNPCInteractionOption::Shop:
+		if (Cast<ADCCCasinoStaff>(Speaker))
+		{
+			bCasinoShopOpen = true;
+			NPCInteractionIndex = 0;
+			return;
+		}
 		if (ADCCVendorNPC* Vendor = Cast<ADCCVendorNPC>(Speaker))
 		{
 			OpenVendorMenu(Vendor);
@@ -3996,9 +4134,17 @@ void ADCCCharacterBase::Server_OpenLootBox_Implementation(EDCCLootBoxTier Tier)
 			FText::FromString(FString::Join(BoonNames, TEXT(", "))));
 	}
 
+	FText Lean = FText::GetEmpty();
+	if (!Inventory->LootBoxLeanSkill.IsNone())
+	{
+		Lean = FText::Format(
+			NSLOCTEXT("DCC", "LootBoxLean", " It leaned toward your {0}."),
+			FText::FromString(FName::NameToDisplayString(Inventory->LootBoxLeanSkill.ToString(), false)));
+	}
+
 	ADCCGameState::Log(this, EDCCLogCategory::Achievement, FText::Format(
-		NSLOCTEXT("DCC", "LogLootBoxOpened", "{0} cracks open a {1} box - {2} item(s) hit the floor.{3}"),
-		GetLootSourceName(), TierName, FText::AsNumber(Result.Items.Num()), BoonSummary));
+		NSLOCTEXT("DCC", "LogLootBoxOpenedLean", "{0} cracks open a {1} box - {2} item(s) hit the floor.{3}{4}"),
+		GetLootSourceName(), TierName, FText::AsNumber(Result.Items.Num()), BoonSummary, Lean));
 }
 
 void ADCCCharacterBase::ClaimAndOpenAllLootBoxes()
@@ -4480,12 +4626,21 @@ void ADCCCharacterBase::Server_OpenLootBoxBatch_Implementation(EDCCLootBoxTier T
 		Boxes.SetNum(60);
 	}
 
+	FName BestLean = NAME_None;
+	int32 BestLeanRank = -1;
+
 	for (const EDCCLootBoxTier BoxTier : Boxes)
 	{
 		FDCCOpenedLootBoxResult Result;
 		if (!Inventory->TryOpenLootBox(BoxTier, GetActorLocation(), Result, this))
 		{
 			continue;
+		}
+
+		if (!Inventory->LootBoxLeanSkill.IsNone() && Inventory->LootBoxLeanRank > BestLeanRank)
+		{
+			BestLean = Inventory->LootBoxLeanSkill;
+			BestLeanRank = Inventory->LootBoxLeanRank;
 		}
 
 		++Reveal.BoxCount;
@@ -4534,9 +4689,17 @@ void ADCCCharacterBase::Server_OpenLootBoxBatch_Implementation(EDCCLootBoxTier T
 	}
 	else
 	{
+		FText Lean = FText::GetEmpty();
+		if (!BestLean.IsNone())
+		{
+			Lean = FText::Format(
+				NSLOCTEXT("DCC", "LootBoxLean", " It leaned toward your {0}."),
+				FText::FromString(FName::NameToDisplayString(BestLean.ToString(), false)));
+		}
+
 		ADCCGameState::Log(this, EDCCLogCategory::Achievement, FText::Format(
-			NSLOCTEXT("DCC", "LogLootBoxBatch", "{0} opens {1} {1}|plural(one=box,other=boxes) on camera. {2} {2}|plural(one=thing,other=things) inside."),
-			GetLootSourceName(), FText::AsNumber(Reveal.BoxCount), FText::AsNumber(Reveal.Entries.Num())));
+			NSLOCTEXT("DCC", "LogLootBoxBatchLean", "{0} opens {1} {1}|plural(one=box,other=boxes) on camera. {2} {2}|plural(one=thing,other=things) inside.{3}"),
+			GetLootSourceName(), FText::AsNumber(Reveal.BoxCount), FText::AsNumber(Reveal.Entries.Num()), Lean));
 	}
 
 	Client_LootBoxReveal(Reveal);
@@ -4675,6 +4838,14 @@ void ADCCCharacterBase::OpenChat(ADCCCharacterBase* Target)
 
 void ADCCCharacterBase::HandleScroll(int32 Delta)
 {
+	if (ADCCCasinoCascade* Casino = ADCCCasinoCascade::Get(GetWorld()))
+	{
+		if (Casino->IsSeated(this))
+		{
+			Casino->LocalScroll(this, Delta);
+			return;
+		}
+	}
 	if (bInSelfieMode) { CycleSelfiePose(Delta); return; }
 	if (bEmoteMenuOpen) { CycleEmoteMenu(Delta); return; }
 	if (VendorTargetActor) { CycleVendorMenu(Delta); return; }
@@ -4686,6 +4857,11 @@ void ADCCCharacterBase::HandleScroll(int32 Delta)
 	if (!InteractionOptions.IsEmpty())
 	{
 		CycleInteractionOption(Delta);
+		return;
+	}
+	if (bRecordingFootage)
+	{
+		NudgeBodyCamZoom(Delta);
 		return;
 	}
 	CycleBeltAim(Delta);
@@ -4749,6 +4925,42 @@ void ADCCCharacterBase::CycleInteractionOption(int32 Delta)
 	InteractionIndex = ((InteractionIndex + Delta) % Count + Count) % Count;
 }
 
+void ADCCCharacterBase::CloseSideMenus()
+{
+	InteractionTarget = nullptr;
+	InspectedCharacter = nullptr;
+	InteractionOptions.Reset();
+	InteractionIndex = 0;
+	bEmoteMenuOpen = false;
+	CloseLootMenu();
+	CloseVendorMenu();
+	CloseOathgatePrompt();
+	CloseNPCInteraction();
+}
+
+bool ADCCCharacterBase::HasSideMenu() const
+{
+	return NPCInteractionTarget || VendorTargetActor || LootTargetActor || OathgateTargetActor
+		|| bEmoteMenuOpen || InteractionTarget;
+}
+
+void ADCCCharacterBase::LeaveCasinoSeat()
+{
+	ADCCCasinoCascade* Casino = ADCCCasinoCascade::Get(GetWorld());
+	if (!Casino || !Casino->IsSeated(this) || !(IsLocallyControlled() || HasAuthority()))
+	{
+		return;
+	}
+	if (HasAuthority())
+	{
+		Server_CasinoAction_Implementation(3, 0);
+	}
+	else
+	{
+		Server_CasinoAction(3, 0);
+	}
+}
+
 void ADCCCharacterBase::CloseInteraction()
 {
 	// Esc puts the phone down (the photo pose used to be cancelled with C).
@@ -4757,20 +4969,28 @@ void ADCCCharacterBase::CloseInteraction()
 		ToggleSelfieMode();
 		return;
 	}
-	InteractionTarget = nullptr;
-	InspectedCharacter = nullptr;
-	InteractionOptions.Reset();
-	InteractionIndex = 0;
-	bEmoteMenuOpen = false;
-
-	// Esc is bound to this function alone, so it has to close whichever of the
-	// menus is actually open - harmless to call when a menu was already
-	// closed, CloseLootMenu/CloseVendorMenu just reset fields that are reset
-	// already.
-	CloseLootMenu();
-	CloseVendorMenu();
-	CloseOathgatePrompt();
-	CloseNPCInteraction();
+	// One press closes the thing in front. A Tab sheet, a shop, or a talk menu
+	// goes away without also standing up from a casino seat.
+	const APlayerController* PC = Cast<APlayerController>(GetController());
+	if (ADCCHUD* Hud = PC ? Cast<ADCCHUD>(PC->GetHUD()) : nullptr)
+	{
+		if (Hud->IsMenuVisible())
+		{
+			Hud->ToggleMenu();
+			return;
+		}
+		if (Hud->DismissOverlay())
+		{
+			return;
+		}
+	}
+	if (HasSideMenu())
+	{
+		CloseSideMenus();
+		return;
+	}
+	LeaveCasinoSeat();
+	CloseSideMenus();
 }
 
 void ADCCCharacterBase::ResolveSocialCheck(ADCCCharacterBase* Target, bool bIntimidate)
@@ -5216,9 +5436,39 @@ void ADCCCharacterBase::Server_AdminLevelUp_Implementation()
 void ADCCCharacterBase::ToggleCharacterMenu()
 {
 	const APlayerController* PC = Cast<APlayerController>(GetController());
-	if (ADCCHUD* DCCHUD = PC ? Cast<ADCCHUD>(PC->GetHUD()) : nullptr)
+	ADCCHUD* Hud = PC ? Cast<ADCCHUD>(PC->GetHUD()) : nullptr;
+	// The sheet is already up: Tab closes it, and does not also stand up.
+	if (Hud && Hud->IsMenuVisible())
 	{
-		DCCHUD->ToggleMenu();
+		Hud->ToggleMenu();
+		return;
+	}
+	if (Hud && Hud->DismissOverlay())
+	{
+		return;
+	}
+	if (bInSelfieMode)
+	{
+		ToggleSelfieMode();
+		return;
+	}
+	if (HasSideMenu())
+	{
+		CloseSideMenus();
+		return;
+	}
+	// A casino hand's panel is the menu in front of you. Tab stands up, same as Esc.
+	if (const ADCCCasinoCascade* Casino = ADCCCasinoCascade::Get(GetWorld()))
+	{
+		if (Casino->IsSeated(this))
+		{
+			LeaveCasinoSeat();
+			return;
+		}
+	}
+	if (Hud)
+	{
+		Hud->ToggleMenu();
 	}
 }
 
@@ -5471,6 +5721,13 @@ FDCCAttackResult ADCCCharacterBase::PerformAttack(ADCCCharacterBase* Target, boo
 		// often as gear does and isn't worth a second member field to track.
 		const EDCCDamageType AttackDamageType = Equipment ? Equipment->GetWeaponDamageType() : EDCCDamageType::Physical;
 
+		const bool bRanged = Equipment && Equipment->GetAttackRangeOverride() > 0.0f;
+		const int32 ClassBonus = bRanged ? DCCBasicClasses::RangedPercent(this) : DCCBasicClasses::MeleePercent(this);
+		if (ClassBonus > 0)
+		{
+			FinalDamage = FMath::Max(1, FMath::RoundToInt(FinalDamage * (100 + ClassBonus) / 100.0f));
+		}
+
 		// The target's own last word on the blow. Anything that wants to be
 		// unhittable-but-not-invulnerable overrides this - see
 		// ADCCCharacterBase::ModifyIncomingDamage.
@@ -5620,6 +5877,8 @@ void ADCCCharacterBase::AnnounceLevelUp(int32 PreviousLevel)
 	ADCCGameState::Log(this, EDCCLogCategory::Experience, FText::Format(
 		NSLOCTEXT("DCC", "LogLevelUp", "{0} reaches level {1}. Contract terms improve accordingly."),
 		FText::FromString(GetActorNameOrLabel()), FText::AsNumber(Stats->Level)));
+
+	DCCBasicClasses::ApplyLearned(this);
 }
 
 void ADCCCharacterBase::PawnClientRestart()
@@ -5818,9 +6077,8 @@ void ADCCCharacterBase::ResolveOrQueueRangedAttack(ADCCCharacterBase* NominatedT
 {
 	// The nomination is a claim, not a fact - re-checked here exactly like
 	// ResolveOrQueueSkill re-checks CanActivate before trusting its own Target
-	// parameter. A target that fails this still reaches PerformAttack below as
-	// nullptr rather than being treated as an error - a shot fired at nothing
-	// is not a refused action, it is a miss, same as swinging into empty air.
+	// parameter. A target that fails this still plays the swing. A shot fired at
+	// nothing deals no damage. It is a practice swing, same as clicking empty air.
 	ADCCCharacterBase* Target =
 		(NominatedTarget && NominatedTarget->IsAlive() && IsHostileTo(NominatedTarget) && IsInAttackRange(NominatedTarget))
 		? NominatedTarget : nullptr;
@@ -5833,6 +6091,12 @@ void ADCCCharacterBase::ResolveOrQueueRangedAttack(ADCCCharacterBase* NominatedT
 			GameState->QueueAction(this, NAME_None, Target);
 			return;
 		}
+	}
+
+	if (!Target)
+	{
+		PracticeSwing();
+		return;
 	}
 
 	PerformAttack(Target);
@@ -5853,7 +6117,32 @@ void ADCCCharacterBase::ResolveOrQueueAttack()
 		}
 	}
 
+	if (!Target)
+	{
+		PracticeSwing();
+		return;
+	}
+
 	PerformAttack(Target);
+}
+
+void ADCCCharacterBase::PracticeSwing()
+{
+	if (!HasAuthority() || !IsAlive())
+	{
+		return;
+	}
+	if (!IsAttackReady())
+	{
+		UE_LOG(LogTemp, Log, TEXT("[DCC Swing] practice waiting on the cooldown"));
+		return;
+	}
+	if (const UWorld* World = GetWorld())
+	{
+		LastAttackTime = World->GetTimeSeconds();
+	}
+	UE_LOG(LogTemp, Log, TEXT("[DCC Swing] practice, no target and no damage"));
+	Multicast_PlayAttack(nullptr, false);
 }
 
 void ADCCCharacterBase::ResolveOrQueueSkill(FName SkillId, AActor* Target)
@@ -5982,16 +6271,50 @@ ADCCCharacterBase* ADCCCharacterBase::FindNearestHostileInRange() const
 	return Best;
 }
 
+namespace
+{
+	// -1 is a real value we have crashed on (an unresolved object handle, or a
+	// field read off something that is not a skeleton). IsValidLowLevelFast
+	// itself dereferences, so the alignment and range check has to come first.
+	bool IsPlausibleUObject(const UObject* Object)
+	{
+		const UPTRINT Address = reinterpret_cast<UPTRINT>(Object);
+		return Address >= 0x10000 && (Address & (sizeof(void*) - 1)) == 0;
+	}
+
+	bool IsLiveSkeleton(const USkeleton* Skeleton)
+	{
+		return IsPlausibleUObject(Skeleton)
+			&& Skeleton->IsValidLowLevelFast(false)
+			&& Skeleton->IsA(USkeleton::StaticClass());
+	}
+}
+
 bool ADCCCharacterBase::CanPlayOnThisSkeleton(const UAnimationAsset* Animation) const
 {
 	const USkeletalMeshComponent* MeshComponent = GetMesh();
-	if (!Animation || !MeshComponent)
+	if (!IsPlausibleUObject(Animation) || !MeshComponent)
 	{
 		return false;
 	}
 
+	// A stale clip cache used to hand back a live component (the nameplate, the
+	// capsule). GetSkeleton() is not virtual, so calling it on those reads a
+	// neighbouring field and can come back as the pointer -1.
+	if (!Animation->IsValidLowLevelFast(false) || !Animation->IsA(UAnimationAsset::StaticClass()))
+	{
+		if (!bWarnedSkeletonMismatch)
+		{
+			bWarnedSkeletonMismatch = true;
+			UE_LOG(LogTemp, Warning,
+				TEXT("[DCC Anim] %s: refusing '%s'. It is not an animation."),
+				*GetActorNameOrLabel(), *Animation->GetName());
+		}
+		return false;
+	}
+
 	const USkeletalMesh* MeshAsset = MeshComponent->GetSkeletalMeshAsset();
-	if (!MeshAsset)
+	if (!IsPlausibleUObject(MeshAsset) || !MeshAsset->IsValidLowLevelFast(false))
 	{
 		return false;
 	}
@@ -5999,7 +6322,15 @@ bool ADCCCharacterBase::CanPlayOnThisSkeleton(const UAnimationAsset* Animation) 
 	const USkeleton* MeshSkeleton = MeshAsset->GetSkeleton();
 	const USkeleton* AnimSkeleton = Animation->GetSkeleton();
 
-	if (MeshSkeleton && AnimSkeleton && MeshSkeleton == AnimSkeleton)
+	// The mesh skeleton can still be resolving on the first ticks after a body
+	// swap. Building a soft path from that pointer is the startup access violation.
+	// Returning false here just keeps the previous pose; the next tick tries again.
+	if (!IsLiveSkeleton(MeshSkeleton) || !IsLiveSkeleton(AnimSkeleton))
+	{
+		return false;
+	}
+
+	if (MeshSkeleton == AnimSkeleton)
 	{
 		return true;
 	}
@@ -6174,6 +6505,14 @@ void ADCCCharacterBase::Server_RequestEmoteAtIndex_Implementation(int32 Index)
 	}
 
 	Multicast_PlayEmoteAtIndex(Index);
+	if (bRecordingFootage)
+	{
+		for (TActorIterator<ADCCArcadeHaunt> It(GetWorld()); It; ++It)
+		{
+			It->GrantFootage(GetPlayerState() ? GetPlayerState()->GetPlayerName() : FString(), 30.0f);
+			break;
+		}
+	}
 }
 
 void ADCCCharacterBase::Multicast_PlayEmoteAtIndex_Implementation(int32 Index)
@@ -6216,23 +6555,40 @@ UAnimationAsset* ADCCCharacterBase::SelectLocomotionAnimation() const
 		return ClimbAnimation;
 	}
 
+	// Swords use the sword-and-shield loops. Axes, hammers, and anything else
+	// keep the body's own set, as they did before the Mixamo weapon holds.
+	UAnimationAsset* WeaponIdle = nullptr;
+	UAnimationAsset* WeaponWalk = nullptr;
+	UAnimationAsset* WeaponRun = nullptr;
+	if (Equipment)
+	{
+		DCCAttackStyle::WeaponLoops(
+			DCCAttackStyle::FromId(Equipment->GetEquippedId(EDCCEquipmentSlot::MainHand)),
+			WeaponIdle, WeaponWalk, WeaponRun);
+	}
+	auto Fits = [this](UAnimationAsset* Clip) { return Clip && CanPlayOnThisSkeleton(Clip); };
+
 	// Horizontal speed only: falling should not read as sprinting.
 	const float Speed = GetVelocity().Size2D();
 
-	if (Speed >= RunSpeedThreshold && RunAnimation)
+	if (Speed >= RunSpeedThreshold)
 	{
-		return RunAnimation;
+		if (Fits(WeaponRun)) { return WeaponRun; }
+		if (RunAnimation) { return RunAnimation; }
 	}
 
 	if (Speed >= WalkSpeedThreshold)
 	{
 		// Fall through to the run cycle when no walk clip exists, so a character
 		// that only has a run still animates while moving.
+		if (Fits(WeaponWalk)) { return WeaponWalk; }
+		if (Fits(WeaponRun)) { return WeaponRun; }
 		return WalkAnimation ? WalkAnimation.Get() : RunAnimation.Get();
 	}
 
 	// Standing still. Idle if authored, otherwise walk, otherwise run - something
 	// looping is better than a frozen T-pose.
+	if (Fits(WeaponIdle)) { return WeaponIdle; }
 	if (IdleAnimation)
 	{
 		return IdleAnimation;
@@ -6243,6 +6599,10 @@ UAnimationAsset* ADCCCharacterBase::SelectLocomotionAnimation() const
 
 void ADCCCharacterBase::UpdateLocomotionAnimation()
 {
+	// BeginPlay can run before the shared skeleton's bone tree is filled in.
+	// EnsureForMesh no-ops until it is, then sticks.
+	DCCRetarget::EnsureForMesh(GetMesh());
+
 	USkeletalMeshComponent* MeshComponent = GetMesh();
 	UWorld* World = GetWorld();
 	if (!MeshComponent || !World)
@@ -6277,6 +6637,12 @@ void ADCCCharacterBase::UpdateLocomotionAnimation()
 	// all, because it is the pose the character holds while doing nothing -
 	// which is precisely when it was seen standing on its head.
 	if (!CanPlayOnThisSkeleton(Desired))
+	{
+		return;
+	}
+
+	// A mesh still compiling has no render data yet. Playing onto it is a null read.
+	if (const USkeletalMesh* MeshAsset = MeshComponent->GetSkeletalMeshAsset(); MeshAsset && MeshAsset->IsCompiling())
 	{
 		return;
 	}
@@ -6599,6 +6965,11 @@ void ADCCCharacterBase::GetFoods(TArray<FName>& Out) const
 
 void ADCCCharacterBase::CycleFood()
 {
+	if (bRecordingFootage)
+	{
+		ToggleFacingCamera();
+		return;
+	}
 	TArray<FName> Foods;
 	GetFoods(Foods);
 	if (Foods.Num() < 2)
@@ -6628,6 +6999,13 @@ void ADCCCharacterBase::BeltKey(int32 Index)
 	if (bHasDied || bInSelfieMode)
 	{
 		return;
+	}
+	if (const ADCCCasinoCascade* Casino = ADCCCasinoCascade::Get(GetWorld()))
+	{
+		if (Casino->IsSeated(this))
+		{
+			return;
+		}
 	}
 	TArray<FDCCBeltEntry> Belt;
 	GetBelt(Belt);
@@ -6661,6 +7039,13 @@ void ADCCCharacterBase::BeltKey(int32 Index)
 
 void ADCCCharacterBase::UseBeltEntry(const FDCCBeltEntry& Entry)
 {
+	if (const ADCCCasinoCascade* Casino = ADCCCasinoCascade::Get(GetWorld()))
+	{
+		if (Casino->IsSeated(this))
+		{
+			return;
+		}
+	}
 	APlayerController* PC = Cast<APlayerController>(GetController());
 	switch (Entry.Kind)
 	{
@@ -6837,7 +7222,17 @@ void ADCCCharacterBase::Tick(float DeltaSeconds)
 		Server_SetReactionChoices(DCCReactions::LoadChoices());
 	}
 
-	// Out of breath: a sweat drop the moment stamina runs dry, once, until it has come back up.
+	// Summoned allies live in memory on the host. Each new game has to stand them up again.
+	if (HasAuthority() && IsPlayerControlled())
+	{
+		static double NextBringAllies = 0.0;
+		const double Now = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0;
+		if (Now >= NextBringAllies)
+		{
+			NextBringAllies = Now + 0.5;
+			DCCSummons::BringAlong(GetWorld());
+		}
+	}
 	if (HasAuthority() && Stats && IsPlayerControlled())
 	{
 		if (!bOutOfBreath && Stats->CurrentStamina <= 0.5f)
@@ -6852,6 +7247,10 @@ void ADCCCharacterBase::Tick(float DeltaSeconds)
 	}
 
 	TickHoldToClimb(DeltaSeconds);
+	if (bBodyCamZoomed && (!bRecordingFootage || !IsAlive()))
+	{
+		RestoreBodyCamZoom();
+	}
 	TickFacingCamera(DeltaSeconds);
 	TickClimbCamera(DeltaSeconds);
 	TickClimbTilt(DeltaSeconds);
@@ -7097,7 +7496,15 @@ void ADCCCharacterBase::PlayCharacterSound(USoundBase* Sound) const
 
 void ADCCCharacterBase::Multicast_PlayCast_Implementation(float HoldSeconds)
 {
-	PlayOneShotAnimation(CastAnimation, HoldSeconds);
+	UAnimationAsset* Clip = DCCAttackStyle::CastClip();
+	if (Clip && CanPlayOnThisSkeleton(Clip))
+	{
+		PlayOneShotAnimation(Clip, HoldSeconds);
+	}
+	else
+	{
+		PlayOneShotAnimation(CastAnimation, HoldSeconds);
+	}
 	PlayCharacterSound(CastSound);
 }
 
@@ -7116,7 +7523,15 @@ void ADCCCharacterBase::Multicast_PlayHitReaction_Implementation()
 	// Squeezed into HitReactionSeconds. PlayOneShotAnimation already stretches or
 	// compresses a clip to fill a window, which is what makes a borrowed gesture
 	// usable as a flinch until a real reaction clip exists.
-	PlayOneShotAnimation(HitReactionAnimation, HitReactionSeconds);
+	UAnimationAsset* Clip = DCCAttackStyle::HitClip();
+	if (Clip && CanPlayOnThisSkeleton(Clip))
+	{
+		PlayOneShotAnimation(Clip, HitReactionSeconds);
+	}
+	else
+	{
+		PlayOneShotAnimation(HitReactionAnimation, HitReactionSeconds);
+	}
 }
 
 void ADCCCharacterBase::ReactToHitFrom(const FVector& ImpactSource)
@@ -7345,6 +7760,40 @@ void ADCCCharacterBase::RollDeathSave()
 		GetWorldTimerManager().ClearTimer(DeathSaveTimer);
 		bIsDowned = false;
 		FinishDying();
+	}
+}
+
+void ADCCCharacterBase::Server_BleedOut_Implementation()
+{
+	if (!HasAuthority() || !bIsDowned || bHasDied)
+	{
+		return;
+	}
+
+	GetWorldTimerManager().ClearTimer(DeathSaveTimer);
+	DeathSaveFailures = DeathSavesToExpire;
+	UE_LOG(LogTemp, Log, TEXT("[DCC Down] %s chose to bleed out"), *GetName());
+
+	// Same ending as the third failed save, just without the wait between rolls.
+	if (ADCCTaleFloor::InterceptDeath(this))
+	{
+		return;
+	}
+
+	bIsDowned = false;
+	FinishDying();
+}
+
+void ADCCCharacterBase::ReleaseClimbIfClimbing()
+{
+	if (bIsDowned && !bHasDied)
+	{
+		Server_BleedOut();
+		return;
+	}
+	if (IsClimbing())
+	{
+		ReleaseClimb();
 	}
 }
 
@@ -8014,6 +8463,35 @@ void ADCCCharacterBase::SetBase(FMovementBaseInterfaceData* MovementBaseInterfac
 	Super::SetBase(MovementBaseInterfaceData, BoneName, bNotifyActor);
 }
 
+void ADCCCharacterBase::NudgeBodyCamZoom(int32 Delta)
+{
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	if (!PC || !PC->PlayerCameraManager || !IsLocallyControlled() || bIsAiming || Delta == 0)
+	{
+		return;
+	}
+	if (!bBodyCamZoomed)
+	{
+		BodyCamBaseFOV = PC->PlayerCameraManager->GetFOVAngle();
+		bBodyCamZoomed = true;
+	}
+	const float Next = FMath::Clamp(PC->PlayerCameraManager->GetFOVAngle() + float(Delta) * 6.0f, 30.0f, FMath::Max(30.0f, BodyCamBaseFOV));
+	PC->PlayerCameraManager->SetFOV(Next);
+}
+
+void ADCCCharacterBase::RestoreBodyCamZoom()
+{
+	if (!bBodyCamZoomed)
+	{
+		return;
+	}
+	bBodyCamZoomed = false;
+	if (APlayerController* PC = Cast<APlayerController>(GetController()); PC && PC->PlayerCameraManager && !bIsAiming)
+	{
+		PC->PlayerCameraManager->SetFOV(BodyCamBaseFOV);
+	}
+}
+
 void ADCCCharacterBase::ToggleFacingCamera()
 {
 	USpringArmComponent* Boom = FindComponentByClass<USpringArmComponent>();
@@ -8026,7 +8504,7 @@ void ADCCCharacterBase::ToggleFacingCamera()
 	{
 		bFacingCameraWasControlRotation = Boom->bUsePawnControlRotation;
 		Boom->bUsePawnControlRotation = false;
-		ShowLocalNotice(NSLOCTEXT("DCC", "FacingCamOn", "Selfie cam: filming your face. B, then Selfie camera, turns it back around."));
+		ShowLocalNotice(NSLOCTEXT("DCC", "FacingCamOn", "Selfie cam: filming your face. Click the wheel again to turn it around."));
 	}
 	else
 	{
@@ -8119,6 +8597,14 @@ void ADCCCharacterBase::Server_RequestReaction_Implementation(uint8 Reaction)
 	}
 	NextPickedReactionTime = World->GetTimeSeconds() + 0.6f;
 	React(Reaction, false);
+	if (bRecordingFootage)
+	{
+		for (TActorIterator<ADCCArcadeHaunt> It(GetWorld()); It; ++It)
+		{
+			It->GrantFootage(GetPlayerState() ? GetPlayerState()->GetPlayerName() : FString(), 30.0f);
+			break;
+		}
+	}
 }
 
 void ADCCCharacterBase::Multicast_React_Implementation(uint8 Reaction, uint8 Move)

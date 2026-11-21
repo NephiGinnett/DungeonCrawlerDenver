@@ -117,9 +117,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialogue")
 	FLinearColor SpeechColour = FLinearColor(0.95f, 0.90f, 0.70f);
 
-	/** Says the next unsaid line immediately, if there is one. */
+	/** Says the next unsaid line immediately, if there is one. Virtual so a camp can hold a line back. */
 	UFUNCTION(BlueprintCallable, Category = "Dialogue")
-	void SayNextLine();
+	virtual void SayNextLine();
 
 	/** Everything this speaker has left to say, in table order. */
 	UFUNCTION(BlueprintCallable, Category = "Dialogue")

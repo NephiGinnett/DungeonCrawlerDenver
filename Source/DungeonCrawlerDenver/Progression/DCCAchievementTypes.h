@@ -90,6 +90,15 @@ enum class EDCCAchievementStat : uint8
 	/** Fourteener: sprayed your tag in the top tenth of the mountain (2026-11-16). */
 	TaggedTheSummit     UMETA(DisplayName = "Tagged the Summit"),
 
+	/** Casino Cascade: tickets the house paid out. A push (stake returned) does not count. */
+	CasinoTicketsWon    UMETA(DisplayName = "Casino Tickets Won"),
+
+	/** Casino Cascade: hands that beat the table. Skee-Ball's score payout is tickets, not a hand. */
+	CasinoWins          UMETA(DisplayName = "Casino Wins"),
+
+	/** Casino Cascade: one count each time a single payout is 50 tickets or more. */
+	CasinoJackpot       UMETA(DisplayName = "Casino Jackpot"),
+
 	MAX                 UMETA(Hidden)
 };
 

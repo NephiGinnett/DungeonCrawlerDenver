@@ -170,6 +170,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	bool EquipItem(int32 Index);
 
+	/** Server only. Puts a piece of gear back in the bag. A full bag still accepts it, so taking something off
+	 *  cannot delete it. False only when there is no authority or no id. */
+	bool AddGearRecord(FName EquipmentItemId);
+
 	/**
 	 * Server only. Respawns the item at a world location and removes the record.
 	 *
@@ -266,9 +270,20 @@ public:
 	 * is ADCCCharacterBase::Server_OpenLootBox's job, the same split
 	 * InteractionRange checks already follow: this component owns the box
 	 * and the roll, not where a character is allowed to be when it asks.
+	 *
+	 * Gear odds lean toward skills the owner already has. Gold and anything
+	 * with no skill stay as authored. The expected number of gear drops does
+	 * not grow; a specialist's share comes out of the rest of the table.
+	 * LootBoxLeanSkill is whatever that lean was, for the open announcement.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Inventory|LootBox")
 	bool TryOpenLootBox(EDCCLootBoxTier Tier, const FVector& WorldLocation, FDCCOpenedLootBoxResult& OutResult, ADCCCharacterBase* Looter = nullptr);
+
+	/** Skill the last opened box leaned toward, or None. Not saved or replicated. */
+	FName LootBoxLeanSkill = NAME_None;
+
+	/** Rank of LootBoxLeanSkill at the moment of that roll. 0 when there was no lean. */
+	int32 LootBoxLeanRank = 0;
 
 protected:
 	UFUNCTION()
