@@ -5,6 +5,8 @@
 //   DCC.SkillTick <Skill> [delay]   one practice tick on a skill of the local crawler (grants it if unknown)
 //   DCC.Scrap <amount> [delay]      give the local player scrap
 
+#include "Classes/DCCClassComponent.h"
+#include "Stats/DCCStatsComponent.h"
 #include "Arcade/DCCSpray.h"
 #include "Session/DCCProfile.h"
 #include "Arcade/DCCWalletComponent.h"
@@ -156,7 +158,7 @@ static FAutoConsoleCommandWithWorldAndArgs GDevPeek(TEXT("DCC.Peek"),
 		});
 	}));
 
-static FAutoConsoleCommandWithWorldAndArgs GDevGateIn(TEXT("DCC.GateIn"), TEXT("DCC.GateIn [room] [delay]: (dev) in Gate Run, open the gate and send everyone in."),
+static FAutoConsoleCommandWithWorldAndArgs GDevGateIn(TEXT("DCC.GateIn"), TEXT("DCC.GateIn [room] [delay]: (dev) in Gate Run, open the gate and send everyone in. Room 100+ is a hazard (100 the first)."),
 	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
 	{
 		const int32 Room = Args.Num() > 0 ? FCString::Atoi(*Args[0]) : 0;
@@ -216,6 +218,80 @@ static FAutoConsoleCommandWithWorldAndArgs GDevCredits(TEXT("DCC.Credits"), TEXT
 
 // Put the local player somewhere, relative to the running arcade arena's origin (2026-11-15: testing the Trading Post
 // pad and Gate Run rooms without walking there).
+static FAutoConsoleCommandWithWorldAndArgs GDevPerk(TEXT("DCC.Perk"),
+	TEXT("DCC.Perk <tier> <option> [delay]: (dev) pick a class perk for the local crawler."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		if (Args.Num() < 2)
+		{
+			return;
+		}
+		const int32 Tier = FCString::Atoi(*Args[0]);
+		const int32 Option = FCString::Atoi(*Args[1]);
+		After(World, Args.Num() > 2 ? FCString::Atof(*Args[2]) : 0.0f, [Tier, Option](UWorld* W)
+		{
+			APlayerController* PC = W->GetFirstPlayerController();
+			ADCCCharacterBase* Crawler = PC ? Cast<ADCCCharacterBase>(PC->GetPawn()) : nullptr;
+			if (UDCCClassComponent* Comp = Crawler ? Crawler->FindComponentByClass<UDCCClassComponent>() : nullptr)
+			{
+				Comp->Server_PickPerk(Tier, Option);
+			}
+		});
+	}));
+
+static FAutoConsoleCommandWithWorldAndArgs GDevCast(TEXT("DCC.Cast"),
+	TEXT("DCC.Cast <SkillId> [delay]: (dev) teach the local crawler a skill, fill its mana, and cast it at the nearest foe."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		if (Args.Num() < 1)
+		{
+			return;
+		}
+		const FName SkillId(*Args[0]);
+		After(World, Args.Num() > 1 ? FCString::Atof(*Args[1]) : 0.0f, [SkillId](UWorld* W)
+		{
+			APlayerController* PC = W->GetFirstPlayerController();
+			ADCCCharacterBase* Crawler = PC ? Cast<ADCCCharacterBase>(PC->GetPawn()) : nullptr;
+			if (!Crawler || !Crawler->Skills || !Crawler->Stats)
+			{
+				return;
+			}
+			Crawler->Skills->GrantSkill(SkillId, 1);
+			Crawler->Stats->RestoreMana(Crawler->Stats->MaxManaPoints);
+			AActor* Nearest = nullptr;
+			float Best = 3000.0f;
+			for (TActorIterator<ADCCCharacterBase> It(W); It; ++It)
+			{
+				if (*It != Crawler && It->IsAlive() && Crawler->IsHostileTo(*It))
+				{
+					const float D = FVector::Dist(It->GetActorLocation(), Crawler->GetActorLocation());
+					if (D < Best) { Best = D; Nearest = *It; }
+				}
+			}
+			if (Nearest)
+			{
+				Crawler->SetActorRotation(FRotator(0.0f, (Nearest->GetActorLocation() - Crawler->GetActorLocation()).Rotation().Yaw, 0.0f));
+			}
+			Crawler->DevCastSkill(SkillId, Nearest);
+		});
+	}));
+
+static FAutoConsoleCommandWithWorldAndArgs GDevXp(TEXT("DCC.Xp"),
+	TEXT("DCC.Xp <amount> [delay]: (dev) give the local crawler XP (it saves: on this PC that is Zoe's crawler)."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		const int32 Amount = Args.Num() > 0 ? FCString::Atoi(*Args[0]) : 0;
+		After(World, Args.Num() > 1 ? FCString::Atof(*Args[1]) : 0.0f, [Amount](UWorld* W)
+		{
+			APlayerController* PC = W->GetFirstPlayerController();
+			ADCCCharacterBase* Crawler = PC ? Cast<ADCCCharacterBase>(PC->GetPawn()) : nullptr;
+			if (Crawler && Crawler->Stats && Amount > 0)
+			{
+				Crawler->Stats->AddExperience(Amount);
+			}
+		});
+	}));
+
 static FAutoConsoleCommandWithWorldAndArgs GDevTp(TEXT("DCC.Tp"),
 	TEXT("DCC.Tp <x> <y> <z> [yaw] [delay]: (dev) move the local player to a point relative to the arena."),
 	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)

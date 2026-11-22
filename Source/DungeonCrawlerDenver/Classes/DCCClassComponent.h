@@ -36,6 +36,14 @@ public:
 	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_SelectedClassId, Category = "Class")
 	FName SelectedClassId;
 
+	/** Picked class perks (2026-11-22), as DCCClassPerks ids. Saved. One per tier per class. */
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Class")
+	TArray<FName> Perks;
+
+	/** A client picks (or swaps) the perk at a tier of their basic class. The server checks the level. */
+	UFUNCTION(Server, Reliable)
+	void Server_PickPerk(int32 Tier, int32 Option);
+
 	UFUNCTION(BlueprintPure, Category = "Class")
 	bool HasSelectedClass() const { return !SelectedClassId.IsNone(); }
 

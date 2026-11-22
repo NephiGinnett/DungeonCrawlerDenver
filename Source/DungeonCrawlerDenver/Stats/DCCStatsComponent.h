@@ -246,9 +246,13 @@ public:
 	 *
 	 * EditAnywhere rather than a constant so a later floor can simply raise it -
 	 * this is a tutorial-era ceiling, not a permanent property of the game.
+	 *
+	 * Raised to 20 on 2026-11-22: the project is an arcade now (no floors, no class choice), and at 5 every
+	 * player hit the cap within a few games and then earned nothing (Zoe: "it kind of seems like I start at
+	 * level 5 and never move from there"). Gate Run pitches its foes against the party's level to match.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats", meta = (ClampMin = "1"))
-	int32 MaxLevel = 5;
+	int32 MaxLevel = 20;
 
 	UFUNCTION(BlueprintPure, Category = "Stats")
 	bool IsAtMaxLevel() const { return Level >= MaxLevel; }
@@ -274,6 +278,27 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Stats")
 	void AddExperience(int32 Amount);
+
+	// -------------------------------------------------------------------------
+	// STAT POINTS (2026-11-22, Zoe: "stat raises between levels")
+	//
+	// Every level past the first earns a point, and every fifth level one more. A
+	// point raises one Unenhanced score by 1, from the Character page. Only what was
+	// SPENT is stored, so a crawler who levelled before this existed has their points
+	// waiting the moment they load: earned is worked out from the level.
+	// -------------------------------------------------------------------------
+
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Stats")
+	int32 StatPointsSpent = 0;
+
+	static int32 StatPointsEarnedAt(int32 AtLevel) { return FMath::Max(0, AtLevel - 1) + FMath::Max(0, AtLevel) / 5; }
+
+	UFUNCTION(BlueprintPure, Category = "Stats")
+	int32 GetUnspentStatPoints() const { return FMath::Max(0, StatPointsEarnedAt(Level) - StatPointsSpent); }
+
+	/** A client asks to spend a point on one score. The server checks there is one to spend. */
+	UFUNCTION(Server, Reliable)
+	void Server_RaiseAbility(EDCCAbility Ability);
 
 	// -------------------------------------------------------------------------
 	// GOLD

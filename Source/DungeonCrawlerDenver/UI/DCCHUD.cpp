@@ -53,6 +53,9 @@
 #include "Classes/DCCBasicClasses.h"
 #include "Session/DCCStarterKits.h"
 #include "Arcade/DCCArcadeArena.h"
+#include "Arcade/DCCArcadeGate.h"
+#include "Classes/DCCClassComponent.h"
+#include "Classes/DCCClassPerks.h"
 #include "Arcade/DCCWalletComponent.h"
 #include "Arcade/DCCClimbItems.h"
 #include "Arcade/DCCRallyItems.h"
@@ -263,6 +266,30 @@ void ADCCHUD::NotifyHitBoxClick(FName BoxName)
 		if (ADCCCharacterBase* Me = GetOwningCrawler())
 		{
 			Me->Server_BleedOut();
+		}
+		return;
+	}
+
+	if (AsString.StartsWith(TEXT("Perk|")))
+	{
+		TArray<FString> Parts;
+		AsString.ParseIntoArray(Parts, TEXT("|"));
+		ADCCCharacterBase* Me = GetOwningCrawler();
+		UDCCClassComponent* ClassComp = Me ? Me->FindComponentByClass<UDCCClassComponent>() : nullptr;
+		if (ClassComp && Parts.Num() == 3)
+		{
+			ClassComp->Server_PickPerk(FCString::Atoi(*Parts[1]), FCString::Atoi(*Parts[2]));
+		}
+		return;
+	}
+
+	if (AsString.StartsWith(TEXT("Stat|")))
+	{
+		const int32 Index = FCString::Atoi(*AsString.RightChop(5));
+		ADCCCharacterBase* Me = GetOwningCrawler();
+		if (Me && Me->Stats && Index >= 0 && Index < static_cast<int32>(EDCCAbility::MAX))
+		{
+			Me->Stats->Server_RaiseAbility(static_cast<EDCCAbility>(Index));
 		}
 		return;
 	}
@@ -708,6 +735,7 @@ void ADCCHUD::DrawHUDContents()
 	DrawItemToasts();
 	DrawNPCSubtitle();
 	DrawArcadeStatus();
+	DrawXpStrip(Crawler);
 	if (!Arena && GetWorld() && !DCCArcade::IsFrontDoor(GetWorld()) && !DCCArcade::IsBenchTool(GetWorld()))
 	{
 		DrawSeriesQuestBanner(TEXT("Crawler"));
@@ -2301,7 +2329,7 @@ void ADCCHUD::DrawVitals(ADCCCharacterBase* Crawler)
 	// rather than showing a full bar that never moves and letting the player
 	// wonder whether progression is broken.
 	const FString ExperienceLabel = Stats->IsAtMaxLevel()
-		? FString::Printf(TEXT("LVL %d   MAX (tutorial cap)"), Stats->Level)
+		? FString::Printf(TEXT("LVL %d   MAX"), Stats->Level)
 		: FString::Printf(TEXT("LVL %d   %d / %d XP"),
 			Stats->Level, Stats->ExperiencePoints, Stats->ExperienceToNextLevel);
 
@@ -3382,6 +3410,14 @@ float ADCCHUD::DrawStats(float X, float Y, ADCCCharacterBase* Crawler)
 	}
 
 	DrawText(TEXT("SCORES"), HeadingColour, X, Y);
+	// Stat points (2026-11-22): a + under each score while there is one to spend.
+	const int32 Unspent = Stats->GetUnspentStatPoints();
+	if (Unspent > 0)
+	{
+		const float Pulse = GetWorld() ? 0.7f + 0.3f * FMath::Sin(GetWorld()->GetRealTimeSeconds() * 4.0f) : 1.0f;
+		DrawText(FString::Printf(TEXT("%d STAT POINT%s TO SPEND"), Unspent, Unspent == 1 ? TEXT("") : TEXT("S")),
+			FLinearColor(0.45f, 1.0f, 0.55f, Pulse), X + 90.0f, Y);
+	}
 	Y += LineHeight;
 
 	static const TCHAR* Short[] = { TEXT("STR"), TEXT("INT"), TEXT("CON"), TEXT("DEX"), TEXT("CHA") };
@@ -3402,6 +3438,14 @@ float ADCCHUD::DrawStats(float X, float Y, ADCCCharacterBase* Crawler)
 		DrawRect(FLinearColor(0.95f, 0.82f, 0.35f, 0.95f), CX + 3.0f, CY, 16.0f, 22.0f);
 		DrawRect(FLinearColor(0.95f, 0.82f, 0.35f, 0.95f), CX, CY + 3.0f, 22.0f, 16.0f);
 		DrawText(FString::Printf(TEXT("+%d"), Modifier), FLinearColor(0.12f, 0.08f, 0.02f), CX + 2.0f, CY + 4.0f, nullptr, 0.7f);
+		if (Unspent > 0)
+		{
+			// The + button: top right of the score's box.
+			const float PX = BX + BoxW - 26.0f, PY = Y + 4.0f;
+			AddHitBox(FVector2D(PX, PY), FVector2D(22.0f, 22.0f), FName(*FString::Printf(TEXT("Stat|%d"), Index)), true, 3);
+			DrawRect(FLinearColor(0.2f, 0.75f, 0.35f, 0.95f), PX, PY, 22.0f, 22.0f);
+			DrawText(TEXT("+"), FLinearColor(0.02f, 0.08f, 0.03f), PX + 6.0f, PY + 1.0f, nullptr, 1.0f);
+		}
 	}
 	Y += 84.0f;
 
@@ -3419,7 +3463,8 @@ float ADCCHUD::DrawStats(float X, float Y, ADCCCharacterBase* Crawler)
 		: 0;
 	DrawText(FString::Printf(TEXT("Evade   %d"), Evade), BodyColour, X, Y);
 	Y += LineHeight;
-	DrawText(FString::Printf(TEXT("Level %d    XP %d"), Stats->Level, Stats->ExperiencePoints), HeadingColour, X, Y);
+	DrawText(Stats->IsAtMaxLevel() ? FString::Printf(TEXT("Level %d    MAX"), Stats->Level)
+		: FString::Printf(TEXT("Level %d    %d / %d XP"), Stats->Level, Stats->ExperiencePoints, Stats->ExperienceToNextLevel), HeadingColour, X, Y);
 	Y += LineHeight;
 
 	Y += 6.0f;
@@ -3430,15 +3475,10 @@ float ADCCHUD::DrawStats(float X, float Y, ADCCCharacterBase* Crawler)
 		// One line, and the next thing it teaches if there is one (2026-11-21: the learned list is on SKILLS).
 		DrawText(FString::Printf(TEXT("%s     %s"), Class->Name, *DCCBasicClasses::BonusLine(Crawler)), Class->Colour, X, Y);
 		Y += LineHeight;
-		const int32 Level = FMath::Clamp(Stats->Level, 1, 5);
-		for (const DCCBasicClasses::FNode& Node : Class->Nodes)
+		if (const DCCBasicClasses::FNode* Next = DCCBasicClasses::NextLesson(Crawler))
 		{
-			if (Node.Level > Level)
-			{
-				DrawText(FString::Printf(TEXT("Next, at level %d: %s"), Node.Level, Node.Title), DimColour, X, Y);
-				Y += LineHeight;
-				break;
-			}
+			DrawText(FString::Printf(TEXT("Next, at level %d: %s"), Next->Level, Next->Title), DimColour, X, Y);
+			Y += LineHeight;
 		}
 	}
 	else
@@ -3492,6 +3532,59 @@ float ADCCHUD::DrawSkills(float X, float Y, ADCCCharacterBase* Crawler)
 	if (!Skills)
 	{
 		return Y;
+	}
+
+	// The class perk tree (2026-11-22): four tiers, two choices each. Click to pick; click the other to swap.
+	if (const DCCBasicClasses::FClass* MyClass = DCCBasicClasses::Find(Crawler))
+	{
+		const int32 ClassIndex = DCCBasicClasses::IndexOf(Crawler);
+		const int32 Level = Crawler->Stats ? Crawler->Stats->Level : 1;
+		DrawText(FString::Printf(TEXT("%s PERKS"), *FString(MyClass->Name).ToUpper()), MyClass->Colour, X, Y);
+		if (const int32 Waiting = DCCClassPerks::Unpicked(Crawler))
+		{
+			const float Pulse = GetWorld() ? 0.7f + 0.3f * FMath::Sin(GetWorld()->GetRealTimeSeconds() * 4.0f) : 1.0f;
+			DrawText(FString::Printf(TEXT("%d TO PICK"), Waiting), FLinearColor(0.45f, 1.0f, 0.55f, Pulse), X + 260.0f, Y);
+		}
+		Y += LineHeight + 2.0f;
+		const float RowW = 430.0f;
+		for (int32 Tier = 0; Tier < DCCClassPerks::TierCount; ++Tier)
+		{
+			const int32 At = DCCClassPerks::TierLevel(Tier);
+			if (Level < At)
+			{
+				const DCCClassPerks::FPerk* A = DCCClassPerks::Get(ClassIndex, Tier, 0);
+				const DCCClassPerks::FPerk* B = DCCClassPerks::Get(ClassIndex, Tier, 1);
+				DrawText(FString::Printf(TEXT("LEVEL %d   %s  or  %s"), At, A ? A->Name : TEXT("?"), B ? B->Name : TEXT("?")), DimColour, X, Y, nullptr, 0.8f);
+				Y += LineHeight;
+				continue;
+			}
+			DrawText(FString::Printf(TEXT("LEVEL %d"), At), HeadingColour, X, Y, nullptr, 0.8f);
+			Y += LineHeight - 2.0f;
+			const int32 Chosen = DCCClassPerks::Picked(Crawler, Tier);
+			for (int32 Option = 0; Option < 2; ++Option)
+			{
+				const DCCClassPerks::FPerk* Perk = DCCClassPerks::Get(ClassIndex, Tier, Option);
+				if (!Perk)
+				{
+					continue;
+				}
+				const bool bOn = Chosen == Option;
+				const float RowH = LineHeight * 2.0f + 4.0f;
+				AddHitBox(FVector2D(X, Y), FVector2D(RowW, RowH), FName(*FString::Printf(TEXT("Perk|%d|%d"), Tier, Option)), true, 3);
+				DrawRect(bOn ? MyClass->Colour * 0.42f : FLinearColor(0.05f, 0.06f, 0.09f, 0.75f), X, Y, RowW, RowH);
+				if (bOn)
+				{
+					DrawRect(MyClass->Colour, X, Y, 3.0f, RowH);
+				}
+				const FLinearColor NameColour = bOn ? FLinearColor::White : Chosen >= 0 ? DimColour : BodyColour;
+				DrawText(FString::Printf(TEXT("%s%s"), bOn ? TEXT("[x] ") : TEXT("[ ] "), Perk->Name), NameColour, X + 8.0f, Y + 1.0f, nullptr, 0.85f);
+				DrawText(DCCClassPerks::EffectLine(*Perk), bOn ? FLinearColor(0.6f, 1.0f, 0.7f) : FLinearColor(0.55f, 0.85f, 0.6f, 0.85f),
+					X + 200.0f, Y + 2.0f, nullptr, 0.7f);
+				DrawText(Perk->Blurb, FLinearColor(0.75f, 0.72f, 0.8f, bOn ? 1.0f : 0.7f), X + 8.0f, Y + LineHeight + 1.0f, nullptr, 0.66f);
+				Y += RowH + 3.0f;
+			}
+		}
+		Y += 8.0f;
 	}
 
 	DrawText(TEXT("Skills"), HeadingColour, X, Y);
@@ -6967,6 +7060,38 @@ void ADCCHUD::DrawArcadeStatus()
 		DrawText(Arena->BossName, FLinearColor(0.92f, 0.82f, 1.0f), (Canvas->SizeX - NW) * 0.5f, BY - NH - 6.0f, Medium, 1.0f);
 	}
 	DrawSeriesQuestBanner(Arena->GetGameId());
+	// Gate Run's contracts (2026-11-22): three side goals for XP and tickets, top right, ticked off as they land.
+	if (const ADCCArcadeGate* Gate = Cast<ADCCArcadeGate>(Arena))
+	{
+		const TArray<FString>& Lines = Gate->GetContractLines();
+		UFont* Small = GEngine ? GEngine->GetSmallFont() : nullptr;
+		if (Lines.Num() > 0 && Small)
+		{
+			float W = 0.0f, LineH = 0.0f;
+			GetTextSize(TEXT("CONTRACTS"), W, LineH, Small, 1.0f);
+			for (const FString& Line : Lines)
+			{
+				float LW = 0.0f, LH = 0.0f;
+				GetTextSize(TEXT("[x]  ") + Line.RightChop(1), LW, LH, Small, 1.0f);
+				W = FMath::Max(W, LW);
+			}
+			const float H = LineH * (Lines.Num() + 1) + 6.0f * Lines.Num();
+			const float CX = Canvas->SizeX - W - 40.0f, CY = 18.0f;
+			DrawRect(FLinearColor(0.02f, 0.015f, 0.04f, 0.62f), CX - 12.0f, CY - 6.0f, W + 24.0f, H + 12.0f);
+			DrawRect(Arena->Accent, CX - 12.0f, CY - 6.0f, W + 24.0f, 2.0f);
+			DrawText(TEXT("CONTRACTS"), Arena->Accent, CX, CY, Small, 1.0f);
+			float Y = CY + LineH + 6.0f;
+			for (const FString& Line : Lines)
+			{
+				const TCHAR State = Line.IsEmpty() ? TEXT('o') : Line[0];
+				const FLinearColor Colour = State == TEXT('x') ? FLinearColor(0.45f, 1.0f, 0.55f)
+					: State == TEXT('-') ? FLinearColor(0.55f, 0.5f, 0.55f) : FLinearColor(0.93f, 0.9f, 0.86f);
+				const TCHAR* Box = State == TEXT('x') ? TEXT("[x]  ") : State == TEXT('-') ? TEXT("[-]  ") : TEXT("[ ]  ");
+				DrawText(Box + Line.RightChop(1), Colour, CX, Y, Small, 1.0f);
+				Y += LineH + 6.0f;
+			}
+		}
+	}
 	if (const ADCCArcadeKart* Kart = Cast<ADCCArcadeKart>(Arena))
 	{
 		DrawRallyScreens(Kart); // its own work order, board, crew, truck and report (DCCHUD_RallyMenus.cpp)
@@ -8292,5 +8417,64 @@ void ADCCHUD::DrawDenStrip(const ADCCArcadeLobby* Lobby)
 		float W = 0.0f, H = 0.0f;
 		GetTextSize(Lobby->CountdownLine, W, H, Small, 1.0f);
 		DrawText(Lobby->CountdownLine, FLinearColor(1.0f, 0.86f, 0.45f), (Canvas->SizeX - W) * 0.5f, Y0 + Tile + 26.0f, Small, 1.0f);
+	}
+}
+
+void ADCCHUD::DrawXpStrip(ADCCCharacterBase* Crawler)
+{
+	UDCCStatsComponent* Stats = Crawler ? Crawler->Stats.Get() : nullptr;
+	if (!Stats || !Canvas || !GEngine || !GetWorld() || DCCArcade::IsFrontDoor(GetWorld()))
+	{
+		return;
+	}
+	const double Now = GetWorld()->GetRealTimeSeconds();
+	// The gain since last frame, for a short "+120 XP" flash. A level-up resets the bar, so count across it.
+	if (XpStripLastLevel >= 0 && (Stats->Level != XpStripLastLevel || Stats->ExperiencePoints != XpStripLastXp))
+	{
+		const int32 Gain = Stats->Level > XpStripLastLevel ? Stats->ExperiencePoints + 1 : Stats->ExperiencePoints - XpStripLastXp;
+		if (Gain > 0)
+		{
+			XpStripGain = Now - XpStripGainAt < 2.5 ? XpStripGain + Gain : Gain;
+			XpStripGainAt = Now;
+		}
+	}
+	XpStripLastLevel = Stats->Level;
+	XpStripLastXp = Stats->ExperiencePoints;
+
+	UFont* Small = GEngine->GetSmallFont();
+	const float W = FMath::Min(560.0f, Canvas->SizeX * 0.44f), H = 6.0f;
+	const float X = (Canvas->SizeX - W) * 0.5f, Y = Canvas->SizeY - 13.0f;
+	const float Fill = Stats->IsAtMaxLevel() ? 1.0f : Stats->GetExperienceFraction();
+	const bool bFresh = Now - XpStripGainAt < 2.5;
+	DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.55f), X - 2.0f, Y - 2.0f, W + 4.0f, H + 4.0f);
+	DrawRect(FLinearColor(0.16f, 0.13f, 0.06f, 0.85f), X, Y, W, H);
+	DrawRect(bFresh ? FLinearColor(1.0f, 0.9f, 0.45f) : FLinearColor(0.9f, 0.72f, 0.25f), X, Y, W * Fill, H);
+
+	const FString Left = FString::Printf(TEXT("LV %d"), Stats->Level);
+	const FString Right = Stats->IsAtMaxLevel() ? FString(TEXT("MAX")) : FString::Printf(TEXT("%d / %d XP"), Stats->ExperiencePoints, Stats->ExperienceToNextLevel);
+	float LW = 0.0f, LH = 0.0f, RW = 0.0f, RH = 0.0f;
+	GetTextSize(Left, LW, LH, Small, 1.0f);
+	GetTextSize(Right, RW, RH, Small, 1.0f);
+	DrawText(Left, FLinearColor(1.0f, 0.85f, 0.4f), X - LW - 10.0f, Y - LH * 0.5f + H * 0.5f, Small, 1.0f);
+	DrawText(Right, FLinearColor(0.85f, 0.82f, 0.75f, 0.85f), X + W + 10.0f, Y - RH * 0.5f + H * 0.5f, Small, 1.0f);
+	if (bFresh && XpStripGain > 0)
+	{
+		const FString Gain = FString::Printf(TEXT("+%d XP"), XpStripGain);
+		float GW = 0.0f, GH = 0.0f;
+		GetTextSize(Gain, GW, GH, Small, 1.0f);
+		const float Rise = float(Now - XpStripGainAt) * 8.0f;
+		DrawText(Gain, FLinearColor(1.0f, 0.92f, 0.5f, FMath::Clamp(2.5f - float(Now - XpStripGainAt), 0.0f, 1.0f)),
+			X + W * Fill - GW * 0.5f, Y - GH - 4.0f - Rise, Small, 1.0f);
+	}
+	const int32 PerksWaiting = DCCClassPerks::Unpicked(Crawler);
+	if (const int32 Points = Stats->GetUnspentStatPoints() + PerksWaiting)
+	{
+		const int32 StatPoints = Stats->GetUnspentStatPoints();
+		FString Note = StatPoints > 0 ? FString::Printf(TEXT("%d STAT POINT%s"), StatPoints, StatPoints == 1 ? TEXT("") : TEXT("S")) : FString();
+		if (PerksWaiting > 0) { Note += (Note.IsEmpty() ? TEXT("") : TEXT("  +  ")) + FString(TEXT("PERK READY")); }
+		Note += TEXT("  [Tab]");
+		(void)Points;
+		DrawText(Note, FLinearColor(0.45f, 1.0f, 0.55f, 0.75f + 0.25f * FMath::Sin(float(Now) * 4.0f)),
+			X + W + 20.0f + RW, Y - RH * 0.5f + H * 0.5f, Small, 1.0f);
 	}
 }

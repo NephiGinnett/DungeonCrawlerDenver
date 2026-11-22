@@ -928,6 +928,12 @@ private:
 
 	/** The arcade's top-centre panel: whichever game's arena is loaded (Arcade/DCCArcadeArena). */
 	void DrawArcadeStatus();
+	/** A slim XP bar along the bottom of every game (2026-11-22): level, progress, a +XP flash, unspent stat points. */
+	void DrawXpStrip(class ADCCCharacterBase* Crawler);
+	int32 XpStripLastLevel = -1;
+	int32 XpStripLastXp = -1;
+	int32 XpStripGain = 0;
+	double XpStripGainAt = -100.0;
 	/** The gold QUEST line. Same banner in every game, including the dungeon. */
 	void DrawSeriesQuestBanner(FName GameId);
 

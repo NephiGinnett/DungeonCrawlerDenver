@@ -32,7 +32,7 @@ namespace
 	{
 		static const TArray<FSavedPart> List = {
 			{ TEXT("Stats"), [](ADCCCharacterBase* C) -> UActorComponent* { return C->Stats; },
-				{ TEXT("AbilityScores"), TEXT("Level"), TEXT("ExperiencePoints"), TEXT("Gold") } },
+				{ TEXT("AbilityScores"), TEXT("Level"), TEXT("ExperiencePoints"), TEXT("Gold"), TEXT("StatPointsSpent") } },
 			{ TEXT("Skills"), [](ADCCCharacterBase* C) -> UActorComponent* { return C->Skills; },
 				{ TEXT("KnownSkills") } },
 			{ TEXT("Favor"), [](ADCCCharacterBase* C) -> UActorComponent* { return C->Favor; },
@@ -44,7 +44,7 @@ namespace
 			{ TEXT("Achievements"), [](ADCCCharacterBase* C) -> UActorComponent* { return C->Achievements; },
 				{ TEXT("Progress"), TEXT("StatTotals") } },
 			{ TEXT("Class"), [](ADCCCharacterBase* C) -> UActorComponent* { return C->Class; },
-				{ TEXT("SelectedClassId") } },
+				{ TEXT("SelectedClassId"), TEXT("Perks") } },
 			{ TEXT("Onboarding"), [](ADCCCharacterBase* C) -> UActorComponent* { return C->Onboarding; },
 				{ TEXT("Stage"), TEXT("UnlockedFeatures") } },
 		};

@@ -1,4 +1,6 @@
 #include "Classes/DCCClassComponent.h"
+#include "Classes/DCCBasicClasses.h"
+#include "Classes/DCCClassPerks.h"
 
 #include "Stats/DCCStatsComponent.h"
 #include "Skills/DCCSkillComponent.h"
@@ -28,6 +30,22 @@ void UDCCClassComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(UDCCClassComponent, SelectedClassId);
+	DOREPLIFETIME(UDCCClassComponent, Perks);
+}
+
+void UDCCClassComponent::Server_PickPerk_Implementation(int32 Tier, int32 Option)
+{
+	ADCCCharacterBase* Crawler = Cast<ADCCCharacterBase>(GetOwner());
+	const int32 ClassIndex = DCCBasicClasses::IndexOf(Crawler);
+	if (!Crawler || !Crawler->Stats || ClassIndex < 0 || !DCCClassPerks::Get(ClassIndex, Tier, Option)
+		|| Crawler->Stats->Level < DCCClassPerks::TierLevel(Tier))
+	{
+		return;
+	}
+	// Swapping is free: the other option of this tier goes, this one comes in.
+	Perks.Remove(DCCClassPerks::IdFor(ClassIndex, Tier, 1 - Option));
+	Perks.AddUnique(DCCClassPerks::IdFor(ClassIndex, Tier, Option));
+	UE_LOG(LogTemp, Log, TEXT("[DCC Class] %s picked %s"), *Crawler->GetName(), DCCClassPerks::Get(ClassIndex, Tier, Option)->Name);
 }
 
 bool UDCCClassComponent::FindClass(FName ClassId, FDCCClassDef& OutClass) const

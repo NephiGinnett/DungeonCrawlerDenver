@@ -2183,6 +2183,25 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "DCC|Experience")
 	void AnnounceLevelUp(int32 PreviousLevel);
 
+	/**
+	 * Level-up window (2026-11-22, Zoe: "isekai style pop up boxes"). Server: every level gained, from any source,
+	 * lands here; a burst of levels (a boss and a contract in the same second) becomes one System window that says
+	 * what changed: health, the stat point, the spell the class just taught, and what is next.
+	 */
+	UFUNCTION()
+	void HandleLevelUp(UDCCStatsComponent* LevelledStats, int32 NewLevel);
+
+	/** Dev (DCC.Cast): cast a skill the way the belt does, server side. */
+	void DevCastSkill(FName SkillId, AActor* Target) { ResolveOrQueueSkill(SkillId, Target); }
+
+private:
+	void FlushLevelUp();
+	int32 PendingLevelFrom = 0;
+	int32 PendingMaxHpFrom = 0;
+	FTimerHandle LevelUpTimer;
+
+public:
+
 protected:
 
 	UFUNCTION()
@@ -2266,7 +2285,7 @@ protected:
 	 * animation lasting as long as the character is actually stuck in place.
 	 */
 	UFUNCTION(NetMulticast, Unreliable)
-	void Multicast_PlayCast(float HoldSeconds);
+	void Multicast_PlayCast(float HoldSeconds, FName SkillId);
 
 	/**
 	 * Plays the flinch on every machine. Unreliable, like the other cosmetics -

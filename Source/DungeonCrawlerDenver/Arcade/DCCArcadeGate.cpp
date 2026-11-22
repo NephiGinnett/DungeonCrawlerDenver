@@ -1,6 +1,8 @@
 #include "Arcade/DCCArcadeGate.h"
 
 #include "Arcade/DCCWalletComponent.h"
+#include "Arcade/DCCGateThemes.h"
+#include "Classes/DCCClassPerks.h"
 #include "Characters/DCCCharacterBase.h"
 #include "Characters/DCCEnemyCharacter.h"
 #include "Characters/DCCEnemyCharacter_DebtEater.h"
@@ -17,12 +19,18 @@
 #include "Engine/SkeletalMesh.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/DirectionalLightComponent.h"
+#include "Components/ExponentialHeightFogComponent.h"
+#include "Engine/DirectionalLight.h"
+#include "Engine/ExponentialHeightFog.h"
+#include "EngineUtils.h"
 #include "Combat/DCCGameState.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/PlayerState.h"
 #include "Items/DCCLootContainerVariants.h"
+#include "Items/DCCGearRoller.h"
 #include "Items/DCCPickupVariants.h"
 #include "Net/UnrealNetwork.h"
 #include "NiagaraFunctionLibrary.h"
@@ -174,6 +182,12 @@ void ADCCArcadeGate::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	DOREPLIFETIME(ADCCArcadeGate, SlamCenter);
 	DOREPLIFETIME(ADCCArcadeGate, SlamAt);
 	DOREPLIFETIME(ADCCArcadeGate, SlamRadius);
+	DOREPLIFETIME(ADCCArcadeGate, ContractLines);
+}
+
+FString ADCCArcadeGate::GetThemeName() const
+{
+	return Seed != 0 ? FString(DCCGateThemes::For(Seed).Name) : FString();
 }
 
 ADCCArcadeArena::FSky ADCCArcadeGate::GetSky() const
@@ -271,6 +285,37 @@ void ADCCArcadeGate::ClientTick(float DeltaSeconds)
 	}
 	const double Now = ServerTime();
 
+	// The theme's floor hazards: a rim that shows when the patch is live. Off: no rim. Warming: a dim flicker. On: bright.
+	if (Seed != 0)
+	{
+		const FLinearColor HazardColour = DCCGateThemes::For(Seed).HazardColour;
+		for (FHazard& H : Hazards)
+		{
+			AActor* Rim = H.Actor.Get();
+			if (!Rim)
+			{
+				continue;
+			}
+			const uint8 State = HazardState(H, Now);
+			const uint8 Shown = State == 1 ? uint8(1 + (FMath::FloorToInt32(Now * 8.0) & 1)) : State == 2 ? 3 : 0;
+			if (Shown == H.Shown)
+			{
+				continue;
+			}
+			H.Shown = Shown;
+			Rim->SetActorHiddenInGame(Shown == 0 || Shown == 1);
+			if (UStaticMeshComponent* Mesh = Rim->FindComponentByClass<UStaticMeshComponent>())
+			{
+				if (UMaterialInstanceDynamic* Mid = Cast<UMaterialInstanceDynamic>(Mesh->GetMaterial(0)))
+				{
+					const FLinearColor Colour = Shown == 3 ? HazardColour * 2.2f : HazardColour * 0.7f;
+					Mid->SetVectorParameterValue(TEXT("Color"), Colour);
+					Mid->SetVectorParameterValue(TEXT("BaseColor"), Colour);
+				}
+			}
+		}
+	}
+
 	// The gauntlet: dark, amber (about to burn), red (burning). Recoloured only when a tile changes.
 	for (FTile& T : Tiles)
 	{
@@ -343,6 +388,213 @@ uint8 ADCCArcadeGate::TileState(int32 Room, int32 X, int32 Y, double Time)
 		return 2;
 	}
 	return Lit(Beat + 1) && Into > 0.5 ? 1 : 0;
+}
+
+uint8 ADCCArcadeGate::HazardState(const FHazard& Hazard, double Time)
+{
+	// 6.5 s a cycle: live for 3.5, quiet for 2, then a 1 s flicker before it goes live again.
+	const double Cycle = 6.5;
+	const double Into = FMath::Fmod(Time + Hazard.Phase, Cycle);
+	return Into < 3.5 ? 2 : Into > 5.5 ? 1 : 0;
+}
+
+void ADCCArcadeGate::DressTheme(int32 RoomIndex)
+{
+	const DCCGateThemes::FTheme& Theme = DCCGateThemes::For(Seed);
+	const UDCCDungeonGrid::FRoom& Room = Grid->GetRooms()[RoomIndex];
+	const FRoomState& State = Rooms[RoomIndex];
+	const FName DressRole = State.Role;
+	const FVector O = DungeonOrigin();
+	const int32 Rank = RankFor(Rooms.Num());
+	FRandomStream R(Seed * 97 + RoomIndex * 389 + 11);
+
+	auto InRoom = [&Room](int32 X, int32 Y) { return X >= Room.X && X < Room.X + Room.W && Y >= Room.Y && Y < Room.Y + Room.H; };
+	// A doorway cell: an edge cell of the room with open floor outside it.
+	auto IsDoor = [&](int32 X, int32 Y)
+	{
+		const FIntPoint Around[] = { { X + 1, Y }, { X - 1, Y }, { X, Y + 1 }, { X, Y - 1 } };
+		for (const FIntPoint& P : Around)
+		{
+			if (!InRoom(P.X, P.Y) && Grid->IsOpen(P.X, P.Y)) { return true; }
+		}
+		return false;
+	};
+	auto NearDoor = [&](int32 X, int32 Y)
+	{
+		for (int32 DY = -1; DY <= 1; ++DY)
+		{
+			for (int32 DX = -1; DX <= 1; ++DX)
+			{
+				if (InRoom(X + DX, Y + DY) && IsDoor(X + DX, Y + DY)) { return true; }
+			}
+		}
+		return false;
+	};
+
+	// Clutter against the walls: crates, vases, pipes, plants. Never in a doorway, never in the gauntlet's tiles.
+	if (DressRole != TEXT("gauntlet") && Theme.WallProps.Num() > 0)
+	{
+		int32 Lit = 0;
+		for (int32 Y = Room.Y; Y < Room.Y + Room.H; ++Y)
+		{
+			for (int32 X = Room.X; X < Room.X + Room.W; ++X)
+			{
+				const bool bEdge = X == Room.X || Y == Room.Y || X == Room.X + Room.W - 1 || Y == Room.Y + Room.H - 1;
+				if (!bEdge || NearDoor(X, Y) || R.FRand() > 0.42f)
+				{
+					continue;
+				}
+				// Pushed toward the wall it stands against (two walls, in a corner), facing into the room.
+				FVector Out(X == Room.X ? -1.0f : X == Room.X + Room.W - 1 ? 1.0f : 0.0f,
+					Y == Room.Y ? -1.0f : Y == Room.Y + Room.H - 1 ? 1.0f : 0.0f, 0.0f);
+				const FVector At = Grid->CellCenter(FIntPoint(X, Y)) + Out * 115.0f;
+				const float Yaw = (-Out).Rotation().Yaw + R.FRandRange(-12.0f, 12.0f);
+				const TCHAR* Mesh = Theme.WallProps[R.RandRange(0, Theme.WallProps.Num() - 1)];
+				Prop(Mesh, FVector(At.X, At.Y, 0.0f), Yaw, FVector(170.0f, 170.0f, 240.0f), true);
+				// A little life at a couple of them: the theme's fire, smoke, spores or motes.
+				if (Theme.Fx && Lit < 2 && R.FRand() < 0.3f)
+				{
+					++Lit;
+					if (UNiagaraSystem* Fx = LoadObject<UNiagaraSystem>(nullptr, Theme.Fx))
+					{
+						UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), Fx, FVector(At.X, At.Y, 180.0f));
+					}
+					Light(FVector(At.X, At.Y, 260.0f), Theme.Accent, 2200.0f, 520.0f);
+				}
+			}
+		}
+	}
+
+	// Pillars in the bigger open rooms, at the grid corners two cells in from the walls, clear of the middle.
+	const bool bPillarRoom = DressRole == TEXT("fight") || DressRole == TEXT("treasure") || DressRole == TEXT("ambush") || DressRole == TEXT("outage")
+		|| DressRole == TEXT("start");
+	if (bPillarRoom && Room.W >= 5 && Room.H >= 5)
+	{
+		const FIntPoint Corners[] = {
+			{ Room.X + 2, Room.Y + 2 }, { Room.X + Room.W - 2, Room.Y + 2 },
+			{ Room.X + 2, Room.Y + Room.H - 2 }, { Room.X + Room.W - 2, Room.Y + Room.H - 2 } };
+		for (const FIntPoint& C : Corners)
+		{
+			const FVector P = O + FVector(C.X * Tile, C.Y * Tile, 0.0f);
+			if (FVector::Dist2D(P, State.Center) < 700.0f)
+			{
+				continue;
+			}
+			AActor* Pillar = Theme.Pillar ? Prop(Theme.Pillar, P, R.FRandRange(0.0f, 360.0f), FVector(170.0f, 170.0f, WallHeight), true) : nullptr;
+			if (!Pillar)
+			{
+				if (AActor* Plain = Shape(TEXT("Cylinder"), P + FVector(0, 0, WallHeight * 0.5f), FVector(110, 110, WallHeight), Theme.Accent * 0.15f))
+				{
+					if (Theme.PillarMaterial) { Paint(Plain, Theme.PillarMaterial); }
+				}
+			}
+		}
+	}
+
+	// A centrepiece in a plain fight room, so no two fights look the same.
+	if (DressRole == TEXT("fight") && Theme.Centrepieces.Num() > 0)
+	{
+		Prop(Theme.Centrepieces[R.RandRange(0, Theme.Centrepieces.Num() - 1)], State.Center, R.FRandRange(0.0f, 360.0f),
+			FVector(280.0f, 280.0f, 340.0f), true);
+	}
+
+	// The hazards: one to three patches in the rooms where you fight on open floor.
+	const bool bHazardRoom = DressRole == TEXT("fight") || DressRole == TEXT("treasure") || DressRole == TEXT("ambush") || DressRole == TEXT("trial")
+		|| DressRole == TEXT("clock") || DressRole == TEXT("outage") || DressRole == TEXT("toll");
+	if (!bHazardRoom || Room.W < 2 || Room.H < 2)
+	{
+		return;
+	}
+	const int32 Want = 1 + (Room.W * Room.H >= 30 ? 1 : 0) + (Rank >= 3 ? 1 : 0);
+	TArray<FIntPoint> Used;
+	for (int32 Try = 0; Try < 30 && Used.Num() < Want; ++Try)
+	{
+		const FIntPoint Cell(R.RandRange(Room.X, Room.X + Room.W - 1), R.RandRange(Room.Y, Room.Y + Room.H - 1));
+		const FVector At = Grid->CellCenter(Cell);
+		// Clear of the doorway itself and of the middle (the trial ring, the toll booth), but not of whole rooms:
+		// with the wider rule most gates rolled no hazard at all.
+		if (Used.Contains(Cell) || IsDoor(Cell.X, Cell.Y) || FVector::Dist2D(At, State.Center) < 470.0f)
+		{
+			continue;
+		}
+		Used.Add(Cell);
+		FHazard H;
+		H.Room = RoomIndex;
+		H.Center = FVector(At.X, At.Y, State.Center.Z);
+		H.Half = 165.0f;
+		H.Phase = R.FRandRange(0.0f, 6.5f);
+		const FVector Size(H.Half * 2.0f, H.Half * 2.0f, 6.0f);
+		const FLinearColor Base = Theme.HazardColour * 0.35f;
+		AActor* Patch = Theme.bRoundHazard
+			? Shape(TEXT("Cylinder"), H.Center + FVector(0, 0, 5), Size, Base, FRotator::ZeroRotator, false)
+			: Block(H.Center + FVector(0, 0, 5), Size, Base, 0.0f, false);
+		if (Patch && Theme.HazardMaterial)
+		{
+			Paint(Patch, Theme.HazardMaterial);
+		}
+		// The rim, a little wider and just under the patch: it is what lights up.
+		const FVector RimSize(H.Half * 2.0f + 50.0f, H.Half * 2.0f + 50.0f, 4.0f);
+		H.Actor = Theme.bRoundHazard
+			? Shape(TEXT("Cylinder"), H.Center + FVector(0, 0, 3), RimSize, Theme.HazardColour, FRotator::ZeroRotator, false)
+			: Block(H.Center + FVector(0, 0, 3), RimSize, Theme.HazardColour, 0.0f, false);
+		UE_LOG(LogTemp, Log, TEXT("[DCC Gate] hazard in room %d at %s"), RoomIndex, *H.Center.ToString());
+		Hazards.Add(H);
+	}
+}
+
+void ADCCArcadeGate::TickHazardsServer(double Now, const TArray<APlayerController*>& Players)
+{
+	if (Hazards.IsEmpty() || Seed == 0)
+	{
+		return;
+	}
+	const DCCGateThemes::FTheme& Theme = DCCGateThemes::For(Seed);
+	TArray<TPair<ADCCCharacterBase*, bool>> Who; // character, is a foe
+	for (APlayerController* PC : Players)
+	{
+		if (ADCCCharacterBase* Crawler = PC ? Cast<ADCCCharacterBase>(PC->GetPawn()) : nullptr)
+		{
+			if (Crawler->IsAlive()) { Who.Add({ Crawler, false }); }
+		}
+	}
+	for (const FRoomState& State : Rooms)
+	{
+		for (const TWeakObjectPtr<ADCCEnemyCharacter>& Foe : State.Foes)
+		{
+			if (Foe.IsValid() && Foe->IsAlive() && Foe != State.Boss) { Who.Add({ Foe.Get(), true }); }
+		}
+	}
+	for (const FHazard& H : Hazards)
+	{
+		if (HazardState(H, Now) != 2)
+		{
+			continue;
+		}
+		for (const TPair<ADCCCharacterBase*, bool>& Pair : Who)
+		{
+			ADCCCharacterBase* Character = Pair.Key;
+			const FVector At = Character->GetActorLocation();
+			const bool bInside = Theme.bRoundHazard
+				? FVector::Dist2D(At, H.Center) <= H.Half
+				: FMath::Abs(At.X - H.Center.X) <= H.Half && FMath::Abs(At.Y - H.Center.Y) <= H.Half;
+			if (!bInside || !Character->Stats || At.Z > H.Center.Z + 260.0f)
+			{
+				continue;
+			}
+			double& Next = NextHazardHurt.FindOrAdd(Character);
+			if (Now < Next)
+			{
+				continue;
+			}
+			Next = Now + 0.6;
+			// It bites foes harder than crawlers: walking a crowd through it is the play.
+			Character->Stats->ApplyDamage(Pair.Value ? 5 + 2 * RankIndex : 2 + RankIndex, Theme.HazardType);
+			if (Pair.Value)
+			{
+				LastHazardHit.Add(Character, Now);
+			}
+		}
+	}
 }
 
 void ADCCArcadeGate::DressRoom(int32 RoomIndex)
@@ -563,6 +815,7 @@ void ADCCArcadeGate::TickRoomsServer(double Now, const TArray<APlayerController*
 				{
 					Next = Now + 0.5;
 					Crawler->Stats->ApplyDamage(3 + RankIndex, EDCCDamageType::Fire);
+					FailContract(TEXT("HotFeet"));
 				}
 			}
 			continue;
@@ -667,6 +920,7 @@ void ADCCArcadeGate::BuildDungeon()
 
 	Rooms.SetNum(Count);
 	const FVector O = DungeonOrigin();
+	const DCCGateThemes::FTheme& Theme = DCCGateThemes::For(Seed);
 	const FLinearColor CorridorColour(0.05f, 0.05f, 0.07f);
 	const FLinearColor WallColour(0.04f, 0.035f, 0.06f);
 
@@ -678,7 +932,7 @@ void ADCCArcadeGate::BuildDungeon()
 			if (Grid->IsOpen(X, Y) && Grid->RoomIndexAt(X, Y) == -1)
 			{
 				Paint(Block(O + FVector((X + 0.5f) * Tile, (Y + 0.5f) * Tile, -20.0f), FVector(Tile, Tile, 40.0f), CorridorColour),
-					TEXT("/Game/Ice_Station/Materials/MI_floor_tile2"));
+					Theme.Corridor);
 			}
 		}
 	}
@@ -690,15 +944,11 @@ void ADCCArcadeGate::BuildDungeon()
 		State.Role = RoomRole;
 		State.Center = Grid->CellCenter(Room.Center());
 		const FLinearColor Colour = RoleColour(RoomRole);
-		const TCHAR* FloorMat = TEXT("/Game/Ice_Station/Materials/MI_floor_tile");
-		if (RoomRole == TEXT("boss")) { FloorMat = TEXT("/Game/Ice_Station/Materials/MI_floor_tile4"); }
-		else if (RoomRole == TEXT("duel")) { FloorMat = TEXT("/Game/Abandonned_Brutalist/Materials/MI_stones"); }
-		else if (RoomRole == TEXT("shrine")) { FloorMat = TEXT("/Game/Ice_Station/Materials/MI_floor_tile1"); }
+		// The theme's floor; its grander floor for the boss, the duel and the shrine; the plain one for back rooms.
+		const TCHAR* FloorMat = Theme.Floor;
+		if (RoomRole == TEXT("boss") || RoomRole == TEXT("duel") || RoomRole == TEXT("shrine")) { FloorMat = Theme.FloorAlt; }
 		else if (RoomRole == TEXT("gauntlet")) { FloorMat = TEXT("/Game/Ice_Station/Materials/MI_floor_tile3"); }
-		else if (RoomRole == TEXT("ambush") || RoomRole == TEXT("toll")) { FloorMat = TEXT("/Game/Abandonned_Brutalist/Materials/MI_concrete_tile"); }
-		else if (RoomRole == TEXT("outage")) { FloorMat = TEXT("/Game/Abandonned_Brutalist/Materials/MI_concrete_01"); }
-		else if (RoomRole == TEXT("clock")) { FloorMat = TEXT("/Game/Ice_Station/Materials/MI_floor_tile3"); }
-		else if (RoomRole == TEXT("pen")) { FloorMat = TEXT("/Game/Abandonned_Brutalist/Materials/MI_stones"); }
+		else if (RoomRole == TEXT("ambush") || RoomRole == TEXT("toll") || RoomRole == TEXT("outage")) { FloorMat = Theme.Corridor; }
 		TiledBlock(O + FVector((Room.X + Room.W * 0.5f) * Tile, (Room.Y + Room.H * 0.5f) * Tile, -20.0f),
 			FVector(Room.W * Tile, Room.H * Tile, 40.0f), FLinearColor(0.07f, 0.06f, 0.09f) + Colour * 0.04f, FloorMat, Tile);
 		// A glowing inlay round the room's middle, so a room reads as a room from the doorway.
@@ -711,7 +961,7 @@ void ADCCArcadeGate::BuildDungeon()
 		else
 		{
 			// Half white and much softer: at 9000 the room's colour flooded the floor flat and hid its texture (2026-11-21).
-			Light(State.Center + FVector(0, 0, 460), FMath::Lerp(Colour, FLinearColor::White, 0.5f), 3200.0f, FMath::Max(Room.W, Room.H) * Tile);
+			Light(State.Center + FVector(0, 0, 460), FMath::Lerp(Colour, Theme.LightTint, 0.7f), 3200.0f * Theme.LightScale, FMath::Max(Room.W, Room.H) * Tile);
 		}
 		Sign(State.Center + FVector(0, 0, 420), 0.0f, RoleSign(RoomRole), Colour.ToFColor(true), RoomRole == TEXT("boss") ? 60.0f : 34.0f);
 		if (RoomRole == TEXT("trial"))
@@ -719,6 +969,7 @@ void ADCCArcadeGate::BuildDungeon()
 			Shape(TEXT("Cylinder"), State.Center + FVector(0, 0, 4), FVector(420, 420, 8), Colour, FRotator::ZeroRotator, false);
 		}
 		DressRoom(i);
+		DressTheme(i);
 	}
 
 	// Walls: merged runs along every open cell's closed sides (the World Dungeon's way, ADCCTaleFloor::SpawnWalls).
@@ -752,7 +1003,7 @@ void ADCCArcadeGate::BuildDungeon()
 			const float L = (Cell == Run.A ? 20.0f : 0.0f), R = (Cell == Run.B - 1 ? 20.0f : 0.0f);
 			const float C0 = O.X + Cell * Tile - L, C1 = O.X + (Cell + 1) * Tile + R;
 			Paint(Block(FVector((C0 + C1) * 0.5f, Yw, WallHeight * 0.5f), FVector(C1 - C0, 40.0f, WallHeight), WallColour),
-				TEXT("/Game/Ice_Station/Materials/MI_trim_01_interior"));
+				Theme.Wall);
 		}
 		(void)X0;
 		(void)X1;
@@ -765,7 +1016,7 @@ void ADCCArcadeGate::BuildDungeon()
 			const float L = (Cell == Run.A ? 20.0f : 0.0f), R = (Cell == Run.B - 1 ? 20.0f : 0.0f);
 			const float C0 = O.Y + Cell * Tile - L, C1 = O.Y + (Cell + 1) * Tile + R;
 			Paint(Block(FVector(Xw, (C0 + C1) * 0.5f, WallHeight * 0.5f), FVector(40.0f, C1 - C0, WallHeight), WallColour),
-				TEXT("/Game/Ice_Station/Materials/MI_trim_01_interior2"));
+				Theme.WallAlt);
 		}
 		(void)Y0;
 		(void)Y1;
@@ -773,22 +1024,22 @@ void ADCCArcadeGate::BuildDungeon()
 	// Inside a gate there is no sky: a lid over the whole layout, so the rooms are lit only by their own glow.
 	// Plain and dark: painted, it showed one huge stretched stone overhead (2026-11-21).
 	Block(O + FVector(GridSize * Tile * 0.5f, GridSize * Tile * 0.5f, WallHeight + 20.0f), FVector(GridSize * Tile + 400.0f, GridSize * Tile + 400.0f, 40.0f),
-		FLinearColor(0.02f, 0.015f, 0.04f));
-	// A thin violet glow along the foot of every wall.
+		Theme.Lid);
+	// A thin glow along the foot of every wall, in the theme's colour.
 	for (const FRun& Run : Horizontal)
 	{
 		const float X0 = O.X + Run.A * Tile, X1 = O.X + Run.B * Tile, Yw = O.Y + Run.Line * Tile;
-		if (AActor* Strip = Block(FVector((X0 + X1) * 0.5f, Yw, 24.0f), FVector(X1 - X0, 56.0f, 10.0f), Violet, 0.0f, false))
+		if (AActor* Strip = Block(FVector((X0 + X1) * 0.5f, Yw, 24.0f), FVector(X1 - X0, 56.0f, 10.0f), Theme.Accent * 0.8f, 0.0f, false))
 		{
-			Paint(Strip, TEXT("/Game/Synthwave_city/Material/MI_neon_1"));
+			if (Theme.StripMaterial) { Paint(Strip, Theme.StripMaterial); }
 		}
 	}
 	for (const FRun& Run : Vertical)
 	{
 		const float Y0 = O.Y + Run.A * Tile, Y1 = O.Y + Run.B * Tile, Xw = O.X + Run.Line * Tile;
-		if (AActor* Strip = Block(FVector(Xw, (Y0 + Y1) * 0.5f, 24.0f), FVector(56.0f, Y1 - Y0, 10.0f), Violet, 0.0f, false))
+		if (AActor* Strip = Block(FVector(Xw, (Y0 + Y1) * 0.5f, 24.0f), FVector(56.0f, Y1 - Y0, 10.0f), Theme.Accent * 0.8f, 0.0f, false))
 		{
-			Paint(Strip, TEXT("/Game/Synthwave_city/Material/MI_neon_1"));
+			if (Theme.StripMaterial) { Paint(Strip, Theme.StripMaterial); }
 		}
 	}
 	FString Roles;
@@ -804,7 +1055,28 @@ void ADCCArcadeGate::BuildDungeon()
 		DrawPortal(ExitAt, 700.0f, GateCyan, 0.0f, true, false);
 		Sign(ExitAt + FVector(0.0f, -420.0f, 240.0f), -90.0f, TEXT("WAY HOME"), FColor(150, 140, 170), 32.0f);
 	}
-	UE_LOG(LogTemp, Log, TEXT("[DCC Gate] Rank %s gate, %d rooms (seed %d): %s"), RankName(RankFor(Count)), Count, Seed, *Roles);
+	// What is through the gate, on a board over the plaza: every machine builds it once the seed is in.
+	// Beside the gate at eye height, where the party stands waiting for it to open.
+	Sign(FVector(-1150.0f, 900.0f, 430.0f), -90.0f, FString::Printf(TEXT("RANK %s  %s"), RankName(RankFor(Count)), Theme.Name),
+		Theme.Accent.ToFColor(true), 46.0f);
+	Sign(FVector(-1150.0f, 900.0f, 360.0f), -90.0f, Theme.Blurb, FColor(220, 215, 235), 18.0f);
+	Light(EntryPortal() + FVector(0, -700, 300), Theme.Accent, 9000.0f, 2400.0f);
+	// The gate's colour leaks out over the plaza and fills the rooms: the fog and the sun take the theme's tint.
+	for (TActorIterator<AExponentialHeightFog> It(GetWorld()); It; ++It)
+	{
+		if (UExponentialHeightFogComponent* Fog = It->GetComponent())
+		{
+			Fog->SetFogInscatteringColor(FMath::Lerp(GetSky().FogColour, Theme.Accent * 0.3f, 0.65f));
+		}
+	}
+	for (TActorIterator<ADirectionalLight> It(GetWorld()); It; ++It)
+	{
+		if (UDirectionalLightComponent* Sun = Cast<UDirectionalLightComponent>(It->GetLightComponent()))
+		{
+			Sun->SetLightColor(FMath::Lerp(GetSky().SunColour, Theme.LightTint, 0.6f));
+		}
+	}
+	UE_LOG(LogTemp, Log, TEXT("[DCC Gate] Rank %s gate, %s, %d rooms (seed %d): %s; %d hazards"), RankName(RankFor(Count)), Theme.Name, Count, Seed, *Roles, Hazards.Num());
 }
 
 // ---- the run (server) ---------------------------------------------------------------------------------------------
@@ -819,8 +1091,11 @@ void ADCCArcadeGate::ServerBegin()
 	RankIndex = RankFor(RoomCount);
 	EndsAt = OpensAt + 150.0 + 45.0 * RoomCount;
 	SpawnRoomContent();
+	PickContracts();
 	RefreshStatus();
-	Say(this, FString::Printf(TEXT("A rank %s gate has opened over the plaza. %d rooms. It will not stay open forever."), RankName(RankIndex), RoomCount));
+	const DCCGateThemes::FTheme& Theme = DCCGateThemes::For(Seed);
+	Say(this, FString::Printf(TEXT("A rank %s gate has opened over the plaza: %s. %d rooms. Watch the %s. It will not stay open forever."),
+		RankName(RankIndex), Theme.Name, RoomCount, Theme.HazardName));
 }
 
 bool ADCCArcadeGate::FindRoomCell(int32 RoomIndex, FRandomStream& R, FVector& Out) const
@@ -863,7 +1138,10 @@ ADCCEnemyCharacter* ADCCArcadeGate::SpawnFoe(TSubclassOf<ADCCEnemyCharacter> Cla
 	{
 		// The rank is the threat: levels and body stats climb with it, the boss most of all.
 		const int32 Threat = RankIndex + (bBoss ? 2 + RankIndex : 0);
-		Foe->Stats->Level = FMath::Max(Foe->Stats->Level, 1 + Threat);
+		// Pitched against the party too (2026-11-22): with the level cap raised, a level 12 crawler in a rank E gate would
+		// otherwise swat level 1 foes for no XP. A little under the party, more for higher ranks and the boss.
+		const int32 Pitched = PartyLevel() - 2 + RankIndex / 2 + (bBoss ? 2 : 0);
+		Foe->Stats->Level = FMath::Max3(Foe->Stats->Level, 1 + Threat, Pitched);
 		for (const EDCCAbility Ability : { EDCCAbility::Strength, EDCCAbility::Constitution, EDCCAbility::Dexterity })
 		{
 			Foe->Stats->AbilityScores.SetScore(Ability, Foe->Stats->AbilityScores.GetScore(Ability) + Threat / 2 + (bBoss ? 2 : 0));
@@ -910,21 +1188,35 @@ void ADCCArcadeGate::SpawnWave(int32 RoomIndex, int32 Count)
 		FVector At;
 		if (FindRoomCell(RoomIndex, R, At))
 		{
-			SpawnFoe(Pool[R.RandRange(0, Pool.Num() - 1)], At, RoomIndex, false);
+			// The theme's own creatures most of the time, anything from the gate's pool the rest.
+			const TArray<TSubclassOf<ADCCEnemyCharacter>>& Favoured = DCCGateThemes::For(Seed).Favoured;
+			const TSubclassOf<ADCCEnemyCharacter> Class = Favoured.Num() > 0 && R.FRand() < 0.6f
+				? Favoured[R.RandRange(0, Favoured.Num() - 1)] : Pool[R.RandRange(0, Pool.Num() - 1)];
+			SpawnFoe(Class, At, RoomIndex, false);
 		}
 	}
 }
 
-void ADCCArcadeGate::SpawnChest(const FVector& At, int32 Tier)
+void ADCCArcadeGate::SpawnChest(const FVector& At, int32 Bonus)
 {
+	// Any of the chest models, filled fresh from the equipment table (2026-11-22, Zoe: "It seems like I've gotten the
+	// same chest on the first level of gate run several times"). It used to be one fixed chest class per rank, each
+	// with the same three items, so every rank E and D gate handed out the same Emergency Equipment Locker.
 	static const TArray<TSubclassOf<ADCCLootContainer>> Chests = {
 		ADCCLootContainer_KitchenDrawer::StaticClass(), ADCCLootContainer_Armory::StaticClass(),
 		ADCCLootContainer_Quartermaster::StaticClass(), ADCCLootContainer_ManagementLockbox::StaticClass(),
+		ADCCLootContainer_LostAndFound::StaticClass(),
 	};
-	const FTransform Transform(FRotator(0.0f, 90.0f, 0.0f), At + FVector(0, 0, 40.0f));
-	if (ADCCLootContainer* Chest = GetWorld()->SpawnActorDeferred<ADCCLootContainer>(Chests[FMath::Clamp(Tier, 0, Chests.Num() - 1)], Transform,
+	const FTransform Transform(FRotator(0.0f, FMath::FRandRange(0.0f, 360.0f), 0.0f), At + FVector(0, 0, 40.0f));
+	if (ADCCLootContainer* Chest = GetWorld()->SpawnActorDeferred<ADCCLootContainer>(Chests[FMath::RandRange(0, Chests.Num() - 1)], Transform,
 		nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn))
 	{
+		Chest->LootTable = DCCGearRoller::Roll(RankIndex, Bonus);
+		const FString Best = DCCGearRoller::LastBestRarity();
+		if (!Best.IsEmpty())
+		{
+			Chest->DisplayName = FText::FromString(FString::Printf(TEXT("%s Cache"), *Best));
+		}
 		Chest->FinishSpawning(Transform);
 	}
 }
@@ -1023,7 +1315,7 @@ void ADCCArcadeGate::SpawnRoomContent()
 		}
 		else if (State.Role == TEXT("treasure"))
 		{
-			SpawnChest(State.Center, FMath::Min(1 + RankIndex / 2, 3));
+			SpawnChest(State.Center, 0);
 			SpawnWave(i, 1 + RankIndex / 3);
 		}
 		else if (State.Role == TEXT("vault"))
@@ -1071,6 +1363,14 @@ void ADCCArcadeGate::OnFoeDied(ADCCCharacterBase* Character)
 	if (!bWrapped)
 	{
 		++PendingKills;
+		Progress(TEXT("Exterminator"));
+		// Died with the hazard still on it: a lure that worked.
+		const double* Hit = Character ? LastHazardHit.Find(Character) : nullptr;
+		if (Hit && ServerTime() - *Hit < 1.5)
+		{
+			++HazardKills;
+			Progress(TEXT("LureJob"));
+		}
 	}
 }
 
@@ -1098,9 +1398,13 @@ void ADCCArcadeGate::OnVaultOpened(ADCCPuzzleDoor* Door, EDCCPuzzleSolveMethod M
 		FRoomState& State = Rooms[i];
 		if (State.Vault.Get() == Door && !State.bCleared)
 		{
-			SpawnChest(State.Prize, FMath::Min(1 + RankIndex / 2, 3));
+			SpawnChest(State.Prize, Method == EDCCPuzzleSolveMethod::Solved ? 2 : 1);
 			// A solved vault is worth more than a forced one.
 			Score += Method == EDCCPuzzleSolveMethod::Solved ? 60 : 0;
+			if (Method == EDCCPuzzleSolveMethod::Solved)
+			{
+				Progress(TEXT("CleanHands"));
+			}
 			ClearRoom(i, Method == EDCCPuzzleSolveMethod::Solved ? TEXT("Vault solved") : TEXT("Vault forced"));
 		}
 	}
@@ -1124,14 +1428,36 @@ void ADCCArcadeGate::ClearRoom(int32 RoomIndex, const TCHAR* Why)
 			: (State.Role == TEXT("fight") || State.Role == TEXT("ambush")) ? 3
 			: State.Role == TEXT("shrine") ? 1 : 2;
 		PayParty(Base + RankIndex, FString::Printf(TEXT("gate %s"), *State.Role.ToString()));
-	}
-	if (State.Role == TEXT("trial"))
-	{
-		SpawnChest(State.Center, FMath::Min(1 + RankIndex / 2, 3));
+		// And XP, now that levels go past 5 (2026-11-22). The Gatekeeper is worth a good part of a level.
+		if (State.Role != TEXT("shrine"))
+		{
+			GiveParty(State.Role == TEXT("boss") ? 90 + 35 * RankIndex : 18 + 7 * RankIndex);
+		}
 	}
 	if (State.Role == TEXT("duel"))
 	{
-		SpawnChest(State.Center, FMath::Min(1 + RankIndex / 2, 3));
+		Progress(TEXT("BeltHolder"));
+	}
+	if (State.Role == TEXT("gauntlet"))
+	{
+		Progress(TEXT("HotFeet"));
+	}
+	if (State.Role == TEXT("boss"))
+	{
+		bool bAll = true;
+		for (const FRoomState& Other : Rooms)
+		{
+			bAll &= Other.bCleared || Other.Role == TEXT("start");
+		}
+		if (bAll) { Progress(TEXT("FullSweep")); } else { FailContract(TEXT("FullSweep")); }
+	}
+	if (State.Role == TEXT("trial"))
+	{
+		SpawnChest(State.Center, 1);
+	}
+	if (State.Role == TEXT("duel"))
+	{
+		SpawnChest(State.Center, 1);
 	}
 	if (State.Role == TEXT("boss"))
 	{
@@ -1139,6 +1465,8 @@ void ADCCArcadeGate::ClearRoom(int32 RoomIndex, const TCHAR* Why)
 		BossHealth = -1.0f;
 		SlamAt = 0.0;
 		bExitOpen = true;
+		// The Gatekeeper's hoard: the best chest in the gate, beside the way home.
+		SpawnChest(State.Center + FVector(0.0f, 420.0f, 0.0f), 3);
 		ForceNetUpdate();
 		Say(this, TEXT("The Gatekeeper is down. The way home is open in its room. Step through."));
 		return;
@@ -1172,12 +1500,17 @@ void ADCCArcadeGate::DebugEnterAll(int32 RoomIndex)
 		if (APawn* Pawn = PC->GetPawn())
 		{
 			const int32 Index = FMath::Clamp(RoomIndex, 0, Rooms.Num() - 1);
-			const FVector Spot = Rooms[Index].Center + FVector(-180, 0, 120);
+			FVector Spot = Rooms[Index].Center + FVector(-180, 0, 120);
+			// 100 and up: stand just short of that hazard (100 is the first), looking along +Y at it.
+			if (RoomIndex >= 100 && Hazards.IsValidIndex(RoomIndex - 100))
+			{
+				Spot = Hazards[RoomIndex - 100].Center + FVector(0, -520, 120);
+			}
 			if (!Pawn->TeleportTo(Spot, FRotator::ZeroRotator))
 			{
 				Pawn->SetActorLocation(Spot, false, nullptr, ETeleportType::TeleportPhysics);
 			}
-			PC->SetControlRotation(FRotator(-12.0f, 0.0f, 0.0f)); // facing +X, where the room's centre (and a boss) is
+			PC->SetControlRotation(FRotator(-12.0f, RoomIndex >= 100 ? 90.0f : 0.0f, 0.0f)); // facing +X, where the room's centre (and a boss) is
 			UE_LOG(LogTemp, Log, TEXT("[DCC Gate] dev in, room %d, crawler at %s"), Index, *Pawn->GetActorLocation().ToString());
 		}
 	}
@@ -1229,6 +1562,7 @@ void ADCCArcadeGate::OnRespawned(APlayerController* PC)
 	// Back in at the gate's entry room: the gate does not throw you out for dying, it just costs you the walk.
 	if (bGateOpen && !bWrapped && PC && Entered.Contains(PC))
 	{
+		FailContract(TEXT("Untouched"));
 		SendIn(PC->GetPawn(), Entered.Num());
 	}
 }
@@ -1237,7 +1571,7 @@ void ADCCArcadeGate::ServerTick(float DeltaSeconds)
 {
 	const double Now = ServerTime();
 	Title = FString::Printf(TEXT("GATE RUN  -  RANK %s"), RankName(RankIndex));
-	Accent = Violet;
+	Accent = Seed != 0 ? DCCGateThemes::For(Seed).Accent : Violet;
 	if (bWrapped)
 	{
 		return;
@@ -1453,6 +1787,7 @@ void ADCCArcadeGate::ServerTick(float DeltaSeconds)
 		}
 	}
 	TickRoomsServer(Now, Players);
+	TickHazardsServer(Now, Players);
 
 	if (PendingKills > 0 && Now >= NextKillPayout)
 	{
@@ -1489,7 +1824,8 @@ void ADCCArcadeGate::RefreshStatus()
 		return;
 	}
 	const float Left = FMath::Max(0.0f, static_cast<float>(EndsAt - Now));
-	StatusLines.Add(FString::Printf(TEXT("%d:%02d left     rooms %d / %d     score %d"), FMath::FloorToInt(Left / 60.0f), FMath::FloorToInt(Left) % 60, Cleared, Total, Score));
+	StatusLines.Add(FString::Printf(TEXT("%s     %d:%02d left     rooms %d / %d     score %d"), DCCGateThemes::For(Seed).Name,
+		FMath::FloorToInt(Left / 60.0f), FMath::FloorToInt(Left) % 60, Cleared, Total, Score));
 	StatusLines.Add(bExitOpen ? TEXT("The way home is lit in the Gatekeeper's room. Step through.")
 		: bBossDown ? TEXT("")
 		: TEXT("The way home stands dark in the farthest room. It lights when the Gatekeeper is down."));
@@ -1516,6 +1852,16 @@ void ADCCArcadeGate::Wrap(bool bCleared)
 	}
 	const int32 Tickets = FMath::Clamp(4 + TimeBonus / 30 + (bCleared ? 8 + RankIndex * 3 : 0), 4, 60);
 
+	// The contracts that are judged at the door.
+	const double Total = 150.0 + 45.0 * RoomCount;
+	if (bCleared && (EndsAt - Now) >= Total * 0.4) { Progress(TEXT("BeatClock")); } else { FailContract(TEXT("BeatClock")); }
+	if (bCleared) { Progress(TEXT("Untouched")); } else { FailContract(TEXT("Untouched")); }
+	for (FContract& Contract : Contracts)
+	{
+		if (!Contract.bDone) { Contract.bFailed = true; }
+	}
+	RefreshContractLines();
+
 	TArray<APlayerController*> Players;
 	GetPlayers(Players);
 	for (APlayerController* PC : Players)
@@ -1533,6 +1879,18 @@ void ADCCArcadeGate::Wrap(bool bCleared)
 			DCCProfile::RecordBest(PC->PlayerState, TEXT("Gate"), TEXT("BestRank"), static_cast<float>(RankIndex));
 		}
 		UDCCWalletComponent::AwardTickets(PC->PlayerState, Tickets, TEXT("gate run"));
+		// What the run did for you, in one line (2026-11-22, Zoe: "I'd like to see ... how rewarding finishing quests
+		// actually is"). Kill XP goes to whoever landed the blow and is not in this sum.
+		if (ADCCCharacterBase* Crawler = Cast<ADCCCharacterBase>(PC->GetPawn()))
+		{
+			int32 Done = 0;
+			for (const FContract& Contract : Contracts) { Done += Contract.bDone ? 1 : 0; }
+			if (Crawler->Wallet && Crawler->Stats)
+			{
+				Crawler->Wallet->Tell(FString::Printf(TEXT("%s  +%d XP from rooms and contracts (%d of %d contracts)  Level %d"),
+					bCleared ? TEXT("GATE CLEARED") : TEXT("GATE CLOSED"), RunXp.FindRef(PC), Done, Contracts.Num(), Crawler->Stats->Level));
+			}
+		}
 		// Out of the gate, back to the plaza.
 		if (APawn* Pawn = PC->GetPawn())
 		{
@@ -1546,4 +1904,138 @@ void ADCCArcadeGate::Wrap(bool bCleared)
 		: FString::Printf(TEXT("The gate collapsed. Score %d for what you cleared."), Score));
 	StatusLines.Add(FString::Printf(TEXT("%d tickets each for the finish, on top of what the rooms and kills paid."), Tickets));
 	ReturnToLobbyIn(20.0f);
+}
+
+// ---- contracts and XP (2026-11-22) ------------------------------------------------------------------------------------
+
+int32 ADCCArcadeGate::PartyLevel() const
+{
+	TArray<APlayerController*> Players;
+	GetPlayers(Players);
+	int32 Sum = 0, Count = 0;
+	for (APlayerController* PC : Players)
+	{
+		if (const ADCCCharacterBase* Crawler = PC ? Cast<ADCCCharacterBase>(PC->GetPawn()) : nullptr)
+		{
+			if (Crawler->Stats)
+			{
+				Sum += Crawler->Stats->Level;
+				++Count;
+			}
+		}
+	}
+	return Count > 0 ? FMath::RoundToInt(float(Sum) / Count) : 1;
+}
+
+void ADCCArcadeGate::GiveParty(int32 Xp)
+{
+	if (Xp <= 0)
+	{
+		return;
+	}
+	TArray<APlayerController*> Players;
+	GetPlayers(Players);
+	for (APlayerController* PC : Players)
+	{
+		ADCCCharacterBase* Crawler = PC ? Cast<ADCCCharacterBase>(PC->GetPawn()) : nullptr;
+		if (Crawler && Crawler->Stats && (Entered.Contains(PC) || Entered.IsEmpty()))
+		{
+			const int32 Mine = FMath::RoundToInt(Xp * (100 + DCCClassPerks::Sum(Crawler, &DCCClassPerks::FPerk::Xp)) / 100.0f);
+			Crawler->Stats->AddExperience(Mine);
+			RunXp.FindOrAdd(PC) += Mine;
+			UE_LOG(LogTemp, Log, TEXT("[DCC Gate] +%d XP to %s: level %d, %d / %d (cap %d)"), Xp, *Crawler->GetName(),
+				Crawler->Stats->Level, Crawler->Stats->ExperiencePoints, Crawler->Stats->ExperienceToNextLevel, Crawler->Stats->MaxLevel);
+		}
+	}
+}
+
+void ADCCArcadeGate::PickContracts()
+{
+	bool bVault = false, bDuel = false, bGauntlet = false;
+	for (const FRoomState& State : Rooms)
+	{
+		bVault |= State.Role == TEXT("vault");
+		bDuel |= State.Role == TEXT("duel");
+		bGauntlet |= State.Role == TEXT("gauntlet");
+	}
+	const DCCGateThemes::FTheme& Theme = DCCGateThemes::For(Seed);
+	TArray<FContract> Offer;
+	auto Add = [&Offer](const TCHAR* Id, const FString& Name, int32 Goal)
+	{
+		FContract C;
+		C.Id = Id;
+		C.Name = Name;
+		C.Goal = Goal;
+		Offer.Add(C);
+	};
+	Add(TEXT("Exterminator"), FString::Printf(TEXT("Exterminator: drop %d foes"), 10 + 4 * RankIndex), 10 + 4 * RankIndex);
+	Add(TEXT("LureJob"), FString::Printf(TEXT("Lure Job: 3 foes go down in the %s"), Theme.HazardName), 3);
+	Add(TEXT("Untouched"), TEXT("Untouched: clear it with nobody going down"), 1);
+	Add(TEXT("BeatClock"), TEXT("Beat the Clock: out with 40% of the time left"), 1);
+	Add(TEXT("FullSweep"), TEXT("Full Sweep: every room before the Gatekeeper"), 1);
+	if (bVault) { Add(TEXT("CleanHands"), TEXT("Clean Hands: solve a vault, no crowbar"), 1); }
+	if (bDuel) { Add(TEXT("BeltHolder"), TEXT("Belt Holder: drop the Champion"), 1); }
+	if (bGauntlet) { Add(TEXT("HotFeet"), TEXT("Hot Feet: cross the gauntlet without a burn"), 1); }
+	FRandomStream R(Seed * 41 + 5);
+	for (int32 i = Offer.Num() - 1; i > 0; --i)
+	{
+		Offer.Swap(i, R.RandRange(0, i));
+	}
+	Contracts.Reset();
+	for (int32 i = 0; i < Offer.Num() && Contracts.Num() < 3; ++i)
+	{
+		Contracts.Add(Offer[i]);
+	}
+	RefreshContractLines();
+}
+
+void ADCCArcadeGate::Progress(FName Id, int32 Amount)
+{
+	for (FContract& Contract : Contracts)
+	{
+		if (Contract.Id != Id || Contract.bDone || Contract.bFailed)
+		{
+			continue;
+		}
+		Contract.Count = FMath::Min(Contract.Goal, Contract.Count + Amount);
+		if (Contract.Count >= Contract.Goal)
+		{
+			Contract.bDone = true;
+			const int32 Xp = 60 + 30 * RankIndex;
+			GiveParty(Xp);
+			FString Short = Contract.Name;
+			int32 Colon = INDEX_NONE;
+			if (Short.FindChar(TEXT(':'), Colon)) { Short = Short.Left(Colon); }
+			PayParty(4 + RankIndex, FString::Printf(TEXT("contract, %s"), *Short));
+			Say(this, FString::Printf(TEXT("Contract done: %s. +%d XP each."), *Short, Xp));
+		}
+		RefreshContractLines();
+	}
+}
+
+void ADCCArcadeGate::FailContract(FName Id)
+{
+	for (FContract& Contract : Contracts)
+	{
+		if (Contract.Id == Id && !Contract.bDone && !Contract.bFailed)
+		{
+			Contract.bFailed = true;
+			RefreshContractLines();
+		}
+	}
+}
+
+void ADCCArcadeGate::RefreshContractLines()
+{
+	ContractLines.Reset();
+	for (const FContract& Contract : Contracts)
+	{
+		FString Line = (Contract.bDone ? TEXT("x") : Contract.bFailed ? TEXT("-") : TEXT("o")) + Contract.Name;
+		if (Contract.Goal > 1 && !Contract.bDone)
+		{
+			Line += FString::Printf(TEXT("  %d/%d"), Contract.Count, Contract.Goal);
+		}
+		ContractLines.Add(Line);
+	}
+	ForceNetUpdate();
 }

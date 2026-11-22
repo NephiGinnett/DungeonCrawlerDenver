@@ -6,6 +6,8 @@ Run one arcade game as a test, take screenshots of its window, then close it.
     python Tools/run_test.py DCCHauntGameMode "DCC.Belt 3 12, DCC.Click 14" 11 3 2.5 haunt_click
     python Tools/run_test.py DCCLobbyGameMode "DCC.LootOpen 22" 27 24 0.15 loot
 
+Extra command-line flags go in the DCC_TEST_ARGS environment variable (e.g. "-GateSeed=13 -GateTheme=2").
+
 <GameMode> is the class name without the prefix: DCCLobbyGameMode (the Den), DCCClimbGameMode (Fourteener),
 DCCHauntGameMode (Dead Air), DCCKartGameMode (Repo Rally), DCCNeonGameMode, DCCGateGameMode (Gate Run),
 DCCFrontDoorGameMode (main menu). Dev commands are comma-separated console commands; most DCC.* ones take a
@@ -51,6 +53,8 @@ def main() -> int:
         str(ENGINE), str(ROOT / "DungeonCrawlerDenver.uproject"),
         f"/Engine/Maps/Entry?game=/Script/DungeonCrawlerDenver.{mode}",
         "-game", "-windowed", "-ResX=1280", "-ResY=720", f"-log={name}.log", f"-ExecCmds={exec_cmds}",
+        # Extra flags, e.g. DCC_TEST_ARGS="-GateSeed=13 -GateTheme=2".
+        *os.environ.get("DCC_TEST_ARGS", "").split(),
     ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
         started = time.time()

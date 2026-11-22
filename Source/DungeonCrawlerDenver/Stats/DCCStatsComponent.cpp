@@ -20,6 +20,7 @@ void UDCCStatsComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(UDCCStatsComponent, AbilityScores);
+	DOREPLIFETIME(UDCCStatsComponent, StatPointsSpent);
 	DOREPLIFETIME(UDCCStatsComponent, EnhancedScores);
 	DOREPLIFETIME(UDCCStatsComponent, DamageResistanceLevels);
 	DOREPLIFETIME(UDCCStatsComponent, CurrentHitPoints);
@@ -739,6 +740,21 @@ void UDCCStatsComponent::AddExperience(int32 Amount)
 	{
 		ExperiencePoints = FMath::Max(ExperienceToNextLevel, 0);
 	}
+}
+
+void UDCCStatsComponent::Server_RaiseAbility_Implementation(EDCCAbility Ability)
+{
+	const int32 Index = static_cast<int32>(Ability);
+	if (Index < 0 || Index >= static_cast<int32>(EDCCAbility::MAX) || GetUnspentStatPoints() <= 0)
+	{
+		return;
+	}
+	AbilityScores.SetScore(Ability, AbilityScores.GetScore(Ability) + 1);
+	++StatPointsSpent;
+	// A raise is not a rest: keep the current health and mana where they are, only the ceilings move.
+	RecalculateEnhancedScores(false);
+	UE_LOG(LogTemp, Log, TEXT("[DCC Stats] %s raised ability %d to %d (%d points left)"), *GetNameSafe(GetOwner()), Index,
+		AbilityScores.GetScore(Ability), GetUnspentStatPoints());
 }
 
 void UDCCStatsComponent::OnRep_ExperiencePoints(int32 PreviousExperience)

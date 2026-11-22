@@ -1,4 +1,7 @@
 #include "Skills/DCCSkillComponent.h"
+#include "Skills/DCCSpellBook.h"
+#include "Skills/DCCSpellFx.h"
+#include "Classes/DCCClassPerks.h"
 
 #include "Characters/DCCCharacterBase.h"
 #include "Classes/DCCBasicClasses.h"
@@ -101,7 +104,7 @@ UDCCStatsComponent* UDCCSkillComponent::GetOwnerStats() const
 
 bool UDCCSkillComponent::FindSkill(FName SkillId, FDCCSkillDef& OutSkill) const
 {
-	if (!SkillTable || SkillId.IsNone())
+	if (SkillId.IsNone())
 	{
 		return false;
 	}
@@ -110,10 +113,16 @@ bool UDCCSkillComponent::FindSkill(FName SkillId, FDCCSkillDef& OutSkill) const
 
 	// Resolved from the table rather than from KnownSkills so that an untrained
 	// attempt can still find the definition it needs to roll against.
-	const FDCCSkillDef* Row = SkillTable->FindRow<FDCCSkillDef>(SkillId, ContextString, false);
+	const FDCCSkillDef* Row = SkillTable ? SkillTable->FindRow<FDCCSkillDef>(SkillId, ContextString, false) : nullptr;
 	if (!Row)
 	{
-		return false;
+		// The class spell book (2026-11-22): spells defined in code. A table row of the same id wins.
+		if (!DCCSpellBook::Find(SkillId, OutSkill))
+		{
+			return false;
+		}
+		DCCClassPerks::AdjustSkill(Cast<ADCCCharacterBase>(GetOwner()), OutSkill);
+		return true;
 	}
 
 	OutSkill = *Row;
@@ -122,6 +131,8 @@ bool UDCCSkillComponent::FindSkill(FName SkillId, FDCCSkillDef& OutSkill) const
 	{
 		OutSkill.SkillId = SkillId;
 	}
+	// Class perks change a skill's cost, wait and area for whoever casts it.
+	DCCClassPerks::AdjustSkill(Cast<ADCCCharacterBase>(GetOwner()), OutSkill);
 
 	return true;
 }
@@ -968,6 +979,13 @@ void UDCCSkillComponent::PlaySkillEffects(const FDCCSkillResult& Result)
 	}
 
 	ADCCCharacterBase* Caster = GetOwningCharacter();
+
+	// The spell's own show (2026-11-22): shapes, colours, a word, on every machine.
+	{
+		TArray<AActor*> Hit;
+		for (const TObjectPtr<AActor>& Affected : Result.AffectedActors) { Hit.Add(Affected.Get()); }
+		ADCCSpellFx::Play(World, Caster, Skill, Hit);
+	}
 
 	if (Caster)
 	{

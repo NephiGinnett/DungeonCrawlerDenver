@@ -42,6 +42,7 @@ public:
 	virtual UDCCDungeonGrid* GetChaseGrid() const override { return Grid; }
 	virtual bool KeepsStatusPanel() const override { return true; }
 	virtual bool ShowsHeldGear() const override { return true; }
+	virtual bool ShowsSpellBelt() const override { return true; }
 	virtual void OnRespawned(APlayerController* PC) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -51,6 +52,14 @@ public:
 	void DebugEnterAll(int32 RoomIndex = 0);
 	/** Dev (DCC.GateClear): knock out every foe in a room (or all rooms with -1), and solve its vault. */
 	void DebugClearRoom(int32 RoomIndex);
+
+	/**
+	 * The run's contracts for the HUD (2026-11-22): side goals that pay XP and tickets. Each line starts with its state,
+	 * 'o' open, 'x' done, '-' failed, then the text ("oExterminator  12/18").
+	 */
+	const TArray<FString>& GetContractLines() const { return ContractLines; }
+	/** The theme's name and accent, for the HUD ("THE STORM DRAIN"). Empty until the seed has arrived. */
+	FString GetThemeName() const;
 
 protected:
 	virtual void PrepareServer() override;
@@ -80,8 +89,57 @@ private:
 	UPROPERTY(Replicated)
 	float SlamRadius = 360.0f;
 
+	UPROPERTY(Replicated)
+	TArray<FString> ContractLines;
+
 	UPROPERTY(Transient)
 	TObjectPtr<UDCCDungeonGrid> Grid;
+
+	/**
+	 * Floor hazards (2026-11-22): the theme's sludge, slag, glyphs, spores... Placed from the seed on every machine.
+	 * Each one cycles on and off on the server clock (the same on every machine), and while it is on it hurts anyone
+	 * standing in it, crawlers and foes alike. Luring foes through it is the point.
+	 */
+	struct FHazard
+	{
+		int32 Room = 0;
+		FVector Center = FVector::ZeroVector;
+		float Half = 160.0f;
+		float Phase = 0.0f;
+		TWeakObjectPtr<AActor> Actor;
+		uint8 Shown = 255;
+	};
+	TArray<FHazard> Hazards;
+	/** 0 off, 1 warming up, 2 on. */
+	static uint8 HazardState(const FHazard& Hazard, double Time);
+	TMap<TWeakObjectPtr<AActor>, double> NextHazardHurt;
+	TMap<TWeakObjectPtr<AActor>, double> LastHazardHit;
+	void TickHazardsServer(double Now, const TArray<APlayerController*>& Players);
+	/** Theme dressing for one room: pillars, wall clutter, a centrepiece, the hazards. Every machine, from the seed. */
+	void DressTheme(int32 RoomIndex);
+
+	/** Contracts (server). Three per run, picked from the seed among the ones this gate's rooms allow. */
+	struct FContract
+	{
+		FName Id;
+		FString Name;
+		int32 Goal = 1;
+		int32 Count = 0;
+		bool bDone = false;
+		bool bFailed = false;
+	};
+	TArray<FContract> Contracts;
+	void PickContracts();
+	void Progress(FName Id, int32 Amount = 1);
+	void FailContract(FName Id);
+	void RefreshContractLines();
+	int32 HazardKills = 0;
+	/** XP this run per player, for the summary at the end. */
+	TMap<TWeakObjectPtr<APlayerController>, int32> RunXp;
+	/** Server: XP to everyone who has entered the gate, counted for the summary. */
+	void GiveParty(int32 Xp);
+	/** The party's average level: foes are pitched against it, so a level 12 crawler still gets a fight. */
+	int32 PartyLevel() const;
 
 	struct FRoomState
 	{

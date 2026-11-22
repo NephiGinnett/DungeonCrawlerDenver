@@ -49,6 +49,8 @@
 #include "Animation/AnimSequenceBase.h"
 #include "Classes/DCCClassComponent.h"
 #include "Classes/DCCBasicClasses.h"
+#include "Classes/DCCClassPerks.h"
+#include "Skills/DCCSpellFx.h"
 #include "Onboarding/DCCOnboardingComponent.h"
 #include "Rooms/DCCTaleFloor.h"
 #include "Bench/DCCBenchData.h"
@@ -263,6 +265,11 @@ void ADCCCharacterBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void ADCCCharacterBase::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (HasAuthority() && Stats)
+	{
+		Stats->OnLevelUp.AddUniqueDynamic(this, &ADCCCharacterBase::HandleLevelUp);
+	}
 
 	// Characters spawned straight from a C++ class (the dungeon's and the gate's enemies) never had a Blueprint set
 	// their body up, so they stood in a T-pose a metre off the floor (found 2026-11-15). Two fixes, only where nothing
@@ -5861,7 +5868,13 @@ void ADCCCharacterBase::AwardKillExperience(ADCCCharacterBase* Victim)
 		return;
 	}
 
-	const int32 Gained = Ruleset->GetExperienceForKill(Victim->Stats->Level, Stats->Level);
+	// Class perks: XP on top, and a little health back per kill.
+	const int32 Gained = FMath::RoundToInt(Ruleset->GetExperienceForKill(Victim->Stats->Level, Stats->Level)
+		* (100 + DCCClassPerks::Sum(this, &DCCClassPerks::FPerk::Xp)) / 100.0f);
+	if (const int32 KillHeal = DCCClassPerks::Sum(this, &DCCClassPerks::FPerk::KillHeal))
+	{
+		Stats->Heal(KillHeal);
+	}
 	if (Gained <= 0)
 	{
 		return;
@@ -5893,8 +5906,7 @@ void ADCCCharacterBase::AnnounceLevelUp(int32 PreviousLevel)
 	ADCCGameState::Log(this, EDCCLogCategory::Experience, FText::Format(
 		NSLOCTEXT("DCC", "LogLevelUp", "{0} reaches level {1}. Contract terms improve accordingly."),
 		FText::FromString(GetActorNameOrLabel()), FText::AsNumber(Stats->Level)));
-
-	DCCBasicClasses::ApplyLearned(this);
+	// Class lessons are taught by HandleLevelUp now, so they can go in the level-up window.
 }
 
 void ADCCCharacterBase::PawnClientRestart()
@@ -6213,7 +6225,7 @@ void ADCCCharacterBase::ResolveOrQueueSkill(FName SkillId, AActor* Target)
 	// as a swing is. ADCCEnemyCharacter does the same in its own cast path.
 	if (bFound)
 	{
-		Multicast_PlayCast(Definition.CastTimeSeconds);
+		Multicast_PlayCast(Definition.CastTimeSeconds, SkillId);
 	}
 
 	Skills->TryActivateSkill(SkillId, Target);
@@ -6829,7 +6841,32 @@ void ADCCCharacterBase::GetBelt(TArray<FDCCBeltEntry>& Out) const
 
 	// Skills: three in the runs; in the arcade only the first, and only in games that use it (Fourteener's
 	// Climbing), so slot 1 in Dead Air is the body cam rather than a skill that does nothing there.
-	if (Skills && (!bArcade || Arena->ShowsClimbHud()))
+	if (Skills && bArcade && Arena->ShowsSpellBelt())
+	{
+		// A fighting game: the three newest spells the crawler knows (2026-11-22), so a lesson learned mid-run is
+		// on the belt at once. Checks and passives never take a slot.
+		TArray<FName> Spells;
+		for (int32 i = Skills->KnownSkills.Num() - 1; i >= 0 && Spells.Num() < 3; --i)
+		{
+			FDCCSkillDef Def;
+			if (Skills->FindSkill(Skills->KnownSkills[i].SkillId, Def) && !Def.bIsPassive
+				&& (Def.Archetype == EDCCSkillArchetype::Damage || Def.Archetype == EDCCSkillArchetype::Heal))
+			{
+				Spells.Insert(Skills->KnownSkills[i].SkillId, 0);
+			}
+		}
+		for (const FName& Pick : Spells)
+		{
+			FDCCBeltEntry E;
+			E.Kind = EDCCBelt::Skill;
+			E.ItemId = Pick;
+			FDCCSkillDef Def;
+			E.Name = Skills->FindSkill(E.ItemId, Def) && !Def.DisplayName.IsEmpty() ? Def.DisplayName.ToString() : E.ItemId.ToString();
+			E.Cooldown = Skills->GetRemainingCooldown(E.ItemId);
+			Out.Add(E);
+		}
+	}
+	else if (Skills && (!bArcade || Arena->ShowsClimbHud()))
 	{
 		// The arcade's one skill slot is the skill that game is about (Climbing on Fourteener), wherever it sits in the
 		// list: reordering skills (the menu's BELT button) once left Martial Arts there and Climbing off the belt.
@@ -7524,8 +7561,19 @@ void ADCCCharacterBase::PlayCharacterSound(USoundBase* Sound) const
 	}
 }
 
-void ADCCCharacterBase::Multicast_PlayCast_Implementation(float HoldSeconds)
+void ADCCCharacterBase::Multicast_PlayCast_Implementation(float HoldSeconds, FName SkillId)
 {
+	// Each spell family has its own move (2026-11-22): a slam, a throw, a call, a dance. About a second, whatever the clip.
+	if (const TCHAR* Own = ADCCSpellFx::CastClipFor(SkillId))
+	{
+		UAnimationAsset* Clip = LoadObject<UAnimationAsset>(nullptr, *FString::Printf(TEXT("/Game/DCC/Characters/Shared/AnimsFixed/%s.%s"), Own, Own));
+		if (Clip && CanPlayOnThisSkeleton(Clip))
+		{
+			PlayOneShotAnimation(Clip, FMath::Max(HoldSeconds, 1.0f));
+			PlayCharacterSound(CastSound);
+			return;
+		}
+	}
 	UAnimationAsset* Clip = DCCAttackStyle::CastClip();
 	if (Clip && CanPlayOnThisSkeleton(Clip))
 	{

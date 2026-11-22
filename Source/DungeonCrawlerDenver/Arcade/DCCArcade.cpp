@@ -341,7 +341,8 @@ namespace DCCArcade
 
 	int32 SeriesQuestXp()
 	{
-		return 100;
+		// 250 since the level cap went to 20 (2026-11-22): at 100 a first clear was a fifteenth of a level.
+		return 250;
 	}
 
 	bool CompleteSeriesQuest(APlayerState* Player, FName GameId, int32 Xp)

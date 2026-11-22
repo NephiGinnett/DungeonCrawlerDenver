@@ -131,7 +131,7 @@ because cursed gear should make you bad at something, not delete the something.
 The one deliberate write to the base layer is `DCCEncounter.cpp` applying a spawn's authored
 stat block. Everything else was migrated.
 
-**Level is capped at 5 (added 2026-09-02).** `UDCCStatsComponent::MaxLevel`, `EditAnywhere` so
+**Level cap: raised to 20 on 2026-11-22** (arcade direction; at 5 everyone hit it and earned nothing). Gate Run pitches foes at the party level. The history: **Level was capped at 5 (added 2026-09-02).** `UDCCStatsComponent::MaxLevel`, `EditAnywhere` so
 a later floor can raise it. XP is awarded from four places — kills, quest completion,
 achievements and encounter clears — and the curve (`100*L + 50*L*(L-1)`) needs only **1500 XP
 total** to reach level 5, while the quest table alone already offers **6700**. Uncapped, a party

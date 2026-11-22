@@ -37,7 +37,8 @@ namespace DCCBasicClasses
 		int32 HealPerLevel = 0;
 		/** Percent of incoming damage removed per level. */
 		int32 TakenPerLevel = 0;
-		FNode Nodes[5] = {};
+		/** Levels 1-5 teach the job's skills; 7, 10, 13, 16 and 20 its spells (2026-11-22). Unused slots have Level 0. */
+		FNode Nodes[10] = {};
 	};
 
 	const TArray<FClass>& All();
@@ -47,8 +48,15 @@ namespace DCCBasicClasses
 
 	const FClass* Find(const ADCCCharacterBase* Crawler);
 
-	/** Server. Grants every lesson this crawler's level has reached. Already-known skills stay. */
-	void ApplyLearned(ADCCCharacterBase* Crawler);
+	/** Server. Grants every lesson this crawler's level has reached. Already-known skills stay. Returns what was
+	 *  newly learned ("Final Notice, Hold the Line"); bTell also says so on the crawler's screen. */
+	FString ApplyLearned(ADCCCharacterBase* Crawler, bool bTell = true);
+
+	/** The next lesson above this level, or null. */
+	const FNode* NextLesson(const ADCCCharacterBase* Crawler);
+
+	/** The level the class bonuses count: full rate to 5, half rate after (so level 20 counts as 12). */
+	int32 BonusLevel(int32 Level);
 
 	int32 MeleePercent(const ADCCCharacterBase* Crawler);
 	int32 RangedPercent(const ADCCCharacterBase* Crawler);

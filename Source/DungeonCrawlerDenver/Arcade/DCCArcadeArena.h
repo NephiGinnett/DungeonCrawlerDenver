@@ -86,6 +86,8 @@ public:
 	virtual bool ShowsHeldGear() const { return true; }
 	/** The skill hotbar, stamina and the climbing-kit panel. */
 	virtual bool ShowsClimbHud() const { return false; }
+	/** Combat games put the crawler's newest spells on the belt (2026-11-22). Gate Run does. */
+	virtual bool ShowsSpellBelt() const { return false; }
 
 	/** Keep the full status panel up for the whole round. Other games fold to alert lines after a minute. */
 	virtual bool KeepsStatusPanel() const { return false; }
