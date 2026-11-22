@@ -9,6 +9,7 @@
 //   DISCORD_WEBHOOK_URL  optional: post each upload to a Discord channel
 //   NTFY_TOPIC           optional: push each upload to the ntfy app (https://ntfy.sh/<topic>)
 //   DEFAULT_REWARD       tickets a shipped line pays, unless set per take in /admin (default 25)
+//   SET_BONUS            extra tickets once every line of a character has shipped for one player (default 100)
 //   MAX_MB               largest take accepted (default 15)
 
 const express = require("express");
@@ -26,6 +27,7 @@ const BUNDLED_CATALOG = path.join(__dirname, "catalog.json");
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "";
 const PUBLIC_URL = (process.env.PUBLIC_URL || "").replace(/\/$/, "");
 const DEFAULT_REWARD = parseInt(process.env.DEFAULT_REWARD || "25", 10);
+const SET_BONUS = parseInt(process.env.SET_BONUS || "100", 10);
 const MAX_MB = parseInt(process.env.MAX_MB || "15", 10);
 const STATUSES = ["new", "approved", "shipped", "rejected"];
 
@@ -96,7 +98,8 @@ app.get("/healthz", (req, res) => res.json({ ok: true }));
 
 app.get("/api/catalog", (req, res) => {
   const c = catalog();
-  res.json({ title: c.title || "Voice Drop", intro: c.intro || "", speakers: c.speakers.filter((s) => s.open !== false) });
+  res.json({ title: c.title || "Voice Drop", intro: c.intro || "", reward: DEFAULT_REWARD, setBonus: SET_BONUS,
+    speakers: c.speakers.filter((s) => s.open !== false) });
 });
 
 // Up to 40 takes an hour from one address: plenty for a session, not enough to fill the disk.

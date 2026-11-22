@@ -42,6 +42,14 @@
   .line:first-child { border-top: 0; }
   .text { font-size: 17px; margin: 0 0 10px; }
   .dir { color: var(--warn); font-style: italic; }
+  .tix { display: inline-block; margin-top: 4px; color: var(--warn); font-size: 13px; font-weight: 600; }
+  .speaker .tix { display: block; font-size: 12px; }
+  .reward { display: flex; gap: 12px; align-items: flex-start; background: rgba(255,179,71,.08); border: 1px solid rgba(255,179,71,.4);
+    border-radius: 10px; padding: 12px 14px; margin: 0 0 14px; font-size: 15px; }
+  .reward .big { font-size: 26px; line-height: 1; }
+  .reward b { color: var(--warn); }
+  .reward small { display: block; color: var(--dim); margin-top: 4px; font-size: 13px; }
+  .meta .pay { color: var(--warn); font-weight: 600; }
   .meta { color: var(--dim); font-size: 12px; margin-bottom: 6px; }
   .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   button.act { border: 0; border-radius: 999px; padding: 8px 16px; font: 600 14px system-ui, sans-serif; cursor: pointer; color: #120f19; }
@@ -95,6 +103,7 @@
       <li><span class="dir">[Words in brackets]</span> are directions. Act them, don't read them.</li>
       <li>Do as many or as few as you like. Each line sends on its own.</li>
     </ul>
+    <div class="reward" id="reward" hidden></div>
     <div id="lines"></div>
   </section>
 
@@ -104,6 +113,8 @@
 <script>
 const $ = (id) => document.getElementById(id);
 let catalog = null;
+// What a line is worth in the game. The live numbers come from the site (/api/catalog).
+let reward = 25, setBonus = 100;
 let current = null;
 const sent = JSON.parse(localStorage.getItem("voiceDropSent") || "{}");
 
@@ -124,6 +135,8 @@ async function load() {
   try {
     const res = await fetch("/api/catalog");
     catalog = await res.json();
+    if (Number.isFinite(catalog.reward)) reward = catalog.reward;
+    if (Number.isFinite(catalog.setBonus)) setBonus = catalog.setBonus;
   } catch {
     $("speakers").innerHTML = '<p class="status err">Could not load the cast. Try again in a minute.</p>';
     return;
@@ -139,11 +152,23 @@ async function load() {
     const b = document.createElement("button");
     b.className = "speaker";
     const wanted = s.lines.filter((l) => l.wanted).length;
-    b.innerHTML = `<img src="portraits/${encodeURIComponent(s.id)}.svg" alt="" loading="lazy" onerror="this.remove()"><span><b>${escapeHtml(s.name)}</b><small>${s.lines.length} line${s.lines.length === 1 ? "" : "s"}${wanted ? ` · ${wanted} with no voice yet` : ""}</small></span>`;
+    const set = s.lines.length > 1 && setBonus ? ` · +${setBonus} for all ${s.lines.length}` : "";
+    b.innerHTML = `<img src="portraits/${encodeURIComponent(s.id)}.svg" alt="" loading="lazy" onerror="this.remove()"><span><b>${escapeHtml(s.name)}</b><small>${s.lines.length} line${s.lines.length === 1 ? "" : "s"}${wanted ? ` · ${wanted} with no voice yet` : ""}</small><small class="tix">🎟 ${reward} a line${set}</small></span>`;
     if (s.blurb) b.title = s.blurb;
     b.onclick = () => pick(s, b);
     box.appendChild(b);
   }
+}
+
+function showReward(speaker) {
+  const n = speaker.lines.length;
+  const mine = speaker.lines.filter((l) => sent[speaker.id + "|" + l.row]).length;
+  const set = n > 1 && setBonus
+    ? ` Voice <b>all ${n}</b> of ${escapeHtml(speaker.name)}'s lines and once they're all in the game you get a <b>+${setBonus} ticket</b> full-set bonus.` : "";
+  $("reward").hidden = false;
+  $("reward").innerHTML = `<span class="big" aria-hidden="true">🎟</span><div>Every line of yours that makes it into Dungeon Crawler Denver pays
+    <b>${reward} tickets</b> to the name you play under.${set}
+    <small>${mine ? `You've sent ${mine} of ${n} so far.` : "Tickets show up in the game the next time you play."}</small></div>`;
 }
 
 function pick(speaker, button) {
@@ -155,6 +180,7 @@ function pick(speaker, button) {
   face.hidden = false; face.alt = speaker.name;
   face.onerror = () => { face.hidden = true; };
   face.src = `portraits/${encodeURIComponent(speaker.id)}.svg`;
+  showReward(speaker);
   const list = $("lines");
   list.innerHTML = "";
   const ordered = [...speaker.lines].sort((a, b) => (b.wanted ? 1 : 0) - (a.wanted ? 1 : 0));
@@ -172,7 +198,7 @@ function lineView(speaker, line) {
   el.className = "line";
   const key = speaker.id + "|" + line.row;
   el.innerHTML = `
-    <div class="meta">${escapeHtml(line.row)}${line.wanted ? " · no voice yet" : ""}${sent[key] ? ' · <span class="done">you sent this one</span>' : ""}</div>
+    <div class="meta"><span class="pay">🎟 ${reward} tickets</span> · ${escapeHtml(line.row)}${line.wanted ? " · no voice yet" : ""}${sent[key] ? ' · <span class="done">you sent this one</span>' : ""}</div>
     <p class="text">${prettyLine(line.text)}</p>
     <div class="controls">
       <button class="act rec">● Record</button>
@@ -250,6 +276,7 @@ function lineView(speaker, line) {
       if (!res.ok) throw new Error(body.error || "That didn't go through.");
       sent[key] = true;
       try { localStorage.setItem("voiceDropSent", JSON.stringify(sent)); } catch {}
+      if (current === speaker) showReward(speaker);
       setStatus("Sent! Thank you.", "ok");
       sendBtn.classList.add("hidden");
     } catch (e) {

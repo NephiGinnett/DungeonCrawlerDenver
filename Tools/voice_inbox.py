@@ -16,7 +16,9 @@ What pull does with each approved take:
     chain as `radio_mix.py import`), keeping any older recording as .wav.bak;
   * adds a credit to Content/DCC/VoiceCredits/credits.json, which ships with the game. The next time that player
     name plays (on the host's machine), the game pays the tickets once and tells them which line shipped;
-  * marks the take "shipped" on the site.
+  * marks the take "shipped" on the site;
+  * once every line of a character has shipped for the same player, adds a one-time full-set bonus credit
+    (SET_BONUS on the site, 100 tickets unless changed there).
 """
 
 import argparse
@@ -135,7 +137,7 @@ def cmd_pull(args):
         if s["id"] not in have:
             credits["credits"].append({
                 "id": s["id"], "player": player, "tickets": int(s["reward"]),
-                "speaker": s["speakerName"], "row": s["row"], "text": s["text"],
+                "speaker": s["speakerName"], "speakerId": s["speaker"], "row": s["row"], "text": s["text"],
             })
             have.add(s["id"])
         CREDITS.parent.mkdir(parents=True, exist_ok=True)
@@ -143,7 +145,40 @@ def cmd_pull(args):
         call("POST", f"/api/admin/submissions/{s['id']}", {"status": "shipped"})
         print("  shipped")
     if not args.dry_run:
+        add_set_bonuses(credits)
         print(f"\nCredits: {CREDITS.relative_to(REPO)} ({len(credits['credits'])} in all). They pay out in the next build or run.")
+
+
+def add_set_bonuses(credits):
+    """Pay a one-time bonus to a player once every line of a character has shipped in their name."""
+    public = call("GET", "/api/catalog")
+    bonus = int(public.get("setBonus") or 0)
+    if bonus <= 0:
+        return
+    speakers = call("GET", "/api/admin/catalog")["speakers"]
+    by_name = {sp["name"]: sp["id"] for sp in speakers}
+    have = {c["id"] for c in credits["credits"]}
+    shipped = {}
+    for c in credits["credits"]:
+        if c["id"].startswith("set-"):
+            continue
+        sid = c.get("speakerId") or by_name.get(c.get("speaker"))
+        if sid:
+            shipped.setdefault((c["player"].lower(), sid), (c["player"], set()))[1].add(c["row"])
+    for sp in speakers:
+        rows = {l["row"] for l in sp["lines"]}
+        if len(rows) < 2:
+            continue
+        for (key, sid), (player, done) in shipped.items():
+            bid = f"set-{sid}-{key}"
+            if sid == sp["id"] and rows <= done and bid not in have:
+                credits["credits"].append({
+                    "id": bid, "player": player, "tickets": bonus, "speaker": sp["name"], "speakerId": sid,
+                    "row": "ALL", "text": f"every one of {sp['name']}'s lines. Full-set bonus!",
+                })
+                have.add(bid)
+                print(f"  full set: {player} voiced all {len(rows)} of {sp['name']}'s lines, +{bonus} tickets")
+    CREDITS.write_text(json.dumps(credits, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
 def cmd_credits(args):
