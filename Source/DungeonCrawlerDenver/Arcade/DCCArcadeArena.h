@@ -97,8 +97,19 @@ public:
 
 	/** This game's id in DCCArcade::Games() ("Climb"...), for PLAY AGAIN. None for the lobby and the front door. */
 	virtual FName GetGameId() const { return NAME_None; }
+	/** How to play, in one line, shown once per session as the game starts (the HUD's DrawArcadeTip). */
+	virtual FString GetTip() const { return FString(); }
 	/** The rooms' walking grid, for characters that cannot use a navmesh here (Gate Run, Dead Air). */
 	virtual class UDCCDungeonGrid* GetChaseGrid() const { return nullptr; }
+
+	/**
+	 * Runtime navmesh (2026-11-22). A few seconds after the arena is built, and again while it grows (the Gate dungeon
+	 * arrives with its seed), the server wraps the arena's own geometry in navmesh bounds and the navigation system
+	 * builds a mesh over it. The driving games say no: their maps are huge and their AI drive.
+	 */
+	virtual bool WantsNavmesh() const { return true; }
+	/** Server: measure the arena's geometry and (re)register navmesh bounds around it. Called on a timer. */
+	void UpdateNavBounds();
 
 protected:
 	/** Server, before the PlayerStarts are placed (a seed, say, that decides where they go). */
@@ -147,6 +158,13 @@ protected:
 
 	/** Swaps the material on something Block/Shape/Prop made, e.g. a rock material on the mountain. */
 	static void Paint(AActor* Actor, const TCHAR* MaterialPath);
+	/**
+	 * A painted slab built from Patch-sized blocks (2026-11-21). Paint stretches a texture once across the whole cube,
+	 * so one big floor showed a single tile blown up to the size of a room. Patches make it repeat at its real scale.
+	 * Splits along X and Y, and along Z too when bSplitZ (walls and towers).
+	 */
+	void TiledBlock(const FVector& Center, const FVector& Size, const FLinearColor& Colour, const TCHAR* MaterialPath, float Patch,
+		bool bCollide = true, bool bSplitZ = false);
 
 	/** Like Block, for any engine basic shape ("Cylinder", "Cone", "Sphere", "Cube"), with full rotation. */
 	AActor* Shape(const TCHAR* ShapeName, const FVector& Center, const FVector& Size, const FLinearColor& Colour,
@@ -164,6 +182,13 @@ protected:
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<AActor>> LocalActors;
+
+	/** The navmesh bounds volumes this arena spawned (UpdateNavBounds), and what they cover. Server. */
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<AActor>> NavVolumes;
+	FBox NavBox = FBox(ForceInit);
+	int32 NavChecks = 0;
+	FTimerHandle NavTimer;
 
 	/** This machine's character shade (see FSky::ShadeStrength), shared by every character. */
 	UPROPERTY(Transient)

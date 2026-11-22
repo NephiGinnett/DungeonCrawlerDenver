@@ -1,6 +1,11 @@
 #include "Arcade/DCCArcadeArena.h"
 #include "Arcade/DCCSummons.h"
 #include "Arcade/DCCSpray.h"
+#include "NavigationSystem.h"
+#include "NavMesh/NavMeshBoundsVolume.h"
+#include "Components/BrushComponent.h"
+#include "PhysicsEngine/BodySetup.h"
+#include "TimerManager.h"
 #include "PhysicsEngine/BodySetup.h"
 #include "Components/BoxComponent.h"
 
@@ -83,7 +88,85 @@ void ADCCArcadeArena::BeginPlay()
 	{
 		ServerBegin();
 		DCCSpray::Restore(this); // the host keeps everyone's tags between sessions
+		if (WantsNavmesh())
+		{
+			GetWorldTimerManager().SetTimer(NavTimer, this, &ADCCArcadeArena::UpdateNavBounds, 4.0f, true, 3.0f);
+		}
 	}
+}
+
+void ADCCArcadeArena::UpdateNavBounds()
+{
+	// The geometry settles in the first half minute (the casino floor, the Gate dungeon once its seed lands).
+	if (++NavChecks >= 10)
+	{
+		GetWorldTimerManager().ClearTimer(NavTimer);
+	}
+	UWorld* World = GetWorld();
+	UNavigationSystemV1* Nav = World ? FNavigationSystem::GetCurrent<UNavigationSystemV1>(World) : nullptr;
+	if (!Nav)
+	{
+		if (NavChecks == 1)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[DCC Nav] no navigation system in %s: AI keeps to grids and straight lines."), *GetClass()->GetName());
+		}
+		return;
+	}
+	// Everything this arena built, except the sky and ground planes far bigger than anywhere anyone walks.
+	FBox Box(ForceInit);
+	for (const TObjectPtr<AActor>& Piece : LocalActors)
+	{
+		if (!Piece)
+		{
+			continue;
+		}
+		const FBox Bounds = Piece->GetComponentsBoundingBox(true);
+		if (Bounds.IsValid && Bounds.GetExtent().GetMax() < 30000.0f)
+		{
+			Box += Bounds;
+		}
+	}
+	if (!Box.IsValid)
+	{
+		return;
+	}
+	Box = Box.ExpandBy(FVector(400.0f, 400.0f, 600.0f));
+	if (NavBox.IsValid && NavBox.IsInsideOrOn(Box.Min) && NavBox.IsInsideOrOn(Box.Max))
+	{
+		return; // already covered
+	}
+	NavBox = NavBox.IsValid ? NavBox + Box : Box;
+
+	for (const TObjectPtr<AActor>& Old : NavVolumes)
+	{
+		if (ANavMeshBoundsVolume* Volume = Cast<ANavMeshBoundsVolume>(Old.Get()))
+		{
+			Nav->OnNavigationBoundsRemoved(Volume);
+			Volume->Destroy();
+		}
+	}
+	NavVolumes.Reset();
+
+	// A bounds volume's size normally comes from a brush built in the editor. At runtime there is none, so it gets a
+	// box collision shape instead, which is what the brush component measures when it has no brush.
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	ANavMeshBoundsVolume* Volume = World->SpawnActor<ANavMeshBoundsVolume>(NavBox.GetCenter(), FRotator::ZeroRotator, Params);
+	UBrushComponent* Brush = Volume ? Volume->GetBrushComponent() : nullptr;
+	if (!Brush)
+	{
+		return;
+	}
+	UBodySetup* Shape = NewObject<UBodySetup>(Brush);
+	const FVector Size = NavBox.GetSize();
+	Shape->AggGeom.BoxElems.Add(FKBoxElem(Size.X, Size.Y, Size.Z));
+	Brush->BrushBodySetup = Shape;
+	Brush->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Brush->UpdateBounds();
+	NavVolumes.Add(Volume);
+	Nav->OnNavigationBoundsUpdated(Volume);
+	UE_LOG(LogTemp, Log, TEXT("[DCC Nav] %s: navmesh bounds %s (%.0f x %.0f x %.0f)"), *GetClass()->GetName(),
+		*NavBox.GetCenter().ToCompactString(), Size.X, Size.Y, Size.Z);
 }
 
 void ADCCArcadeArena::Tick(float DeltaSeconds)
@@ -455,6 +538,7 @@ AActor* ADCCArcadeArena::Prop(const TCHAR* MeshPath, const FVector& Base, float 
 		Component->SetMobility(EComponentMobility::Movable);
 		Component->SetStaticMesh(Mesh);
 		Component->SetCollisionProfileName(bCollide ? TEXT("BlockAll") : TEXT("NoCollision"));
+		Component->SetCanEverAffectNavigation(bCollide);
 		Component->SetCastShadow(true);
 	}
 	Actor->FinishSpawning(Transform);
@@ -495,6 +579,28 @@ void ADCCArcadeArena::Paint(AActor* Actor, const TCHAR* MaterialPath)
 	}
 }
 
+void ADCCArcadeArena::TiledBlock(const FVector& Center, const FVector& Size, const FLinearColor& Colour, const TCHAR* MaterialPath,
+	float Patch, bool bCollide, bool bSplitZ)
+{
+	const float Step = FMath::Max(50.0f, Patch);
+	const int32 NX = FMath::Max(1, FMath::RoundToInt(Size.X / Step));
+	const int32 NY = FMath::Max(1, FMath::RoundToInt(Size.Y / Step));
+	const int32 NZ = bSplitZ ? FMath::Max(1, FMath::RoundToInt(Size.Z / Step)) : 1;
+	const FVector Piece(Size.X / NX, Size.Y / NY, Size.Z / NZ);
+	const FVector Corner = Center - Size * 0.5f;
+	for (int32 X = 0; X < NX; ++X)
+	{
+		for (int32 Y = 0; Y < NY; ++Y)
+		{
+			for (int32 Z = 0; Z < NZ; ++Z)
+			{
+				const FVector At = Corner + FVector((X + 0.5f) * Piece.X, (Y + 0.5f) * Piece.Y, (Z + 0.5f) * Piece.Z);
+				Paint(Block(At, Piece, Colour, 0.0f, bCollide), MaterialPath);
+			}
+		}
+	}
+}
+
 AActor* ADCCArcadeArena::Shape(const TCHAR* ShapeName, const FVector& Center, const FVector& Size, const FLinearColor& Colour,
 	const FRotator& Rotation, bool bCollide)
 {
@@ -520,6 +626,7 @@ AActor* ADCCArcadeArena::Shape(const TCHAR* ShapeName, const FVector& Center, co
 		Component->SetMobility(EComponentMobility::Movable);
 		Component->SetStaticMesh(Mesh);
 		Component->SetCollisionProfileName(bCollide ? TEXT("BlockAll") : TEXT("NoCollision"));
+		Component->SetCanEverAffectNavigation(bCollide);
 		Component->SetCastShadow(false);
 		if (ShapeMaterial)
 		{

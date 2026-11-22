@@ -228,6 +228,7 @@ public:
 	const FDCCFootageEntry* FindEntry(const FString& Player) const;
 
 	virtual FName GetGameId() const override { return TEXT("Haunt"); }
+	virtual FString GetTip() const override { return TEXT("Press 1 to film. Be back in the cage before time runs out."); }
 	virtual UDCCDungeonGrid* GetChaseGrid() const override { return Grid; }
 	/** A tag on the cage makes the stream: footage, once a round each, and an achievement. */
 	virtual void OnTagged(class ADCCCharacterBase* Painter, const FVector& At) override;
@@ -360,6 +361,36 @@ private:
 	TMap<FString, int32> TapeWarned;
 	bool bCrewLeftCage = false;
 	double AllDownSince = 0.0;
+
+	/**
+	 * F.I.A.T. companions playing Dead Air themselves (2026-11-21): each walks the mine on its own, films what it
+	 * finds (the same scoring as a player's camera), and makes for the cage when the clock, the tape or its health
+	 * says so. Its footage uploads under its own name; its player gets the tickets.
+	 */
+	struct FMineCompanion
+	{
+		FString Name;
+		FString Boss;
+		/** The anomaly it is after (an index into Anomalies), or -1. */
+		int32 Goal = -1;
+		/** Filming the goal until then; 0 until it has arrived. */
+		double FilmUntil = 0.0;
+		bool bHome = false;
+		/** What its camera points at, for Score. */
+		FVector Subject = FVector::ZeroVector;
+		TSet<int32> Filmed;
+		/** Closest it has got to the goal, and when, so a shot it cannot reach is given up. */
+		float BestDist = BIG_NUMBER;
+		double BestAt = 0.0;
+		/** Running from a monster (to the cage, filming over its shoulder) until then. */
+		double FleeUntil = 0.0;
+		/** Filming a monster since then; after a few seconds it leaves the monsters alone for a while. */
+		double BeastSince = 0.0;
+		double BeastsOffUntil = 0.0;
+	};
+	TMap<TWeakObjectPtr<class ADCCSummonedAlly>, FMineCompanion> MineCrew;
+	void TickMineCrew();
+	void CrewSay(const FMineCompanion& Mate, const FString& Line);
 	void BuildCage();
 	/** Dead Air's dressing passes: textures, props, filler (Arcade/DCCHauntDressing.cpp). */
 	void DressDetail();

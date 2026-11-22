@@ -651,7 +651,7 @@ void ADCCCharacterBase::OnPrimaryPressed()
 	{
 		if (const ADCCHUD* DCCHUD = Cast<ADCCHUD>(PC->GetHUD()))
 		{
-			if (DCCHUD->IsMenuVisible() || DCCHUD->IsSummonPanelOpen())
+			if (DCCHUD->IsMenuVisible() || DCCHUD->IsSummonPanelOpen() || DCCHUD->IsScratchCardOpen())
 			{
 				return;
 			}
@@ -2886,6 +2886,21 @@ void ADCCCharacterBase::HandleInteractPressed()
 		{
 			if (!Casino->IsSeated(this) && !FindDialogueNPCUnderCursor())
 			{
+				// A slot machine or the card machine in front of you (2026-11-21): E pulls, or buys a card.
+				const int32 Machine = Casino->SlotNear(GetActorLocation());
+				if (Machine >= 0)
+				{
+					const uint8 Verb = Machine == ADCCCasinoCascade::SlotCount ? 6 : 5;
+					if (HasAuthority())
+					{
+						Server_CasinoAction_Implementation(Verb, Machine);
+					}
+					else
+					{
+						Server_CasinoAction(Verb, Machine);
+					}
+					return;
+				}
 				const int32 Table = Casino->ClosestTable(GetActorLocation());
 				if (Table >= 0)
 				{
@@ -6815,12 +6830,24 @@ void ADCCCharacterBase::GetBelt(TArray<FDCCBeltEntry>& Out) const
 	// Climbing), so slot 1 in Dead Air is the body cam rather than a skill that does nothing there.
 	if (Skills && (!bArcade || Arena->ShowsClimbHud()))
 	{
-		const int32 SkillSlots = bArcade ? 1 : 3;
-		for (int32 i = 0; i < Skills->KnownSkills.Num() && i < SkillSlots; ++i)
+		// The arcade's one skill slot is the skill that game is about (Climbing on Fourteener), wherever it sits in the
+		// list: reordering skills (the menu's BELT button) once left Martial Arts there and Climbing off the belt.
+		TArray<FName> Picks;
+		if (bArcade)
+		{
+			const FName Climbing(TEXT("Climbing"));
+			const bool bKnowsClimbing = Skills->KnownSkills.ContainsByPredicate([&Climbing](const FDCCKnownSkill& K) { return K.SkillId == Climbing; });
+			Picks.Add(bKnowsClimbing || Skills->KnownSkills.IsEmpty() ? Climbing : Skills->KnownSkills[0].SkillId);
+		}
+		else
+		{
+			for (int32 i = 0; i < Skills->KnownSkills.Num() && i < 3; ++i) { Picks.Add(Skills->KnownSkills[i].SkillId); }
+		}
+		for (const FName& Pick : Picks)
 		{
 			FDCCBeltEntry E;
 			E.Kind = EDCCBelt::Skill;
-			E.ItemId = Skills->KnownSkills[i].SkillId;
+			E.ItemId = Pick;
 			FDCCSkillDef Def;
 			E.Name = Skills->FindSkill(E.ItemId, Def) && !Def.DisplayName.IsEmpty() ? Def.DisplayName.ToString() : E.ItemId.ToString();
 			E.Cooldown = Skills->GetRemainingCooldown(E.ItemId);

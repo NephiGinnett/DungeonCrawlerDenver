@@ -232,7 +232,8 @@ void ADCCArcadeGate::BuildLocal()
 {
 	// A dark plaza under a violet sky, ringed with broken towers, the gate hanging at the north end.
 	const FLinearColor Stone(0.05f, 0.045f, 0.07f);
-	Paint(Block(FVector(0, 0, -20), FVector(9000, 9000, 40), Stone), TEXT("/Game/Abandonned_Brutalist/Materials/MI_concrete_tile"));
+	// Tiled, not one slab: a single block showed one stone tile stretched across the whole plaza (2026-11-21).
+	TiledBlock(FVector(0, 0, -20), FVector(9000, 9000, 40), Stone, TEXT("/Game/Ice_Station/Materials/MI_floor_tile2"), 500.0f);
 	for (int32 i = 0; i < 18; ++i)
 	{
 		const float A = i * (2.0f * PI / 18.0f);
@@ -241,7 +242,13 @@ void ADCCArcadeGate::BuildLocal()
 		const TCHAR* TowerMat = (i % 3 == 0) ? TEXT("/Game/Ice_Station/Materials/MI_concrete_block")
 			: (i % 3 == 1) ? TEXT("/Game/Ice_Station/Materials/MI_concrete_block1")
 			: TEXT("/Game/Abandonned_Brutalist/Materials/MI_concrete_01");
-		Paint(Block(At + FVector(0, 0, H * 0.5f), FVector(700, 700, H), FLinearColor(0.035f, 0.03f, 0.05f), i * 23.0f), TowerMat);
+		// Stacked in storeys so the concrete keeps its scale all the way up.
+		const int32 Storeys = FMath::Max(1, FMath::RoundToInt(H / 700.0f));
+		for (int32 s = 0; s < Storeys; ++s)
+		{
+			const float Part = H / Storeys;
+			Paint(Block(At + FVector(0, 0, Part * (s + 0.5f)), FVector(700, 700, Part), FLinearColor(0.035f, 0.03f, 0.05f), i * 23.0f), TowerMat);
+		}
 	}
 	DrawPortal(EntryPortal(), 1200.0f, Violet, 0.0f);
 	Sign(EntryPortal() + FVector(0, -500, 1450), -90.0f, TEXT("A GATE HAS OPENED"), FColor(200, 160, 255), 90.0f);
@@ -692,8 +699,8 @@ void ADCCArcadeGate::BuildDungeon()
 		else if (RoomRole == TEXT("outage")) { FloorMat = TEXT("/Game/Abandonned_Brutalist/Materials/MI_concrete_01"); }
 		else if (RoomRole == TEXT("clock")) { FloorMat = TEXT("/Game/Ice_Station/Materials/MI_floor_tile3"); }
 		else if (RoomRole == TEXT("pen")) { FloorMat = TEXT("/Game/Abandonned_Brutalist/Materials/MI_stones"); }
-		Paint(Block(O + FVector((Room.X + Room.W * 0.5f) * Tile, (Room.Y + Room.H * 0.5f) * Tile, -20.0f),
-			FVector(Room.W * Tile, Room.H * Tile, 40.0f), FLinearColor(0.07f, 0.06f, 0.09f) + Colour * 0.04f), FloorMat);
+		TiledBlock(O + FVector((Room.X + Room.W * 0.5f) * Tile, (Room.Y + Room.H * 0.5f) * Tile, -20.0f),
+			FVector(Room.W * Tile, Room.H * Tile, 40.0f), FLinearColor(0.07f, 0.06f, 0.09f) + Colour * 0.04f, FloorMat, Tile);
 		// A glowing inlay round the room's middle, so a room reads as a room from the doorway.
 		Block(State.Center + FVector(0, 0, 2), FVector(Room.W * Tile - 500.0f, 30.0f, 4.0f), Colour * 0.8f, 0.0f, false);
 		Block(State.Center + FVector(0, 0, 2), FVector(30.0f, Room.H * Tile - 500.0f, 4.0f), Colour * 0.8f, 0.0f, false);
@@ -703,7 +710,8 @@ void ADCCArcadeGate::BuildDungeon()
 		}
 		else
 		{
-			Light(State.Center + FVector(0, 0, 460), Colour, 9000.0f, FMath::Max(Room.W, Room.H) * Tile);
+			// Half white and much softer: at 9000 the room's colour flooded the floor flat and hid its texture (2026-11-21).
+			Light(State.Center + FVector(0, 0, 460), FMath::Lerp(Colour, FLinearColor::White, 0.5f), 3200.0f, FMath::Max(Room.W, Room.H) * Tile);
 		}
 		Sign(State.Center + FVector(0, 0, 420), 0.0f, RoleSign(RoomRole), Colour.ToFColor(true), RoomRole == TEXT("boss") ? 60.0f : 34.0f);
 		if (RoomRole == TEXT("trial"))
@@ -738,18 +746,34 @@ void ADCCArcadeGate::BuildDungeon()
 	for (const FRun& Run : Horizontal)
 	{
 		const float X0 = O.X + Run.A * Tile, X1 = O.X + Run.B * Tile, Yw = O.Y + Run.Line * Tile;
-		Paint(Block(FVector((X0 + X1) * 0.5f, Yw, WallHeight * 0.5f), FVector(X1 - X0 + 40.0f, 40.0f, WallHeight), WallColour),
-			TEXT("/Game/Ice_Station/Materials/MI_trim_01_interior"));
+		// One panel per cell, so the trim repeats instead of stretching down the whole run.
+		for (int32 Cell = Run.A; Cell < Run.B; ++Cell)
+		{
+			const float L = (Cell == Run.A ? 20.0f : 0.0f), R = (Cell == Run.B - 1 ? 20.0f : 0.0f);
+			const float C0 = O.X + Cell * Tile - L, C1 = O.X + (Cell + 1) * Tile + R;
+			Paint(Block(FVector((C0 + C1) * 0.5f, Yw, WallHeight * 0.5f), FVector(C1 - C0, 40.0f, WallHeight), WallColour),
+				TEXT("/Game/Ice_Station/Materials/MI_trim_01_interior"));
+		}
+		(void)X0;
+		(void)X1;
 	}
 	for (const FRun& Run : Vertical)
 	{
 		const float Y0 = O.Y + Run.A * Tile, Y1 = O.Y + Run.B * Tile, Xw = O.X + Run.Line * Tile;
-		Paint(Block(FVector(Xw, (Y0 + Y1) * 0.5f, WallHeight * 0.5f), FVector(40.0f, Y1 - Y0 + 40.0f, WallHeight), WallColour),
-			TEXT("/Game/Ice_Station/Materials/MI_trim_01_interior2"));
+		for (int32 Cell = Run.A; Cell < Run.B; ++Cell)
+		{
+			const float L = (Cell == Run.A ? 20.0f : 0.0f), R = (Cell == Run.B - 1 ? 20.0f : 0.0f);
+			const float C0 = O.Y + Cell * Tile - L, C1 = O.Y + (Cell + 1) * Tile + R;
+			Paint(Block(FVector(Xw, (C0 + C1) * 0.5f, WallHeight * 0.5f), FVector(40.0f, C1 - C0, WallHeight), WallColour),
+				TEXT("/Game/Ice_Station/Materials/MI_trim_01_interior2"));
+		}
+		(void)Y0;
+		(void)Y1;
 	}
 	// Inside a gate there is no sky: a lid over the whole layout, so the rooms are lit only by their own glow.
-	Paint(Block(O + FVector(GridSize * Tile * 0.5f, GridSize * Tile * 0.5f, WallHeight + 20.0f), FVector(GridSize * Tile + 400.0f, GridSize * Tile + 400.0f, 40.0f),
-		FLinearColor(0.02f, 0.015f, 0.04f)), TEXT("/Game/Abandonned_Brutalist/Materials/MI_concrete_01"));
+	// Plain and dark: painted, it showed one huge stretched stone overhead (2026-11-21).
+	Block(O + FVector(GridSize * Tile * 0.5f, GridSize * Tile * 0.5f, WallHeight + 20.0f), FVector(GridSize * Tile + 400.0f, GridSize * Tile + 400.0f, 40.0f),
+		FLinearColor(0.02f, 0.015f, 0.04f));
 	// A thin violet glow along the foot of every wall.
 	for (const FRun& Run : Horizontal)
 	{

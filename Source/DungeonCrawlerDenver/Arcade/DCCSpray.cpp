@@ -30,6 +30,7 @@
 #include "Serialization/JsonWriter.h"
 #include "Widgets/SWindow.h"
 #include "UObject/StrongObjectPtr.h"
+#include "TimerManager.h"
 
 #if PLATFORM_WINDOWS
 #include "Windows/AllowWindowsPlatformTypes.h"
@@ -41,6 +42,9 @@ DEFINE_LOG_CATEGORY_STATIC(LogDCCSpray, Log, All);
 
 namespace DCCSpray
 {
+	/** Server: put this arena's saved tags back now, keeping only the ones that still have a surface. */
+	void RestoreNow(ADCCArcadeArena* Arena);
+
 	namespace
 	{
 		FString Dir() { return FPaths::ProjectSavedDir() / TEXT("Sprays"); }
@@ -132,12 +136,19 @@ namespace DCCSpray
 			return Tag;
 		}
 
+		/** The arena whose saved tags are already back in the world. Until then, a save would drop them. */
+		TWeakObjectPtr<const ADCCArcadeArena> RestoredArena;
+
 		void Save(UWorld* World)
 		{
 			ADCCArcadeArena* Arena = ArenaIn(World);
 			if (!Arena)
 			{
 				return; // only the arcade's arenas keep their walls between sessions
+			}
+			if (RestoredArena.Get() != Arena)
+			{
+				RestoreNow(Arena); // someone sprayed before the old tags were back: bring them back first
 			}
 			const FTransform Origin = Arena->GetActorTransform();
 			TArray<TSharedPtr<FJsonValue>> Rows;
@@ -357,8 +368,14 @@ namespace DCCSpray
 		FCollisionQueryParams Params(SCENE_QUERY_STAT(DCCSprayAttach), true, Ignore);
 		if (Tag && World->LineTraceSingleByChannel(Under, At + N * 20.0f, At - N * 40.0f, ECC_Visibility, Params))
 		{
-			USceneComponent* Surface = Under.GetComponent();
-			if (Surface && Surface->Mobility == EComponentMobility::Movable && Under.GetActor() && !Cast<ADCCArcadeArena>(Under.GetActor()))
+			// Only things that really move: a pawn (the trucks, the traffic) or something under physics. Every wall the
+			// arcade builds at runtime is a Movable mesh too, and treating those as vehicles meant no tag was ever kept
+			// (2026-11-21, Zoe: "I had hoped that sprays might persist between games!").
+			UPrimitiveComponent* Surface = Under.GetComponent();
+			AActor* Thing = Under.GetActor();
+			const bool bRides = Surface && Thing && !Cast<ADCCArcadeArena>(Thing)
+				&& (Cast<APawn>(Thing) || Surface->IsSimulatingPhysics() || (Thing->GetAttachParentActor() && Cast<APawn>(Thing->GetAttachParentActor())));
+			if (bRides)
 			{
 				Tag->AttachToComponent(Surface, FAttachmentTransformRules::KeepWorldTransform);
 			}
@@ -433,6 +450,22 @@ namespace DCCSpray
 		{
 			return;
 		}
+		// Most arenas build their walls after BeginPlay (the casino floor, the Gate dungeon once its seed lands), so
+		// the tags go back a few seconds in, when there is something to stick to.
+		TWeakObjectPtr<ADCCArcadeArena> Weak(Arena);
+		FTimerHandle Handle;
+		Arena->GetWorldTimerManager().SetTimer(Handle, FTimerDelegate::CreateLambda([Weak]()
+		{
+			if (ADCCArcadeArena* Live = Weak.Get(); Live && RestoredArena.Get() != Live)
+			{
+				RestoreNow(Live);
+			}
+		}), 4.0f, false);
+	}
+
+	void RestoreNow(ADCCArcadeArena* Arena)
+	{
+		RestoredArena = Arena;
 		FString Text;
 		if (!IFileManager::Get().FileExists(*WorldPath(Arena)) || !FFileHelper::LoadFileToString(Text, *WorldPath(Arena)))
 		{
@@ -450,6 +483,7 @@ namespace DCCSpray
 		}
 		const FTransform Origin = Arena->GetActorTransform();
 		int32 Count = 0;
+		int32 Skipped = 0;
 		for (const TSharedPtr<FJsonValue>& Value : *Rows)
 		{
 			const TSharedPtr<FJsonObject> Row = Value.IsValid() ? Value->AsObject() : nullptr;
@@ -460,11 +494,23 @@ namespace DCCSpray
 			}
 			const FVector L(Row->GetNumberField(TEXT("x")), Row->GetNumberField(TEXT("y")), Row->GetNumberField(TEXT("z")));
 			const FRotator R(Row->GetNumberField(TEXT("pitch")), Row->GetNumberField(TEXT("yaw")), Row->GetNumberField(TEXT("roll")));
-			SpawnTag(Arena->GetWorld(), Origin.TransformPosition(L), Origin.TransformRotation(R.Quaternion()).Rotator(), RGB,
-				Row->GetStringField(TEXT("painter")), Row->GetNumberField(TEXT("t")));
+			const FVector At = Origin.TransformPosition(L);
+			const FRotator Rot = Origin.TransformRotation(R.Quaternion()).Rotator();
+			// Still a wall there? A Gate dungeon is a new layout every run; a tag from last run's rooms is not hung in the air.
+			const FVector Into = Rot.Vector();
+			FHitResult Hit;
+			FCollisionQueryParams Params(SCENE_QUERY_STAT(DCCSprayRestore), true);
+			if (!Arena->GetWorld()->LineTraceSingleByChannel(Hit, At - Into * 30.0f, At + Into * 60.0f, ECC_Visibility, Params)
+				|| Cast<APawn>(Hit.GetActor()))
+			{
+				++Skipped;
+				continue;
+			}
+			SpawnTag(Arena->GetWorld(), At, Rot, RGB, Row->GetStringField(TEXT("painter")), Row->GetNumberField(TEXT("t")));
 			++Count;
 		}
-		UE_LOG(LogDCCSpray, Log, TEXT("[DCC Spray] %d tag(s) put back in %s."), Count, *Arena->GetClass()->GetName());
+		UE_LOG(LogDCCSpray, Log, TEXT("[DCC Spray] %d tag(s) put back in %s (%d with nothing left to stick to)."), Count,
+			*Arena->GetClass()->GetName(), Skipped);
 	}
 
 	void ClearAll(UWorld* World)

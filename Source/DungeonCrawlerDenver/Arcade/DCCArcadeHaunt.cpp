@@ -1,4 +1,5 @@
 #include "Arcade/DCCArcadeHaunt.h"
+#include "Characters/DCCAllyCharacters.h"
 #include "Arcade/DCCArcade.h"
 #include "Characters/DCCReactions.h"
 #include "Progression/DCCAchievementComponent.h"
@@ -470,7 +471,6 @@ void ADCCArcadeHaunt::BuildHouse()
 		Prop(TEXT("/Game/Cave_Camp/Meshes/Props_02/SM_crate_group_02"), OutfitPad + FVector(TileSize * 0.3f, TileSize * 0.3f, 0), 200.0f, FVector(0, 0, 130), false);
 		Light(OutfitPad + FVector(0, 0, 300), FLinearColor(0.5f, 1.0f, 0.6f), 2500.0f, 700.0f);
 		Sign(OutfitPad + FVector(0, 0, 260), 180.0f, TEXT("MINE OUTFITTERS"), FColor(140, 255, 170), 30.0f);
-		Sign(OutfitPad + FVector(0, 0, 225), 180.0f, TEXT("tanks  -  lamps  -  lightsticks  -  hats  -  rope"), FColor(200, 230, 210), 14.0f);
 	}
 
 	// Where each level of air tank runs out: a red lantern hung on a timber post in the tunnel, and a board.
@@ -1934,7 +1934,7 @@ void ADCCArcadeHaunt::Blast(int32 CrateIndex)
 		ADCCCharacterBase* Who = *It;
 		if (Who->Stats && Who->IsAlive() && FVector::Dist(Who->GetActorLocation(), At) < 450.0f)
 		{
-			const bool bCrew = !Who->IsA<ADCCEnemyCharacter>();
+			const bool bCrew = Who->IsCrawler(); // players and their companions (allies), not the mine's monsters
 			if (bCrew && IsInCage(Who->GetActorLocation())) { continue; } // the cage takes the blast
 			if (bCrew) { HitCrew(Who, 0.3f, 10, true, false); }
 			else { Who->Stats->ApplyDamage(80); }
@@ -2049,7 +2049,7 @@ void ADCCArcadeHaunt::TickTrapsServer(float DeltaSeconds)
 					if (Who->Stats && Who->IsAlive() && !Run.HitThisRun.Contains(Key) && FVector::Dist2D(Who->GetActorLocation(), Pos) < 170.0f)
 					{
 						Run.HitThisRun.Add(Key);
-						const bool bCrew = !Who->IsA<ADCCEnemyCharacter>();
+						const bool bCrew = Who->IsCrawler(); // players and their companions (allies), not the mine's monsters
 						if (bCrew) { HitCrew(Who, 0.2f, 8, true, false); }
 						else { Who->Stats->ApplyDamage(60); }
 						Who->LaunchCharacter((Who->GetActorLocation() - (Pos - (To - From).GetSafeNormal() * 200.0f)).GetSafeNormal2D() * 650.0f + FVector(0, 0, 260.0f), true, true);
@@ -2779,16 +2779,39 @@ void ADCCArcadeHaunt::Score(float DeltaSeconds)
 		DeathFlashes.RemoveAll([Now](const TPair<FVector, double>& Flash) { return Now - Flash.Value > 3.5; });
 	}
 
+	// Everyone holding a camera: the players, and the companions filming on their own (TickMineCrew).
+	struct FShooter
+	{
+		ADCCCharacterBase* Camera = nullptr;
+		FString Name;
+		FVector Look = FVector::ForwardVector;
+		APlayerController* PC = nullptr;
+	};
+	TArray<FShooter> Shooters;
 	TArray<APlayerController*> Players;
 	GetPlayers(Players);
 	for (APlayerController* PC : Players)
 	{
 		ADCCCharacterBase* Camera = Cast<ADCCCharacterBase>(PC->GetPawn());
 		const FString Name = PC->PlayerState ? PC->PlayerState->GetPlayerName() : FString();
-		if (!Camera || Name.IsEmpty())
+		if (Camera && !Name.IsEmpty())
 		{
-			continue;
+			Shooters.Add({ Camera, Name, PC->GetControlRotation().Vector(), PC });
 		}
+	}
+	for (const TPair<TWeakObjectPtr<ADCCSummonedAlly>, FMineCompanion>& Pair : MineCrew)
+	{
+		if (ADCCSummonedAlly* Ally = Pair.Key.Get())
+		{
+			const FVector Look = (Pair.Value.Subject - Ally->GetPawnViewLocation()).GetSafeNormal();
+			Shooters.Add({ Ally, Pair.Value.Name, Look.IsNearlyZero() ? Ally->GetActorForwardVector() : Look, nullptr });
+		}
+	}
+	for (const FShooter& Shooter : Shooters)
+	{
+		ADCCCharacterBase* Camera = Shooter.Camera;
+		const FString& Name = Shooter.Name;
+		APlayerController* PC = Shooter.PC;
 		FDCCFootageEntry& Entry = EntryFor(Name);
 		LoadKit(Entry, PC);
 
@@ -2815,7 +2838,7 @@ void ADCCArcadeHaunt::Score(float DeltaSeconds)
 		}
 
 		const FVector Eye = Camera->GetPawnViewLocation();
-		const FVector Look = PC->GetControlRotation().Vector();
+		const FVector Look = Shooter.Look;
 		const float MaxRange = 2500.0f;
 		const float CosHalfAngle = FMath::Cos(FMath::DegreesToRadians(25.0f));
 
@@ -2919,6 +2942,10 @@ void ADCCArcadeHaunt::Score(float DeltaSeconds)
 			}
 		}
 
+		if (!PC)
+		{
+			Shot *= 0.35f; // a companion's camera: worth having, never worth more than yours
+		}
 		Entry.LiveShot = Shot;
 		if (Shot > 0.5f)
 		{
@@ -2981,6 +3008,40 @@ void ADCCArcadeHaunt::Wrap()
 			const int32 Credits = Entry.Views / 150 + (Read ? Read->Num() : 0) + 8 * StoriesDone.Num();
 			UDCCWalletComponent::AwardCredits(PC->PlayerState, Credits, TEXT("Dead Air (footage, notes and stories)"));
 		}
+	}
+
+	// Companions upload too, if they made it back. Their views are their player's tickets.
+	for (TPair<TWeakObjectPtr<ADCCSummonedAlly>, FMineCompanion>& Pair : MineCrew)
+	{
+		ADCCSummonedAlly* Ally = Pair.Key.Get();
+		const FString MateName = Pair.Value.Name;
+		FDCCFootageEntry* Entry = Footage.FindByPredicate([&MateName](const FDCCFootageEntry& E) { return E.Player == MateName; });
+		if (Ally)
+		{
+			Ally->bHasErrand = false;
+			Ally->bRecordingFootage = false;
+			if (Ally->Stats)
+			{
+				Ally->Stats->bInvulnerable = false;
+			}
+		}
+		if (!Entry)
+		{
+			continue;
+		}
+		const bool bMadeIt = Ally && Ally->IsAlive() && !Ally->IsDowned() && InVan(Ally->GetActorLocation());
+		Entry->Views = bMadeIt ? FMath::RoundToInt(Entry->Footage * ViewsPerPoint) : 0;
+		Entry->bRecording = false;
+		TeamViews += Entry->Views;
+		for (APlayerController* PC : Players)
+		{
+			if (Entry->Views > 0 && PC && PC->PlayerState && PC->PlayerState->GetPlayerName() == Pair.Value.Boss)
+			{
+				UDCCWalletComponent::AwardTickets(PC->PlayerState, FMath::Clamp(Entry->Views / 100, 1, 40),
+					FString::Printf(TEXT("%s's footage"), *MateName));
+			}
+		}
+		UE_LOG(LogTemp, Log, TEXT("[DCC Haunt] companion %s %s with %d views"), *MateName, bMadeIt ? TEXT("made the cage") : TEXT("did not make it back"), Entry->Views);
 	}
 
 	StatusLines.Reset();
@@ -3057,6 +3118,7 @@ void ADCCArcadeHaunt::ServerTick(float DeltaSeconds)
 	{
 		return;
 	}
+	TickMineCrew();
 	if (TimeLeft <= 0.0f)
 	{
 		Wrap();
@@ -3102,7 +3164,7 @@ void ADCCArcadeHaunt::ServerTick(float DeltaSeconds)
 		Crew += FString::Printf(TEXT("%s%s %s%s"), Crew.IsEmpty() ? TEXT("") : TEXT("     "), *Entry.Player,
 			*FText::AsNumber(FMath::RoundToInt(Entry.Footage * ViewsPerPoint)).ToString(), Entry.bRecording ? TEXT(" (REC)") : TEXT(""));
 	}
-	StatusLines.Add(FString::Printf(TEXT("%d:%02d until the cage goes up.   Projected: %s views"),
+	StatusLines.Add(FString::Printf(TEXT("%d:%02d to the cage     %s views"),
 		FMath::FloorToInt(TimeLeft / 60.0f), FMath::FloorToInt(FMath::Fmod(TimeLeft, 60.0f)), *FText::AsNumber(Projected).ToString()));
 	if (!Crew.IsEmpty())
 	{
@@ -3110,12 +3172,12 @@ void ADCCArcadeHaunt::ServerTick(float DeltaSeconds)
 	}
 	if (BellNow < LieUntil)
 	{
-		StatusLines.Add(TEXT("THE BELL. Three rings. The cage is going up. GET TO THE CAGE."));
+		StatusLines.Add(TEXT("!THE BELL. Three rings. The cage is going up. GET TO THE CAGE."));
 	}
 	if (TimeLeft < 45.0f)
 	{
-		StatusLines.Add(bHonestBellRung ? TEXT("The bell, honestly this time. Pike is holding the cage. GET BACK TO THE CAGE.")
-			: TEXT("The roof is coming in. GET BACK TO THE CAGE."));
+		StatusLines.Add(bHonestBellRung ? TEXT("!The bell, honestly this time. Pike is holding the cage. GET BACK TO THE CAGE.")
+			: TEXT("!The roof is coming in. GET BACK TO THE CAGE."));
 	}
 	// Which stories are down here, and how far the crew has read into each.
 	FString Stories;
@@ -3191,10 +3253,8 @@ void ADCCArcadeHaunt::BuildCage()
 	const FVector SignAt = C + GateDir * (Half + 20.0f);
 	const float Yaw = GateDir.Rotation().Yaw;
 	Sign(SignAt + FVector(0, 0, Height + 60.0f), Yaw, TEXT("THE CAGE"), FColor(140, 255, 160), 50.0f);
-	Sign(SignAt + FVector(0, 0, Height + 20.0f), Yaw, TEXT("Safe inside. Be in it when the clock runs out, or your tape stays down here."), FColor(200, 220, 200), 15.0f);
 	const FVector Wall = FoyerBox.IsValid ? FVector(C.X, C.Y, C.Z) - GateDir * (Half + 120.0f) : C;
-	Sign(Wall + FVector(0, 0, 360), Yaw, TEXT("MOUNT FOURTEENER"), FColor(200, 220, 255), 26.0f);
-	Sign(Wall + FVector(0, 0, 320), Yaw, TEXT("LUCKY TUESDAY MINE  -  SHAFT No. 2  -  CLOSED 1893"), FColor(230, 200, 150), 18.0f);
+	Sign(Wall + FVector(0, 0, 340), Yaw, TEXT("LUCKY TUESDAY MINE"), FColor(230, 200, 150), 26.0f);
 }
 
 void ADCCArcadeHaunt::TickCage()
@@ -3270,6 +3330,264 @@ void ADCCArcadeHaunt::TickCage()
 		UE_LOG(LogTemp, Log, TEXT("[DCC Haunt] the crew sent the cage up early."));
 		EndsAt = Now; // the round ends this tick, tapes counted as usual
 		TimeLeft = 0.0f;
+	}
+}
+
+// ---- companions with cameras (2026-11-21) ---------------------------------------------------------------------------
+
+void ADCCArcadeHaunt::CrewSay(const FMineCompanion& Mate, const FString& Line)
+{
+	TArray<APlayerController*> Players;
+	GetPlayers(Players);
+	for (APlayerController* PC : Players)
+	{
+		ADCCCharacterBase* Crawler = PC ? Cast<ADCCCharacterBase>(PC->GetPawn()) : nullptr;
+		if (Crawler && Crawler->Wallet && PC->PlayerState && PC->PlayerState->GetPlayerName() == Mate.Boss)
+		{
+			Crawler->Wallet->Tell(FString::Printf(TEXT("%s: %s"), *Mate.Name, *Line));
+		}
+	}
+}
+
+void ADCCArcadeHaunt::TickMineCrew()
+{
+	const double Now = ServerTime();
+	for (TActorIterator<ADCCSummonedAlly> It(GetWorld()); It; ++It)
+	{
+		ADCCSummonedAlly* Ally = *It;
+		if (!Ally || !Ally->IsAlive())
+		{
+			continue;
+		}
+		FMineCompanion* Mate = MineCrew.Find(Ally);
+		if (!Mate)
+		{
+			Mate = &MineCrew.Add(Ally);
+			Mate->Name = Ally->Friend.IsNone() ? Ally->DisplayName.ToString() : Ally->Friend.ToString();
+			Mate->Boss = Ally->SummonerName;
+			Mate->Subject = Ally->GetActorLocation() + Ally->GetActorForwardVector() * 500.0f;
+			EntryFor(Mate->Name); // on the footage board from the start
+			CrewSay(*Mate, TEXT("I've got a camera. I'll find my own shots and meet you at the cage."));
+			UE_LOG(LogTemp, Log, TEXT("[DCC Haunt] companion %s (with %s) has a camera"), *Mate->Name, *Mate->Boss);
+		}
+		FDCCFootageEntry& Entry = EntryFor(Mate->Name);
+		const FVector Here = Ally->GetActorLocation();
+		const bool bInCage = IsInCage(Here);
+		Ally->bHasErrand = true;
+		{
+			// What each companion is up to, every 15 s, for test runs.
+			static TMap<FString, double> NextLog;
+			double& Due = NextLog.FindOrAdd(Mate->Name);
+			if (Now >= Due)
+			{
+				Due = Now + 15.0;
+				UE_LOG(LogTemp, Log, TEXT("[DCC Haunt] companion %s: goal %d, %s, %.0f from the cage, footage %.0f, tape %.0f, hp %d, rec %d, in cage %d, fleeing %d, errand %.0f away, goal %.0f away, film %.1f, walking by %s, speed %.0f"),
+					*Mate->Name, Mate->Goal, Mate->bHome ? TEXT("going home") : TEXT("out filming"), FVector::Dist2D(Here, CageCenter),
+					Entry.Footage, Entry.Tape, Ally->Stats ? Ally->Stats->CurrentHitPoints : -1, Ally->bRecordingFootage ? 1 : 0,
+					bInCage ? 1 : 0, Now < Mate->FleeUntil ? 1 : 0, FVector::Dist2D(Here, Ally->ErrandAt),
+					Anomalies.IsValidIndex(Mate->Goal) ? FVector::Dist2D(Here, Anomalies[Mate->Goal].Location) : -1.0f,
+					Mate->FilmUntil > 0.0 ? float(Mate->FilmUntil - Now) : -1.0f,
+					Ally->CanUseNavmesh() ? TEXT("navmesh") : TEXT("grid"), Ally->GetVelocity().Size2D());
+			}
+		}
+
+		// Home time: the clock (leaving time for the walk back), a full tape, or a bad beating.
+		const float WalkBack = FVector::Dist2D(Here, CageCenter) / 320.0f;
+		Ally->bErrandAvoidFights = true; // a camera, not a pick: it films the monsters and runs from them
+		// The cage keeps companions safe too, and the monsters drop one that locked on before it had a camera.
+		if (Ally->Stats)
+		{
+			Ally->Stats->bInvulnerable = bInCage;
+		}
+		for (const TWeakObjectPtr<ADCCEnemyCharacter>& MonsterPtr : Monsters)
+		{
+			if (ADCCEnemyCharacter* Monster = MonsterPtr.Get(); Monster && Monster->GetCurrentTarget() == Ally)
+			{
+				Monster->ForgetTarget();
+			}
+		}
+		// The same test Score makes: footage only counts with nothing in the way.
+		auto CanSee = [this, Ally](const FVector& Point, const AActor* Subject)
+		{
+			FCollisionQueryParams Query(SCENE_QUERY_STAT(DCCHauntCrewSight), false, Ally);
+			if (Subject)
+			{
+				Query.AddIgnoredActor(Subject);
+			}
+			// Stop just short of the subject, so the subject itself never counts as in the way.
+			const FVector Eye = Ally->GetPawnViewLocation();
+			const FVector End = Point - (Point - Eye).GetSafeNormal() * 80.0f;
+			FHitResult Hit;
+			return !GetWorld()->LineTraceSingleByChannel(Hit, Eye, End, ECC_Visibility, Query);
+		};
+		const float MaxHp = Ally->Stats ? float(Ally->Stats->MaxHitPoints) : 0.0f;
+		const bool bHurt = Ally->Stats && MaxHp > 0.0f && Ally->Stats->CurrentHitPoints < MaxHp * 0.3f;
+		if (!Mate->bHome && (TimeLeft < 25.0f + WalkBack || Entry.Tape <= 0.0f || bHurt))
+		{
+			Mate->bHome = true;
+			CrewSay(*Mate, Entry.Tape <= 0.0f ? TEXT("Tape's full. Heading back to the cage.")
+				: bHurt ? TEXT("I'm hurt. Going back to the cage.") : TEXT("Clock's running down. Back to the cage."));
+			UE_LOG(LogTemp, Log, TEXT("[DCC Haunt] companion %s heads for the cage (%.0f s left, tape %.0f)"), *Mate->Name, TimeLeft, Entry.Tape);
+		}
+		// Something with teeth inside 10 m: run for the cage (monsters never come in), camera still rolling.
+		for (const TWeakObjectPtr<ADCCEnemyCharacter>& MonsterPtr : Monsters)
+		{
+			const ADCCEnemyCharacter* Monster = MonsterPtr.Get();
+			// Only one that is actually after it: the mine's monsters let a quiet camera be (FindNearestHostileTarget),
+			// and running from every one that wandered past the gate kept it in the cage all round.
+			if (!bInCage && Monster && Monster->IsAlive() && Monster->GetCurrentTarget() == Ally
+				&& FVector::Dist(Here, Monster->GetActorLocation()) < 1000.0f)
+			{
+				if (Now >= Mate->FleeUntil)
+				{
+					CrewSay(*Mate, TEXT("Something's coming for me. Running for the cage."));
+				}
+				Mate->FleeUntil = Now + 6.0;
+				Mate->Subject = Monster->GetActorLocation() + FVector(0.0f, 0.0f, 40.0f);
+				break;
+			}
+		}
+		if (Mate->bHome || Now < Mate->FleeUntil)
+		{
+			const FVector GateOut = CageCenter + GateDir * (CageHalf + 260.0f);
+			const bool bAtGate = FVector::Dist2D(Here, GateOut) < 300.0f || bInCage;
+			Ally->ErrandAt = bAtGate ? CageCenter : GateOut;
+			Ally->ErrandRadius = bAtGate ? CageHalf * 0.4f : 200.0f;
+			Ally->bErrandRun = true;
+			Ally->bErrandLook = false;
+			if (Mate->bHome)
+			{
+				Mate->Subject = Here + Ally->GetActorForwardVector() * 500.0f;
+			}
+			Ally->bRecordingFootage = Entry.Tape > 0.0f && !bInCage; // keep rolling on the way back
+			continue;
+		}
+
+		// A creature close by is the best shot going: hold ground and film it (and fight it, if it comes on).
+		const ADCCEnemyCharacter* Beast = nullptr;
+		float BeastDist = 1800.0f;
+		for (const TWeakObjectPtr<ADCCEnemyCharacter>& MonsterPtr : Monsters)
+		{
+			const ADCCEnemyCharacter* Monster = MonsterPtr.Get();
+			const float D = Monster && Monster->IsAlive() ? FVector::Dist(Here, Monster->GetActorLocation()) : BIG_NUMBER;
+			if (D < BeastDist && D >= 1000.0f && !bInCage && Now >= Mate->BeastsOffUntil // filmed from a respectful distance, never through the bars,
+				&& CanSee(Monster->GetActorLocation() + FVector(0.0f, 0.0f, 40.0f), Monster)) // and only when it is in sight
+			{
+				BeastDist = D;
+				Beast = Monster;
+			}
+		}
+
+		// Otherwise the best anomaly in reach that it has not filmed and no other companion is on.
+		const bool bDoneHere = Anomalies.IsValidIndex(Mate->Goal) && Mate->FilmUntil > 0.0 && Now >= Mate->FilmUntil;
+		if (!Anomalies.IsValidIndex(Mate->Goal) || bDoneHere)
+		{
+			if (bDoneHere)
+			{
+				Mate->Filmed.Add(Mate->Goal);
+			}
+			if (Mate->Filmed.Num() >= Anomalies.Num())
+			{
+				Mate->Filmed.Reset(); // seen the lot: go round again
+			}
+			Mate->Goal = -1;
+			Mate->FilmUntil = 0.0;
+			Mate->BestDist = BIG_NUMBER;
+			Mate->BestAt = Now;
+			float Best = 0.0f;
+			for (int32 i = 0; i < Anomalies.Num(); ++i)
+			{
+				if (Mate->Filmed.Contains(i))
+				{
+					continue;
+				}
+				bool bTaken = false;
+				for (const TPair<TWeakObjectPtr<ADCCSummonedAlly>, FMineCompanion>& Other : MineCrew)
+				{
+					bTaken |= (&Other.Value != Mate && Other.Value.Goal == i);
+				}
+				const float Worth = Anomalies[i].Value / (1.0f + FVector::Dist(Here, Anomalies[i].Location) / 2500.0f) * (bTaken ? 0.2f : 1.0f);
+				if (Worth > Best)
+				{
+					Best = Worth;
+					Mate->Goal = i;
+				}
+			}
+			if (Mate->Goal >= 0)
+			{
+				CrewSay(*Mate, Anomalies[Mate->Goal].bGhost ? TEXT("Something's moving down the tunnel. Going to film it.")
+					: TEXT("There's a shot over there. Going for it."));
+			}
+		}
+
+		if (Beast)
+		{
+			// A few seconds of any one monster is the shot; then back to the mine for a while.
+			if (Mate->BeastSince <= 0.0)
+			{
+				Mate->BeastSince = Now;
+			}
+			if (Now - Mate->BeastSince > 8.0)
+			{
+				Mate->BeastsOffUntil = Now + 15.0;
+				Mate->BeastSince = 0.0;
+			}
+		}
+		else
+		{
+			Mate->BeastSince = 0.0;
+		}
+		if (Beast)
+		{
+			Ally->ErrandAt = Here;
+			Ally->ErrandRadius = 400.0f;
+			Ally->bErrandLook = true;
+			Ally->ErrandLook = Beast->GetActorLocation();
+			Mate->Subject = Beast->GetActorLocation() + FVector(0.0f, 0.0f, 40.0f);
+		}
+		else if (Anomalies.IsValidIndex(Mate->Goal))
+		{
+			const FVector Target = Anomalies[Mate->Goal].Location;
+			const float Dist = FVector::Dist2D(Here, Target);
+			// No closer in 10 s (a cave-in, a pit, bars): give it up and find another.
+			if (Dist < Mate->BestDist - 150.0f)
+			{
+				Mate->BestDist = Dist;
+				Mate->BestAt = Now;
+			}
+			else if (Mate->FilmUntil <= 0.0 && Now - Mate->BestAt > 10.0)
+			{
+				Mate->Filmed.Add(Mate->Goal);
+				Mate->Goal = -1;
+				UE_LOG(LogTemp, Log, TEXT("[DCC Haunt] companion %s could not reach its shot; trying another"), *Mate->Name);
+				continue;
+			}
+			Ally->ErrandAt = Target;
+			Ally->ErrandRadius = 650.0f; // a good distance for a shot
+			Ally->bErrandRun = Dist > 2500.0f;
+			Ally->bErrandLook = true;
+			Ally->ErrandLook = Target;
+			Mate->Subject = Target;
+			if (bInCage && !IsInCage(Target))
+			{
+				// The bars are not on the walking grid: out through the gate first.
+				Ally->ErrandAt = CageCenter + GateDir * (CageHalf + 260.0f);
+				Ally->ErrandRadius = 120.0f;
+				Ally->bErrandLook = false;
+			}
+			if (Dist <= 800.0f && Mate->FilmUntil <= 0.0)
+			{
+				Mate->FilmUntil = Now + 7.0;
+			}
+		}
+		else
+		{
+			Ally->ErrandAt = Here;
+			Ally->bErrandLook = false;
+		}
+		const float SubjectDist = FVector::Dist(Here, Mate->Subject);
+		// Tape only rolls with the subject in sight: walking up to a shot does not spend it.
+		Ally->bRecordingFootage = !bInCage && Entry.Tape > 0.0f && SubjectDist < 2500.0f && CanSee(Mate->Subject, nullptr);
 	}
 }
 

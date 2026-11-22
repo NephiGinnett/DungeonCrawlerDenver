@@ -408,10 +408,8 @@ void ADCCHUD::DrawRallyBriefing(const ADCCArcadeKart* Kart)
 		const float RX = X + W * 0.45f;
 		RallyText(TEXT("YOU KNOW THE JOB"), Cyan, RX, ColY - 4.0f * S, GEngine->GetLargeFont(), 1.7f * S);
 		const TCHAR* Lines[] = {
-			TEXT("Right mouse aims, Q hooks, tow it to the yard, Q drops."),
-			TEXT("Fast and clean pays. The wrong car is a fine."),
-			TEXT("Owners yell. Some fight. Gas stations fix your hull."),
-			TEXT("Scrap from drops buys upgrades at the Chop Shop."),
+			TEXT("Right mouse aims, Q hooks, the yard pays."),
+			TEXT("Fast and clean pays more. The wrong car is a fine."),
 		};
 		float LY = ColY + 38.0f * S;
 		for (const TCHAR* Line : Lines)

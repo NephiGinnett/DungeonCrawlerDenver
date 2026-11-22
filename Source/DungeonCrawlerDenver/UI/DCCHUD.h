@@ -190,6 +190,8 @@ public:
 	/** E at a podium: open its panel, or close it. */
 	void ToggleSummonPanel(int32 Tube);
 	bool IsSummonPanelOpen() const { return SummonTube >= 0; }
+	/** A Mother Lode scratchcard is on screen (2026-11-21). The mouse scratches; it does not swing. */
+	bool IsScratchCardOpen() const { return bScratchOpen; }
 	/** The reveal banner after a pull. */
 	void ShowSummonResult(FName Friend, uint8 Tier, uint8 Variant, const FString& WeaponName);
 	/** The reveal banner alone (also drawn while a trailer is rolling). */
@@ -560,9 +562,27 @@ protected:
 	void DrawReactions();
 	/** The Den: a slim strip of game logos with the players on each pad, in place of the long status list. */
 	void DrawDenStrip(const class ADCCArcadeLobby* Lobby);
+	/** How to play the game on screen, once per game per session (Arena->GetTip). */
+	void DrawArcadeTip(const class ADCCArcadeArena* Arena);
+	TMap<FName, double> TipShownAt;
+	/** The health bar shows only when below full or recently hit. */
+	int32 LastSeenHitPoints = 0;
+	double HealthShownUntil = 0.0;
+	bool bHealthBarUp = false;
+	/** SETTINGS: show the quick-reaction key rows that have no key yet. */
+	bool bShowAllQuickKeys = false;
 	/** The podium prompt, the summon panel and the reveal banner. */
 	void DrawSummon(const class ADCCArcadeLobby* Lobby);
 	int32 SummonTube = -1;
+
+	// The scratchcard (2026-11-21). The server dealt the card; these are the coating patches this screen has rubbed off.
+	void DrawScratchCard(class ADCCCasinoCascade* Casino, ADCCCharacterBase* Crawler);
+	void SetScratchOpen(bool bOpen);
+	void ClaimScratchCard();
+	bool bScratchOpen = false;
+	uint8 ScratchSerialSeen = 0;
+	uint16 ScratchMask[9] = {};
+	bool bScratchClaimSent = false;
 	/** Pulls waiting for (or showing) their banner, each from when its friend lands. Pulls in quick succession each get
 	 *  their turn rather than resetting one banner's timer (the gacha ad's button-mashing showed none until the last). */
 	struct FSummonBanner { FName Friend; uint8 Tier = 0; uint8 Variant = 0; FString Weapon; double At = 0.0; };

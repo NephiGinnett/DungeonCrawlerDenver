@@ -1,4 +1,5 @@
 #include "Characters/DCCEnemyCharacter.h"
+#include "NavigationSystem.h"
 #include "Characters/DCCReactions.h"
 
 #include "Rooms/DCCDungeonGrid.h"
@@ -233,6 +234,12 @@ ADCCCharacterBase* ADCCEnemyCharacter::FindNearestHostileTarget() const
 		{
 			continue;
 		}
+		// A companion on a quiet errand (filming in Dead Air, 2026-11-21) is not hunted: it keeps out of fights,
+		// and a monster that wanted it camped at the cage gate it could never get through.
+		if (const ADCCEnemyCharacter* Quiet = Cast<ADCCEnemyCharacter>(Candidate); Quiet && Quiet->bHasErrand && Quiet->bErrandAvoidFights)
+		{
+			continue;
+		}
 
 		const float DistanceSquared = FVector::DistSquared(GetActorLocation(), Candidate->GetActorLocation());
 		if (DistanceSquared < BestDistanceSquared)
@@ -397,7 +404,7 @@ ADCCCharacterBase* ADCCEnemyCharacter::FindFollowLeader() const
 
 bool ADCCEnemyCharacter::ShouldAllyEngage(const ADCCCharacterBase* Hostile, const ADCCCharacterBase* Leader) const
 {
-	if (!Hostile)
+	if (!Hostile || (bHasErrand && bErrandAvoidFights))
 	{
 		return false;
 	}
@@ -452,6 +459,114 @@ void ADCCEnemyCharacter::SetHoldingPosition(bool bHold)
 	}
 }
 
+bool ADCCEnemyCharacter::CanUseNavmesh() const
+{
+	const UWorld* World = GetWorld();
+	if (!World)
+	{
+		return false;
+	}
+	const double Now = World->GetTimeSeconds();
+	if (Now - NavCheckedAt < 1.0)
+	{
+		return bNavHere;
+	}
+	NavCheckedAt = Now;
+	UNavigationSystemV1* Nav = FNavigationSystem::GetCurrent<UNavigationSystemV1>(const_cast<UWorld*>(World));
+	FNavLocation OnMesh;
+	bNavHere = Nav && Nav->GetDefaultNavDataInstance(FNavigationSystem::DontCreate)
+		&& Nav->ProjectPointToNavigation(GetActorLocation(), OnMesh, FVector(150.0f, 150.0f, 250.0f))
+		&& Now - NavFailedAt > 8.0;
+	return bNavHere;
+}
+
+void ADCCEnemyCharacter::TickErrand()
+{
+	const FVector Here = GetActorLocation();
+	// A navmesh under it: path there properly.
+	AAIController* NavAI = Cast<AAIController>(GetController());
+	if (NavAI && CanUseNavmesh())
+	{
+		if (FVector::Dist2D(Here, ErrandAt) > ErrandRadius)
+		{
+			SetMovementSpeedOverride(bErrandRun ? 0.0f : FollowWalkSpeed);
+			const bool bNewOrder = FVector::Dist2D(ErrandMovingTo, ErrandAt) > 150.0f;
+			if (bNewOrder || NavAI->GetMoveStatus() == EPathFollowingStatus::Idle)
+			{
+				ErrandMovingTo = ErrandAt;
+				if (NavAI->MoveToLocation(ErrandAt, ErrandRadius * 0.8f) == EPathFollowingRequestResult::Failed)
+				{
+					NavFailedAt = GetWorld()->GetTimeSeconds(); // no route on the mesh: walk the old way for a bit
+					bNavHere = false;
+				}
+			}
+			if (bNavHere)
+			{
+				bIsChasing = true;
+				return;
+			}
+		}
+		else
+		{
+			if (bIsChasing)
+			{
+				NavAI->StopMovement();
+			}
+			ErrandMovingTo = FVector(BIG_NUMBER);
+			bIsChasing = false;
+			SetMovementSpeedOverride(0.0f);
+			if (bErrandLook)
+			{
+				FRotator Face = (ErrandLook - Here).Rotation();
+				Face.Pitch = 0.0f;
+				Face.Roll = 0.0f;
+				SetActorRotation(FMath::RInterpTo(GetActorRotation(), Face, GetWorld()->GetDeltaSeconds(), 6.0f));
+			}
+			return;
+		}
+	}
+	if (FVector::Dist2D(Here, ErrandAt) > ErrandRadius)
+	{
+		FVector Waypoint = ErrandAt;
+		if (ChaseGrid)
+		{
+			ChaseGrid->NextWaypoint(Here, ErrandAt, Waypoint);
+		}
+		Waypoint.Z = Here.Z;
+		const FVector Direction = (Waypoint - Here).GetSafeNormal2D();
+		if (!Direction.IsNearlyZero())
+		{
+			SetMovementSpeedOverride(bErrandRun ? 0.0f : FollowWalkSpeed);
+			AddMovementInput(Direction, 1.0f);
+			bIsChasing = true;
+			// Pushing and going nowhere: a hop gets it over most clutter; a few seconds more and it steps past.
+			const float Delta = GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.016f;
+			ErrandBlockedFor = GetVelocity().Size2D() < 40.0f ? ErrandBlockedFor + Delta : 0.0f;
+			if (ErrandBlockedFor > 2.0f && ErrandBlockedFor - Delta <= 2.0f)
+			{
+				Jump();
+			}
+			if (ErrandBlockedFor > 5.0f)
+			{
+				ErrandBlockedFor = 0.0f;
+				const FVector Step = Here + Direction * FMath::Min(250.0f, FVector::Dist2D(Here, Waypoint));
+				TeleportTo(FVector(Step.X, Step.Y, Here.Z + 40.0f), GetActorRotation());
+			}
+			return;
+		}
+	}
+	bIsChasing = false;
+	SetMovementSpeedOverride(0.0f);
+	if (bErrandLook)
+	{
+		FRotator Face = (ErrandLook - Here).Rotation();
+		Face.Pitch = 0.0f;
+		Face.Roll = 0.0f;
+		const float Delta = GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.016f;
+		SetActorRotation(FMath::RInterpTo(GetActorRotation(), Face, Delta, 6.0f));
+	}
+}
+
 void ADCCEnemyCharacter::TickFollowLeader(ADCCCharacterBase* Leader, AAIController* AIController)
 {
 	// Ordered to stay put. Combat is handled before this is ever reached, so a
@@ -461,9 +576,15 @@ void ADCCEnemyCharacter::TickFollowLeader(ADCCCharacterBase* Leader, AAIControll
 		return;
 	}
 
-	// A generated floor has no navmesh, so MoveToActor does nothing there. Walk
-	// the floor's grid instead, with the same settle/resume dead band as below.
-	if (ChaseGrid)
+	if (bHasErrand)
+	{
+		TickErrand();
+		return;
+	}
+
+	// A generated floor with no navmesh: walk the floor's grid instead, with the same settle/resume dead band as
+	// below. Where the arena has built a navmesh (2026-11-22), the proper MoveToActor path at the bottom wins.
+	if (ChaseGrid && !CanUseNavmesh())
 	{
 		const float Distance = Leader ? FVector::Dist2D(GetActorLocation(), Leader->GetActorLocation()) : 0.0f;
 		if (!Leader || Distance <= FollowDistance)
@@ -483,8 +604,8 @@ void ADCCEnemyCharacter::TickFollowLeader(ADCCCharacterBase* Leader, AAIControll
 		return;
 	}
 
-	// No grid and no navmesh either (the Den is built at runtime): walk straight at the leader, same dead band.
-	if (bFollowStraight)
+	// No grid and no navmesh either: walk straight at the leader, same dead band.
+	if (bFollowStraight && !CanUseNavmesh())
 	{
 		const float Distance = Leader ? FVector::Dist2D(GetActorLocation(), Leader->GetActorLocation()) : 0.0f;
 		if (!Leader || Distance <= FollowDistance * 0.6f)
@@ -821,6 +942,12 @@ void ADCCEnemyCharacter::Tick(float DeltaSeconds)
 		return;
 	}
 
+	// Riding in something (a companion in its Repo Rally truck, 2026-11-21): the vehicle does the work.
+	if (GetAttachParentActor())
+	{
+		return;
+	}
+
 	// Runs unconditionally, even through combat pause - the collector is an
 	// ambient/environmental task, not a fight, and a paused fight is not a
 	// paused dungeon. Entirely separate from everything below: this actor
@@ -876,7 +1003,7 @@ void ADCCEnemyCharacter::Tick(float DeltaSeconds)
 		// and the ally simply turned round and charged again. The result was an
 		// escort permanently sprinting between its leader and a fight it never
 		// arrived at - "they never stop running and never attack".
-		if (!bDropTarget && Leader)
+		if (!bDropTarget && Leader && !bHasErrand) // on an errand, it is not on a leash to its player
 		{
 			const float FromLeaderSquared = FVector::DistSquared(GetActorLocation(), Leader->GetActorLocation());
 			if (FromLeaderSquared > FMath::Square(FollowLeashRadius))
@@ -1086,7 +1213,7 @@ void ADCCEnemyCharacter::Tick(float DeltaSeconds)
 		? EffectiveRange * RangedStandoffFraction
 		: EffectiveRange * 0.5f;
 
-	if (ChaseGrid)
+	if (ChaseGrid && !CanUseNavmesh())
 	{
 		FollowChaseGrid(CurrentTarget, StopDistance);
 		return;
@@ -1094,9 +1221,14 @@ void ADCCEnemyCharacter::Tick(float DeltaSeconds)
 
 	if (AIController && !bIsChasing)
 	{
-		// Requires a NavMeshBoundsVolume covering the room; without one this is
-		// a no-op and the enemy will stand still.
-		AIController->MoveToActor(CurrentTarget, StopDistance);
+		// Requires a navmesh: the placed levels have bounds volumes, and the arcade arenas build theirs at runtime.
+		if (AIController->MoveToActor(CurrentTarget, StopDistance) == EPathFollowingRequestResult::Failed && ChaseGrid)
+		{
+			NavFailedAt = GetWorld()->GetTimeSeconds(); // no route on the mesh: the grid for a while
+			bNavHere = false;
+			FollowChaseGrid(CurrentTarget, StopDistance);
+			return;
+		}
 		bIsChasing = true;
 	}
 	else if (AIController && bIsChasing)

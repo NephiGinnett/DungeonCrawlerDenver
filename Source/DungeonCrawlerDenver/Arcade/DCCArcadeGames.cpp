@@ -1,5 +1,6 @@
 #include "Arcade/DCCArcadeGames.h"
 #include "Arcade/DCCSummons.h"
+#include "Characters/DCCAllyCharacters.h"
 #include "Components/PointLightComponent.h"
 #include "Characters/DCCReactions.h"
 #include "Progression/DCCAchievementComponent.h"
@@ -114,7 +115,7 @@ void ADCCArcadeLobby::BuildLocal()
 		PadTops.Add(Block(Pad + FVector(0, 0, 7), FVector(700, 700, 14), Game.Colour * 0.6f, 0.0f, false));
 		Block(Pad + FVector(0, 520, 220), FVector(420, 180, 440), Game.Colour * 0.35f);
 		Sign(Pad + FVector(0, 420, 520), -90.0f, FString(Game.Title).ToUpper(), ToColor(Game.Colour), 44.0f);
-		Sign(Pad + FVector(0, 420, 470), -90.0f, Game.Pitch, FColor(210, 205, 220), 14.0f);
+		// (The one-line pitch under the name came off on 2026-11-21: less to read. The name and the record stay.)
 		// The game's record, on its own board where you vote for it (2026-11-16: it used to be a long list on screen).
 		RecordSigns.Add(Sign(Pad + FVector(0, 420, 428), -90.0f, TEXT(" "), FColor(255, 214, 120), 22.0f, false));
 		RecordShown.Add(FString());
@@ -2481,12 +2482,10 @@ void ADCCArcadeClimb::ServerTick(float DeltaSeconds)
 	Title = TEXT("FOURTEENER  -  get everyone to the summit");
 	Accent = FLinearColor(0.55f, 0.85f, 1.0f);
 	StatusLines.Reset();
-	StatusLines.Add(FString::Join(Rows, TEXT("     ")));
-	const DCCArcade::FGame* Game = DCCArcade::Find(TEXT("Climb"));
-	StatusLines.Add(FString::Printf(TEXT("Best ever: %s"), *DCCProfile::Leaderboard(GetWorld(), TEXT("Climb"), TEXT("BestHeight"), true,
-		[Game](float V) { return DCCArcade::FormatRecord(*Game, V); })));
-	StatusLines.Add(FString::Printf(TEXT("Time: %d:%02d of %d:00.  Equip Climbing, HOLD left mouse to climb, let go to drop. Points become tickets."),
-		FMath::FloorToInt(Elapsed / 60.0f), FMath::FloorToInt(FMath::Fmod(Elapsed, 60.0f)), FMath::RoundToInt(RoundSeconds / 60.0f)));
+	// The key line (the HUD shows only this one): heights, then the time left.
+	const float ClimbLeft = FMath::Max(0.0f, RoundSeconds - Elapsed);
+	StatusLines.Add(FString::Printf(TEXT("%s     %d:%02d left"), *FString::Join(Rows, TEXT("     ")),
+		FMath::FloorToInt(ClimbLeft / 60.0f), FMath::FloorToInt(FMath::Fmod(ClimbLeft, 60.0f))));
 	if (!HazardLine.IsEmpty() && ServerTime() < HazardLineUntil)
 	{
 		StatusLines.Add(TEXT("!") + HazardLine); // "!" = an alert: it shows even after the status box steps aside
@@ -3223,6 +3222,373 @@ void ADCCArcadeKart::SeatPlayers()
 	}
 }
 
+// ---- Companions on the job (2026-11-21, Zoe: "I've seen the bots join a game of repo rally with me but I'm not sure
+// they have proper controls and like, guidance to play through each game"). Each summoned friend drives a wrecker of
+// its own and works the marks the way a player does, through the same FireHook / UseTool / Deliver as everyone.
+
+void ADCCArcadeKart::SeatCompanions()
+{
+	if (Seated.Num() == 0)
+	{
+		return; // their players first, so the bays fill in order
+	}
+	for (TActorIterator<ADCCSummonedAlly> It(GetWorld()); It; ++It)
+	{
+		ADCCSummonedAlly* Ally = *It;
+		if (!Ally || !Ally->IsAlive() || SeatedCompanions.Contains(Ally))
+		{
+			continue;
+		}
+		int32 Taken = 0;
+		for (const FTruck& Truck : Trucks)
+		{
+			Taken += (Truck.bPlayer || Truck.bCompanion) ? 1 : 0;
+		}
+		const FTransform Slot = GridSlot(Taken);
+		FActorSpawnParameters Params;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+		ADCCRover* Car = GetWorld()->SpawnActor<ADCCRover>(ADCCRover::StaticClass(), Slot, Params);
+		if (!Car)
+		{
+			continue;
+		}
+		Car->RallyDuty = 0;
+		Car->SetWrecker(true);
+		Car->bAutoPilotBoostOnLaunch = false;
+		Car->SetRacePace(0.48f);
+		Car->SpawnDefaultController(); // runtime rovers need one to move (see TickTraffic)
+		const FString FriendName = Ally->Friend.IsNone() ? Ally->DisplayName.ToString() : Ally->Friend.ToString();
+		FTruck Truck;
+		Truck.Car = Car;
+		Truck.Name = FriendName;
+		Truck.bCompanion = true;
+		Truck.Boss = Ally->SummonerName;
+		Truck.Rider = Ally;
+		Truck.BasePace = 0.48f;
+		Truck.Fuel = 100.0f;
+		Truck.Tools.Add(DCCRallyItems::Hook);
+		Car->RallyPlate = FriendName;
+		// In the cab: the body rides along out of sight, and its walking brain rests until the shift is over.
+		Ally->SetActorEnableCollision(false);
+		Ally->SetActorHiddenInGame(true);
+		Ally->AttachToActor(Car, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+		Trucks.Add(Truck);
+		SeatedCompanions.Add(Ally);
+		CompanionSay(Trucks.Last(), TEXT("I've got a truck. I'll work the marks too."));
+		UE_LOG(LogTemp, Log, TEXT("[DCC Rally] %s (with %s) took bay %d"), *FriendName, *Truck.Boss, Taken);
+	}
+}
+
+void ADCCArcadeKart::CompanionSay(const FTruck& Truck, const FString& Line)
+{
+	for (const FTruck& Other : Trucks)
+	{
+		if (Other.bPlayer && Other.Name == Truck.Boss)
+		{
+			Tell(Other.Car.Get(), FString::Printf(TEXT("%s: %s"), *Truck.Name, *Line));
+			return;
+		}
+	}
+}
+
+void ADCCArcadeKart::CompanionDrive(FTruck& Truck, const FVector& Goal, bool bToYard)
+{
+	ADCCRover* Car = Truck.Car.Get();
+	if (!Car)
+	{
+		return;
+	}
+	const FVector O = GetActorLocation();
+	const int32 R = StreetRadius;
+	auto Cell = [&](const FVector& P)
+	{
+		return FIntPoint(FMath::Clamp(FMath::RoundToInt((P.X - O.X) / StreetSpacing), -R, R),
+			FMath::Clamp(FMath::RoundToInt((P.Y - O.Y) / StreetSpacing), -R, R));
+	};
+	const FVector Here = Car->GetActorLocation();
+	const FIntPoint A = Cell(Here);
+	TArray<FVector> Tail;
+	FIntPoint B;
+	if (bToYard)
+	{
+		// The yard's gate faces east, onto the street one block in. Up that street, through the gate, onto the pad.
+		const FVector Yard = O + FVector(YardOffset().X, YardOffset().Y, 160.0f);
+		B = FIntPoint(-R + 1, FMath::Abs(A.Y - (-R)) <= FMath::Abs(A.Y - (-R + 1)) ? -R : -R + 1);
+		Tail.Add(FVector(O.X + (-R + 1) * StreetSpacing, Yard.Y, 160.0f));
+		Tail.Add(Yard + FVector(5800.0f, 0.0f, 0.0f));
+		Tail.Add(Yard + FVector(2800.0f, 0.0f, 0.0f));
+	}
+	else
+	{
+		B = Cell(Goal);
+		Tail.Add(Goal);
+	}
+	// Row first, then column, crossing to crossing: every leg is a street, so it never cuts through a tower.
+	TArray<FVector> Route;
+	auto Push = [&Route](const FVector& P)
+	{
+		if (Route.IsEmpty() || FVector::Dist2D(Route.Last(), P) > 600.0f)
+		{
+			Route.Add(P);
+		}
+	};
+	FIntPoint From = A;
+	if (InYard(Car) && !bToYard)
+	{
+		// Inside the fence: out through the gate onto the street east of the yard first.
+		const FVector Yard = O + FVector(YardOffset().X, YardOffset().Y, 160.0f);
+		const FVector Street(O.X + (-R + 1) * StreetSpacing, Yard.Y, 160.0f);
+		Push(Yard + FVector(2800.0f, 0.0f, 0.0f));
+		Push(Yard + FVector(5800.0f, 0.0f, 0.0f));
+		Push(Street);
+		From = Cell(Street);
+	}
+	else if (FVector::Dist2D(Here, Crossing(A.X, A.Y)) > 2500.0f || A != B)
+	{
+		Push(Crossing(A.X, A.Y));
+	}
+	const FIntPoint A2 = From;
+	Push(Crossing(A2.X, A2.Y));
+	Push(Crossing(B.X, A2.Y));
+	Push(Crossing(B.X, B.Y));
+	for (const FVector& P : Tail)
+	{
+		Push(P);
+	}
+	// Already at the first point: skip it, so it does not turn round for a crossing it is standing on.
+	if (Route.Num() > 1 && FVector::Dist2D(Here, Route[0]) < 1200.0f)
+	{
+		Route.RemoveAt(0);
+	}
+	Car->AutoPilotAcceptanceRadius = 700.0f;
+	Car->StartAutoPilotRoute(Route, false);
+	Truck.BotPlannedTo = bToYard ? Tail.Last() : Goal;
+	Truck.BotPlannedAt = ServerTime();
+}
+
+void ADCCArcadeKart::TickCompanions()
+{
+	const double Now = ServerTime();
+	for (int32 ti = 0; ti < Trucks.Num(); ++ti)
+	{
+		FTruck& Truck = Trucks[ti];
+		ADCCRover* Car = Truck.Car.Get();
+		if (!Truck.bCompanion || !Car)
+		{
+			continue;
+		}
+		if (!bGo || bPaid)
+		{
+			// Before the flag, and once the shift is over: parked.
+			if (Car->bAutoPilotActive)
+			{
+				Car->StopAutoPilot();
+			}
+			if (bPaid)
+			{
+				if (ADCCCharacterBase* Rider = Truck.Rider.Get(); Rider && Rider->GetAttachParentActor() == Car)
+				{
+					Rider->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+					Rider->SetActorLocation(Car->GetActorLocation() + FVector(0.0f, 0.0f, 160.0f) - Car->GetActorRightVector() * 300.0f);
+					Rider->SetActorHiddenInGame(false);
+					Rider->SetActorEnableCollision(true);
+				}
+			}
+			continue;
+		}
+
+		// Stuck against something for a while: back to the nearest crossing and try again.
+		if (Now >= Truck.BotStuckAt)
+		{
+			const bool bMoving = FVector::Dist2D(Car->GetActorLocation(), Truck.BotLastPos) > 250.0f;
+			const bool bMeantToMove = Car->bAutoPilotActive;
+			Truck.BotStuck = (!bMoving && bMeantToMove) ? Truck.BotStuck + 1 : 0;
+			Truck.BotLastPos = Car->GetActorLocation();
+			Truck.BotStuckAt = Now + 2.0;
+			if (Truck.BotStuck >= 2)
+			{
+				// Wedged (a ramp lip, a pillar, a knot of traffic): hop 15 m on along its own route, past whatever it is.
+				const FVector Here = Car->GetActorLocation();
+				FVector Next = Here + Car->GetActorForwardVector() * 1500.0f;
+				if (Car->AutoPilotWaypoints.IsValidIndex(Car->AutoPilotWaypointIndex))
+				{
+					const FVector Way = Car->AutoPilotWaypoints[Car->AutoPilotWaypointIndex];
+					const FVector Dir = (Way - Here).GetSafeNormal2D();
+					Next = Here + Dir * FMath::Min(2500.0f, FMath::Max(0.0f, FVector::Dist2D(Way, Here) - 200.0f));
+					Car->SetActorRotation(FRotator(0.0f, Dir.Rotation().Yaw, 0.0f));
+				}
+				Next.Z = Here.Z + 120.0f;
+				Car->SetActorLocation(Next, false, nullptr, ETeleportType::TeleportPhysics);
+				Truck.BotStuck = 0;
+				UE_LOG(LogTemp, Log, TEXT("[DCC Rally] %s was stuck; hopped on along its route"), *Truck.Name);
+			}
+		}
+
+		if (Now >= Truck.NextBark)
+		{
+			// Where each companion is and what it is doing, every 10 s, for test runs ([DCC Rally]).
+			Truck.NextBark = Now + 10.0;
+			const ADCCRover* GoalCar = Marks.IsValidIndex(Truck.BotGoal) ? Marks[Truck.BotGoal].Car.Get() : nullptr;
+			UE_LOG(LogTemp, Log, TEXT("[DCC Rally] companion %s: leg %d, goal %d (%.0f away, kind %d), hooked %d, in yard %d, speed %.0f, autopilot %d at %d/%d, stuck %d, %d nabs, at %s"),
+				*Truck.Name, Truck.BotLeg, Truck.BotGoal, GoalCar ? FVector::Dist2D(GoalCar->GetActorLocation(), Car->GetActorLocation()) : -1.0f,
+				Marks.IsValidIndex(Truck.BotGoal) ? Marks[Truck.BotGoal].Kind : -1, Truck.HookedId, InYard(Car) ? 1 : 0,
+				Car->GetVelocity().Size2D(), Car->bAutoPilotActive ? 1 : 0, Car->AutoPilotWaypointIndex, Car->AutoPilotWaypoints.Num(),
+				Truck.BotStuck, Truck.Nabs, *(Car->GetActorLocation() - GetActorLocation()).ToCompactString());
+		}
+
+		// On the line.
+		if (Truck.HookedId >= 0 && Marks.IsValidIndex(Truck.HookedId))
+		{
+			FMark& Mark = Marks[Truck.HookedId];
+			if (!Mark.bDocked)
+			{
+				// Reeling: the magnet draws it to the rear bumper, so crawl away from it and let it trail in
+				// (facing it, the truck itself was in the way and it never clamped).
+				if (!Car->bAutoPilotActive && Mark.Car.IsValid())
+				{
+					const FVector Away = (Car->GetActorLocation() - Mark.Car->GetActorLocation()).GetSafeNormal2D();
+					Car->AutoPilotAcceptanceRadius = 400.0f;
+					Car->StartAutoPilotRoute({ Car->GetActorLocation() + Away * 2600.0f }, false);
+				}
+				Car->SetRacePace(0.22f);
+				if (Truck.BotLeg != 1)
+				{
+					Truck.BotLeg = 1;
+					CompanionSay(Truck, FString::Printf(TEXT("Hooked %s."), *Mark.Name));
+				}
+				continue;
+			}
+			if (Car->RallyTrick == 1)
+			{
+				// Clamped and fighting it: hold still and hold on.
+				if (Car->bAutoPilotActive)
+				{
+					Car->StopAutoPilot();
+				}
+				if (Truck.BotLeg != 1)
+				{
+					Truck.BotLeg = 1;
+					CompanionSay(Truck, FString::Printf(TEXT("Hooked %s."), *Mark.Name));
+				}
+				continue;
+			}
+			if (InYard(Car))
+			{
+				UE_LOG(LogTemp, Log, TEXT("[DCC Rally] companion %s dropped %s at the yard"), *Truck.Name, *Mark.Name);
+				UseTool(Car); // the drop (Deliver)
+				CompanionSay(Truck, FString::Printf(TEXT("Dropped %s at the yard."), *Mark.Name));
+				Truck.BotLeg = 0;
+				Truck.BotGoal = -1;
+				Truck.BotThink = 0.0;
+				continue;
+			}
+			if (Truck.BotLeg != 2 || Now >= Truck.BotThink || !Car->bAutoPilotActive)
+			{
+				if (Truck.BotLeg != 2)
+				{
+					CompanionSay(Truck, TEXT("It's on the hitch. Taking it to the yard."));
+				}
+				Truck.BotLeg = 2;
+				Car->SetRacePace(0.46f);
+				CompanionDrive(Truck, FVector::ZeroVector, true);
+				Truck.BotThink = Now + 15.0;
+			}
+			continue;
+		}
+		if (Truck.BotLeg != 0)
+		{
+			Truck.BotLeg = 0;
+			Truck.BotGoal = -1;
+		}
+
+		// Hunting: the nearest mark nobody has a line on and no other companion has called.
+		auto Free = [&](int32 i)
+		{
+			if (!Marks.IsValidIndex(i))
+			{
+				return false;
+			}
+			const FMark& Mark = Marks[i];
+			return Mark.Car.IsValid() && !Mark.Tower.IsValid() && !Mark.bRetired && Mark.Hover < 0.3f;
+		};
+		// Each replan, a much nearer free mark wins over the one it was chasing across town.
+		if (Free(Truck.BotGoal) && Now >= Truck.BotThink)
+		{
+			const float Current = FVector::Dist2D(Car->GetActorLocation(), Marks[Truck.BotGoal].Car->GetActorLocation());
+			for (int32 i = 0; i < Marks.Num(); ++i)
+			{
+				if (i != Truck.BotGoal && Free(i)
+					&& FVector::Dist2D(Car->GetActorLocation(), Marks[i].Car->GetActorLocation()) < Current * 0.6f)
+				{
+					Truck.BotGoal = -1; // pick again below
+					break;
+				}
+			}
+		}
+		if (!Free(Truck.BotGoal))
+		{
+			Truck.BotGoal = -1;
+			float Best = TNumericLimits<float>::Max();
+			for (int32 i = 0; i < Marks.Num(); ++i)
+			{
+				if (!Free(i))
+				{
+					continue;
+				}
+				bool bCalled = false;
+				for (const FTruck& Other : Trucks)
+				{
+					bCalled |= (&Other != &Truck && Other.bCompanion && Other.BotGoal == i);
+				}
+				const float D = FVector::Dist2D(Car->GetActorLocation(), Marks[i].Car->GetActorLocation()) + (bCalled ? 40000.0f : 0.0f);
+				if (D < Best)
+				{
+					Best = D;
+					Truck.BotGoal = i;
+				}
+			}
+			Truck.BotThink = 0.0;
+			if (Truck.BotGoal >= 0)
+			{
+				CompanionSay(Truck, FString::Printf(TEXT("Going after %s."), *Marks[Truck.BotGoal].Name));
+			}
+		}
+		if (Truck.BotGoal < 0)
+		{
+			if (!Car->bAutoPilotActive)
+			{
+				TArray<FVector> Route;
+				FillRoute(ti, Route);
+				Car->StartAutoPilotRoute(Route, true);
+			}
+			continue;
+		}
+		// Lead a running mark: where it will be in a couple of seconds, not where it was.
+		const ADCCRover* Quarry = Marks[Truck.BotGoal].Car.Get();
+		const FVector MarkNow = Quarry->GetActorLocation();
+		const FVector MarkAt = MarkNow + Quarry->GetVelocity().GetSafeNormal2D() * FMath::Min(Quarry->GetVelocity().Size2D() * 2.0f, 6000.0f);
+		const float Dist = FVector::Dist2D(Car->GetActorLocation(), MarkNow);
+
+		if (Dist < HookLine(Truck) * 0.85f && Now >= Truck.NetReadyAt)
+		{
+			Truck.NetReadyAt = Now + 1.5; // a miss (a lamp post, a bus) waits a beat before the next try
+			FireHook(Car, MarkNow - Car->GetActorLocation());
+			continue;
+		}
+		Car->SetRacePace(Dist < 3500.0f ? 0.30f : 0.48f);
+		// A new route only when this one is done, the mark has moved off it, or a long while has passed:
+		// replanning from the nearest crossing every few seconds kept turning it round.
+		// At least 4 s between routes: a fast mark's lead point moves every frame, and replanning every frame kept it
+		// circling the yard on the first leg out.
+		const bool bMoved = FVector::Dist2D(MarkAt, Truck.BotPlannedTo) > FMath::Max(3000.0f, Dist * 0.3f);
+		if (!Car->bAutoPilotActive || ((bMoved || Now >= Truck.BotThink) && Now - Truck.BotPlannedAt > 4.0))
+		{
+			CompanionDrive(Truck, MarkAt, false);
+			Truck.BotThink = Now + 14.0;
+		}
+	}
+}
+
 void ADCCArcadeKart::SpawnStaff()
 {
 	const FVector Yard = GetActorLocation() + FVector(YardOffset().X, YardOffset().Y, 90.0f);
@@ -3248,6 +3614,7 @@ void ADCCArcadeKart::SpawnStaff()
 void ADCCArcadeKart::ServerTick(float DeltaSeconds)
 {
 	SeatPlayers();
+	SeatCompanions();
 	TickTraffic();
 	TickThugs(DeltaSeconds);
 	const double Now = ServerTime();
@@ -3326,6 +3693,7 @@ void ADCCArcadeKart::ServerTick(float DeltaSeconds)
 	{
 		TickCity(DeltaSeconds);
 	}
+	TickCompanions();
 	RefreshBoard();
 
 	Title = TEXT("REPO RALLY  -  hook, tow, drop");
@@ -3463,6 +3831,24 @@ void ADCCArcadeKart::ServerTick(float DeltaSeconds)
 				DCCProfile::RecordBest(PlayerState, TEXT("Kart"), TEXT("BestNab"), Truck->BestNab, false);
 			}
 			UDCCWalletComponent::AwardTickets(PlayerState, Tickets, Why);
+		}
+		// A companion's tows are its player's: 4 tickets a drop.
+		for (FTruck& Helper : Trucks)
+		{
+			if (!Helper.bCompanion || Helper.Nabs <= 0)
+			{
+				continue;
+			}
+			for (FTruck& BossTruck : Trucks)
+			{
+				ADCCRover* BossCar = BossTruck.Car.Get();
+				if (BossTruck.bPlayer && BossTruck.Name == Helper.Boss && BossCar && BossCar->GetPlayerState())
+				{
+					Helper.Tickets = Helper.Nabs * 4;
+					UDCCWalletComponent::AwardTickets(BossCar->GetPlayerState(), Helper.Tickets,
+						FString::Printf(TEXT("%s brought in %d"), *Helper.Name, Helper.Nabs));
+				}
+			}
 		}
 		ReturnToLobbyIn(15.0f);
 	}
@@ -3881,6 +4267,11 @@ void ADCCArcadeKart::TickCity(float DeltaSeconds)
 				TowerCar->RallyBalance += FMath::Sin(static_cast<float>(Now) * (Mark.Kind >= 1 ? 3.2f : 1.8f)) * Wander * DeltaSeconds;
 				TowerCar->RallyBalance = FMath::Clamp(
 					TowerCar->RallyBalance - TowerCar->GetSteerInput() * 2.4f * DeltaSeconds, -1.6f, 1.6f);
+				if (Tower && Tower->bCompanion)
+				{
+					// A companion keeps a steady hand: the line still wobbles where you can see it, and holds.
+					TowerCar->RallyBalance = FMath::Clamp(TowerCar->RallyBalance, -0.7f, 0.7f);
+				}
 				if (FMath::Abs(TowerCar->RallyBalance) > 1.0f)
 				{
 					TowerCar->RallyOffBalance += DeltaSeconds;
@@ -4664,6 +5055,10 @@ int32 ADCCArcadeKart::MarkIndex(const ADCCRover* Car) const
 
 float ADCCArcadeKart::HookLine(const FTruck& Truck) const
 {
+	if (Truck.bCompanion)
+	{
+		return 2200.0f; // about what a player gets from a line upgrade
+	}
 	if (!Truck.bPlayer)
 	{
 		return 1600.0f;
@@ -5042,7 +5437,7 @@ void ADCCArcadeKart::RefreshBoard()
 	TArray<const FTruck*> Order;
 	for (const FTruck& Truck : Trucks)
 	{
-		if (Truck.bPlayer)
+		if (Truck.bPlayer || Truck.bCompanion)
 		{
 			Order.Add(&Truck);
 		}
@@ -5663,12 +6058,7 @@ void ADCCArcadeNeon::ServerTick(float DeltaSeconds)
 	Title = TEXT("NEON MILE  -  how far can you get?");
 	Accent = FLinearColor(1.0f, 0.3f, 0.9f);
 	StatusLines.Reset();
-	StatusLines.Add(FString::Join(Now, TEXT("     ")));
-	const DCCArcade::FGame* Game = DCCArcade::Find(TEXT("Neon"));
-	StatusLines.Add(FString::Printf(TEXT("Furthest ever: %s"), *DCCProfile::Leaderboard(GetWorld(), TEXT("Neon"), TEXT("BestDistance"), true,
-		[Game](float V) { return DCCArcade::FormatRecord(*Game, V); })));
-	StatusLines.Add(FString::Printf(TEXT("W to drive, A / D to steer, click to boost. Glowing chevrons boost you too. A crash sends you back to the start.   %d s left"),
-		FMath::Max(0, FMath::CeilToInt(TimeLimit - Elapsed))));
+	StatusLines.Add(FString::Printf(TEXT("%s     %d s left"), *FString::Join(Now, TEXT("     ")), FMath::Max(0, FMath::CeilToInt(TimeLimit - Elapsed))));
 
 	if (Elapsed >= TimeLimit)
 	{

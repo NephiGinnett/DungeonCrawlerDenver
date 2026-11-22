@@ -153,6 +153,7 @@ class DUNGEONCRAWLERDENVER_API ADCCArcadeClimb : public ADCCArcadeArena
 	GENERATED_BODY()
 public:
 	virtual FName GetGameId() const override { return TEXT("Climb"); }
+	virtual FString GetTip() const override { return TEXT("Press 1 for Climbing, then hold left mouse on a wall to climb. Let go to drop."); }
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void OnRespawned(APlayerController* PC) override;
 	virtual bool ShowsClimbHud() const override { return true; }
@@ -409,6 +410,7 @@ class DUNGEONCRAWLERDENVER_API ADCCArcadeKart : public ADCCArcadeArena
 {
 	GENERATED_BODY()
 public:
+	virtual bool WantsNavmesh() const override { return false; } // a city to drive, not walk
 	virtual FName GetGameId() const override { return TEXT("Kart"); }
 	virtual bool KeepsStatusPanel() const override { return true; }
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -482,6 +484,23 @@ private:
 		int32 Selected = 0;
 		/** Traffic: the crossing it is heading for, and the one it came from (TickTraffic). */
 		FIntPoint To = FIntPoint(0, 0), From = FIntPoint(0, 0);
+
+		/** A F.I.A.T. companion driving its own wrecker (2026-11-21). TickCompanions is its head. */
+		bool bCompanion = false;
+		/** The player it came with. Its lines go to their truck; its tows earn them tickets at the end. */
+		FString Boss;
+		TWeakObjectPtr<class ADCCCharacterBase> Rider;
+		/** The mark it is after (an index into Marks), or -1. */
+		int32 BotGoal = -1;
+		/** 0 hunting, 1 on the line, 2 towing home. */
+		int32 BotLeg = 0;
+		double BotThink = 0.0;
+		double BotStuckAt = 0.0;
+		FVector BotLastPos = FVector::ZeroVector;
+		int32 BotStuck = 0;
+		/** Where the current route was planned to; a mark that has moved well away from it gets a new route. */
+		FVector BotPlannedTo = FVector::ZeroVector;
+		double BotPlannedAt = 0.0;
 	};
 
 	struct FMark
@@ -557,6 +576,15 @@ private:
 	bool InYard(const ADCCRover* Car) const;
 	void DressCity();
 	void SeatPlayers();
+	/** Server: each summoned companion in the shift gets its own wrecker beside its player's (2026-11-21). */
+	void SeatCompanions();
+	/** Server: the companions' heads. Pick a mark, drive the streets to it, hook it, hold it, tow it home, drop it. */
+	void TickCompanions();
+	/** Server: autopilot along the streets (row, then column) to Goal, or to the yard's drop pad when bToYard. */
+	void CompanionDrive(FTruck& Truck, const FVector& Goal, bool bToYard);
+	/** Server: a short line from a companion, on its player's truck radio. */
+	void CompanionSay(const FTruck& Truck, const FString& Line);
+	TSet<TWeakObjectPtr<AActor>> SeatedCompanions;
 	void SpawnStaff();
 	void SpawnMark(int32 Slot);
 	/** One heavy coach per shift, after the flag. Worth more. A stronger engine tows it faster. */
@@ -678,9 +706,11 @@ class DUNGEONCRAWLERDENVER_API ADCCArcadeNeon : public ADCCArcadeArena
 {
 	GENERATED_BODY()
 public:
+	virtual bool WantsNavmesh() const override { return false; } // a city to drive, not walk
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 public:
 	virtual FName GetGameId() const override { return TEXT("Neon"); }
+	virtual FString GetTip() const override { return TEXT("W drives, A and D steer, click to boost. Chevrons boost you too."); }
 protected:
 	virtual void ServerBegin() override;
 	virtual void ServerTick(float DeltaSeconds) override;

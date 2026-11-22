@@ -47,6 +47,7 @@ public:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	virtual FName GetGameId() const override { return TEXT("Audit"); }
+	virtual FString GetTip() const override { return TEXT("Hit The Quarterly. Fists, weapons and spells all count."); }
 	virtual bool KeepsStatusPanel() const override { return true; }
 
 	static constexpr float StandbySeconds = 4.0f;

@@ -138,6 +138,8 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "DCC|AI")
 	ADCCCharacterBase* GetCurrentTarget() const { return CurrentTarget; }
+	/** Let go of whoever it was after; it picks again on its next look round. Server. */
+	void ForgetTarget() { CurrentTarget = nullptr; }
 
 	/**
 	 * Walk this grid instead of asking the navmesh.
@@ -382,6 +384,29 @@ public:
 	/** Follow in a straight line, for places with no grid and no navmesh (a summoned friend in the Den). */
 	bool bFollowStraight = false;
 
+	/**
+	 * An errand from the game, in place of following (2026-11-21, companions playing the arcade games themselves):
+	 * walk to ErrandAt (over the grid where there is one), stop inside ErrandRadius, and face ErrandLook while
+	 * bErrandLook. Fights still come first. Server; the game sets it every tick and clears bHasErrand to give the
+	 * ally back to its player.
+	 */
+	bool bHasErrand = false;
+	FVector ErrandAt = FVector::ZeroVector;
+	float ErrandRadius = 250.0f;
+	bool bErrandLook = false;
+	FVector ErrandLook = FVector::ZeroVector;
+	bool bErrandRun = false;
+	/** On this errand it does not pick fights (a companion filming in Dead Air runs from the monsters instead). */
+	bool bErrandAvoidFights = false;
+	/** How long it has been pushing on an errand without moving (a crate, a cart, rubble): it hops, then steps past. */
+	float ErrandBlockedFor = 0.0f;
+
+	/**
+	 * True when there is a navmesh under it (2026-11-22: the arenas now build one at runtime). Then it paths properly
+	 * (MoveTo) instead of the coarse grid or a straight line. Checked once a second.
+	 */
+	bool CanUseNavmesh() const;
+
 	/** Dungeon-side unless bIsAlly flips it. Drives the whole faction check. */
 	virtual bool IsCrawler() const override { return bIsAlly; }
 
@@ -475,6 +500,12 @@ protected:
 	 * was already long enough to hide a bug in.
 	 */
 	void TickFollowLeader(ADCCCharacterBase* Leader, class AAIController* AIController);
+	void TickErrand();
+	mutable double NavCheckedAt = -100.0;
+	mutable bool bNavHere = false;
+	/** Where the last navmesh errand order went, and when a navmesh order last failed (then it walks for a while). */
+	FVector ErrandMovingTo = FVector(BIG_NUMBER);
+	double NavFailedAt = -100.0;
 
 	/**
 	 * Server only. Casts the longest-range currently-usable skill at Target.

@@ -38,6 +38,7 @@ class DUNGEONCRAWLERDENVER_API ADCCArcadeGate : public ADCCArcadeArena
 
 public:
 	virtual FName GetGameId() const override { return TEXT("Gate"); }
+	virtual FString GetTip() const override { return TEXT("Clear the rooms and drop the Gatekeeper. Gear, skills and spells all work in there."); }
 	virtual UDCCDungeonGrid* GetChaseGrid() const override { return Grid; }
 	virtual bool KeepsStatusPanel() const override { return true; }
 	virtual bool ShowsHeldGear() const override { return true; }

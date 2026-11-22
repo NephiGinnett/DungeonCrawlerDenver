@@ -27,6 +27,11 @@
 #include "Materials/MaterialInterface.h"
 #include "Net/UnrealNetwork.h"
 #include "UObject/ConstructorHelpers.h"
+#include "UObject/StrongObjectPtr.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundAttenuation.h"
+#include "Components/AudioComponent.h"
+#include "Sound/SoundWaveProcedural.h"
 
 namespace
 {
@@ -101,6 +106,7 @@ namespace
 		{
 			Mid->SetVectorParameterValue(TEXT("Color"), Colour);
 			Mid->SetVectorParameterValue(TEXT("BaseColor"), Colour);
+			Mid->SetVectorParameterValue(TEXT("Emissive Color"), Colour);
 		}
 	}
 
@@ -139,6 +145,320 @@ namespace
 		if (FromCentre < 0.20) return 30;
 		if (FromCentre < 0.32) return 20;
 		return 10;
+	}
+
+	// ---- The three show games, rebuilt 2026-11-21 (Zoe: "The wheel and roulette both need work, and ski ball could use
+	// a bit more, like seeing the ball go up the table instead of just thrown. It should all be a lot more fun").
+
+	constexpr float WheelSpinTime = 5.6f;
+	constexpr float RouletteSpinTime = 6.4f;
+	constexpr float WheelHubZ = 450.0f;
+	constexpr float RouletteTop = 86.0f;
+	constexpr int32 WheelSliceCount = 12;
+
+	/** Twelve slices, each pay twice: slice j pays WheelPay[j % 6]. */
+	FLinearColor SliceColour(int32 Slice)
+	{
+		return (Slice % 6) == 5 ? FLinearColor(0.20f, 0.20f, 0.24f) : PitColours[Slice % 6];
+	}
+
+	FLinearColor WheelBulbColour(int32 Bulb)
+	{
+		return (Bulb % 2) ? FLinearColor(1.0f, 0.82f, 0.45f) : FLinearColor(1.0f, 0.25f, 0.35f);
+	}
+
+	/** A single-zero wheel in the usual order, so red and black alternate round the rim. */
+	const int32 RouletteOrder[37] = { 0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16,
+		33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26 };
+
+	int32 RoulettePocketOf(int32 Number)
+	{
+		for (int32 p = 0; p < 37; ++p)
+		{
+			if (RouletteOrder[p] == Number)
+			{
+				return p;
+			}
+		}
+		return 0;
+	}
+
+	// ---- Reels and scratchcards (2026-11-21, Zoe: "It'd be nice if you actually got to pull a lever to spin the wheel
+	// or something. Or if we could have scratchcards and reels or something").
+	constexpr int32 SlotSymbols = 6;
+	const TCHAR* SlotSymbolName[SlotSymbols] = { TEXT("cherries"), TEXT("lemons"), TEXT("bells"), TEXT("bars"), TEXT("diamonds"), TEXT("sevens") };
+	const int32 SlotWeight[SlotSymbols] = { 30, 26, 18, 12, 9, 5 };
+	const int32 SlotThree[SlotSymbols] = { 3, 4, 6, 10, 20, 50 };
+	/** The pull takes this long before anything turns, then the reels stop one by one. */
+	constexpr float SlotLeverLead = 0.3f;
+	constexpr float SlotReelStop0 = 1.35f;
+	constexpr float SlotReelGap = 0.45f;
+	constexpr float SlotSpinEnd = SlotLeverLead + SlotReelStop0 + SlotReelGap * 2.0f;
+	const FLinearColor SlotTopColours[] = {
+		FLinearColor(1.0f, 0.25f, 0.6f), FLinearColor(0.2f, 0.8f, 1.0f), FLinearColor(1.0f, 0.75f, 0.15f), FLinearColor(0.45f, 1.0f, 0.3f),
+	};
+	const int32 CardAmounts[6] = { 1, 2, 5, 10, 25, 100 };
+	const int32 CardWeights[6] = { 40, 28, 18, 9, 4, 1 };
+
+	int32 Weighted(const int32* Weights, int32 Count)
+	{
+		int32 Total = 0;
+		for (int32 i = 0; i < Count; ++i)
+		{
+			Total += Weights[i];
+		}
+		int32 Roll = FMath::RandRange(0, Total - 1);
+		for (int32 i = 0; i < Count; ++i)
+		{
+			if (Roll < Weights[i])
+			{
+				return i;
+			}
+			Roll -= Weights[i];
+		}
+		return 0;
+	}
+
+	int32 SlotMultiplier(uint8 A, uint8 B, uint8 C, FString& Why)
+	{
+		if (A == B && B == C)
+		{
+			Why = A == 5 ? FString(TEXT("JACKPOT, three sevens")) : FString::Printf(TEXT("three %s"), SlotSymbolName[A]);
+			return SlotThree[A];
+		}
+		if (A == B || B == C || A == C)
+		{
+			const uint8 Pair = (A == B || A == C) ? A : B;
+			Why = FString::Printf(TEXT("two %s"), SlotSymbolName[Pair]);
+			return Pair == 0 ? 2 : 1;
+		}
+		Why = TEXT("Nothing lined up.");
+		return 0;
+	}
+
+	/** Out from a reel's axle at this angle. 0 faces the player (-Y); the reels roll down, toward negative angles. */
+	FVector ReelRadial(float Degrees)
+	{
+		const float A = FMath::DegreesToRadians(Degrees);
+		return FVector(0.0f, -FMath::Cos(A), FMath::Sin(A));
+	}
+
+	FVector ReelUp(float Degrees)
+	{
+		const float A = FMath::DegreesToRadians(Degrees);
+		return FVector(0.0f, FMath::Sin(A), FMath::Cos(A));
+	}
+
+	/** A lever's angle, T seconds after the pull: down fast, a beat, then a springy return. */
+	float LeverAngle(float T)
+	{
+		if (T < 0.0f || T > 1.1f)
+		{
+			return 0.0f;
+		}
+		if (T < 0.22f)
+		{
+			return 105.0f * FMath::Sin(T / 0.22f * HALF_PI);
+		}
+		if (T < 0.42f)
+		{
+			return 105.0f;
+		}
+		const float U = (T - 0.42f) / 0.68f;
+		return 105.0f * (1.0f - U) * (1.0f - U) + FMath::Sin(U * PI * 3.0f) * (1.0f - U) * 9.0f;
+	}
+
+	void PoseLever(AActor* Arm, AActor* Knob, const FVector& Pivot, const FVector& Toward, float Degrees, float Length)
+	{
+		const float A = FMath::DegreesToRadians(Degrees);
+		const FVector D = (FVector(0.0f, 0.0f, 1.0f) * FMath::Cos(A) + Toward * FMath::Sin(A)).GetSafeNormal();
+		const FVector Axle = FVector::CrossProduct(Toward, FVector(0.0f, 0.0f, 1.0f)).GetSafeNormal();
+		if (Arm)
+		{
+			Arm->SetActorLocationAndRotation(Pivot + D * (Length * 0.5f), FRotationMatrix::MakeFromZX(D, Axle).Rotator());
+		}
+		if (Knob)
+		{
+			Knob->SetActorLocation(Pivot + D * Length);
+		}
+	}
+
+	/**
+	 * One skee-ball cabinet, from where its thrower stands. The ball rolls up the lane, hops the lip, and lands in a
+	 * hole on a board tilted back at 38 degrees: five rings round the 50, each with its hole at the bottom of the ring.
+	 */
+	struct FSkeeLane
+	{
+		FVector LaneFrom;
+		FVector LaneTo;
+		FVector RampTop;
+		FVector LaneDir;
+		FVector LaneUp;
+		FVector RampDir;
+		FVector RampUp;
+		FVector BoardFoot;
+		FVector BoardUp;
+		FVector BoardOut;
+		FVector Centre;
+		float Radius[5] = { 22.0f, 46.0f, 70.0f, 94.0f, 118.0f };
+
+		/** How far each ring stands off the board. The 50 is on top. */
+		float Lift(int32 Ring) const { return 2.0f + (4 - Ring) * 3.0f; }
+
+		/** The mouth of the hole for this ring (0 is the 50). */
+		FVector Hole(int32 Ring) const
+		{
+			const float Down = Ring == 0 ? 0.0f : (Radius[Ring - 1] + Radius[Ring]) * 0.5f;
+			return Centre - BoardUp * Down + BoardOut * (Lift(Ring) + 2.5f);
+		}
+	};
+
+	FSkeeLane SkeeLane(const FVector& Throw)
+	{
+		const FVector X(1.0f, 0.0f, 0.0f);
+		// The thrower stands just right of their lane, so the camera over their shoulder sees the ball go.
+		const float LaneX = Throw.X - 95.0f;
+		FSkeeLane L;
+		L.LaneFrom = FVector(LaneX, Throw.Y + 70.0f, 34.0f);
+		L.LaneTo = FVector(LaneX, Throw.Y + 500.0f, 84.0f);
+		L.LaneDir = (L.LaneTo - L.LaneFrom).GetSafeNormal();
+		L.LaneUp = FVector::CrossProduct(X, L.LaneDir);
+		L.RampTop = L.LaneTo + FVector(0.0f, 40.0f, 26.0f);
+		L.RampDir = (L.RampTop - L.LaneTo).GetSafeNormal();
+		L.RampUp = FVector::CrossProduct(X, L.RampDir);
+		const float Tilt = FMath::DegreesToRadians(38.0f);
+		L.BoardFoot = FVector(LaneX, Throw.Y + 570.0f, 70.0f);
+		L.BoardUp = FVector(0.0f, FMath::Cos(Tilt), FMath::Sin(Tilt));
+		L.BoardOut = FVector::CrossProduct(X, L.BoardUp);
+		L.Centre = L.BoardFoot + L.BoardUp * 215.0f;
+		return L;
+	}
+
+	/** Swap a basic shape onto the glowing light material, so Tint can light it up past white. */
+	void MakeGlow(AActor* Actor, const FLinearColor& Colour)
+	{
+		static TStrongObjectPtr<UMaterialInterface> Glow;
+		if (!Glow.IsValid())
+		{
+			Glow.Reset(LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/Synthwave_city/Material/MI_light.MI_light")));
+		}
+		UStaticMeshComponent* Mesh = Actor ? Actor->FindComponentByClass<UStaticMeshComponent>() : nullptr;
+		if (!Mesh || !Glow.IsValid())
+		{
+			return;
+		}
+		UMaterialInstanceDynamic* Mid = UMaterialInstanceDynamic::Create(Glow.Get(), Mesh);
+		Mid->SetVectorParameterValue(TEXT("Color"), Colour);
+		Mid->SetVectorParameterValue(TEXT("Emissive Color"), Colour);
+		Mesh->SetMaterial(0, Mid);
+	}
+
+	// Small synthesised sounds, made once (the same procedural-wave trick Dead Air uses for its knocks).
+	constexpr int32 CasinoRate = 22050;
+	enum class ECasinoSound : uint8 { Tick, Clack, Roll, Whirr, Drop, Chime, Count };
+
+	const TArray<int16>& CasinoPcm(ECasinoSound Kind)
+	{
+		static TArray<int16> Cache[int32(ECasinoSound::Count)];
+		TArray<int16>& Pcm = Cache[int32(Kind)];
+		if (!Pcm.IsEmpty())
+		{
+			return Pcm;
+		}
+		const float Lengths[] = { 0.04f, 0.09f, 0.95f, 3.6f, 0.4f, 1.1f };
+		const float Length = Lengths[int32(Kind)];
+		const int32 N = int32(CasinoRate * Length);
+		FRandomStream Noise(int32(Kind) * 7919 + 3);
+		float Low = 0.0f;
+		Pcm.SetNumUninitialized(N);
+		for (int32 i = 0; i < N; ++i)
+		{
+			const float T = float(i) / CasinoRate;
+			const float White = Noise.FRandRange(-1.0f, 1.0f);
+			float V = 0.0f;
+			switch (Kind)
+			{
+			case ECasinoSound::Tick:
+				V = (White * 0.5f + FMath::Sin(2.0f * PI * 2300.0f * T) * 0.6f) * FMath::Exp(-T * 170.0f);
+				break;
+			case ECasinoSound::Clack:
+				V = (White * 0.35f + FMath::Sin(2.0f * PI * 3100.0f * T) * 0.55f + FMath::Sin(2.0f * PI * 1650.0f * T) * 0.35f)
+					* FMath::Exp(-T * 85.0f);
+				break;
+			case ECasinoSound::Roll:
+			case ECasinoSound::Whirr:
+			{
+				// Low-passed noise with a wobble: a hard ball on wood.
+				Low += (Kind == ECasinoSound::Roll ? 0.07f : 0.12f) * (White - Low);
+				const float Wobble = 0.65f + 0.35f * FMath::Sin(2.0f * PI * (Kind == ECasinoSound::Roll ? 23.0f : 38.0f) * T);
+				const float Fade = FMath::Min(1.0f, T * 20.0f) * FMath::Clamp((Length - T) / (Length * 0.6f), 0.0f, 1.0f);
+				V = Low * 3.2f * Wobble * Fade;
+				break;
+			}
+			case ECasinoSound::Drop:
+				V = FMath::Sin(2.0f * PI * (130.0f + 90.0f * FMath::Exp(-T * 30.0f)) * T) * FMath::Exp(-T * 13.0f)
+					+ White * FMath::Exp(-T * 220.0f) * 0.4f;
+				break;
+			case ECasinoSound::Chime:
+			{
+				const float Notes[] = { 1046.5f, 1318.5f, 1568.0f, 2093.0f };
+				for (int32 n = 0; n < 4; ++n)
+				{
+					const float Start = n * 0.085f;
+					if (T >= Start)
+					{
+						const float U = T - Start;
+						V += FMath::Sin(2.0f * PI * Notes[n] * U) * FMath::Exp(-U * 4.5f) * 0.32f;
+					}
+				}
+				break;
+			}
+			default:
+				break;
+			}
+			Pcm[i] = int16(FMath::Clamp(V * 0.8f, -1.0f, 1.0f) * 24000.0f);
+		}
+		return Pcm;
+	}
+
+	void CasinoSound(UWorld* World, ECasinoSound Kind, const FVector& At, float Volume = 1.0f, float Pitch = 1.0f)
+	{
+		if (!World || World->GetNetMode() == NM_DedicatedServer)
+		{
+			return;
+		}
+		// At most one of each sound per 45 ms, so a fast wheel still clicks without a wall of voices.
+		static double LastPlayed[int32(ECasinoSound::Count)] = {};
+		const double Now = World->GetRealTimeSeconds();
+		if (Now - LastPlayed[int32(Kind)] < 0.045 && Now >= LastPlayed[int32(Kind)])
+		{
+			return;
+		}
+		LastPlayed[int32(Kind)] = Now;
+		static TStrongObjectPtr<USoundAttenuation> Att;
+		if (!Att.IsValid())
+		{
+			Att.Reset(NewObject<USoundAttenuation>(GetTransientPackage()));
+			Att->Attenuation.bAttenuate = true;
+			Att->Attenuation.bSpatialize = true;
+			Att->Attenuation.AttenuationShape = EAttenuationShape::Sphere;
+			Att->Attenuation.AttenuationShapeExtents = FVector(600.0f, 0, 0);
+			Att->Attenuation.FalloffDistance = 2600.0f;
+		}
+		const TArray<int16>& Pcm = CasinoPcm(Kind);
+		USoundWaveProcedural* Wave = NewObject<USoundWaveProcedural>(World);
+		Wave->SetSampleRate(CasinoRate);
+		Wave->NumChannels = 1;
+		Wave->Duration = float(Pcm.Num()) / CasinoRate;
+		Wave->SoundGroup = SOUNDGROUP_Effects;
+		Wave->bLooping = false;
+		Wave->QueueAudio(reinterpret_cast<const uint8*>(Pcm.GetData()), Pcm.Num() * sizeof(int16));
+		// A procedural wave never ends by itself; left running, fast ticks pile up and steal the room's song.
+		if (UAudioComponent* Voice = UGameplayStatics::SpawnSoundAtLocation(World, Wave, At, FRotator::ZeroRotator, Volume, Pitch,
+			0.0f, Att.Get(), nullptr, true))
+		{
+			Voice->StopDelayed(Wave->Duration / FMath::Max(0.1f, Pitch) + 0.05f);
+		}
 	}
 
 	FString CrawlerName(const ADCCCharacterBase* Who)
@@ -329,7 +649,7 @@ ADCCCasinoCascade::FRoom ADCCCasinoCascade::RoomFor(const FVector& O)
 	// The wheel on the east wall, north of the title, so the door does not look straight into the back of someone's head.
 	{
 		const FVector At = World(R.HalfX - 420.0f, 420.0f);
-		Ring(4, At, 520.0f, 180.0f, true);
+		Ring(4, At, 820.0f, 180.0f, true);
 		R.Staff[4].At = At + FVector(180.0f, -640.0f, 92.0f);
 		R.Staff[4].Face = FRotator(0.0f, 100.0f, 0.0f);
 	}
@@ -378,7 +698,23 @@ void ADCCCasinoCascade::Dress(ADCCArcadeLobby* Lobby)
 	};
 
 	Carpet(O, L, W, false);
-	Carpet(R.Center, R.HalfX, R.HalfY, true);
+	// The casino carpet (2026-11-21): one deep wine field with a small repeating motif, the way a casino floor reads,
+	// instead of a tile of every colour.
+	{
+		Lobby->Block(R.Center + FVector(0.0f, 0.0f, 2.0f), FVector(R.HalfX * 2.0f - 20.0f, R.HalfY * 2.0f - 20.0f, 4.0f),
+			FLinearColor(0.075f, 0.012f, 0.022f), 0.0f, false);
+		constexpr float Tile = 400.0f;
+		for (float X = -R.HalfX + Tile * 0.5f; X < R.HalfX - 60.0f; X += Tile)
+		{
+			for (float Y = -R.HalfY + Tile * 0.5f; Y < R.HalfY - 60.0f; Y += Tile)
+			{
+				Lobby->Shape(TEXT("Cube"), R.Center + FVector(X, Y, 4.6f), FVector(150.0f, 150.0f, 1.5f),
+					FLinearColor(0.07f, 0.03f, 0.12f), FRotator(0.0f, 45.0f, 0.0f), false);
+				Lobby->Shape(TEXT("Cube"), R.Center + FVector(X, Y, 5.6f), FVector(44.0f, 44.0f, 1.5f),
+					CarpetGold * 0.7f, FRotator(0.0f, 45.0f, 0.0f), false);
+			}
+		}
+	}
 
 	// East wall of the Safe Room, with a door into the casino. The lintel keeps the ceiling sealed.
 	const float DoorHalf = 340.0f;
@@ -397,8 +733,6 @@ void ADCCCasinoCascade::Dress(ADCCArcadeLobby* Lobby)
 		Lobby->Paint(Lintel, WallMat);
 	}
 	Lobby->Sign(O + FVector(L - 50.0f, 0.0f, 560.0f), 180.0f, TEXT("CASINO CASCADE"), FColor(255, 196, 80), 64.0f);
-	Lobby->Sign(O + FVector(L - 50.0f, 0.0f, 490.0f), 180.0f,
-		TEXT("Whoever is at the table plays. The rest of the room can keep voting."), FColor(230, 214, 180), 18.0f);
 
 	// Ceiling over both rooms, so the sky stays outside.
 	Lobby->Block(O + FVector(0.0f, 0.0f, 930.0f), FVector(L * 2.0f + 200.0f, W * 2.0f + 200.0f, 50.0f), FLinearColor(0.05f, 0.04f, 0.07f));
@@ -453,7 +787,6 @@ void ADCCCasinoCascade::Dress(ADCCArcadeLobby* Lobby)
 	CasinoWall(C + FVector(0.0f, -(R.HalfY + 20.0f), H * 0.5f), FVector(R.HalfX * 2.0f + 80.0f, 40.0f, H));
 	CasinoWall(C + FVector(R.HalfX + 20.0f, 0.0f, H * 0.5f), FVector(40.0f, R.HalfY * 2.0f, H));
 	Lobby->Sign(C + FVector(R.HalfX - 50.0f, 0.0f, 760.0f), 180.0f, TEXT("CASINO CASCADE"), FColor(255, 210, 120), 80.0f);
-	Lobby->Sign(C + FVector(R.HalfX - 50.0f, 0.0f, 680.0f), 180.0f, TEXT("Games on the walls. The floor stays open."), FColor(230, 210, 180), 22.0f);
 	// The walk from the door to the wheel. Games stay off it.
 	Lobby->Block(C + FVector(-500.0f, 0.0f, 6.0f), FVector(2600.0f, 280.0f, 2.0f), FLinearColor(0.04f, 0.015f, 0.03f), 0.0f, false);
 
@@ -553,35 +886,71 @@ void ADCCCasinoCascade::BuildFloor()
 		PitLights[t] = Glow(R.Tables[t] + FVector(0.0f, 0.0f, 420.0f));
 	}
 
-	// Skee-Ball lanes, rings toward the north wall.
+	// Skee-Ball (rebuilt 2026-11-21). Each lane is a cabinet: a lane you roll up, a lip that hops the ball, and a
+	// target tilted back toward you with five rings round the 50, each with its hole. The ball is watched all the way.
 	for (int32 i = 0; i < SeatCount; ++i)
 	{
-		const FVector Throw(R.Seats[0][i].At.X, R.Seats[0][i].At.Y, 0.0f);
-		const FVector Far(Throw.X, R.Tables[0].Y, 0.0f);
-		const FVector Mid = (Throw + Far) * 0.5f + FVector(0.0f, 0.0f, 28.0f);
-		const FLinearColor Lane(0.55f, 0.36f, 0.14f);
-		Lobby->Shape(TEXT("Cube"), Mid, FVector(150.0f, 700.0f, 16.0f), Wood, FRotator(-8.0f, 0.0f, 0.0f), true);
-		Lobby->Shape(TEXT("Cube"), Mid + FVector(0.0f, 0.0f, 12.0f), FVector(118.0f, 660.0f, 5.0f),
-			Lane, FRotator(-8.0f, 0.0f, 0.0f), false);
-		Lobby->Shape(TEXT("Cube"), Mid + FVector(78.0f, 0.0f, 22.0f), FVector(10.0f, 700.0f, 36.0f), Wood, FRotator(-8.0f, 0.0f, 0.0f), true);
-		Lobby->Shape(TEXT("Cube"), Mid + FVector(-78.0f, 0.0f, 22.0f), FVector(10.0f, 700.0f, 36.0f), Wood, FRotator(-8.0f, 0.0f, 0.0f), true);
-		const FVector Board = Far + FVector(0.0f, 36.0f, 130.0f);
-		Lobby->Block(Board + FVector(0.0f, 18.0f, 0.0f), FVector(168.0f, 16.0f, 230.0f), Ink);
-		// Concentric rings on the board. Ring 0 is the 50, the small centre, closest to the throw.
+		const FSkeeLane S = SkeeLane(R.Seats[0][i].At);
+		const FVector X(1.0f, 0.0f, 0.0f);
+		const FLinearColor LaneTop(0.30f, 0.16f, 0.06f);
+		const float LaneLen = FVector::Dist(S.LaneFrom, S.LaneTo);
+		const FVector LaneMid = (S.LaneFrom + S.LaneTo) * 0.5f;
+		const FRotator LaneRot = FRotationMatrix::MakeFromYZ(S.LaneDir, S.LaneUp).Rotator();
+		// The cabinet body, its top flush with the lane, sunk into the floor at the near end.
+		Lobby->Shape(TEXT("Cube"), LaneMid - S.LaneUp * 50.0f, FVector(176.0f, LaneLen, 100.0f), Wood, LaneRot, true);
+		Lobby->Shape(TEXT("Cube"), LaneMid + S.LaneUp * 1.0f, FVector(116.0f, LaneLen, 2.0f), LaneTop, LaneRot, false);
+		for (const float Side : { -1.0f, 1.0f })
+		{
+			Lobby->Shape(TEXT("Cube"), LaneMid + X * (Side * 72.0f) + S.LaneUp * 14.0f, FVector(12.0f, LaneLen, 30.0f),
+				CarpetGold * 0.8f, LaneRot, false);
+		}
+		// The lip the ball hops off.
+		const float RampLen = FVector::Dist(S.LaneTo, S.RampTop);
+		const FRotator RampRot = FRotationMatrix::MakeFromYZ(S.RampDir, S.RampUp).Rotator();
+		Lobby->Shape(TEXT("Cube"), (S.LaneTo + S.RampTop) * 0.5f - S.RampUp * 20.0f, FVector(116.0f, RampLen + 6.0f, 40.0f),
+			LaneTop * 0.75f, RampRot, false);
+		// The target board, the wood under it, the cheeks either side, and a hood with a light strip.
+		const FRotator BoardRot = FRotationMatrix::MakeFromYZ(S.BoardUp, S.BoardOut).Rotator();
+		constexpr float BoardLen = 340.0f;
+		const FVector BoardMid = S.BoardFoot + S.BoardUp * (BoardLen * 0.5f);
+		const FVector BoardTop = S.BoardFoot + S.BoardUp * BoardLen;
+		Lobby->Shape(TEXT("Cube"), BoardMid - S.BoardOut * 6.0f, FVector(250.0f, BoardLen, 12.0f), Ink, BoardRot, false);
+		Lobby->Shape(TEXT("Cube"), BoardMid - S.BoardOut * 72.0f, FVector(250.0f, BoardLen, 120.0f), Wood, BoardRot, true);
+		for (const float Side : { -1.0f, 1.0f })
+		{
+			Lobby->Shape(TEXT("Cube"), BoardMid + X * (Side * 131.0f) + S.BoardOut * 18.0f, FVector(12.0f, BoardLen, 60.0f),
+				Wood * 1.4f, BoardRot, false);
+		}
+		Lobby->Block(FVector(S.BoardFoot.X, BoardTop.Y + 20.0f, (BoardTop.Z + 70.0f) * 0.5f),
+			FVector(262.0f, 120.0f, BoardTop.Z + 70.0f), Wood, 0.0f, true);
+		if (AActor* Strip = Lobby->Shape(TEXT("Cube"), FVector(S.BoardFoot.X, BoardTop.Y - 42.0f, BoardTop.Z + 46.0f),
+			FVector(236.0f, 4.0f, 12.0f), RingColours[i % 4] * 2.0f, FRotator::ZeroRotator, false))
+		{
+			MakeGlow(Strip, RingColours[i % 4] * 2.0f);
+		}
+		// Rings, outermost first, each a little prouder than the one round it, and a hole at the bottom of each.
+		const FRotator Flat = FRotationMatrix::MakeFromZX(S.BoardOut, X).Rotator();
 		for (int32 Ring = 4; Ring >= 0; --Ring)
 		{
-			const float Diameter = 44.0f + Ring * 28.0f;
-			SkeeRings[i][Ring] = Lobby->Shape(TEXT("Cylinder"),
-				Board + FVector(0.0f, -6.0f - (4 - Ring) * 5.0f, 0.0f),
-				FVector(Diameter, Diameter, 8.0f),
-				RingColours[Ring], FRotator(90.0f, 90.0f, 0.0f), false);
+			const float D = S.Radius[Ring] * 2.0f;
+			SkeeRings[i][Ring] = Lobby->Shape(TEXT("Cylinder"), S.Centre + S.BoardOut * S.Lift(Ring), FVector(D, D, 4.0f),
+				RingColours[Ring], Flat, false);
 		}
-		Lobby->Shape(TEXT("Sphere"), Throw + FVector(0.0f, 36.0f, 30.0f), FVector(22.0f, 22.0f, 22.0f), CarpetGold, FRotator::ZeroRotator, false);
+		for (int32 Ring = 0; Ring < 5; ++Ring)
+		{
+			const float D = Ring == 0 ? 26.0f : 22.0f;
+			Lobby->Shape(TEXT("Cylinder"), S.Hole(Ring) - S.BoardOut * 0.4f, FVector(D, D, 1.0f), FLinearColor(0.01f, 0.01f, 0.01f),
+				Flat, false);
+		}
+		// Three balls waiting at the foot of the lane, and the one in play.
+		for (int32 b = 0; b < 3; ++b)
+		{
+			Lobby->Shape(TEXT("Sphere"), S.LaneFrom + FVector(-24.0f + b * 24.0f, -40.0f, 6.0f), FVector(22.0f, 22.0f, 22.0f),
+				FLinearColor(0.55f, 0.05f, 0.04f), FRotator::ZeroRotator, false);
+		}
 		SkeeBalls[i] = Hide(Lobby->Shape(TEXT("Sphere"), FVector(0.0f, 0.0f, -400.0f),
-			FVector(18.0f, 18.0f, 18.0f), CarpetGold, FRotator::ZeroRotator, false));
+			FVector(24.0f, 24.0f, 24.0f), FLinearColor(0.55f, 0.05f, 0.04f), FRotator::ZeroRotator, false));
 	}
-	Lobby->Sign(R.Tables[0] + FVector(0.0f, 70.0f, 210.0f), -90.0f, TEXT("50     40     30     20     10"),
-		FColor(255, 220, 140), 16.0f, false);
 	Marquees[0] = Lobby->Sign(FVector(R.Tables[0].X, R.Center.Y + R.HalfY - 36.0f, 500.0f), -90.0f, Wide,
 		FColor(255, 220, 160), 22.0f);
 	Lobby->Prop(Neon, FVector(R.Tables[0].X, R.Center.Y + R.HalfY - 28.0f, 580.0f), 0.0f, FVector(1700.0f, 16.0f, 20.0f), false, true);
@@ -626,42 +995,65 @@ void ADCCCasinoCascade::BuildFloor()
 		}
 	};
 
-	// Roulette. Wood bowl on the back half of the felt, a ring of pockets, and the three bets in front.
+	// Roulette (rebuilt 2026-11-21). A 37-pocket wheel in a wooden bowl. The rotor turns one way and the ball the other;
+	// the ball runs the track, rattles over the diamonds and drops into the pocket the server already rolled.
 	{
 		const FVector At = R.Tables[2];
-		const FVector Bowl = At + FVector(0.0f, 60.0f, 0.0f);
+		const FVector Bowl = At + FVector(0.0f, 40.0f, 0.0f);
+		const float T = RouletteTop;
 		const FLinearColor PocketRed(0.82f, 0.08f, 0.09f);
 		const FLinearColor PocketBlack(0.07f, 0.06f, 0.07f);
 		const FLinearColor PocketGreen(0.05f, 0.62f, 0.22f);
-		Lobby->Prop(Rug, At, 30.0f, FVector(460.0f, 360.0f, 0.0f), false);
-		if (!Lobby->Prop(Table, At, 0.0f, FVector(340.0f, 210.0f, 74.0f), true))
+		Lobby->Prop(Rug, At, 30.0f, FVector(540.0f, 440.0f, 0.0f), false);
+		if (!Lobby->Prop(Table, At, 0.0f, FVector(440.0f, 340.0f, 74.0f), true))
 		{
-			Lobby->Block(At + FVector(0.0f, 0.0f, 36.0f), FVector(340.0f, 210.0f, 72.0f), Wood);
+			Lobby->Block(At + FVector(0.0f, 0.0f, 36.0f), FVector(440.0f, 340.0f, 72.0f), Wood);
 		}
-		Lobby->Block(At + FVector(0.0f, -20.0f, 78.0f), FVector(300.0f, 180.0f, 8.0f), Felt, 0.0f, false);
-		Lobby->Shape(TEXT("Cylinder"), Bowl + FVector(0.0f, 0.0f, 96.0f), FVector(210.0f, 210.0f, 18.0f), Wood, FRotator::ZeroRotator, false);
-		Lobby->Shape(TEXT("Cylinder"), Bowl + FVector(0.0f, 0.0f, 108.0f), FVector(196.0f, 196.0f, 6.0f), CarpetGold, FRotator::ZeroRotator, false);
-		RouletteDisc = Lobby->Shape(TEXT("Cylinder"), Bowl + FVector(0.0f, 0.0f, 114.0f), FVector(176.0f, 176.0f, 8.0f), Felt, FRotator::ZeroRotator, false);
-		Lobby->Shape(TEXT("Cylinder"), Bowl + FVector(0.0f, 0.0f, 122.0f), FVector(40.0f, 40.0f, 12.0f), CarpetGold, FRotator::ZeroRotator, false);
-		Lobby->Shape(TEXT("Cone"), Bowl + FVector(0.0f, -112.0f, 128.0f), FVector(22.0f, 22.0f, 36.0f), CarpetGold, FRotator(0.0f, 0.0f, 90.0f), false);
-		for (int32 i = 0; i < 12; ++i)
+		Lobby->Block(At + FVector(0.0f, 0.0f, 78.0f), FVector(400.0f, 300.0f, 8.0f), Felt, 0.0f, false);
+		// The bowl: a wooden base, a wall of staves, the track, and eight brass diamonds to knock the ball about.
+		Lobby->Shape(TEXT("Cylinder"), Bowl + FVector(0.0f, 0.0f, T + 9.0f), FVector(290.0f, 290.0f, 18.0f), Wood, FRotator::ZeroRotator, false);
+		for (int32 k = 0; k < 36; ++k)
 		{
-			const FLinearColor Colour = (i == 0) ? PocketGreen : ((i % 2) ? PocketRed : PocketBlack);
-			const float A = i * 30.0f;
-			RoulettePockets[i] = Lobby->Shape(TEXT("Cube"), Bowl + FVector(0.0f, 0.0f, 132.0f),
-				FVector(40.0f, 30.0f, 22.0f), Colour, TableSlice(A), false);
-			RouletteFrets[i] = Lobby->Shape(TEXT("Cube"), Bowl + FVector(0.0f, 0.0f, 133.0f),
-				FVector(46.0f, 5.0f, 16.0f), CarpetGold, TableSlice(A + 15.0f), false);
+			const float A = k * 10.0f;
+			Lobby->Shape(TEXT("Cube"), Bowl + FRotator(0.0f, A, 0.0f).Vector() * 139.0f + FVector(0.0f, 0.0f, T + 26.0f),
+				FVector(10.0f, 26.0f, 18.0f), (k % 2) ? Wood * 1.25f : Wood * 1.05f, FRotator(0.0f, A, 0.0f), false);
 		}
-		RouletteZero = Lobby->Sign(Bowl + FVector(0.0f, 0.0f, 156.0f), -90.0f, TEXT("0"), FColor::White, 28.0f, false);
-		RouletteBallActor = Lobby->Shape(TEXT("Sphere"), Bowl + FVector(90.0f, 0.0f, 136.0f), FVector(16.0f, 16.0f, 16.0f), FLinearColor::White, FRotator::ZeroRotator, false);
+		Lobby->Shape(TEXT("Cylinder"), Bowl + FVector(0.0f, 0.0f, T + 19.0f), FVector(268.0f, 268.0f, 2.0f),
+			FLinearColor(0.16f, 0.08f, 0.035f), FRotator::ZeroRotator, false);
+		for (int32 k = 0; k < 8; ++k)
+		{
+			const float A = k * 45.0f + 22.5f;
+			Lobby->Shape(TEXT("Cube"), Bowl + FRotator(0.0f, A, 0.0f).Vector() * 110.0f + FVector(0.0f, 0.0f, T + 22.0f),
+				FVector(12.0f, 7.0f, 5.0f), CarpetGold, FRotator(0.0f, A, 0.0f), false);
+		}
+		RouletteDisc = Lobby->Shape(TEXT("Cylinder"), Bowl + FVector(0.0f, 0.0f, T + 22.0f), FVector(190.0f, 190.0f, 8.0f),
+			FLinearColor(0.34f, 0.16f, 0.06f), FRotator::ZeroRotator, false);
+		for (int32 p = 0; p < 37; ++p)
+		{
+			const int32 Number = RouletteOrder[p];
+			const FLinearColor Colour = Number == 0 ? PocketGreen : DCCCasinoRedPocket(Number) ? PocketRed : PocketBlack;
+			RoulettePockets[p] = Lobby->Shape(TEXT("Cube"), Bowl + FVector(0.0f, 0.0f, T + 28.0f),
+				FVector(24.0f, 12.5f, 6.0f), Colour, FRotator::ZeroRotator, false);
+			RouletteFrets[p] = Lobby->Shape(TEXT("Cube"), Bowl + FVector(0.0f, 0.0f, T + 30.0f),
+				FVector(26.0f, 2.0f, 10.0f), CarpetGold, FRotator::ZeroRotator, false);
+		}
+		// The turret in the middle: a brass cone and a cross that turns with the rotor.
+		Lobby->Shape(TEXT("Cone"), Bowl + FVector(0.0f, 0.0f, T + 40.0f), FVector(56.0f, 56.0f, 28.0f), CarpetGold, FRotator::ZeroRotator, false);
+		for (int32 k = 0; k < 2; ++k)
+		{
+			RouletteCross[k] = Lobby->Shape(TEXT("Cube"), Bowl + FVector(0.0f, 0.0f, T + 50.0f), FVector(76.0f, 6.0f, 6.0f),
+				CarpetGold, FRotator::ZeroRotator, false);
+		}
+		Lobby->Shape(TEXT("Sphere"), Bowl + FVector(0.0f, 0.0f, T + 56.0f), FVector(14.0f, 14.0f, 14.0f), CarpetGold, FRotator::ZeroRotator, false);
+		RouletteBallActor = Lobby->Shape(TEXT("Sphere"), Bowl + FVector(80.0f, 0.0f, T + 30.0f), FVector(12.0f, 12.0f, 12.0f),
+			FLinearColor(0.95f, 0.95f, 0.92f), FRotator::ZeroRotator, false);
 		const TCHAR* Bets[] = { TEXT("RED"), TEXT("BLACK"), TEXT("0") };
 		const FLinearColor BetColours[] = { PocketRed, PocketBlack, PocketGreen };
 		for (int32 i = 0; i < 3; ++i)
 		{
-			const FVector Spot = At + FVector(-90.0f + i * 90.0f, -88.0f, 88.0f);
-			Lobby->Block(Spot, FVector(72.0f, 36.0f, 6.0f), BetColours[i], 0.0f, false);
-			Lobby->Sign(Spot + FVector(0.0f, -32.0f, 22.0f), -90.0f, Bets[i], FColor::White, 26.0f, false);
+			const FVector Spot = At + FVector(-110.0f + i * 110.0f, -122.0f, 88.0f);
+			Lobby->Block(Spot, FVector(96.0f, 40.0f, 6.0f), BetColours[i], 0.0f, false);
+			Lobby->Sign(Spot + FVector(0.0f, -30.0f, 22.0f), -90.0f, Bets[i], FColor::White, 26.0f, false);
 		}
 		Stools(2);
 		Marquees[2] = Lobby->Sign(FVector(At.X, R.Center.Y + R.HalfY - 36.0f, 440.0f), -90.0f, Wide, FColor(255, 210, 160), 22.0f);
@@ -688,33 +1080,127 @@ void ADCCCasinoCascade::BuildFloor()
 		Marquees[3] = Lobby->Sign(FVector(At.X, R.Center.Y - R.HalfY + 36.0f, 420.0f), 90.0f, Wide, FColor(255, 220, 170), 22.0f);
 	}
 
-	// The wheel. Six slices, narrow at the hub, and a still key beside it so the pays can be read from the aisle.
+	// The wheel (rebuilt 2026-11-21). Twelve slices (each pay twice), brass pegs round the rim, a flapper at the top that
+	// clicks over them, and a ring of bulbs that chases while it turns and flashes for the winner.
 	{
-		const FVector Hub = R.Tables[4] + FVector(0.0f, 0.0f, 470.0f);
-		const float BandR[] = { 64.0f, 118.0f, 174.0f };
-		const float BandLen[] = { 56.0f, 60.0f, 64.0f };
-		const float BandWide[] = { 32.0f, 80.0f, 128.0f };
-		Lobby->Shape(TEXT("Cylinder"), FVector(R.Tables[4].X, R.Tables[4].Y, 230.0f), FVector(48.0f, 48.0f, 460.0f), Wood, FRotator::ZeroRotator, true);
-		Lobby->Shape(TEXT("Cylinder"), Hub + FVector(16.0f, 0.0f, 0.0f), FVector(520.0f, 520.0f, 16.0f), CarpetGold, FRotator(90.0f, 0.0f, 0.0f), false);
-		PrizeDisc = Lobby->Shape(TEXT("Cylinder"), Hub, FVector(450.0f, 450.0f, 18.0f), Ink, FRotator(90.0f, 0.0f, 0.0f), false);
-		Lobby->Shape(TEXT("Cylinder"), Hub + FVector(-28.0f, 0.0f, 0.0f), FVector(70.0f, 70.0f, 14.0f), CarpetGold, FRotator(90.0f, 0.0f, 0.0f), false);
+		const FVector Hub = R.Tables[4] + FVector(0.0f, 0.0f, WheelHubZ);
+		Lobby->Shape(TEXT("Cylinder"), FVector(R.Tables[4].X + 40.0f, R.Tables[4].Y, WheelHubZ * 0.5f), FVector(60.0f, 60.0f, WheelHubZ),
+			Wood, FRotator::ZeroRotator, true);
+		Lobby->Shape(TEXT("Cylinder"), Hub + FVector(24.0f, 0.0f, 0.0f), FVector(770.0f, 770.0f, 20.0f), CarpetGold * 0.75f, FRotator(90.0f, 0.0f, 0.0f), false);
+		PrizeDisc = Lobby->Shape(TEXT("Cylinder"), Hub, FVector(664.0f, 664.0f, 18.0f), Ink, FRotator(90.0f, 0.0f, 0.0f), false);
+		const float BandC[] = { 92.0f, 158.0f, 224.0f, 290.0f };
+		for (int32 j = 0; j < WheelSliceCount; ++j)
+		{
+			const float A = j * 30.0f;
+			for (int32 Band = 0; Band < 4; ++Band)
+			{
+				PrizeParts[j][Band] = Lobby->Shape(TEXT("Cube"), Hub + FVector(-16.0f, 0.0f, 0.0f) + WallRadial(A, BandC[Band]),
+					FVector(64.0f, BandC[Band] * 0.515f, 8.0f), SliceColour(j), WallSlice(A), false);
+			}
+			const FColor InkOn = (j % 6 == 1 || j % 6 == 3) ? FColor(24, 18, 16) : FColor::White;
+			WheelLabels[j] = Lobby->Sign(Hub + FVector(-34.0f, 0.0f, 0.0f) + WallRadial(A, 236.0f), 180.0f, WheelWord[j % 6], InkOn, 40.0f, false);
+			WheelPegs[j] = Lobby->Shape(TEXT("Cylinder"), Hub + FVector(-26.0f, 0.0f, 0.0f) + WallRadial(A + 15.0f, 334.0f),
+				FVector(14.0f, 14.0f, 34.0f), CarpetGold, FRotator(90.0f, 0.0f, 0.0f), false);
+		}
+		Lobby->Shape(TEXT("Cylinder"), Hub + FVector(-26.0f, 0.0f, 0.0f), FVector(96.0f, 96.0f, 14.0f), CarpetGold, FRotator(90.0f, 0.0f, 0.0f), false);
+		for (int32 k = 0; k < 24; ++k)
+		{
+			WheelBulbs[k] = Lobby->Shape(TEXT("Sphere"), Hub + FVector(-6.0f, 0.0f, 0.0f) + WallRadial(k * 15.0f + 7.5f, 360.0f),
+				FVector(30.0f, 30.0f, 30.0f), WheelBulbColour(k), FRotator::ZeroRotator, false);
+			MakeGlow(WheelBulbs[k], WheelBulbColour(k));
+		}
+		// The flapper hangs from a brass block above the rim.
+		Lobby->Shape(TEXT("Cube"), Hub + FVector(-30.0f, 0.0f, 392.0f), FVector(36.0f, 56.0f, 34.0f), CarpetGold, FRotator::ZeroRotator, false);
+		WheelFlapper = Lobby->Shape(TEXT("Cube"), Hub + FVector(-30.0f, 0.0f, 352.0f), FVector(16.0f, 14.0f, 48.0f),
+			FLinearColor(0.85f, 0.1f, 0.12f), FRotator::ZeroRotator, false);
 		for (int32 i = 0; i < 6; ++i)
 		{
-			const float A = i * 60.0f;
-			for (int32 Band = 0; Band < 3; ++Band)
-			{
-				PrizeParts[i][Band] = Lobby->Shape(TEXT("Cube"), Hub + FVector(-22.0f, 0.0f, 0.0f) + WallRadial(A, BandR[Band]),
-					FVector(BandLen[Band], BandWide[Band], 16.0f), PitColours[i], WallSlice(A), false);
-			}
 			const FColor InkOn = (i == 1 || i == 3) ? FColor(24, 18, 16) : FColor::White;
-			WheelLabels[i] = Lobby->Sign(Hub + FVector(-46.0f, 0.0f, 0.0f) + WallRadial(A, 168.0f), 180.0f, WheelWord[i], InkOn, 44.0f, false);
-			const FVector Key = Hub + FVector(-30.0f, -340.0f, 150.0f - i * 64.0f);
-			Lobby->Block(Key, FVector(12.0f, 168.0f, 54.0f), PitColours[i], 0.0f, false);
-			Lobby->Sign(Key + FVector(-14.0f, 0.0f, 0.0f), 180.0f, WheelWord[i], InkOn, 32.0f, false);
+			const FVector Key = Hub + FVector(-30.0f, -490.0f, 150.0f - i * 64.0f);
+			Lobby->Block(Key, FVector(12.0f, 168.0f, 54.0f), SliceColour(i), 0.0f, false);
+			Lobby->Sign(Key + FVector(-14.0f, 0.0f, 0.0f), 180.0f, i == 5 ? FString(WheelWord[i]) : FString::Printf(TEXT("x%s"), WheelWord[i]),
+				InkOn, 32.0f, false);
 		}
-		Lobby->Shape(TEXT("Cone"), Hub + FVector(-40.0f, 0.0f, 248.0f), FVector(44.0f, 44.0f, 78.0f), CarpetGold, FRotator(180.0f, 0.0f, 0.0f), false);
-		Marquees[4] = Lobby->Sign(FVector(R.Center.X + R.HalfX - 36.0f, R.Tables[4].Y, 790.0f), 180.0f, Wide, FColor(255, 214, 120), 26.0f);
-		Lobby->Prop(Neon, FVector(R.Center.X + R.HalfX - 24.0f, R.Tables[4].Y, 850.0f), 90.0f, FVector(520.0f, 16.0f, 16.0f), false, true);
+		Marquees[4] = Lobby->Sign(FVector(R.Center.X + R.HalfX - 36.0f, R.Tables[4].Y, 872.0f), 180.0f, Wide, FColor(255, 214, 120), 24.0f);
+		Lobby->Prop(Neon, FVector(R.Center.X + R.HalfX - 24.0f, R.Tables[4].Y, 896.0f), 90.0f, FVector(520.0f, 16.0f, 8.0f), false, true);
+	}
+
+	// The wheel's lever, on a brass post in front of it. Pulling it is what starts the spin.
+	{
+		const FVector Post = R.Tables[4] + FVector(-300.0f, -330.0f, 0.0f);
+		Lobby->Block(Post + FVector(0.0f, 0.0f, 60.0f), FVector(64.0f, 64.0f, 120.0f), Wood);
+		Lobby->Block(Post + FVector(0.0f, 0.0f, 126.0f), FVector(44.0f, 52.0f, 20.0f), CarpetGold);
+		WheelLever[0] = Lobby->Shape(TEXT("Cylinder"), Post + FVector(0.0f, 0.0f, 200.0f), FVector(14.0f, 14.0f, 150.0f),
+			FLinearColor(0.75f, 0.75f, 0.8f), FRotator::ZeroRotator, false);
+		WheelLever[1] = Lobby->Shape(TEXT("Sphere"), Post + FVector(0.0f, 0.0f, 280.0f), FVector(42.0f, 42.0f, 42.0f),
+			FLinearColor(1.0f, 0.1f, 0.12f), FRotator::ZeroRotator, false);
+		MakeGlow(WheelLever[1], FLinearColor(1.0f, 0.1f, 0.12f));
+		Lobby->Sign(Post + FVector(-34.0f, 0.0f, 90.0f), 180.0f, TEXT("PULL"), FColor(255, 214, 120), 20.0f, false);
+	}
+
+	// Reels and the card machine (2026-11-21), along the north wall between the skee lanes and roulette.
+	for (int32 m = 0; m <= SlotCount; ++m)
+	{
+		const FVector Cm = MachineAt(R, m);
+		const bool bCards = m == SlotCount;
+		const FLinearColor Body = bCards ? FLinearColor(0.03f, 0.20f, 0.18f) : FLinearColor(0.24f, 0.03f, 0.10f);
+		const FLinearColor Lit = bCards ? FLinearColor(0.2f, 1.0f, 0.8f) : SlotTopColours[m % 4];
+		Lobby->Block(Cm + FVector(0.0f, 0.0f, 55.0f), FVector(160.0f, 120.0f, 110.0f), Body);
+		Lobby->Block(Cm + FVector(0.0f, 25.0f, 190.0f), FVector(160.0f, 70.0f, 170.0f), Body * 0.8f);
+		// The bezel round the window, and the cheeks that close it in.
+		Lobby->Block(Cm + FVector(0.0f, -80.0f, 248.0f), FVector(164.0f, 10.0f, 54.0f), CarpetGold, 0.0f, false);
+		Lobby->Block(Cm + FVector(0.0f, -80.0f, 124.0f), FVector(164.0f, 10.0f, 48.0f), CarpetGold, 0.0f, false);
+		Lobby->Block(Cm + FVector(-71.0f, -80.0f, 185.0f), FVector(22.0f, 10.0f, 76.0f), CarpetGold, 0.0f, false);
+		Lobby->Block(Cm + FVector(71.0f, -80.0f, 185.0f), FVector(22.0f, 10.0f, 76.0f), CarpetGold, 0.0f, false);
+		Lobby->Block(Cm + FVector(-82.0f, -40.0f, 188.0f), FVector(4.0f, 84.0f, 176.0f), Body, 0.0f, false);
+		Lobby->Block(Cm + FVector(82.0f, -40.0f, 188.0f), FVector(4.0f, 84.0f, 176.0f), Body, 0.0f, false);
+		if (AActor* Top = Lobby->Shape(TEXT("Cube"), Cm + FVector(0.0f, -20.0f, 302.0f), FVector(150.0f, 60.0f, 46.0f), Lit, FRotator::ZeroRotator, false))
+		{
+			MakeGlow(Top, Lit * 1.5f);
+			if (!bCards)
+			{
+				SlotTops[m] = Top;
+			}
+		}
+		if (bCards)
+		{
+			// A lit window with the card art, and a card waiting in the slot.
+			if (AActor* Face = Lobby->Shape(TEXT("Cube"), Cm + FVector(0.0f, -78.0f, 185.0f), FVector(120.0f, 4.0f, 72.0f), Lit * 0.6f, FRotator::ZeroRotator, false))
+			{
+				MakeGlow(Face, Lit * 0.6f);
+			}
+			Lobby->Sign(Cm + FVector(0.0f, -84.0f, 198.0f), -90.0f, TEXT("SCRATCH"), FColor(10, 40, 36), 22.0f, false);
+			Lobby->Sign(Cm + FVector(0.0f, -84.0f, 172.0f), -90.0f, TEXT("cards"), FColor(10, 40, 36), 16.0f, false);
+			Lobby->Sign(Cm + FVector(0.0f, -87.0f, 248.0f), -90.0f, TEXT("MOTHER LODE"), FColor(60, 24, 8), 15.0f, false);
+			Lobby->Block(Cm + FVector(0.0f, -64.0f, 112.0f), FVector(70.0f, 8.0f, 44.0f), FLinearColor(0.92f, 0.85f, 0.6f), 0.0f, false);
+			continue;
+		}
+		SlotSigns[m] = Lobby->Sign(Cm + FVector(0.0f, -87.0f, 248.0f), -90.0f, TEXT("2 A PULL"), FColor(60, 24, 8), 16.0f, false);
+		for (int32 r = 0; r < 3; ++r)
+		{
+			const FVector Axle = Cm + FVector(-42.0f + r * 42.0f, -40.0f, 185.0f);
+			Lobby->Shape(TEXT("Cylinder"), Axle, FVector(64.0f, 64.0f, 38.0f), FLinearColor(0.95f, 0.92f, 0.84f), FRotator(90.0f, 0.0f, 0.0f), false);
+			for (int32 k = 0; k < SlotSymbols; ++k)
+			{
+				AActor* Symbol = nullptr;
+				switch (k)
+				{
+				case 0: Symbol = Lobby->Shape(TEXT("Sphere"), Axle, FVector(20.0f, 20.0f, 20.0f), FLinearColor(0.85f, 0.04f, 0.08f), FRotator::ZeroRotator, false); break;
+				case 1: Symbol = Lobby->Shape(TEXT("Sphere"), Axle, FVector(26.0f, 18.0f, 18.0f), FLinearColor(1.0f, 0.85f, 0.1f), FRotator::ZeroRotator, false); break;
+				case 2: Symbol = Lobby->Shape(TEXT("Cone"), Axle, FVector(22.0f, 22.0f, 22.0f), CarpetGold * 1.2f, FRotator::ZeroRotator, false); break;
+				case 3: Symbol = Lobby->Sign(Axle, 0.0f, TEXT("BAR"), FColor(20, 16, 16), 13.0f, false); break;
+				case 4: Symbol = Lobby->Shape(TEXT("Cube"), Axle, FVector(16.0f, 16.0f, 16.0f), FLinearColor(0.2f, 0.85f, 1.0f), FRotator::ZeroRotator, false); break;
+				default: Symbol = Lobby->Sign(Axle, 0.0f, TEXT("7"), FColor(220, 20, 30), 30.0f, false); break;
+				}
+				SlotSymbolActors[m][r][k] = Symbol;
+			}
+		}
+		// The lever, on the player's right hand.
+		const FVector Pivot = Cm + FVector(-96.0f, -30.0f, 200.0f);
+		Lobby->Block(Pivot, FVector(20.0f, 30.0f, 34.0f), CarpetGold, 0.0f, false);
+		SlotLevers[m][0] = Lobby->Shape(TEXT("Cylinder"), Pivot, FVector(9.0f, 9.0f, 80.0f), FLinearColor(0.75f, 0.75f, 0.8f), FRotator::ZeroRotator, false);
+		SlotLevers[m][1] = Lobby->Shape(TEXT("Sphere"), Pivot, FVector(24.0f, 24.0f, 24.0f), FLinearColor(1.0f, 0.1f, 0.12f), FRotator::ZeroRotator, false);
+		MakeGlow(SlotLevers[m][1], FLinearColor(1.0f, 0.1f, 0.12f));
 	}
 
 	// Bar. The diner counter, stools, and the bottles that are already in the packs.
@@ -774,8 +1260,9 @@ void ADCCCasinoCascade::AnimateFloor(float DeltaSeconds)
 		if (Spin.bLive)
 		{
 			Spin.Age += DeltaSeconds;
-			const float U = FMath::Clamp(Spin.Age / 4.2f, 0.0f, 1.0f);
-			const float Eased = 1.0f - FMath::Pow(1.0f - U, 3.0f);
+			const float U = FMath::Clamp(Spin.Age / Spin.Duration, 0.0f, 1.0f);
+			// Fast off the hand, then a long crawl, so the last few pegs are the suspense.
+			const float Eased = 1.0f - FMath::Pow(1.0f - U, 3.2f);
 			Angle = FMath::Lerp(Spin.From, Spin.To, Eased);
 			if (U >= 1.0f)
 			{
@@ -792,117 +1279,351 @@ void ADCCCasinoCascade::AnimateFloor(float DeltaSeconds)
 			Angle += DeltaSeconds * Idle;
 		}
 	};
-	auto Arm = [&](FSpin& Spin, float& Angle, float Target)
+	auto Arm = [&](FSpin& Spin, float& Angle, float Target, float MinTravel, float Duration)
 	{
 		Spin.bLive = true;
 		Spin.Age = 0.0f;
+		Spin.Duration = Duration;
 		Spin.From = Angle;
 		Spin.To = Target;
-		while (Spin.To < Spin.From + 520.0f)
+		while (Spin.To < Spin.From + MinTravel)
 		{
 			Spin.To += 360.0f;
 		}
 	};
 
-	if (bEdges && Tables.IsValidIndex(4) && Tables[4].Phase == 3 && SeenPhase[4] != 3 && Tables[4].Result >= 0)
+	const bool bWheelResult = Tables.IsValidIndex(4) && Tables[4].Result >= 0;
+	const bool bRouletteResult = Tables.IsValidIndex(2) && Tables[2].Result >= 0;
+	if (bEdges && bWheelResult && Tables[4].Phase == 3 && SeenPhase[4] != 3)
 	{
-		Arm(WheelSpin, WheelAngle, -60.0f * Tables[4].Result);
+		WheelSlice = Tables[4].Result + ((++WheelSpins & 1) ? 6 : 0);
+		Arm(WheelSpin, WheelAngle, -30.0f * WheelSlice, 1080.0f, WheelSpinTime);
+		// The lever goes down first; the wheel takes off as it bottoms out.
+		WheelSpin.Age = -SlotLeverLead;
+		WheelLeverAge = 0.0f;
+		CasinoSound(GetWorld(), ECasinoSound::Clack, R.Tables[4] + FVector(-300.0f, -330.0f, 200.0f), 0.9f, 0.55f);
 	}
-	if (bEdges && Tables.IsValidIndex(2) && Tables[2].Phase == 3 && SeenPhase[2] != 3 && Tables[2].Result >= 0)
+	if (bEdges && bRouletteResult && Tables[2].Phase == 3 && SeenPhase[2] != 3)
 	{
-		Arm(RouletteSpinAnim, RouletteAngle, (Tables[2].Result / 37.0f) * 360.0f);
+		Arm(RouletteSpinAnim, RouletteAngle, RouletteAngle, 620.0f, RouletteSpinTime);
+		LastBounce = -1;
+		CasinoSound(GetWorld(), ECasinoSound::Whirr, R.Tables[2] + FVector(0.0f, 40.0f, RouletteTop + 30.0f), 0.8f);
 	}
-	if (!bVisualCaught)
+	if (!bVisualCaught && bWheelResult)
 	{
-		if (Tables.IsValidIndex(4) && Tables[4].Result >= 0)
-		{
-			WheelAngle = -60.0f * Tables[4].Result;
-		}
-		if (Tables.IsValidIndex(2) && Tables[2].Result >= 0)
-		{
-			RouletteAngle = (Tables[2].Result / 37.0f) * 360.0f;
-		}
+		WheelSlice = Tables[4].Result;
+		WheelAngle = -30.0f * WheelSlice;
 	}
-	Advance(WheelSpin, WheelAngle, 10.0f);
+	const bool bWheelWasLive = WheelSpin.bLive;
+	const bool bRouletteWasLive = RouletteSpinAnim.bLive;
+	const bool bWheelHold = bWheelResult && Tables[4].Phase == 3;
+	Advance(WheelSpin, WheelAngle, bWheelHold ? 0.0f : 6.0f);
 	Advance(RouletteSpinAnim, RouletteAngle, 8.0f);
+	const bool bBlink = FMath::Fmod(Now * 4.0, 1.0) < 0.5;
 
+	// ---- The wheel.
+	const FVector Hub = R.Tables[4] + FVector(0.0f, 0.0f, WheelHubZ);
+	if (bWheelWasLive && !WheelSpin.bLive)
+	{
+		const bool bBust = (WheelSlice % 6) == 5;
+		CasinoSound(GetWorld(), bBust ? ECasinoSound::Drop : ECasinoSound::Chime, Hub, bBust ? 1.0f : 0.8f);
+	}
 	if (PrizeDisc)
 	{
-		// Spin in the plane of the wall. A roll on the pitched disc turns it edge-on.
 		PrizeDisc->SetActorRotation(WallSlice(WheelAngle));
 	}
-	const FVector Hub = R.Tables[4] + FVector(0.0f, 0.0f, 470.0f);
-	const float BandR[] = { 64.0f, 118.0f, 174.0f };
-	for (int32 i = 0; i < 6; ++i)
+	const bool bWheelShow = bWheelHold && !WheelSpin.bLive;
+	const float BandC[] = { 92.0f, 158.0f, 224.0f, 290.0f };
+	for (int32 j = 0; j < WheelSliceCount; ++j)
 	{
-		const float A = WheelAngle + i * 60.0f;
-		for (int32 Band = 0; Band < 3; ++Band)
+		const float A = WheelAngle + j * 30.0f;
+		const bool bWinner = bWheelShow && j == WheelSlice;
+		for (int32 Band = 0; Band < 4; ++Band)
 		{
-			if (PrizeParts[i][Band])
+			if (AActor* Part = PrizeParts[j][Band])
 			{
-				PrizeParts[i][Band]->SetActorLocation(Hub + FVector(-22.0f, 0.0f, 0.0f) + WallRadial(A, BandR[Band]));
-				PrizeParts[i][Band]->SetActorRotation(WallSlice(A));
+				Part->SetActorLocationAndRotation(Hub + FVector(-16.0f - (j & 1) * 0.6f, 0.0f, 0.0f) + WallRadial(A, BandC[Band]), WallSlice(A));
+				if (bWinner)
+				{
+					Tint(Part, bBlink ? FLinearColor(1.0f, 0.97f, 0.85f) : SliceColour(j));
+				}
+				else if (bWheelShowWas && !bWheelShow)
+				{
+					Tint(Part, SliceColour(j));
+				}
 			}
 		}
-		if (WheelLabels[i])
+		if (WheelLabels[j])
 		{
-			// Stay upright so 10 and Bust can be read while the slice turns.
-			WheelLabels[i]->SetActorLocation(Hub + FVector(-46.0f, 0.0f, 0.0f) + WallRadial(A, 168.0f));
-			WheelLabels[i]->SetActorRotation(FRotator(0.0f, 180.0f, 0.0f));
+			// Upright, so 10 and Bust can be read while the slice turns.
+			WheelLabels[j]->SetActorLocation(Hub + FVector(-34.0f, 0.0f, 0.0f) + WallRadial(A, 236.0f));
+			WheelLabels[j]->SetActorRotation(FRotator(0.0f, 180.0f, 0.0f));
+		}
+		if (WheelPegs[j])
+		{
+			WheelPegs[j]->SetActorLocation(Hub + FVector(-26.0f, 0.0f, 0.0f) + WallRadial(A + 15.0f, 334.0f));
 		}
 	}
-
-	const FVector WheelHub = R.Tables[2] + FVector(0.0f, 60.0f, 132.0f);
-	for (int32 i = 0; i < 12; ++i)
+	bWheelShowWas = bWheelShow;
 	{
-		const float Deg = RouletteAngle + i * 30.0f;
-		const float A = FMath::DegreesToRadians(Deg);
-		const FVector Spoke(FMath::Cos(A), FMath::Sin(A), 0.0f);
-		if (RoulettePockets[i])
+		// A peg passes the top every 30 degrees: the flapper kicks and clicks.
+		const int32 Peg = FMath::FloorToInt((WheelAngle + 15.0f) / 30.0f);
+		if (Peg != LastPeg)
 		{
-			RoulettePockets[i]->SetActorLocation(WheelHub + Spoke * 78.0f);
-			RoulettePockets[i]->SetActorRotation(TableSlice(Deg));
+			if (WheelSpin.bLive && LastPeg != MIN_int32)
+			{
+				FlapperKick = 1.0f;
+				CasinoSound(GetWorld(), ECasinoSound::Tick, Hub + FVector(-30.0f, 0.0f, 340.0f), 0.6f, FMath::FRandRange(0.95f, 1.08f));
+			}
+			LastPeg = Peg;
 		}
-		if (RouletteFrets[i])
+		FlapperKick = FMath::Max(0.0f, FlapperKick - DeltaSeconds * 6.0f);
+		if (WheelFlapper)
 		{
-			const float Fret = Deg + 15.0f;
-			const float FR = FMath::DegreesToRadians(Fret);
-			RouletteFrets[i]->SetActorLocation(WheelHub + FVector(FMath::Cos(FR) * 78.0f, FMath::Sin(FR) * 78.0f, 1.0f));
-			RouletteFrets[i]->SetActorRotation(TableSlice(Fret));
+			const FVector Pivot = Hub + FVector(-30.0f, 0.0f, 376.0f);
+			const FRotator Swing(0.0f, 0.0f, -FlapperKick * 32.0f);
+			WheelFlapper->SetActorLocationAndRotation(Pivot + Swing.RotateVector(FVector(0.0f, 0.0f, -24.0f)), Swing);
 		}
-		if (i == 0 && RouletteZero)
+	}
+	for (int32 k = 0; k < 24; ++k)
+	{
+		float Level = 0.45f + 0.3f * FMath::Sin(float(Now) * 2.0f + k * 0.5f);
+		if (WheelSpin.bLive)
 		{
-			RouletteZero->SetActorLocation(WheelHub + Spoke * 78.0f + FVector(0.0f, 0.0f, 18.0f));
-			RouletteZero->SetActorRotation(FRotator(0.0f, -90.0f, 0.0f));
+			Level = ((k + int32(Now * 14.0)) % 4 == 0) ? 1.6f : 0.15f;
+		}
+		else if (bWheelShow)
+		{
+			Level = bBlink ? 1.8f : 0.1f;
+		}
+		Tint(WheelBulbs[k], WheelBulbColour(k) * Level * 2.0f);
+	}
+
+	// ---- Roulette.
+	const FVector Bowl = R.Tables[2] + FVector(0.0f, 40.0f, 0.0f);
+	const float Step = 360.0f / 37.0f;
+	const bool bRouletteShow = bRouletteResult && Tables[2].Phase == 3 && !RouletteSpinAnim.bLive;
+	const int32 WinPocket = bRouletteResult ? RoulettePocketOf(Tables[2].Result) : 0;
+	for (int32 p = 0; p < 37; ++p)
+	{
+		const float Deg = RouletteAngle + p * Step;
+		if (RoulettePockets[p])
+		{
+			RoulettePockets[p]->SetActorLocationAndRotation(Bowl + FRotator(0.0f, Deg, 0.0f).Vector() * 80.0f
+				+ FVector(0.0f, 0.0f, RouletteTop + 28.0f), FRotator(0.0f, Deg, 0.0f));
+		}
+		if (RouletteFrets[p])
+		{
+			const float Fret = Deg + Step * 0.5f;
+			RouletteFrets[p]->SetActorLocationAndRotation(Bowl + FRotator(0.0f, Fret, 0.0f).Vector() * 80.0f
+				+ FVector(0.0f, 0.0f, RouletteTop + 30.0f), FRotator(0.0f, Fret, 0.0f));
+		}
+	}
+	for (int32 k = 0; k < 2; ++k)
+	{
+		if (RouletteCross[k])
+		{
+			RouletteCross[k]->SetActorLocationAndRotation(Bowl + FVector(0.0f, 0.0f, RouletteTop + 50.0f),
+				FRotator(0.0f, RouletteAngle + k * 90.0f, 0.0f));
+		}
+	}
+	if (bRouletteShow || (RouletteShownPocket >= 0 && RoulettePockets[RouletteShownPocket]))
+	{
+		const int32 Number = RouletteOrder[bRouletteShow ? WinPocket : RouletteShownPocket];
+		const FLinearColor Own = Number == 0 ? FLinearColor(0.05f, 0.62f, 0.22f)
+			: DCCCasinoRedPocket(Number) ? FLinearColor(0.82f, 0.08f, 0.09f) : FLinearColor(0.07f, 0.06f, 0.07f);
+		if (bRouletteShow)
+		{
+			Tint(RoulettePockets[WinPocket], bBlink ? FLinearColor(1.0f, 0.9f, 0.5f) : Own);
+			RouletteShownPocket = WinPocket;
+		}
+		else
+		{
+			Tint(RoulettePockets[RouletteShownPocket], Own);
+			RouletteShownPocket = -1;
 		}
 	}
 	if (RouletteBallActor)
 	{
-		float Orbit = -RouletteAngle * 1.35f;
-		float Radius = 100.0f;
+		const float Track = 127.0f;
+		const float Pocket = 80.0f;
+		float Rel = WinPocket * Step;
+		float Radius = Pocket;
+		float Z = RouletteTop + 30.0f;
 		if (RouletteSpinAnim.bLive)
 		{
-			const float U = FMath::Clamp(RouletteSpinAnim.Age / 4.2f, 0.0f, 1.0f);
-			Radius = FMath::Lerp(104.0f, 78.0f, U * U);
+			const float U = FMath::Clamp(RouletteSpinAnim.Age / RouletteSpinAnim.Duration, 0.0f, 1.0f);
+			constexpr float Settle = 0.9f;
+			const float E = 1.0f - FMath::Pow(1.0f - FMath::Min(U / Settle, 1.0f), 2.0f);
+			// Seven laps the other way round, relative to the rotor, ending in the rolled pocket.
+			Rel = WinPocket * Step + 2520.0f * (1.0f - E);
+			if (U < 0.5f)
+			{
+				Radius = Track;
+				Z = RouletteTop + 26.0f;
+			}
+			else if (U < Settle)
+			{
+				// Off the track, over the diamonds, bouncing pocket to pocket.
+				const float V = (U - 0.5f) / (Settle - 0.5f);
+				const float Bounce = FMath::Sin(V * PI * 5.0f);
+				Radius = FMath::Lerp(Track, Pocket, FMath::SmoothStep(0.0f, 1.0f, V)) + Bounce * (1.0f - V) * 10.0f;
+				Z = FMath::Lerp(RouletteTop + 26.0f, RouletteTop + 30.0f, V) + FMath::Abs(Bounce) * (1.0f - V) * 18.0f;
+				const int32 Hit = FMath::FloorToInt(V * 5.0f);
+				if (Hit != LastBounce)
+				{
+					LastBounce = Hit;
+					CasinoSound(GetWorld(), ECasinoSound::Clack, Bowl + FVector(0.0f, 0.0f, Z), 0.35f + 0.5f * (1.0f - V), FMath::FRandRange(0.9f, 1.15f));
+				}
+			}
+			else if (LastBounce != 99)
+			{
+				LastBounce = 99;
+				CasinoSound(GetWorld(), ECasinoSound::Clack, Bowl + FVector(0.0f, 0.0f, Z), 0.5f, 0.8f);
+			}
 		}
-		else if (Tables.IsValidIndex(2) && Tables[2].Result >= 0 && Tables[2].Phase == 3)
-		{
-			Orbit = (Tables[2].Result / 37.0f) * 360.0f;
-			Radius = 78.0f;
-		}
-		const float A = FMath::DegreesToRadians(Orbit);
-		RouletteBallActor->SetActorLocation(WheelHub + FVector(FMath::Cos(A) * Radius, FMath::Sin(A) * Radius, 10.0f));
+		const float Abs = RouletteAngle + Rel;
+		RouletteBallActor->SetActorLocation(Bowl + FRotator(0.0f, Abs, 0.0f).Vector() * Radius + FVector(0.0f, 0.0f, Z));
+	}
+	if (bRouletteWasLive && !RouletteSpinAnim.bLive)
+	{
+		CasinoSound(GetWorld(), ECasinoSound::Chime, Bowl + FVector(0.0f, 0.0f, 120.0f), 0.7f);
 	}
 
-	// Skee balls. A new BallSerial launches one, up the lane and into the ring it earned.
+	// ---- The wheel's lever.
+	WheelLeverAge += DeltaSeconds;
+	PoseLever(WheelLever[0], WheelLever[1], R.Tables[4] + FVector(-300.0f, -330.0f, 136.0f), FVector(-1.0f, 0.0f, 0.0f),
+		LeverAngle(WheelLeverAge), 150.0f);
+
+	// ---- Reels. A new Serial pulls the lever and spins; the reels stop left to right on the server's symbols.
+	for (int32 m = 0; m < SlotCount; ++m)
+	{
+		const FVector Cm = MachineAt(R, m);
+		const FDCCCasinoSlotNet* Net = Slots.IsValidIndex(m) ? &Slots[m] : nullptr;
+		const bool bPlayed = Net && Net->Serial > 0; // an unplayed machine shows a mixed row, not three cherries
+		const uint8 Result[3] = { bPlayed ? Net->Reel0 : uint8((m + 1) % 6), bPlayed ? Net->Reel1 : uint8((m + 3) % 6), bPlayed ? Net->Reel2 : uint8((m + 5) % 6) };
+		if (Net && Net->Serial != SlotSeen[m])
+		{
+			SlotSeen[m] = Net->Serial;
+			if (bEdges)
+			{
+				SlotLive[m] = true;
+				SlotAge[m] = 0.0f;
+				for (int32 r = 0; r < 3; ++r)
+				{
+					ReelFrom[m][r] = ReelAngle[m][r];
+					float To = -60.0f * (Result[r] % SlotSymbols);
+					while (To > ReelFrom[m][r] - (1080.0f + r * 360.0f))
+					{
+						To -= 360.0f;
+					}
+					ReelTo[m][r] = To;
+				}
+				CasinoSound(GetWorld(), ECasinoSound::Clack, Cm + FVector(-96.0f, -40.0f, 200.0f), 0.8f, 0.6f);
+				CasinoSound(GetWorld(), ECasinoSound::Roll, Cm + FVector(0.0f, -60.0f, 185.0f), 0.6f, 0.65f);
+			}
+			else
+			{
+				for (int32 r = 0; r < 3; ++r)
+				{
+					ReelAngle[m][r] = -60.0f * (Result[r] % SlotSymbols);
+				}
+			}
+		}
+		if (SlotLive[m])
+		{
+			const float Was = SlotAge[m];
+			SlotAge[m] += DeltaSeconds;
+			const float T = SlotAge[m];
+			for (int32 r = 0; r < 3; ++r)
+			{
+				const float Stop = SlotLeverLead + SlotReelStop0 + r * SlotReelGap;
+				if (T <= SlotLeverLead)
+				{
+					ReelAngle[m][r] = ReelFrom[m][r];
+				}
+				else if (T < Stop)
+				{
+					const float U = (T - SlotLeverLead) / (Stop - SlotLeverLead);
+					ReelAngle[m][r] = FMath::Lerp(ReelFrom[m][r], ReelTo[m][r], 1.0f - FMath::Pow(1.0f - U, 2.0f));
+				}
+				else
+				{
+					// A little kick back as it locks.
+					const float After = T - Stop;
+					ReelAngle[m][r] = ReelTo[m][r] + 6.0f * FMath::Sin(After * 30.0f) * FMath::Exp(-After * 10.0f);
+				}
+				if (Was < Stop && T >= Stop)
+				{
+					CasinoSound(GetWorld(), ECasinoSound::Clack, Cm + FVector(-42.0f + r * 42.0f, -60.0f, 185.0f), 0.7f, 0.85f + r * 0.1f);
+				}
+			}
+			const bool bWon = Net && Net->Pay > 0;
+			if (Was < SlotSpinEnd + 0.05f && T >= SlotSpinEnd + 0.05f)
+			{
+				if (bWon)
+				{
+					CasinoSound(GetWorld(), ECasinoSound::Chime, Cm + FVector(0.0f, -60.0f, 260.0f), Net->Pay >= 20 ? 1.0f : 0.7f, Net->Pay >= 20 ? 1.25f : 1.0f);
+				}
+				Say(SlotSigns[m], bWon ? FString::Printf(TEXT("WIN %d"), int32(Net->Pay)) : FString(TEXT("NO LUCK")),
+					bWon ? FColor(140, 10, 20) : FColor(60, 24, 8));
+			}
+			const FLinearColor Glow = SlotTopColours[m % 4];
+			if (T > SlotSpinEnd && bWon)
+			{
+				Tint(SlotTops[m], Glow * (FMath::Fmod(T * 6.0f, 1.0f) < 0.5f ? 4.0f : 0.3f));
+			}
+			if (T > SlotSpinEnd + 3.0f)
+			{
+				SlotLive[m] = false;
+				Tint(SlotTops[m], Glow * 1.5f);
+				Say(SlotSigns[m], TEXT("2 A PULL"), FColor(60, 24, 8));
+			}
+		}
+		PoseLever(SlotLevers[m][0], SlotLevers[m][1], Cm + FVector(-96.0f, -30.0f, 210.0f), FVector(0.0f, -1.0f, 0.0f),
+			SlotLive[m] ? LeverAngle(SlotAge[m]) : 0.0f, 80.0f);
+		for (int32 r = 0; r < 3; ++r)
+		{
+			const FVector Axle = Cm + FVector(-42.0f + r * 42.0f, -40.0f, 185.0f);
+			for (int32 k = 0; k < SlotSymbols; ++k)
+			{
+				AActor* Symbol = SlotSymbolActors[m][r][k];
+				if (!Symbol)
+				{
+					continue;
+				}
+				const float A = ReelAngle[m][r] + k * 60.0f;
+				const FVector Out = ReelRadial(A);
+				const FVector Up = ReelUp(A);
+				FRotator Rot = FRotator::ZeroRotator;
+				if (k == 3 || k == 5)
+				{
+					Rot = FRotationMatrix::MakeFromXZ(Out, Up).Rotator(); // text faces out of the reel
+				}
+				else if (k == 2)
+				{
+					Rot = FRotationMatrix::MakeFromZX(Up, Out).Rotator(); // the bell stands upright on the reel
+				}
+				else if (k == 4)
+				{
+					Rot = FRotationMatrix::MakeFromZX(Out, (FVector(1.0f, 0.0f, 0.0f) + Up).GetSafeNormal()).Rotator(); // a diamond, on its point
+				}
+				Symbol->SetActorLocationAndRotation(Axle + Out * (k == 3 || k == 5 ? 33.5f : 34.0f), Rot);
+			}
+		}
+	}
+
+	// ---- Skee balls. A new BallSerial rolls one up its lane, over the lip, and into the hole it earned.
 	for (int32 s = 0; s < SeatCount; ++s)
 	{
 		const FDCCCasinoSeatNet* Seat = Seats.IsValidIndex(s) ? &Seats[s] : nullptr;
+		const FSkeeLane S = SkeeLane(R.Seats[0][s].At);
 		if (bEdges && Seat && Seat->BallSerial != SeenSerial[s] && Seat->LastBall > 0 && SkeeBalls[s])
 		{
 			BallT[s] = 0.001f;
 			BallPts[s] = Seat->LastBall;
 			SkeeBalls[s]->SetActorHiddenInGame(false);
+			CasinoSound(GetWorld(), ECasinoSound::Roll, S.LaneFrom + FVector(0.0f, 200.0f, 20.0f), 0.9f, FMath::FRandRange(0.95f, 1.05f));
 		}
 		if (Seat)
 		{
@@ -912,24 +1633,57 @@ void ADCCCasinoCascade::AnimateFloor(float DeltaSeconds)
 		{
 			continue;
 		}
-		BallT[s] += DeltaSeconds / 1.05f;
-		int32 Step = 4;
-		if (BallPts[s] >= 50) Step = 0;
-		else if (BallPts[s] >= 40) Step = 1;
-		else if (BallPts[s] >= 30) Step = 2;
-		else if (BallPts[s] >= 20) Step = 3;
-		const FVector Start(R.Seats[0][s].At.X, R.Seats[0][s].At.Y, 64.0f);
-		const FVector End(Start.X, R.Tables[0].Y + 16.0f, 130.0f);
-		const float T = FMath::Clamp(BallT[s], 0.0f, 1.0f);
-		FVector At = FMath::Lerp(Start, End, T);
-		At.Z += FMath::Sin(T * PI) * 120.0f;
-		SkeeBalls[s]->SetActorLocation(At);
-		for (int32 Ring = 0; Ring < 5; ++Ring)
+		const float Was = BallT[s];
+		BallT[s] += DeltaSeconds / 1.9f;
+		const float T = BallT[s];
+		int32 Ring = 4;
+		if (BallPts[s] >= 50) Ring = 0;
+		else if (BallPts[s] >= 40) Ring = 1;
+		else if (BallPts[s] >= 30) Ring = 2;
+		else if (BallPts[s] >= 20) Ring = 3;
+		const FVector Target = S.Hole(Ring) + S.BoardOut * 12.0f;
+		FVector At = Target;
+		if (T < 0.42f)
 		{
-			const bool bFlash = Ring == Step && BallT[s] > 1.0f && BallT[s] < 1.45f;
-			Tint(SkeeRings[s][Ring], bFlash ? FLinearColor(1.0f, 0.95f, 0.7f) : RingColours[Ring]);
+			// Up the lane, slowing as it climbs, with a little drift.
+			const float U = T / 0.42f;
+			const float Along = 1.0f - FMath::Pow(1.0f - U, 1.6f);
+			At = FMath::Lerp(S.LaneFrom, S.LaneTo, Along) + S.LaneUp * 12.0f + FVector(FMath::Sin(U * 9.0f) * 6.0f * (1.0f - U), 0.0f, 0.0f);
 		}
-		if (BallT[s] > 1.9f)
+		else if (T < 0.52f)
+		{
+			const float U = (T - 0.42f) / 0.10f;
+			At = FMath::Lerp(S.LaneTo, S.RampTop, U) + S.RampUp * 12.0f;
+		}
+		else if (T < 0.86f)
+		{
+			// Off the lip and into the air. The 50 needs the biggest hop.
+			const float U = (T - 0.52f) / 0.34f;
+			At = FMath::Lerp(S.RampTop + S.RampUp * 12.0f, Target, U);
+			At.Z += 4.0f * U * (1.0f - U) * (40.0f + (4 - Ring) * 14.0f);
+		}
+		else if (T < 1.0f)
+		{
+			const float U = (T - 0.86f) / 0.14f;
+			At = Target - S.BoardOut * (U * 34.0f);
+		}
+		if (Was < 0.86f && T >= 0.86f)
+		{
+			CasinoSound(GetWorld(), ECasinoSound::Drop, Target, 0.9f, 1.0f + (4 - Ring) * 0.08f);
+			if (Ring <= 1)
+			{
+				CasinoSound(GetWorld(), ECasinoSound::Chime, Target, 0.6f, Ring == 0 ? 1.2f : 1.0f);
+			}
+		}
+		SkeeBalls[s]->SetActorLocation(At);
+		SkeeBalls[s]->SetActorHiddenInGame(T >= 1.0f);
+
+		for (int32 k = 0; k < 5; ++k)
+		{
+			const bool bFlash = k == Ring && T > 0.86f && T < 1.5f && FMath::Fmod(T * 8.0f, 1.0f) < 0.6f;
+			Tint(SkeeRings[s][k], bFlash ? FLinearColor(1.0f, 0.95f, 0.7f) : RingColours[k]);
+		}
+		if (T > 1.6f)
 		{
 			BallT[s] = 0.0f;
 			SkeeBalls[s]->SetActorHiddenInGame(true);
@@ -1059,12 +1813,12 @@ void ADCCCasinoCascade::AnimateFloor(float DeltaSeconds)
 		}
 		FString Line;
 		FColor Colour(255, 220, 170);
-		if (t == 4 && WheelSpin.bLive && WheelSpin.Age < 3.1f)
+		if (t == 4 && WheelSpin.bLive)
 		{
 			Line = TEXT("The wheel is turning.");
 			Colour = FColor(255, 196, 80);
 		}
-		else if (t == 2 && RouletteSpinAnim.bLive && RouletteSpinAnim.Age < 3.1f)
+		else if (t == 2 && RouletteSpinAnim.bLive)
 		{
 			Line = TEXT("The ball is in the wheel.");
 			Colour = FColor(255, 196, 80);
@@ -1306,6 +2060,8 @@ void ADCCCasinoCascade::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	DOREPLIFETIME(ADCCCasinoCascade, Tables);
 	DOREPLIFETIME(ADCCCasinoCascade, Seats);
 	DOREPLIFETIME(ADCCCasinoCascade, ServerClock);
+	DOREPLIFETIME(ADCCCasinoCascade, Slots);
+	DOREPLIFETIME(ADCCCasinoCascade, Scratchcards);
 }
 
 void ADCCCasinoCascade::OnRep_Clock()
@@ -1369,12 +2125,192 @@ void ADCCCasinoCascade::DrinkInfo(int32 Index, FString& Label, int32& Price, FSt
 
 void ADCCCasinoCascade::EnsureArrays()
 {
+	if (Slots.Num() != SlotCount)
+	{
+		Slots.SetNum(SlotCount);
+	}
 	if (Tables.Num() == TableCount && Seats.Num() == TableCount * SeatCount)
 	{
 		return;
 	}
 	Tables.SetNum(TableCount);
 	Seats.SetNum(TableCount * SeatCount);
+}
+
+// ---- Reels and scratchcards -----------------------------------------------------------------------------------------
+
+FVector ADCCCasinoCascade::MachineAt(const FRoom& R, int32 Index)
+{
+	// On the north wall, between the last skee lane and the roulette table. The card machine is last, a step apart.
+	return R.Center + FVector(-100.0f + Index * 180.0f + (Index >= SlotCount ? 30.0f : 0.0f), R.HalfY - 110.0f, 0.0f);
+}
+
+int32 ADCCCasinoCascade::SlotNear(const FVector& At) const
+{
+	const FRoom R = Room();
+	int32 Best = -1;
+	float BestDist = 120.0f;
+	for (int32 i = 0; i <= SlotCount; ++i)
+	{
+		const float Dist = FVector::Dist2D(At, MachineAt(R, i) + FVector(0.0f, -190.0f, 0.0f));
+		if (Dist < BestDist)
+		{
+			BestDist = Dist;
+			Best = i;
+		}
+	}
+	return Best;
+}
+
+int32 ADCCCasinoCascade::CardAmount(int32 Index)
+{
+	return CardAmounts[FMath::Clamp(Index, 0, 5)];
+}
+
+const FDCCScratchNet* ADCCCasinoCascade::CardFor(const APlayerState* State) const
+{
+	const FString Name = State ? State->GetPlayerName() : FString();
+	if (Name.IsEmpty())
+	{
+		return nullptr;
+	}
+	return Scratchcards.FindByPredicate([&Name](const FDCCScratchNet& Card) { return Card.Owner == Name; });
+}
+
+bool ADCCCasinoCascade::SpendFor(ADCCCharacterBase* Who, int32 Price)
+{
+	APlayerState* State = Who ? Who->GetPlayerState() : nullptr;
+	const FString Key = DCCProfile::KeyFor(State);
+	if (Key.IsEmpty() || !DCCProfile::SpendTickets(Key, Price))
+	{
+		// No comps here: a free pull that can pay would be a ticket tap.
+		Tell(Who, FString::Printf(TEXT("That is %d tickets. Skee-ball pays tickets."), Price));
+		return false;
+	}
+	if (Who->Wallet)
+	{
+		Who->Wallet->Tickets = DCCProfile::GetTickets(Key);
+	}
+	Tell(Who, FString::Printf(TEXT("-%d tickets."), Price));
+	return true;
+}
+
+void ADCCCasinoCascade::PullSlot(ADCCCharacterBase* Who, int32 Machine)
+{
+	if (!HasAuthority() || !Who || Machine < 0 || Machine >= SlotCount || IsSeated(Who))
+	{
+		return;
+	}
+	EnsureArrays();
+	if (FVector::Dist2D(Who->GetActorLocation(), MachineAt(Room(), Machine)) > 420.0f)
+	{
+		Tell(Who, TEXT("Step up to the machine."));
+		return;
+	}
+	const double Now = GetWorld()->GetTimeSeconds();
+	if (Now < SlotBusy[Machine])
+	{
+		Tell(Who, TEXT("Let the reels stop first."));
+		return;
+	}
+	if (!SpendFor(Who, SlotStake))
+	{
+		return;
+	}
+	FDCCCasinoSlotNet& Slot = Slots[Machine];
+	Slot.Player = CrawlerName(Who);
+	Slot.Reel0 = uint8(Weighted(SlotWeight, SlotSymbols));
+	Slot.Reel1 = uint8(Weighted(SlotWeight, SlotSymbols));
+	Slot.Reel2 = uint8(Weighted(SlotWeight, SlotSymbols));
+	FString Why;
+	const int32 Mult = SlotMultiplier(Slot.Reel0, Slot.Reel1, Slot.Reel2, Why);
+	Slot.Pay = int16(Mult * SlotStake);
+	++Slot.Serial;
+	SlotBusy[Machine] = Now + SlotSpinEnd + 0.5;
+	SlotRevealAt[Machine] = Now + SlotSpinEnd + 0.1;
+	SlotOwed[Machine].Who = Who;
+	SlotOwed[Machine].Pay = Slot.Pay;
+	SlotOwed[Machine].Text = Why;
+	ForceNetUpdate();
+	UE_LOG(LogTemp, Log, TEXT("[DCC Casino] %s pulled reel %d: %d %d %d, pays %d"), *Slot.Player, Machine, Slot.Reel0, Slot.Reel1, Slot.Reel2, Slot.Pay);
+}
+
+void ADCCCasinoCascade::BuyCard(ADCCCharacterBase* Who)
+{
+	if (!HasAuthority() || !Who || IsSeated(Who))
+	{
+		return;
+	}
+	if (FVector::Dist2D(Who->GetActorLocation(), MachineAt(Room(), SlotCount)) > 420.0f)
+	{
+		Tell(Who, TEXT("Step up to the machine."));
+		return;
+	}
+	ClaimCard(Who); // an unfinished card pays out before the next one
+	if (!SpendFor(Who, CardPrice))
+	{
+		return;
+	}
+	const FString Name = CrawlerName(Who);
+	FDCCScratchNet* Card = Scratchcards.FindByPredicate([&Name](const FDCCScratchNet& Each) { return Each.Owner == Name; });
+	if (!Card)
+	{
+		Card = &Scratchcards.AddDefaulted_GetRef();
+		Card->Owner = Name;
+	}
+	// Decide the card first, then deal the cells: the winning amount three times, every other amount at most twice.
+	const int32 Win = FMath::FRand() < 0.45f ? Weighted(CardWeights, 6) : -1;
+	TArray<uint8> Cells;
+	int32 Count[6] = {};
+	if (Win >= 0)
+	{
+		Cells.Init(uint8(Win), 3);
+		Count[Win] = 3;
+	}
+	while (Cells.Num() < 9)
+	{
+		const int32 Pick = FMath::RandRange(0, 5);
+		if (Pick == Win || Count[Pick] >= 2)
+		{
+			continue;
+		}
+		Cells.Add(uint8(Pick));
+		++Count[Pick];
+	}
+	for (int32 i = Cells.Num() - 1; i > 0; --i)
+	{
+		Cells.Swap(i, FMath::RandRange(0, i));
+	}
+	Card->Cells = Cells;
+	Card->Prize = int16(Win >= 0 ? CardAmounts[Win] : 0);
+	Card->bClaimed = 0;
+	++Card->Serial;
+	ForceNetUpdate();
+	UE_LOG(LogTemp, Log, TEXT("[DCC Casino] %s bought a card, prize %d"), *Name, int32(Card->Prize));
+}
+
+void ADCCCasinoCascade::ClaimCard(ADCCCharacterBase* Who)
+{
+	if (!HasAuthority() || !Who)
+	{
+		return;
+	}
+	const FString Name = CrawlerName(Who);
+	FDCCScratchNet* Card = Scratchcards.FindByPredicate([&Name](const FDCCScratchNet& Each) { return Each.Owner == Name; });
+	if (!Card || Card->bClaimed)
+	{
+		return;
+	}
+	Card->bClaimed = 1;
+	if (Card->Prize > 0)
+	{
+		Give(Who, Card->Prize, FString::Printf(TEXT("Mother Lode, three %ds"), int32(Card->Prize)));
+	}
+	else
+	{
+		Tell(Who, TEXT("No three alike."));
+	}
+	ForceNetUpdate();
 }
 
 void ADCCCasinoCascade::BeginPlay()
@@ -1528,6 +2464,15 @@ void ADCCCasinoCascade::Sit(ADCCCharacterBase* Who, const FRoom& Layout, int32 T
 	const FSpot& Spot = Layout.Seats[Table][Seat];
 	Who->SetActorLocation(Spot.At, false, nullptr, ETeleportType::TeleportPhysics);
 	Who->SetActorRotation(Spot.Face);
+	// Turn the camera to the game too (2026-11-21): sitting at the wheel used to leave you looking back across the room.
+	if (APlayerController* PC = Cast<APlayerController>(Who->GetController()))
+	{
+		FRotator View = Spot.Face;
+		// Skee looks up the lane, roulette and the card table look down onto the felt, the wheel looks up at the wheel.
+		const float Pitches[] = { -24.0f, -26.0f, -34.0f, -26.0f, 10.0f };
+		View.Pitch = Pitches[FMath::Clamp(Table, 0, 4)];
+		PC->ClientSetRotation(View, true);
+	}
 	if (UCharacterMovementComponent* Move = Who->GetCharacterMovement())
 	{
 		Move->StopMovementImmediately();
@@ -1680,8 +2625,9 @@ void ADCCCasinoCascade::Join(ADCCCharacterBase* Who, int32 Table)
 	else if (Pit.Phase == 0 || Pit.Phase == 3)
 	{
 		Pit.Phase = 1;
-		Pit.EndsAt = Now + 6.0;
-		Pit.Line = TEXT("Sitting down. Deal when you are ready, or wait a few seconds.");
+		// The wheel waits for someone to pull its lever (2026-11-21). The rest deal after a few seconds.
+		Pit.EndsAt = Now + (Table == 4 ? 40.0 : 6.0);
+		Pit.Line = Table == 4 ? TEXT("Pick a wedge, then pull the lever.") : TEXT("Sitting down. Deal when you are ready, or wait a few seconds.");
 		Tell(Who, TEXT("You are in. This table does not wait on the room."));
 	}
 	else if (Pit.Phase == 1)
@@ -1860,27 +2806,26 @@ void ADCCCasinoCascade::StartHand(int32 Table)
 					Pay = Seat.Stake > 0 ? (Pick == 12 ? Seat.Stake * 15 : Seat.Stake * 2) : (Pick == 12 ? 8 : 4);
 				}
 			}
-			if (bWin)
-			{
-				Give(Who, Pay, FString::Printf(TEXT("%s hit"), *Bet));
-			}
-			else
-			{
-				Tell(Who, FString::Printf(TEXT("%s did not come up."), *Bet));
-			}
+			// Held until the wheel stops (ServerTickGame), so the ticket pop never spoils the spin.
+			FPendingPay& Owed = PendingPays[Table].AddDefaulted_GetRef();
+			Owed.Who = Who;
+			Owed.Pay = bWin ? Pay : 0;
+			Owed.Text = bWin ? FString::Printf(TEXT("%s hit"), *Bet) : FString::Printf(TEXT("%s did not come up."), *Bet);
 		}
 		if (bWheel)
 		{
-			Pit.Line = FString::Printf(TEXT("The wheel stops on %s."), WheelWord[Pit.Result]);
+			PendingLine[Table] = FString::Printf(TEXT("The wheel stops on %s."), WheelWord[Pit.Result]);
 		}
 		else
 		{
 			const TCHAR* Colour = Pit.Result == 0 ? TEXT("green") : DCCCasinoRedPocket(Pit.Result) ? TEXT("red") : TEXT("black");
-			Pit.Line = FString::Printf(TEXT("Ball on %d, %s."), Pit.Result, Colour);
+			PendingLine[Table] = FString::Printf(TEXT("Ball on %d, %s."), Pit.Result, Colour);
 		}
+		Pit.Line = bWheel ? TEXT("The wheel is turning.") : TEXT("No more bets.");
 		Pit.Phase = 3;
-		Pit.EndsAt = Now + 6.0;
-		UE_LOG(LogTemp, Log, TEXT("[DCC Casino] %s resolved: %s"), GameTitle(Table), *Pit.Line);
+		RevealAt[Table] = Now + (bWheel ? WheelSpinTime : RouletteSpinTime) + 0.3;
+		Pit.EndsAt = RevealAt[Table] + 4.5;
+		UE_LOG(LogTemp, Log, TEXT("[DCC Casino] %s resolved: %s"), GameTitle(Table), *PendingLine[Table]);
 		return;
 	}
 
@@ -2104,7 +3049,7 @@ void ADCCCasinoCascade::FinishShow(int32 Table)
 	}
 	FDCCCasinoTableNet Cleared;
 	Cleared.Phase = Table == 0 ? 2 : 1;
-	Cleared.EndsAt = GetWorld()->GetTimeSeconds() + 6.0;
+	Cleared.EndsAt = GetWorld()->GetTimeSeconds() + (Table == 4 ? 40.0 : 6.0);
 	Cleared.Line = Tables[Table].Line;
 	for (int32 s = 0; s < SeatCount; ++s)
 	{
@@ -2172,7 +3117,7 @@ void ADCCCasinoCascade::Choose(ADCCCharacterBase* Who, int32 ChoiceId)
 				bAll = false;
 			}
 		}
-		if (bAll)
+		if (bAll && Table != 4) // the wheel goes on its lever
 		{
 			StartHand(Table);
 		}
@@ -2277,6 +3222,27 @@ void ADCCCasinoCascade::ServerTickGame()
 	for (int32 t = 0; t < TableCount; ++t)
 	{
 		FDCCCasinoTableNet& Pit = Tables[t];
+		if (t < SlotCount && SlotRevealAt[t] > 0.0 && Now >= SlotRevealAt[t])
+		{
+			// The reels have stopped on every screen: pay, or say so.
+			SlotRevealAt[t] = 0.0;
+			Give(SlotOwed[t].Who.Get(), SlotOwed[t].Pay, SlotOwed[t].Text);
+			SlotOwed[t] = FPendingPay();
+		}
+		if (RevealAt[t] > 0.0 && (Now >= RevealAt[t] || Occupied(t) == 0))
+		{
+			RevealAt[t] = 0.0;
+			if (!PendingLine[t].IsEmpty())
+			{
+				Pit.Line = PendingLine[t];
+			}
+			for (const FPendingPay& Owed : PendingPays[t])
+			{
+				Give(Owed.Who.Get(), Owed.Pay, Owed.Text);
+			}
+			PendingPays[t].Reset();
+			PendingLine[t].Reset();
+		}
 		if (Pit.Phase == 0)
 		{
 			continue;
@@ -2404,7 +3370,7 @@ void ADCCCasinoCascade::FillOptions(const ADCCCharacterBase* Who, TArray<FString
 			{
 				Add(WheelWord[i], 20 + i);
 			}
-			Add(TEXT("Spin"), 1);
+			Add(TEXT("Pull the lever"), 1);
 		}
 		else if (Table == 1)
 		{
@@ -2488,6 +3454,9 @@ void ADCCCharacterBase::Server_CasinoAction_Implementation(uint8 Action, int32 A
 	case 2: Casino->Choose(this, Arg); break;
 	case 3: Casino->Leave(this); break;
 	case 4: Casino->Buy(this, Arg); break;
+	case 5: Casino->PullSlot(this, Arg); break;
+	case 6: Casino->BuyCard(this); break;
+	case 7: Casino->ClaimCard(this); break;
 	default: break;
 	}
 }
@@ -2543,6 +3512,80 @@ static FAutoConsoleCommandWithWorldAndArgs GCasinoGo(
 				Go(Weak.Get());
 			}
 		}), Delay, false);
+	}));
+
+static FAutoConsoleCommandWithWorldAndArgs GCasinoMachine(
+	TEXT("DCC.CasinoMachine"),
+	TEXT("Dev: walk up to a casino machine (0-3 slots, 4 the card machine) and use it. Delay is the last argument."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		if (!World)
+		{
+			return;
+		}
+		const int32 Which = FMath::Clamp(Args.Num() > 0 ? FCString::Atoi(*Args[0]) : 0, 0, ADCCCasinoCascade::SlotCount);
+		const float Delay = Args.Num() > 1 ? FCString::Atof(*Args.Last()) : 0.0f;
+		TWeakObjectPtr<UWorld> Weak(World);
+		auto Go = [Weak, Which]()
+		{
+			UWorld* W = Weak.Get();
+			APlayerController* PC = W ? W->GetFirstPlayerController() : nullptr;
+			ADCCCharacterBase* Who = PC ? Cast<ADCCCharacterBase>(PC->GetPawn()) : nullptr;
+			ADCCCasinoCascade* Casino = W ? ADCCCasinoCascade::Get(W) : nullptr;
+			if (!Who || !Casino)
+			{
+				return;
+			}
+			const FVector At = ADCCCasinoCascade::MachineAt(ADCCCasinoCascade::RoomFor(Casino->GetActorLocation()), Which)
+				+ FVector(0.0f, -190.0f, 100.0f);
+			Who->SetActorLocation(At, false, nullptr, ETeleportType::TeleportPhysics);
+			const FRotator Face(-12.0f, 90.0f, 0.0f);
+			Who->SetActorRotation(FRotator(0.0f, 90.0f, 0.0f));
+			PC->SetControlRotation(Face);
+			Who->Server_CasinoAction_Implementation(Which == ADCCCasinoCascade::SlotCount ? 6 : 5, Which);
+		};
+		if (Delay <= 0.0f)
+		{
+			Go();
+			return;
+		}
+		FTimerHandle Handle;
+		World->GetTimerManager().SetTimer(Handle, FTimerDelegate::CreateLambda(Go), Delay, false);
+	}));
+
+static FAutoConsoleCommandWithWorldAndArgs GCasinoSit(
+	TEXT("DCC.CasinoSit"),
+	TEXT("Dev: sit the local crawler at a casino game (0 skee, 1 hockey, 2 roulette, 3 blackjack, 4 wheel). Delay is the last argument."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		if (!World)
+		{
+			return;
+		}
+		const int32 Which = Args.Num() > 0 ? FCString::Atoi(*Args[0]) : 0;
+		const float Delay = Args.Num() > 1 ? FCString::Atof(*Args.Last()) : 0.0f;
+		TWeakObjectPtr<UWorld> Weak(World);
+		auto Go = [Weak, Which]()
+		{
+			UWorld* W = Weak.Get();
+			APlayerController* PC = W ? W->GetFirstPlayerController() : nullptr;
+			ADCCCharacterBase* Who = PC ? Cast<ADCCCharacterBase>(PC->GetPawn()) : nullptr;
+			ADCCCasinoCascade* Casino = W ? ADCCCasinoCascade::Get(W) : nullptr;
+			if (Who && Casino)
+			{
+				const int32 Table = FMath::Clamp(Which, 0, ADCCCasinoCascade::TableCount - 1);
+				// Walk up to the middle seat first: Join wants you at the table.
+				Who->SetActorLocation(ADCCCasinoCascade::RoomFor(Casino->GetActorLocation()).Seats[Table][2].At, false, nullptr, ETeleportType::TeleportPhysics);
+				Casino->Join(Who, Table);
+			}
+		};
+		if (Delay <= 0.0f)
+		{
+			Go();
+			return;
+		}
+		FTimerHandle Handle;
+		World->GetTimerManager().SetTimer(Handle, FTimerDelegate::CreateLambda(Go), Delay, false);
 	}));
 
 static FAutoConsoleCommandWithWorldAndArgs GCasinoSpot(

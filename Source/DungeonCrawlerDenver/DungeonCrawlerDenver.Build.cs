@@ -17,6 +17,7 @@ public class DungeonCrawlerDenver : ModuleRules
 			"InputCore",
 			"EnhancedInput",
 			"AIModule",
+			"NavigationSystem", // the runtime navmesh for the arcade arenas (2026-11-22)
 			"StateTreeModule",
 			"GameplayStateTreeModule",
 			"UMG",

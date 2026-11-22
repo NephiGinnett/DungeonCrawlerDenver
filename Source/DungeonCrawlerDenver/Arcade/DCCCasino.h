@@ -121,6 +121,54 @@ struct FDCCCasinoTableNet
 	FString Line;
 };
 
+/** One slot machine on the casino's north wall (2026-11-21). A new Serial spins its reels on every screen. */
+USTRUCT()
+struct FDCCCasinoSlotNet
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	FString Player;
+
+	/** The symbol each reel stops on (0 cherries ... 5 sevens). */
+	UPROPERTY()
+	uint8 Reel0 = 0;
+	UPROPERTY()
+	uint8 Reel1 = 0;
+	UPROPERTY()
+	uint8 Reel2 = 0;
+
+	UPROPERTY()
+	uint8 Serial = 0;
+
+	/** Tickets this pull pays, paid when the last reel stops. */
+	UPROPERTY()
+	int16 Pay = 0;
+};
+
+/** A Mother Lode scratchcard. The server deals it whole; scratching only uncovers it (2026-11-21). */
+USTRUCT()
+struct FDCCScratchNet
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	FString Owner;
+
+	/** Nine cells, each an index into the prize amounts. Three alike win that amount. */
+	UPROPERTY()
+	TArray<uint8> Cells;
+
+	UPROPERTY()
+	int16 Prize = 0;
+
+	UPROPERTY()
+	uint8 Serial = 0;
+
+	UPROPERTY()
+	uint8 bClaimed = 0;
+};
+
 /** Floor staff. Play, rules, and the bar list. They do not fight. */
 UCLASS()
 class DUNGEONCRAWLERDENVER_API ADCCCasinoStaff : public ADCCDialogueNPC
@@ -174,6 +222,18 @@ public:
 	static constexpr int32 SeatCount = 6;
 	static constexpr int32 Stake = 5;
 
+	/** Reels and scratchcards (2026-11-21). Four slot machines, then the card machine at index SlotCount. */
+	static constexpr int32 SlotCount = 4;
+	static constexpr int32 SlotStake = 2;
+	static constexpr int32 CardPrice = 2;
+	/** The machine (0 to SlotCount-1), the card machine (SlotCount), or -1 when nothing is in front of you. */
+	int32 SlotNear(const FVector& At) const;
+	void PullSlot(ADCCCharacterBase* Who, int32 Machine);
+	void BuyCard(ADCCCharacterBase* Who);
+	void ClaimCard(ADCCCharacterBase* Who);
+	const FDCCScratchNet* CardFor(const APlayerState* State) const;
+	static int32 CardAmount(int32 Index);
+
 	/** The moving mark. Salt is the seat for skee, and 0 for the shared hockey puck. */
 	static double Mark(double Now, int32 Salt);
 
@@ -223,6 +283,8 @@ public:
 
 	static void DenBounds(float& L, float& W);
 	static FRoom RoomFor(const FVector& LobbyOrigin);
+	/** Floor middle of a machine (Index SlotCount is the card machine). Players stand 190 south of it. */
+	static FVector MachineAt(const FRoom& R, int32 Index);
 
 private:
 	UPROPERTY(Replicated)
@@ -233,6 +295,12 @@ private:
 
 	UPROPERTY(ReplicatedUsing = OnRep_Clock)
 	double ServerClock = 0.0;
+
+	UPROPERTY(Replicated)
+	TArray<FDCCCasinoSlotNet> Slots;
+
+	UPROPERTY(Replicated)
+	TArray<FDCCScratchNet> Scratchcards;
 
 	UFUNCTION()
 	void OnRep_Clock();
@@ -258,6 +326,7 @@ private:
 		float From = 0.0f;
 		float To = 0.0f;
 		float Age = 0.0f;
+		float Duration = 4.2f;
 		bool bLive = false;
 	};
 
@@ -265,6 +334,45 @@ private:
 	FSpin RouletteSpinAnim;
 	float WheelAngle = 0.0f;
 	float RouletteAngle = 0.0f;
+	/** The slice the wheel is landing on (0-11; slice j pays like j % 6). */
+	int32 WheelSlice = 0;
+	int32 WheelSpins = 0;
+	int32 LastPeg = MIN_int32;
+	float FlapperKick = 0.0f;
+	int32 LastBounce = -1;
+	bool bWheelShowWas = false;
+	int32 RouletteShownPocket = -1;
+
+	/** Roulette and the wheel pay out when the spin stops, not when the server rolls (2026-11-21). */
+	struct FPendingPay
+	{
+		TWeakObjectPtr<ADCCCharacterBase> Who;
+		int32 Pay = 0;
+		FString Text;
+	};
+	TArray<FPendingPay> PendingPays[TableCount];
+	FString PendingLine[TableCount];
+	double RevealAt[TableCount] = {};
+
+	// Reels (server).
+	double SlotBusy[SlotCount] = {};
+	double SlotRevealAt[SlotCount] = {};
+	FPendingPay SlotOwed[SlotCount];
+	bool SpendFor(ADCCCharacterBase* Who, int32 Price);
+
+	// Reels and levers (every screen).
+	AActor* SlotSymbolActors[SlotCount][3][6] = {};
+	AActor* SlotLevers[SlotCount][2] = {};
+	AActor* SlotTops[SlotCount] = {};
+	ATextRenderActor* SlotSigns[SlotCount] = {};
+	float ReelAngle[SlotCount][3] = {};
+	float ReelFrom[SlotCount][3] = {};
+	float ReelTo[SlotCount][3] = {};
+	float SlotAge[SlotCount] = {};
+	bool SlotLive[SlotCount] = {};
+	uint8 SlotSeen[SlotCount] = {};
+	AActor* WheelLever[2] = {};
+	float WheelLeverAge = 99.0f;
 	float BallT[SeatCount] = {};
 	int32 BallPts[SeatCount] = {};
 	uint8 SeenSerial[SeatCount] = {};
@@ -279,13 +387,16 @@ private:
 	int32 PuckSide = 0;
 
 	AActor* PrizeDisc = nullptr;
-	/** Three bands per prize, narrow at the hub and wide at the rim, so the six pays read as slices. */
-	AActor* PrizeParts[6][3] = {};
-	ATextRenderActor* WheelLabels[6] = {};
+	/** Four bands per slice, narrow at the hub and wide at the rim. Twelve slices, each pay twice. */
+	AActor* PrizeParts[12][4] = {};
+	ATextRenderActor* WheelLabels[12] = {};
+	AActor* WheelPegs[12] = {};
+	AActor* WheelBulbs[24] = {};
+	AActor* WheelFlapper = nullptr;
 	AActor* RouletteDisc = nullptr;
-	AActor* RoulettePockets[12] = {};
-	AActor* RouletteFrets[12] = {};
-	ATextRenderActor* RouletteZero = nullptr;
+	AActor* RoulettePockets[37] = {};
+	AActor* RouletteFrets[37] = {};
+	AActor* RouletteCross[2] = {};
 	AActor* RouletteBallActor = nullptr;
 	AActor* Puck = nullptr;
 	AActor* Mallets[2] = {};
