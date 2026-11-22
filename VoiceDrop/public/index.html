@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Voice Drop</title>
+<style>
+  :root {
+    --bg: #0d0b14; --panel: #17131f; --panel2: #1f1a2b; --line: #2e2740; --ink: #efe9f7; --dim: #a79fb8;
+    --accent: #ff4fa3; --accent2: #43e6d0; --good: #6be07a; --warn: #ffb347; --bad: #ff6b6b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 28px 16px 80px; }
+  h1 { margin: 0 0 4px; font-size: 30px; letter-spacing: .5px; }
+  h1 span { color: var(--accent); }
+  h2 { font-size: 18px; margin: 0 0 12px; }
+  .sub { color: var(--dim); margin: 0 0 24px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin-bottom: 18px; }
+  label { display: block; font-size: 14px; color: var(--dim); margin: 10px 0 4px; }
+  input[type=text], textarea { width: 100%; background: var(--panel2); border: 1px solid var(--line); color: var(--ink);
+    border-radius: 8px; padding: 10px 12px; font: inherit; }
+  textarea { min-height: 54px; resize: vertical; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 600px) { .row2 { grid-template-columns: 1fr; } }
+  .consent { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; color: var(--ink); font-size: 15px; }
+  .consent input { margin-top: 4px; width: 18px; height: 18px; accent-color: var(--accent); }
+  .speakers { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+  .speaker { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 12px; cursor: pointer; text-align: left;
+    color: var(--ink); font: inherit; }
+  .speaker:hover { border-color: var(--accent2); }
+  .speaker.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .speaker b { display: block; }
+  .speaker small { color: var(--dim); }
+  .tips { color: var(--dim); font-size: 14px; margin: 0; padding-left: 18px; }
+  .line { border-top: 1px solid var(--line); padding: 14px 0; }
+  .line:first-child { border-top: 0; }
+  .text { font-size: 17px; margin: 0 0 10px; }
+  .dir { color: var(--warn); font-style: italic; }
+  .meta { color: var(--dim); font-size: 12px; margin-bottom: 6px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  button.act { border: 0; border-radius: 999px; padding: 8px 16px; font: 600 14px system-ui, sans-serif; cursor: pointer; color: #120f19; }
+  button.rec { background: var(--accent); }
+  button.stop { background: var(--bad); animation: pulse 1s infinite; }
+  button.send { background: var(--good); }
+  button.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  button:disabled { opacity: .45; cursor: default; }
+  @keyframes pulse { 50% { opacity: .65; } }
+  audio { height: 34px; max-width: 260px; }
+  .status { font-size: 14px; }
+  .status.ok { color: var(--good); } .status.err { color: var(--bad); } .status.busy { color: var(--dim); }
+  .file { position: relative; overflow: hidden; }
+  .file input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .done { color: var(--good); font-weight: 600; }
+  .hidden { display: none; }
+  footer { color: var(--dim); font-size: 13px; margin-top: 30px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Voice <span>Drop</span></h1>
+  <p class="sub" id="intro">Lend a character your voice. Record right here, or upload a take from your phone. When a line ships in the game, the name you play under gets tickets.</p>
+
+  <section class="card">
+    <h2>1. Who's reading</h2>
+    <div class="row2">
+      <div>
+        <label for="name">Your name</label>
+        <input type="text" id="name" maxlength="60" placeholder="So we know who you are" autocomplete="name">
+      </div>
+      <div>
+        <label for="gameName">The name you play as (if you play)</label>
+        <input type="text" id="gameName" maxlength="60" placeholder="Tickets go here when a line ships">
+      </div>
+    </div>
+    <label for="contact">How to reach you (optional)</label>
+    <input type="text" id="contact" maxlength="120" placeholder="Discord, email, whatever works">
+    <label class="consent"><input type="checkbox" id="consent"> I'm happy for my recordings to be used in Dungeon Crawler Denver.</label>
+  </section>
+
+  <section class="card">
+    <h2>2. Pick a character</h2>
+    <div class="speakers" id="speakers"><p class="status busy">Loading the cast...</p></div>
+  </section>
+
+  <section class="card hidden" id="linesCard">
+    <h2 id="linesTitle">3. Read the lines</h2>
+    <ul class="tips">
+      <li>A quiet room is better than a good mic. Phones are fine.</li>
+      <li><span class="dir">[Words in brackets]</span> are directions. Act them, don't read them.</li>
+      <li>Do as many or as few as you like. Each line sends on its own.</li>
+    </ul>
+    <div id="lines"></div>
+  </section>
+
+  <footer>Takes go to the game's developer to listen to first. Not every take ships, and that's okay.</footer>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let catalog = null;
+let current = null;
+const sent = JSON.parse(localStorage.getItem("voiceDropSent") || "{}");
+
+// Remember who's reading between visits.
+for (const id of ["name", "gameName", "contact"]) {
+  try { $(id).value = localStorage.getItem("voiceDrop_" + id) || ""; } catch {}
+  $(id).addEventListener("change", () => { try { localStorage.setItem("voiceDrop_" + id, $(id).value); } catch {} });
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+function prettyLine(text) {
+  return escapeHtml(text).replace(/\[([^\]]+)\]/g, '<span class="dir">[$1]</span>');
+}
+
+async function load() {
+  try {
+    const res = await fetch("/api/catalog");
+    catalog = await res.json();
+  } catch {
+    $("speakers").innerHTML = '<p class="status err">Could not load the cast. Try again in a minute.</p>';
+    return;
+  }
+  if (catalog.intro) $("intro").textContent = catalog.intro;
+  const box = $("speakers");
+  box.innerHTML = "";
+  if (!catalog.speakers.length) {
+    box.innerHTML = '<p class="status">Nothing to record right now. Check back soon.</p>';
+    return;
+  }
+  for (const s of catalog.speakers) {
+    const b = document.createElement("button");
+    b.className = "speaker";
+    const wanted = s.lines.filter((l) => l.wanted).length;
+    b.innerHTML = `<b>${escapeHtml(s.name)}</b><small>${s.lines.length} line${s.lines.length === 1 ? "" : "s"}${wanted ? ` · ${wanted} with no voice yet` : ""}</small>`;
+    if (s.blurb) b.title = s.blurb;
+    b.onclick = () => pick(s, b);
+    box.appendChild(b);
+  }
+}
+
+function pick(speaker, button) {
+  current = speaker;
+  document.querySelectorAll(".speaker").forEach((el) => el.classList.toggle("on", el === button));
+  $("linesCard").classList.remove("hidden");
+  $("linesTitle").textContent = `3. Read as ${speaker.name}`;
+  const list = $("lines");
+  list.innerHTML = "";
+  const ordered = [...speaker.lines].sort((a, b) => (b.wanted ? 1 : 0) - (a.wanted ? 1 : 0));
+  for (const line of ordered) list.appendChild(lineView(speaker, line));
+  $("linesCard").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function pickMime() {
+  const options = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus"];
+  return options.find((m) => window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) || "";
+}
+
+function lineView(speaker, line) {
+  const el = document.createElement("div");
+  el.className = "line";
+  const key = speaker.id + "|" + line.row;
+  el.innerHTML = `
+    <div class="meta">${escapeHtml(line.row)}${line.wanted ? " · no voice yet" : ""}${sent[key] ? ' · <span class="done">you sent this one</span>' : ""}</div>
+    <p class="text">${prettyLine(line.text)}</p>
+    <div class="controls">
+      <button class="act rec">● Record</button>
+      <span class="act ghost file"><button class="act ghost" tabindex="-1">Upload a file</button><input type="file" accept="audio/*,.m4a,.mp3,.wav,.ogg,.webm,.flac"></span>
+      <audio controls class="hidden"></audio>
+      <button class="act send hidden">Send</button>
+      <span class="status"></span>
+    </div>`;
+  const recBtn = el.querySelector(".rec");
+  const fileInput = el.querySelector("input[type=file]");
+  const audio = el.querySelector("audio");
+  const sendBtn = el.querySelector(".send");
+  const status = el.querySelector(".status");
+  let blob = null, recorder = null, stream = null, chunks = [];
+
+  const setStatus = (text, kind) => { status.textContent = text; status.className = "status " + (kind || ""); };
+  const ready = (b) => {
+    blob = b;
+    audio.src = URL.createObjectURL(b);
+    audio.classList.remove("hidden");
+    sendBtn.classList.remove("hidden");
+    sendBtn.disabled = false;
+    setStatus("Have a listen, then send it.", "busy");
+  };
+
+  recBtn.onclick = async () => {
+    if (recorder && recorder.state === "recording") { recorder.stop(); return; }
+    if (!window.MediaRecorder) { setStatus("This browser can't record. Upload a file instead.", "err"); return; }
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: true, autoGainControl: true } });
+    } catch {
+      setStatus("No microphone access. Allow it in the address bar, or upload a file.", "err");
+      return;
+    }
+    const mime = pickMime();
+    recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+    chunks = [];
+    recorder.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+    recorder.onstop = () => {
+      stream.getTracks().forEach((t) => t.stop());
+      recBtn.textContent = "● Record again";
+      recBtn.className = "act rec";
+      ready(new Blob(chunks, { type: recorder.mimeType || mime || "audio/webm" }));
+    };
+    recorder.start();
+    recBtn.textContent = "■ Stop";
+    recBtn.className = "act stop";
+    setStatus("Recording...", "busy");
+  };
+
+  fileInput.onchange = () => {
+    const f = fileInput.files[0];
+    if (f) ready(f);
+  };
+
+  sendBtn.onclick = async () => {
+    const name = $("name").value.trim();
+    if (!name) { setStatus("Put your name in at the top first.", "err"); $("name").focus(); return; }
+    if (!$("consent").checked) { setStatus("Tick the box at the top first.", "err"); return; }
+    if (!blob) return;
+    const form = new FormData();
+    form.append("name", name);
+    form.append("gameName", $("gameName").value.trim());
+    form.append("contact", $("contact").value.trim());
+    form.append("consent", "yes");
+    form.append("speaker", speaker.id);
+    form.append("row", line.row);
+    const ext = (blob.type.includes("mp4") ? "m4a" : blob.type.includes("ogg") ? "ogg" : blob.type.includes("mpeg") ? "mp3" : blob.type.includes("wav") ? "wav" : "webm");
+    form.append("audio", blob, blob.name || `${line.row}.${ext}`);
+    sendBtn.disabled = true;
+    setStatus("Sending...", "busy");
+    try {
+      const res = await fetch("/api/submit", { method: "POST", body: form });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || "That didn't go through.");
+      sent[key] = true;
+      try { localStorage.setItem("voiceDropSent", JSON.stringify(sent)); } catch {}
+      setStatus("Sent! Thank you.", "ok");
+      sendBtn.classList.add("hidden");
+    } catch (e) {
+      sendBtn.disabled = false;
+      setStatus(e.message, "err");
+    }
+  };
+  return el;
+}
+
+load();
+</script>
+</body>
+</html>

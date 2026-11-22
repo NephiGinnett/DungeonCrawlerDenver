@@ -1,4 +1,89 @@
 #include "Arcade/DCCWalletComponent.h"
+#include "Session/DCCProfile.h"
+#include "Dom/JsonObject.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
+#include "Serialization/JsonReader.h"
+#include "Serialization/JsonSerializer.h"
+
+/**
+ * Voice Drop credits (2026-11-22, Zoe: "players to be able to upload their voice lines and even friends who haven't
+ * played the game ... have the game award those tickets ... when the voice line is shipped"). Friends record on the
+ * VoiceDrop site; Tools/voice_inbox.py brings approved takes into the game and writes Content/DCC/VoiceCredits/
+ * credits.json. Here, on the host, each credit is paid once to the player whose name matches, the first time they play.
+ */
+namespace DCCVoiceCredits
+{
+	struct FCredit
+	{
+		FString Id;
+		FString Player;
+		FString Speaker;
+		FString Text;
+		int32 Tickets = 0;
+	};
+
+	const TArray<FCredit>& All()
+	{
+		static TArray<FCredit> Credits;
+		static bool bLoaded = false;
+		if (bLoaded)
+		{
+			return Credits;
+		}
+		bLoaded = true;
+		FString Text;
+		const FString Path = FPaths::ProjectContentDir() / TEXT("DCC/VoiceCredits/credits.json");
+		TSharedPtr<FJsonObject> Root;
+		const TArray<TSharedPtr<FJsonValue>>* Rows = nullptr;
+		if (FFileHelper::LoadFileToString(Text, *Path) && FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Text), Root)
+			&& Root.IsValid() && Root->TryGetArrayField(TEXT("credits"), Rows))
+		{
+			for (const TSharedPtr<FJsonValue>& Value : *Rows)
+			{
+				const TSharedPtr<FJsonObject> Row = Value.IsValid() ? Value->AsObject() : nullptr;
+				if (!Row.IsValid())
+				{
+					continue;
+				}
+				FCredit Credit;
+				Credit.Id = Row->GetStringField(TEXT("id"));
+				Credit.Player = Row->GetStringField(TEXT("player")).TrimStartAndEnd();
+				Credit.Speaker = Row->GetStringField(TEXT("speaker"));
+				Credit.Text = Row->GetStringField(TEXT("text"));
+				Credit.Tickets = static_cast<int32>(Row->GetNumberField(TEXT("tickets")));
+				if (!Credit.Id.IsEmpty() && !Credit.Player.IsEmpty() && Credit.Tickets > 0)
+				{
+					Credits.Add(Credit);
+				}
+			}
+		}
+		UE_LOG(LogTemp, Log, TEXT("[DCC Voice] %d shipped voice line credit(s) on file."), Credits.Num());
+		return Credits;
+	}
+
+	/** Server: pay this player any credit of theirs not paid yet. The profile remembers which were paid. */
+	void PayOut(APlayerState* State, const FString& Key)
+	{
+		for (const FCredit& Credit : All())
+		{
+			if (!Credit.Player.Equals(Key, ESearchCase::IgnoreCase))
+			{
+				continue;
+			}
+			const FName Stat(*FString::Printf(TEXT("Credit_%s"), *Credit.Id));
+			if (DCCProfile::GetForKey(Key, TEXT("Voice"), Stat, 0.0f) > 0.5f)
+			{
+				continue;
+			}
+			DCCProfile::SetForKey(Key, TEXT("Voice"), Stat, 1.0f);
+			const FString Quote = Credit.Text.Len() > 50 ? Credit.Text.Left(47) + TEXT("...") : Credit.Text;
+			UDCCWalletComponent::AwardTickets(State, Credit.Tickets,
+				FString::Printf(TEXT("your voice line shipped (%s: \"%s\")"), *Credit.Speaker, *Quote));
+			UE_LOG(LogTemp, Log, TEXT("[DCC Voice] paid %s %d tickets for %s %s"), *Key, Credit.Tickets, *Credit.Speaker, *Credit.Id);
+		}
+	}
+}
 #include "Combat/DCCGameState.h"
 #include "Characters/DCCAllyCharacters.h"
 #include "Arcade/DCCSummons.h"
@@ -632,6 +717,12 @@ void UDCCWalletComponent::RefreshBounties()
 	if (Key.IsEmpty())
 	{
 		return;
+	}
+	// Shipped voice lines (DCCVoiceCredits above). A visitor only once their profile has merged here, so the payment
+	// cannot be overwritten by the copy their PC brings.
+	if (const APawn* Pawn = Cast<APawn>(GetOwner()); Pawn && (Pawn->IsLocallyControlled() || bProfileSent))
+	{
+		DCCVoiceCredits::PayOut(Pawn->GetPlayerState(), Key);
 	}
 	int32 Done = 0, Paid = 0;
 	const TArray<DCCBounties::FBounty>& All = DCCBounties::All();

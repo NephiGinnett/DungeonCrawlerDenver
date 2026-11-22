@@ -1,0 +1,17 @@
+{
+  "name": "voice-drop",
+  "version": "1.0.0",
+  "description": "Dungeon Crawler Denver voice line uploads: friends record lines in the browser, Zoe gets pinged, the game pays tickets when a line ships.",
+  "main": "server.js",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "4.21.2",
+    "multer": "2.0.2"
+  }
+}

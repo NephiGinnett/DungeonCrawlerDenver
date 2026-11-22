@@ -1,0 +1,523 @@
+{
+  "title": "Voice Drop",
+  "intro": "Lend a character your voice. Record right here, or upload a take from your phone. When a line ships in the game, the name you play under gets tickets.",
+  "speakers": [
+    {
+      "id": "Dispatch",
+      "name": "Dispatch (Vonda)",
+      "open": true,
+      "source": "impound_lines",
+      "lines": [
+        {
+          "row": "RR_Disp_Go",
+          "text": "Dispatch to all trucks. Flag is down. Marks are on the board, amber columns. Go get them.",
+          "wanted": true
+        },
+        {
+          "row": "RR_Disp_Hooked",
+          "text": "Line's on. Reel it in. Keep it off the parked cars.",
+          "wanted": true
+        },
+        {
+          "row": "RR_Disp_Bumper",
+          "text": "It's on your bumper. Bring it home to the yard.",
+          "wanted": true
+        },
+        {
+          "row": "RR_Disp_Drop",
+          "text": "Drop logged. Clean work. Rhee might even nod.",
+          "wanted": true
+        },
+        {
+          "row": "RR_Disp_DropWreck",
+          "text": "Drop logged. That car came in looking like modern art. Pay's docked.",
+          "wanted": true
+        },
+        {
+          "row": "RR_Disp_Wrong",
+          "text": "That was not a mark. That was a citizen. Fine's on your tab.",
+          "wanted": true
+        },
+        {
+          "row": "RR_Disp_Cut",
+          "text": "Line cut. No car, no pay.",
+          "wanted": true
+        },
+        {
+          "row": "RR_Disp_Debt",
+          "text": "Your tab just went red, driver. Every crew in the city can hear that on the scanner.",
+          "wanted": true
+        },
+        {
+          "row": "RR_Disp_Wave1",
+          "text": "Heads up. The easy ones are gone. Next marks are boxed in.",
+          "wanted": true
+        },
+        {
+          "row": "RR_Disp_Wave2",
+          "text": "They're moving now. Runners on the grid. Hook and hold.",
+          "wanted": true
+        },
+        {
+          "row": "RR_Disp_Wave3",
+          "text": "Some of these spook. Get too close and they lift off. Lock before they know you're there.",
+          "wanted": true
+        },
+        {
+          "row": "RR_Disp_Last30",
+          "text": "Thirty seconds on the shift. Whatever's on your hook, get it home.",
+          "wanted": true
+        },
+        {
+          "row": "RR_Disp_Brief",
+          "text": "Evening, night shift. Tonight's list is on your screens: four cars that stopped paying. Hook them, reel them onto your bumper, tow them home to the yard, drop them. Quick and clean pays. Wrong car is a fine. Flag drops in fifteen.",
+          "wanted": true
+        }
+      ]
+    },
+    {
+      "id": "Jan",
+      "name": "Clerk Jan",
+      "open": true,
+      "source": "impound_lines",
+      "lines": [
+        {
+          "row": "RR_Jan_01",
+          "text": "Right mouse aims. Q fires the hook, or drops the car once it is on your bumper and you are in this yard. F switches, if your truck has a net. T is the radio. Leave it.",
+          "wanted": true
+        },
+        {
+          "row": "RR_Jan_02",
+          "text": "The bays are the roles. Runner is faster and a shorter hook. Net throws a net. Winch reaches further and reels harder. Tank drinks less fuel. The tab covers it, and the tab can go red.",
+          "wanted": true
+        },
+        {
+          "row": "RR_Jan_03",
+          "text": "Street gas always pumps, and it goes on your tab. The yard pump is free until you owe us. Then it is closed, and I will not pretend otherwise.",
+          "wanted": true
+        },
+        {
+          "row": "RR_Jan_04",
+          "text": "A drop pays the tab. Clear it, or the other crews will treat your truck like a skip. Hook the wrong car and I fine you.",
+          "wanted": true
+        },
+        {
+          "row": "RR_Jan_05",
+          "text": "Amber columns are the marks. The map in the corner shows the same cars, the gas, and anyone hunting you.",
+          "wanted": true
+        },
+        {
+          "row": "RR_Jan_06",
+          "text": "Cyan chevrons on the road are boost pads. The skyways have them all the way down the far side. Downhill and boosted is how you beat a runner home.",
+          "wanted": true
+        },
+        {
+          "row": "RR_Jan_07",
+          "text": "The ramps are on the street because the city planner lost a bet. You can jump them with a car on your bumper. I would not. Paperwork.",
+          "wanted": true
+        },
+        {
+          "row": "RR_Jan_08",
+          "text": "When the music comes up, the shift is almost over. Whatever is on your hook when it ends is not a drop. Get it home.",
+          "wanted": true
+        }
+      ]
+    },
+    {
+      "id": "Bea",
+      "name": "Banjo Bea",
+      "open": true,
+      "source": "fort_tiner_lines",
+      "lines": [
+        {
+          "row": "FT_Bea_01",
+          "text": "Equip your Climbin', then hold the left mouse to haul yourself up. Let go and you drop, so only let go over a ledge, hon.",
+          "wanted": true
+        },
+        {
+          "row": "FT_Bea_02",
+          "text": "Climbin' burns stamina. When your arms start singin', find a ledge and let 'em rest a spell.",
+          "wanted": true
+        },
+        {
+          "row": "FT_Bea_03",
+          "text": "I wrote a song about the last fella who skipped the ledges. It's a short song. Real short.",
+          "wanted": true
+        },
+        {
+          "row": "FT_Bea_04",
+          "text": "Beat the clock to the summit and there's extra tickets in it for ya. Daylight's wastin', crawler!",
+          "wanted": true
+        },
+        {
+          "row": "FT_Bea_05",
+          "text": "I tried to write the drones a song. They didn't clap. Rude little machines.",
+          "wanted": true
+        },
+        {
+          "row": "FT_Bea_06",
+          "text": "Sheriff wants a lookout on the peak. That's you, hon. Hold on tight and go see.",
+          "wanted": true
+        },
+        {
+          "row": "FT_Bea_Summit_01",
+          "text": "I'm writin' it into the song so it's on the record. Vaughn found the Lucky Tuesday under the pasture. The drones were just the ushers.",
+          "wanted": true
+        }
+      ]
+    },
+    {
+      "id": "Diaz",
+      "name": "Flagger Diaz",
+      "open": true,
+      "source": "impound_lines",
+      "lines": [
+        {
+          "row": "RR_Diaz_01",
+          "text": "Heavy traffic. It is not decoration, and it is not a ghost anymore. Hit it and you stop. Go around.",
+          "wanted": true
+        },
+        {
+          "row": "RR_Diaz_02",
+          "text": "I keep the beacons lit. If you cannot see the column, trust the map. Parked cars sit off the street. The ones that spook climb.",
+          "wanted": true
+        },
+        {
+          "row": "RR_Diaz_03",
+          "text": "A net on the road slows whatever drives through it. Slow is easier to reel onto the bumper. Then you still have to drive it home.",
+          "wanted": true
+        },
+        {
+          "row": "RR_Diaz_04",
+          "text": "W and S drive. A and D steer. Click boosts. Shift slides. Right mouse aims the hook. The flag drops when the flag drops.",
+          "wanted": true
+        },
+        {
+          "row": "RR_Diaz_05",
+          "text": "Two skyways, nine metres up. Up the ramp, along the deck over the crossings, and down the long side with the pads. The rails keep you on. Mostly.",
+          "wanted": true
+        },
+        {
+          "row": "RR_Diaz_06",
+          "text": "Parked cars sit right in the lanes tonight. Somebody double-parked the whole city. Weave.",
+          "wanted": true
+        },
+        {
+          "row": "RR_Diaz_07",
+          "text": "Sirens out there are not for you. Yet. The horns are, usually.",
+          "wanted": true
+        }
+      ]
+    },
+    {
+      "id": "Rhee",
+      "name": "Lot Boss Rhee",
+      "open": true,
+      "source": "impound_lines",
+      "lines": [
+        {
+          "row": "RR_Rhee_01",
+          "text": "This is a shift, not a parade. Marked cars are loose in the city. Right mouse aims the hook. Q fires it. Pull the car onto your bumper and bring it here.",
+          "wanted": true
+        },
+        {
+          "row": "RR_Rhee_02",
+          "text": "The first ones are parked. Then they sit boxed in, and yanking one out scars it. Then they run. Some of them spook and leave the ground when you get close. A clean car pays. A scarred one does not.",
+          "wanted": true
+        },
+        {
+          "row": "RR_Rhee_03",
+          "text": "One truck tows one car. A second truck can throw a net, or block a runner, or take a different mark. Split up and you cover more of the city. The shift pays whoever banks the most.",
+          "wanted": true
+        },
+        {
+          "row": "RR_Rhee_04",
+          "text": "Go into debt and you are a mark too. Night Shift and the other crew will come find you, and Jan will not open the yard pump.",
+          "wanted": true
+        },
+        {
+          "row": "RR_Rhee_05",
+          "text": "Night shift pays double because nobody wants it. The city looks like a postcard from 1986 and drives like a pinball machine. Bring my cars back clean.",
+          "wanted": true
+        },
+        {
+          "row": "RR_Rhee_06",
+          "text": "Hold right mouse on a mark until the ring locks green. Then fire. A locked hook does not miss. A guessed one buys you a fine.",
+          "wanted": true
+        },
+        {
+          "row": "RR_Rhee_07",
+          "text": "Every one of those cars was a promise somebody made to a lender. Tonight we collect on promises. Do not get sentimental about the fuzzy dice.",
+          "wanted": true
+        }
+      ]
+    },
+    {
+      "id": "MaOre",
+      "name": "Ma Ore",
+      "open": true,
+      "source": "fort_tiner_lines",
+      "lines": [
+        {
+          "row": "FT_MaOre_01",
+          "text": "Prize counter's back in the Safe Room, sugar. Win yourself some tickets up that rock and go treat yourself.",
+          "wanted": true
+        },
+        {
+          "row": "FT_MaOre_02",
+          "text": "That helmet? Lamp works fine. Battery don't. We're workin' on it. We've been workin' on it since eighteen fifty-nine.",
+          "wanted": true
+        },
+        {
+          "row": "FT_MaOre_03",
+          "text": "My late husband went down a mineshaft lookin' for silver. Found the System instead. Now he's a floor boss. We still write.",
+          "wanted": true
+        },
+        {
+          "row": "FT_MaOre_04",
+          "text": "Every inch you climb earns you points. Get to the top with everybody and the whole crew gets a bonus. Teamwork, darlin'.",
+          "wanted": true
+        },
+        {
+          "row": "FT_MaOre_05",
+          "text": "Those drones hover like they're takin' inventory. I don't like bein' counted.",
+          "wanted": true
+        },
+        {
+          "row": "FT_MaOre_06",
+          "text": "Climb it, sugar. If the company wants the mountain, I want our eyes on the top before theirs.",
+          "wanted": true
+        },
+        {
+          "row": "FT_MaOre_Summit_01",
+          "text": "The beam over that hole has my husband's mark on it. Vaughn read it out loud and the lamp went blue. Don't go in alone.",
+          "wanted": true
+        }
+      ]
+    },
+    {
+      "id": "Dusty",
+      "name": "Sheriff Dusty",
+      "open": true,
+      "source": "fort_tiner_lines",
+      "lines": [
+        {
+          "row": "FT_Dusty_01",
+          "text": "Well howdy, crawler. Welcome to Fort Tiner. Population six, and one goat that thinks it's the mayor.",
+          "wanted": true
+        },
+        {
+          "row": "FT_Dusty_02",
+          "text": "Rule one of Fort Tiner: no climbin' on the fort. Rule two: climb everything else. That's what you're here for.",
+          "wanted": true
+        },
+        {
+          "row": "FT_Dusty_03",
+          "text": "The summit sits at fourteen thousand one hundred and fifteen feet. I've been up there twice. Came down the fast way once.",
+          "wanted": true
+        },
+        {
+          "row": "FT_Dusty_04",
+          "text": "If a crawler don't come back down by sundown, we ring the bell. Then we eat their beans. Out of respect.",
+          "wanted": true
+        },
+        {
+          "row": "FT_Dusty_05",
+          "text": "Been seein' little metal bugs over the ridge. Corpo drones. They ain't here for the goat.",
+          "wanted": true
+        },
+        {
+          "row": "FT_Dusty_06",
+          "text": "They keep circlin' the peak. You get up there and tell me what they're lookin' at. That's the job.",
+          "wanted": true
+        },
+        {
+          "row": "FT_Dusty_Summit_01",
+          "text": "Gus come off the slope white as a sheet. Says Vaughn found a shaft the company already knew about. That's why the drones came.",
+          "wanted": true
+        }
+      ]
+    },
+    {
+      "id": "Brad",
+      "name": "Brad from LIQUIDATOR",
+      "open": true,
+      "source": "radio_lines",
+      "lines": [
+        {
+          "row": "KMHR_S04_01",
+          "text": "[maximum volume] ARE YOU TIRED OF BEING ALIVE AT A NORMAL SPEED?",
+          "wanted": true
+        },
+        {
+          "row": "KMHR_S04_02",
+          "text": "LIQUIDATOR ENERGY. FORTY-ONE TIMES THE CAFFEINE OF A REGULAR SCREAM. FLAVORS INCLUDE: BLUE. ANGRY BLUE. AND FINAL NOTICE, NOW WITH REAL BERRY FLAVOR!",
+          "wanted": true
+        },
+        {
+          "row": "KMHR_S04_03",
+          "text": "I DRANK FOUR LIQUIDATORS AND OUTRAN A REPOSSESSION. [beat] I'M STILL RUNNING. I CAN'T STOP. THIS IS A RECORDING. I'M IN NEBRASKA.",
+          "wanted": true
+        },
+        {
+          "row": "KMHR_S09_06",
+          "text": "[distant, out of breath] STILL RUNNING. ENTERING KANSAS. LIQUIDATOR.",
+          "wanted": true
+        }
+      ]
+    },
+    {
+      "id": "NotGary",
+      "name": "Not Gary",
+      "open": true,
+      "source": "radio_lines",
+      "lines": [
+        {
+          "row": "KMHR_S05_03",
+          "text": "[whispering, wind noise] Dale. Dale, I work night maintenance at the airport.",
+          "wanted": false
+        },
+        {
+          "row": "KMHR_S05_05",
+          "text": "I'm not, actually, but I appreciate it. Dale, there's a level under the baggage claim. And a level under that one. I went down eleven floors before I found a vending machine.",
+          "wanted": false
+        },
+        {
+          "row": "KMHR_S05_07",
+          "text": "Health potions, Dale. Dollar-fifty. And a sign that said \"Floor 1, Tutorial, Have Fun!\" with the \"Fun\" in quotation marks.",
+          "wanted": true
+        },
+        {
+          "row": "KMHR_S05_09",
+          "text": "And Dale, there was a camera on the ceiling. And it waved at me.",
+          "wanted": true
+        },
+        {
+          "row": "KMHR_S05_11",
+          "text": "This one does now. I have to go. Something's offering me a sponsorship.",
+          "wanted": true
+        }
+      ]
+    },
+    {
+      "id": "Gus",
+      "name": "Old Gus",
+      "open": true,
+      "source": "fort_tiner_lines",
+      "lines": [
+        {
+          "row": "FT_Gus_01",
+          "text": "Folks think the treasure's up top. Heh. The treasure's DOWN, partner. Deep down. The mountain's just the lid.",
+          "wanted": false
+        },
+        {
+          "row": "FT_Gus_02",
+          "text": "I dug a hole so deep last spring, somethin' down there dug back. Polite fella. Wanted to know if we was hirin'.",
+          "wanted": false
+        },
+        {
+          "row": "FT_Gus_03",
+          "text": "Hear that rumblin'? That's the dungeon, stretchin' its legs under the Rockies. One day it's gonna come up for air.",
+          "wanted": false
+        },
+        {
+          "row": "FT_Gus_04",
+          "text": "You want my advice? Rest on them ledges. The rock don't care how tired you are. The rock never cares.",
+          "wanted": false
+        },
+        {
+          "row": "FT_Gus_05",
+          "text": "Drones again last night. Quiet ones. They don't care about the fort. They care about what's under it.",
+          "wanted": true
+        },
+        {
+          "row": "FT_Gus_06",
+          "text": "Get to the summit. If the lid's cracked, I'll know by how the wind sounds when you come down.",
+          "wanted": true
+        },
+        {
+          "row": "FT_Gus_Summit_01",
+          "text": "While you were on the peak, a drone dropped into the pasture. Vaughn followed it. There's a mine under the goat grass, and the planks moved.",
+          "wanted": true
+        }
+      ]
+    },
+    {
+      "id": "VantageCaller",
+      "name": "Vantage Wellness (on the phone)",
+      "open": true,
+      "source": "radio_lines",
+      "lines": [
+        {
+          "row": "KMHR_S05_14",
+          "text": "Hi Dale! Big fan.",
+          "wanted": true
+        },
+        {
+          "row": "KMHR_S05_16",
+          "text": "We noticed you're stressed, Dale. Your heart rate spiked forty beats when Not Gary said \"eleven floors.\" Have you considered not knowing things?",
+          "wanted": true
+        },
+        {
+          "row": "KMHR_S05_18",
+          "text": "Vantage Wellness offers a full line of soothing products to help you stop noticing. Try our new Unbothered Tea, steeped in the warm feeling that someone else is handling it.",
+          "wanted": true
+        }
+      ]
+    },
+    {
+      "id": "Holt",
+      "name": "Holt (car owner)",
+      "open": true,
+      "source": "impound_lines",
+      "lines": [
+        {
+          "row": "RR_Holt_01",
+          "text": "I paid that note! The receipt is in the glove box you're dragging down the street!",
+          "wanted": false
+        },
+        {
+          "row": "RR_Holt_02",
+          "text": "Mile High can kiss my ass! Touch that bumper and I am not moving!",
+          "wanted": false
+        }
+      ]
+    },
+    {
+      "id": "Nia",
+      "name": "Nia (car owner)",
+      "open": true,
+      "source": "impound_lines",
+      "lines": [
+        {
+          "row": "RR_Nia_01",
+          "text": "Get off my car! My kid's seat is in the back, you asshole!",
+          "wanted": false
+        },
+        {
+          "row": "RR_Nia_02",
+          "text": "I am not a skip! The notice went to the old address! You don't get to take it!",
+          "wanted": false
+        }
+      ]
+    },
+    {
+      "id": "Pryce",
+      "name": "Pryce (car owner)",
+      "open": true,
+      "source": "impound_lines",
+      "lines": [
+        {
+          "row": "RR_Pryce_01",
+          "text": "Hey! That is my car, you son of a bitch! I am paid through Friday!",
+          "wanted": false
+        },
+        {
+          "row": "RR_Pryce_02",
+          "text": "Put the hook down! That is how I get to work, and I have a shift at six!",
+          "wanted": false
+        }
+      ]
+    }
+  ]
+}

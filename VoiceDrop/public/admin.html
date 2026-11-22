@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Voice Drop Admin</title>
+<style>
+  :root { --bg: #0d0b14; --panel: #17131f; --panel2: #1f1a2b; --line: #2e2740; --ink: #efe9f7; --dim: #a79fb8;
+    --accent: #ff4fa3; --good: #6be07a; --warn: #ffb347; --bad: #ff6b6b; --ship: #43e6d0; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 1000px; margin: 0 auto; padding: 24px 16px 60px; }
+  h1 { margin: 0 0 16px; font-size: 24px; } h1 span { color: var(--accent); }
+  .bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; align-items: center; }
+  .tab { background: var(--panel); border: 1px solid var(--line); color: var(--ink); border-radius: 999px; padding: 6px 14px; cursor: pointer; font: inherit; }
+  .tab.on { border-color: var(--accent); color: var(--accent); }
+  .count { color: var(--dim); margin-left: auto; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+  .card.flash { border-color: var(--accent); }
+  .top { display: flex; flex-wrap: wrap; gap: 6px 14px; color: var(--dim); font-size: 13px; }
+  .top b { color: var(--ink); font-size: 15px; }
+  .pill { border-radius: 999px; padding: 1px 9px; font-size: 12px; font-weight: 600; color: #120f19; }
+  .pill.new { background: var(--warn); } .pill.approved { background: var(--good); } .pill.shipped { background: var(--ship); } .pill.rejected { background: var(--bad); }
+  .text { margin: 8px 0; font-size: 16px; }
+  .note { color: var(--warn); font-size: 14px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+  audio { height: 34px; }
+  button.act { border: 0; border-radius: 8px; padding: 6px 12px; font: 600 13px system-ui, sans-serif; cursor: pointer; color: #120f19; }
+  .ok { background: var(--good); } .ship { background: var(--ship); } .no { background: var(--bad); } .plain { background: #cfc8dc; }
+  input.small { width: 70px; } input.name { width: 150px; }
+  input { background: var(--panel2); border: 1px solid var(--line); color: var(--ink); border-radius: 6px; padding: 5px 8px; font: inherit; }
+  a { color: var(--ship); }
+  #login { max-width: 360px; margin: 80px auto; }
+  #login input { width: 100%; margin: 8px 0; padding: 10px; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <div id="login" class="card hidden">
+    <h1>Voice <span>Drop</span> admin</h1>
+    <p>Admin password (the ADMIN_TOKEN you set when deploying):</p>
+    <input type="password" id="token" autocomplete="current-password">
+    <button class="act ok" id="go">Open</button>
+    <p id="loginErr" class="note"></p>
+  </div>
+
+  <div id="app" class="hidden">
+    <h1>Voice <span>Drop</span> admin</h1>
+    <div class="bar" id="tabs"></div>
+    <div id="list"></div>
+  </div>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+let token = "";
+try { token = localStorage.getItem("voiceDropAdmin") || ""; } catch {}
+let filter = "new";
+const STATUSES = ["new", "approved", "shipped", "rejected", "all"];
+
+async function api(path, options = {}) {
+  const res = await fetch(path, { ...options, headers: { "x-admin-token": token, "Content-Type": "application/json", ...(options.headers || {}) } });
+  if (res.status === 401) { showLogin("That password didn't work."); throw new Error("401"); }
+  return res.json();
+}
+function esc(s) { return String(s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+
+function showLogin(msg) {
+  $("app").classList.add("hidden");
+  $("login").classList.remove("hidden");
+  $("loginErr").textContent = msg || "";
+}
+$("go").onclick = () => {
+  token = $("token").value.trim();
+  try { localStorage.setItem("voiceDropAdmin", token); } catch {}
+  start();
+};
+$("token").addEventListener("keydown", (e) => e.key === "Enter" && $("go").click());
+
+function tabs() {
+  $("tabs").innerHTML = "";
+  for (const s of STATUSES) {
+    const b = document.createElement("button");
+    b.className = "tab" + (s === filter ? " on" : "");
+    b.textContent = s[0].toUpperCase() + s.slice(1);
+    b.onclick = () => { filter = s; render(); };
+    $("tabs").appendChild(b);
+  }
+  const c = document.createElement("span");
+  c.className = "count";
+  c.id = "count";
+  $("tabs").appendChild(c);
+}
+
+async function render() {
+  tabs();
+  const list = await api("/api/admin/submissions?status=" + filter);
+  $("count").textContent = `${list.length} take${list.length === 1 ? "" : "s"}`;
+  const box = $("list");
+  box.innerHTML = list.length ? "" : '<p class="note">Nothing here.</p>';
+  for (const s of list) box.appendChild(card(s));
+  const hash = location.hash.slice(1);
+  if (hash) { const el = document.getElementById("s_" + hash); if (el) { el.classList.add("flash"); el.scrollIntoView({ block: "center" }); } }
+}
+
+function card(s) {
+  const el = document.createElement("div");
+  el.className = "card";
+  el.id = "s_" + s.id;
+  const audioUrl = `/api/admin/audio/${s.id}?token=${encodeURIComponent(token)}`;
+  el.innerHTML = `
+    <div class="top">
+      <span class="pill ${s.status}">${s.status}</span>
+      <b>${esc(s.speakerName)}</b><span>${esc(s.row)}</span>
+      <span>by <b>${esc(s.name)}</b>${s.gameName ? ` (plays as ${esc(s.gameName)})` : ""}</span>
+      ${s.contact ? `<span>${esc(s.contact)}</span>` : ""}
+      <span>${new Date(s.createdAt).toLocaleString()}</span>
+    </div>
+    <p class="text">${esc(s.text)}</p>
+    ${s.note ? `<p class="note">Their note: ${esc(s.note)}</p>` : ""}
+    <div class="row">
+      <audio controls preload="none" src="${audioUrl}"></audio>
+      <a href="${audioUrl}&download=1">Download</a>
+    </div>
+    <div class="row">
+      <label>Tickets <input class="small" type="number" min="0" max="1000" value="${s.reward}" data-f="reward"></label>
+      <label>Game name <input class="name" type="text" value="${esc(s.gameName)}" data-f="gameName" placeholder="who gets the tickets"></label>
+      <button class="act ok" data-s="approved">Approve</button>
+      <button class="act ship" data-s="shipped">Mark shipped</button>
+      <button class="act no" data-s="rejected">Reject</button>
+      <button class="act plain" data-s="new">Back to new</button>
+      <button class="act no" data-del>Delete</button>
+    </div>`;
+  const fields = () => ({ reward: el.querySelector('[data-f="reward"]').value, gameName: el.querySelector('[data-f="gameName"]').value });
+  el.querySelectorAll("[data-s]").forEach((b) => b.onclick = async () => {
+    await api(`/api/admin/submissions/${s.id}`, { method: "POST", body: JSON.stringify({ ...fields(), status: b.dataset.s }) });
+    render();
+  });
+  el.querySelectorAll("[data-f]").forEach((input) => input.onchange = () =>
+    api(`/api/admin/submissions/${s.id}`, { method: "POST", body: JSON.stringify(fields()) }));
+  el.querySelector("[data-del]").onclick = async () => {
+    if (!confirm("Delete this take for good? The file goes too.")) return;
+    await api(`/api/admin/submissions/${s.id}`, { method: "DELETE" });
+    render();
+  };
+  return el;
+}
+
+async function start() {
+  if (!token) return showLogin();
+  try {
+    await api("/api/admin/submissions?status=new");
+  } catch { return; }
+  $("login").classList.add("hidden");
+  $("app").classList.remove("hidden");
+  render();
+}
+start();
+</script>
+</body>
+</html>
