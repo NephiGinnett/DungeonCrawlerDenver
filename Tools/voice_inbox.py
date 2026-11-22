@@ -18,7 +18,7 @@ What pull does with each approved take:
     name plays (on the host's machine), the game pays the tickets once and tells them which line shipped;
   * marks the take "shipped" on the site;
   * once every line of a character has shipped for the same player, adds a one-time full-set bonus credit
-    (SET_BONUS on the site, 100 tickets unless changed there).
+    (SET_BONUS on the site, 300 tickets unless changed there).
 """
 
 import argparse

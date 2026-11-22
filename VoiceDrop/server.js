@@ -9,7 +9,7 @@
 //   DISCORD_WEBHOOK_URL  optional: post each upload to a Discord channel
 //   NTFY_TOPIC           optional: push each upload to the ntfy app (https://ntfy.sh/<topic>)
 //   DEFAULT_REWARD       tickets a shipped line pays, unless set per take in /admin (default 25)
-//   SET_BONUS            extra tickets once every line of a character has shipped for one player (default 100)
+//   SET_BONUS            extra tickets once every line of a character has shipped for one player (default 300)
 //   MAX_MB               largest take accepted (default 15)
 
 const express = require("express");
@@ -27,7 +27,7 @@ const BUNDLED_CATALOG = path.join(__dirname, "catalog.json");
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "";
 const PUBLIC_URL = (process.env.PUBLIC_URL || "").replace(/\/$/, "");
 const DEFAULT_REWARD = parseInt(process.env.DEFAULT_REWARD || "25", 10);
-const SET_BONUS = parseInt(process.env.SET_BONUS || "100", 10);
+const SET_BONUS = parseInt(process.env.SET_BONUS || "300", 10);
 const MAX_MB = parseInt(process.env.MAX_MB || "15", 10);
 const STATUSES = ["new", "approved", "shipped", "rejected"];
 
