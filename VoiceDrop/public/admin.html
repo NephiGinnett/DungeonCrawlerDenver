@@ -21,6 +21,15 @@
   .top b { color: var(--ink); font-size: 15px; }
   .pill { border-radius: 999px; padding: 1px 9px; font-size: 12px; font-weight: 600; color: #120f19; }
   .pill.new { background: var(--warn); } .pill.approved { background: var(--good); } .pill.shipped { background: var(--ship); } .pill.rejected { background: var(--bad); }
+  .pill.open { background: transparent; color: var(--dim); border: 1px solid var(--line); }
+  /* the Progress tab */
+  .card .bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--panel2); margin: 10px 0; }
+  .card .bar i { display: block; height: 100%; }
+  .pline { display: grid; grid-template-columns: 92px 120px 1fr; gap: 10px; align-items: baseline; padding: 5px 0; border-top: 1px solid var(--line); font-size: 14px; }
+  .pline .pill { text-align: center; }
+  .pline .who { color: var(--ink); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pline .what { color: var(--dim); }
+  @media (max-width: 640px) { .pline { grid-template-columns: 86px 1fr; } .pline .what { grid-column: 1 / -1; } }
   .text { margin: 8px 0; font-size: 16px; }
   .note { color: var(--warn); font-size: 14px; }
   .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
@@ -55,8 +64,10 @@
 const $ = (id) => document.getElementById(id);
 let token = "";
 try { token = localStorage.getItem("voiceDropAdmin") || ""; } catch {}
-let filter = "new";
-const STATUSES = ["new", "approved", "shipped", "rejected", "all"];
+let filter = "progress";
+// "progress" is the overview: every character, who voices it, and where each line stands (2026-11-22).
+const STATUSES = ["progress", "new", "approved", "shipped", "rejected", "all"];
+const STATE_LABEL = { open: "Open", review: "In review", taken: "Approved", done: "Shipped" };
 
 async function api(path, options = {}) {
   const res = await fetch(path, { ...options, headers: { "x-admin-token": token, "Content-Type": "application/json", ...(options.headers || {}) } });
@@ -94,6 +105,7 @@ function tabs() {
 
 async function render() {
   tabs();
+  if (filter === "progress") return renderProgress();
   const list = await api("/api/admin/submissions?status=" + filter);
   $("count").textContent = `${list.length} take${list.length === 1 ? "" : "s"}`;
   const box = $("list");
@@ -101,6 +113,43 @@ async function render() {
   for (const s of list) box.appendChild(card(s));
   const hash = location.hash.slice(1);
   if (hash) { const el = document.getElementById("s_" + hash); if (el) { el.classList.add("flash"); el.scrollIntoView({ block: "center" }); } }
+}
+
+// Every character: who voices it, a bar, and each line's state. Approve a take and its line turns "Approved" here and
+// "Taken" on the public site; ship it (voice_inbox.py pull) and both say it is in the game.
+async function renderProgress() {
+  const list = await api("/api/admin/progress");
+  const sum = { open: 0, review: 0, taken: 0, done: 0, total: 0 };
+  list.forEach((sp) => Object.keys(sum).forEach((k) => { sum[k] += sp.counts[k]; }));
+  $("count").textContent = `${sum.done} shipped · ${sum.taken} approved · ${sum.review} in review · ${sum.open} open of ${sum.total}`;
+  const box = $("list");
+  box.innerHTML = "";
+  for (const sp of list) {
+    const c = sp.counts;
+    const pct = (n) => (c.total ? (n / c.total) * 100 : 0) + "%";
+    const el = document.createElement("div");
+    el.className = "card";
+    el.innerHTML = `
+      <div class="top"><b>${esc(sp.name)}</b>
+        <span>${sp.castBy ? "Voiced by <b>" + esc(sp.castBy) + "</b>" : "Not cast yet"}</span>
+        <span>${c.done} shipped · ${c.taken} approved · ${c.review} in review · ${c.open} open</span></div>
+      <div class="bar"><i style="width:${pct(c.done)};background:var(--ship)"></i><i style="width:${pct(c.taken)};background:var(--good)"></i><i style="width:${pct(c.review)};background:var(--warn)"></i></div>
+      <div class="lines"></div>`;
+    const lines = el.querySelector(".lines");
+    for (const l of sp.lines) {
+      const row = document.createElement("div");
+      row.className = "pline";
+      row.innerHTML = `<span class="pill ${l.state === "done" ? "shipped" : l.state === "taken" ? "approved" : l.state === "review" ? "new" : "open"}">${STATE_LABEL[l.state]}</span>
+        <span class="who">${l.by ? esc(l.by) : l.review ? l.review + " waiting" : ""}</span><span class="what">${esc(l.text)}</span>`;
+      if (l.state === "review") {
+        row.style.cursor = "pointer";
+        row.title = "Open the takes waiting for this line";
+        row.onclick = () => { filter = "new"; render(); };
+      }
+      lines.appendChild(row);
+    }
+    box.appendChild(el);
+  }
 }
 
 function card(s) {

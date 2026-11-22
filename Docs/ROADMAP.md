@@ -1775,3 +1775,11 @@ Zoe: "can you make sure that our game properly captures audio and includes it in
 - Dev: `DCC.HauntEnd [delay]` runs the clock out now.
 - Checked by log (test runs have no ears): a 70 s round with the test player in a stope, filming. Before the creature voices, 4 sounds were logged and only one post had any. After, 54 were logged and every post replays 4 to 6, each post with its camera as the ear. Not heard by anyone yet: worth a listen in a real round. Not checked: two players (each machine logs and plays its own, so it should match). Not committed.
 
+### 2026-11-22 (Claude): Voice Drop shows what is taken
+Zoe: "I approved 7 of Anke's for Flagger Diaz yet they still seem to be showing as if they're available. Also, it's just not that clear what's been done and what hasn't". The site only knew the catalog's static "wanted" flag, so approved takes changed nothing on the public page.
+- **Status comes from the takes now** (`progress()` in `server.js`): each line is open, in review (a take is waiting), taken (approved), or done (shipped). `/api/catalog` sends it; `/api/admin/progress` too.
+- **Casting:** the first reader approved or shipped for a character is its voice. That character's remaining lines are reserved for that name; anyone else sees "Reserved for X" with no record button. Typing the cast name unlocks them.
+- **Public page:** characters with open lines first, badges ("Open for anyone", "Voiced by X", "Complete"), counts, a progress bar, and lines grouped: still to record, waiting for review, taken, in the game. The ticket box hides when nothing is left for the viewer.
+- **Admin:** a Progress tab (now the default): every character, who voices it, a bar, and each line's state. A line in review opens the New tab.
+- Checked locally with test data: Anke's 7 Diaz takes approved, Diaz reads Complete and Voiced by Anke, no record buttons; a shipped Jan line cast Jan to Lee (0 buttons for others, 7 for "Lee"); a waiting Rhee take reads in review. Needs a push and a Railway redeploy to go live.
+

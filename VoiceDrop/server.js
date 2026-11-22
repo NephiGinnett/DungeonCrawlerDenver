@@ -61,6 +61,45 @@ function findLine(speakerId, row) {
   return speaker && line ? { speaker, line } : null;
 }
 
+// ---- where every line stands (2026-11-22, Zoe: "we need to delineate which voices are not taken yet ... it's just
+// not that clear what's been done and what hasn't"). Worked out from the takes themselves every time, so approving or
+// shipping a take in /admin shows on the site at once.
+//   done    a take of this line is in the game (shipped)
+//   taken   a take is approved, on its way into the game
+//   review  takes are waiting for Zoe to listen
+//   open    nobody has sent this line yet
+// The first person with an approved or shipped take for a character is that character's voice ("cast"): the rest of
+// its lines are theirs to finish.
+const RANK = { new: 1, approved: 2, shipped: 3 };
+function progress() {
+  const best = new Map();    // "speaker|row" -> the furthest-along take
+  const waiting = new Map(); // "speaker|row" -> takes still to review
+  const cast = new Map();    // speaker -> { name, at }
+  for (const s of submissions) {
+    if (!RANK[s.status]) continue;
+    const key = s.speaker + "|" + s.row;
+    if (s.status === "new") waiting.set(key, (waiting.get(key) || 0) + 1);
+    const prev = best.get(key);
+    if (!prev || RANK[s.status] > RANK[prev.status]) best.set(key, s);
+    if (s.status !== "new") {
+      const c = cast.get(s.speaker);
+      if (!c || s.createdAt < c.at) cast.set(s.speaker, { name: s.name, at: s.createdAt });
+    }
+  }
+  return catalog().speakers.filter((sp) => sp.open !== false).map((sp) => {
+    const counts = { open: 0, review: 0, taken: 0, done: 0, total: sp.lines.length };
+    const lines = sp.lines.map((l) => {
+      const key = sp.id + "|" + l.row;
+      const top = best.get(key);
+      const state = top && top.status === "shipped" ? "done" : top && top.status === "approved" ? "taken" : waiting.get(key) ? "review" : "open";
+      counts[state]++;
+      return { ...l, state, by: state === "done" || state === "taken" ? top.name : "", review: waiting.get(key) || 0 };
+    });
+    const c = cast.get(sp.id);
+    return { ...sp, lines, counts, castBy: c ? c.name : "" };
+  });
+}
+
 // ---- notifications ------------------------------------------------------------------------------------------------
 async function notify(sub) {
   const who = sub.gameName && sub.gameName !== sub.name ? `${sub.name} (plays as ${sub.gameName})` : sub.name;
@@ -99,7 +138,7 @@ app.get("/healthz", (req, res) => res.json({ ok: true }));
 app.get("/api/catalog", (req, res) => {
   const c = catalog();
   res.json({ title: c.title || "Voice Drop", intro: c.intro || "", reward: DEFAULT_REWARD, setBonus: SET_BONUS,
-    speakers: c.speakers.filter((s) => s.open !== false) });
+    speakers: progress() });
 });
 
 // Up to 40 takes an hour from one address: plenty for a session, not enough to fill the disk.
@@ -214,6 +253,7 @@ app.delete("/api/admin/submissions/:id", admin, (req, res) => {
   res.json({ ok: true });
 });
 
+app.get("/api/admin/progress", admin, (req, res) => res.json(progress()));
 app.get("/api/admin/catalog", admin, (req, res) => res.json(catalog()));
 app.post("/api/admin/catalog", admin, (req, res) => {
   const c = req.body;

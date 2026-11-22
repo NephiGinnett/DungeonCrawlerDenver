@@ -46,6 +46,7 @@
   .speaker .tix { display: block; font-size: 12px; }
   .reward { display: flex; gap: 12px; align-items: flex-start; background: rgba(255,179,71,.08); border: 1px solid rgba(255,179,71,.4);
     border-radius: 10px; padding: 12px 14px; margin: 0 0 14px; font-size: 15px; }
+  .reward[hidden] { display: none; } /* display:flex above would otherwise beat the hidden attribute */
   .reward .big { font-size: 26px; line-height: 1; }
   .reward b { color: var(--warn); }
   .reward small { display: block; color: var(--dim); margin-top: 4px; font-size: 13px; }
@@ -66,6 +67,26 @@
   .file input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
   .done { color: var(--good); font-weight: 600; }
   .hidden { display: none; }
+  /* Where things stand (2026-11-22): a badge per character, a bar, and the lines grouped by state. */
+  .badge { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .04em; padding: 2px 8px; border-radius: 999px; margin-top: 4px; }
+  .badge.open { background: rgba(107,224,122,.16); color: var(--good); }
+  .badge.cast { background: rgba(67,230,208,.14); color: var(--accent2); }
+  .badge.full { background: rgba(255,255,255,.1); color: var(--dim); }
+  .speaker.complete { opacity: .55; }
+  .counts { display: block; color: var(--dim); font-size: 12px; margin-top: 2px; }
+  .progress { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--panel2); margin: 6px 0 4px; }
+  .progress i { display: block; height: 100%; }
+  .progress .p-done { background: var(--good); } .progress .p-taken { background: var(--accent2); } .progress .p-review { background: var(--warn); }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; color: var(--dim); font-size: 13px; margin-bottom: 14px; }
+  .legend span::before { content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 0; background: var(--panel2); border: 1px solid var(--line); }
+  .legend .l-done::before { background: var(--good); border: 0; } .legend .l-taken::before { background: var(--accent2); border: 0; } .legend .l-review::before { background: var(--warn); border: 0; }
+  .group { margin: 18px 0 4px; font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
+  .group.g-open { color: var(--good); }
+  .line.closed { opacity: .7; padding: 10px 0; }
+  .line.closed .text { font-size: 15px; margin: 0; }
+  .state { font-size: 12px; font-weight: 700; }
+  .state.s-done { color: var(--good); } .state.s-taken { color: var(--accent2); } .state.s-review { color: var(--warn); }
+  .castnote { background: rgba(67,230,208,.08); border: 1px solid rgba(67,230,208,.35); border-radius: 10px; padding: 10px 14px; margin: 0 0 14px; font-size: 14px; }
   footer { color: var(--dim); font-size: 13px; margin-top: 30px; }
 </style>
 </head>
@@ -148,19 +169,34 @@ async function load() {
     box.innerHTML = '<p class="status">Nothing to record right now. Check back soon.</p>';
     return;
   }
-  for (const s of catalog.speakers) {
+  // Characters with lines still to record first; finished ones last.
+  const left = (s) => s.counts ? s.counts.open + s.counts.review : s.lines.length;
+  const speakers = [...catalog.speakers].sort((a, b) => (left(b) > 0) - (left(a) > 0) || (!!a.castBy - !!b.castBy) || a.name.localeCompare(b.name));
+  for (const s of speakers) {
     const b = document.createElement("button");
-    b.className = "speaker";
-    const wanted = s.lines.filter((l) => l.wanted).length;
-    const set = s.lines.length > 1 && setBonus ? ` · +${setBonus} for all ${s.lines.length}` : "";
-    b.innerHTML = `<img src="portraits/${encodeURIComponent(s.id)}.svg" alt="" loading="lazy" onerror="this.remove()"><span><b>${escapeHtml(s.name)}</b><small>${s.lines.length} line${s.lines.length === 1 ? "" : "s"}${wanted ? ` · ${wanted} with no voice yet` : ""}</small><small class="tix">🎟 ${reward} a line${set}</small></span>`;
+    const c = s.counts || { open: s.lines.length, review: 0, taken: 0, done: 0, total: s.lines.length };
+    const complete = c.open + c.review === 0;
+    b.className = "speaker" + (complete ? " complete" : "");
+    const set = s.lines.length > 1 && setBonus && !complete ? ` · +${setBonus} for all ${s.lines.length}` : "";
+    const badge = complete ? '<span class="badge full">Complete</span>'
+      : s.castBy ? `<span class="badge cast">Voiced by ${escapeHtml(s.castBy)}</span>` : '<span class="badge open">Open for anyone</span>';
+    const bits = [c.open && `${c.open} open`, c.review && `${c.review} in review`, c.taken && `${c.taken} taken`, c.done && `${c.done} in the game`].filter(Boolean).join(" · ");
+    b.innerHTML = `<img src="portraits/${encodeURIComponent(s.id)}.svg" alt="" loading="lazy" onerror="this.remove()"><span><b>${escapeHtml(s.name)}</b>${badge}<small class="counts">${c.total} line${c.total === 1 ? "" : "s"}: ${bits}</small>${complete ? "" : `<small class="tix">🎟 ${reward} a line${set}</small>`}</span>`;
     if (s.blurb) b.title = s.blurb;
     b.onclick = () => pick(s, b);
     box.appendChild(b);
   }
 }
 
+// Is the person reading this the character's voice? Then its open lines are theirs; anyone else sees them reserved.
+const sameName = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
+const isCast = (speaker) => !speaker.castBy || sameName($("name").value, speaker.castBy);
+$("name").addEventListener("input", () => { if (current) pick(current, document.querySelector(".speaker.on"), true); });
+
 function showReward(speaker) {
+  // Only worth pitching to someone who can still record here: not when another reader is the voice, or it's all done.
+  const left = speaker.counts ? speaker.counts.open + speaker.counts.review : speaker.lines.length;
+  if (!isCast(speaker) || !left) { $("reward").hidden = true; return; }
   const n = speaker.lines.length;
   const mine = speaker.lines.filter((l) => sent[speaker.id + "|" + l.row]).length;
   const set = n > 1 && setBonus
@@ -171,7 +207,7 @@ function showReward(speaker) {
     <small>${mine ? `You've sent ${mine} of ${n} so far.` : "Tickets show up in the game the next time you play."}</small></div>`;
 }
 
-function pick(speaker, button) {
+function pick(speaker, button, quiet) {
   current = speaker;
   document.querySelectorAll(".speaker").forEach((el) => el.classList.toggle("on", el === button));
   $("linesCard").classList.remove("hidden");
@@ -183,9 +219,59 @@ function pick(speaker, button) {
   showReward(speaker);
   const list = $("lines");
   list.innerHTML = "";
-  const ordered = [...speaker.lines].sort((a, b) => (b.wanted ? 1 : 0) - (a.wanted ? 1 : 0));
-  for (const line of ordered) list.appendChild(lineView(speaker, line));
-  $("linesCard").scrollIntoView({ behavior: "smooth", block: "start" });
+
+  // Where this character stands, at a glance.
+  const c = speaker.counts || { open: speaker.lines.length, review: 0, taken: 0, done: 0, total: speaker.lines.length };
+  const pct = (n) => (c.total ? (n / c.total) * 100 : 0) + "%";
+  const summary = document.createElement("div");
+  summary.innerHTML = `<div class="progress"><i class="p-done" style="width:${pct(c.done)}"></i><i class="p-taken" style="width:${pct(c.taken)}"></i><i class="p-review" style="width:${pct(c.review)}"></i></div>
+    <div class="legend"><span class="l-done">${c.done} in the game</span><span class="l-taken">${c.taken} taken</span><span class="l-review">${c.review} in review</span><span>${c.open} still open</span></div>`;
+  list.appendChild(summary);
+  const mine = isCast(speaker);
+  if (speaker.castBy) {
+    const note = document.createElement("div");
+    note.className = "castnote";
+    note.innerHTML = c.open + c.review === 0
+      ? `${escapeHtml(speaker.castBy)} is the voice of ${escapeHtml(speaker.name)}. Every line is taken.`
+      : mine
+      ? `You're the voice of ${escapeHtml(speaker.name)}. The open lines below are yours to finish.`
+      : `<b>${escapeHtml(speaker.castBy)}</b> is the voice of ${escapeHtml(speaker.name)}, so the rest of these lines are theirs. Pick an open character to record.
+         <small style="display:block;color:var(--dim);margin-top:4px">${escapeHtml(speaker.castBy)}? Put that name in at the top and your lines open up.</small>`;
+    list.appendChild(note);
+  }
+
+  const groups = [
+    ["open", "Still open", "g-open"],
+    ["review", "Waiting for review", ""],
+    ["taken", "Taken: approved, on its way into the game", ""],
+    ["done", "In the game", ""],
+  ];
+  for (const [state, title, cls] of groups) {
+    const lines = speaker.lines.filter((l) => (l.state || "open") === state);
+    if (!lines.length) continue;
+    const h = document.createElement("div");
+    h.className = "group " + (mine ? cls : "");
+    h.textContent = `${state === "open" && !mine ? `Still to record, by ${speaker.castBy}` : title} (${lines.length})`;
+    list.appendChild(h);
+    for (const line of lines) {
+      const recordable = (state === "open" || state === "review") && mine;
+      list.appendChild(recordable ? lineView(speaker, line) : closedView(speaker, line, state));
+    }
+  }
+  if (!quiet) $("linesCard").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+// A line nobody needs to record right now: just what it says and where it stands.
+function closedView(speaker, line, state) {
+  const el = document.createElement("div");
+  el.className = "line closed";
+  const label = state === "done" ? `In the game · ${escapeHtml(line.by)}`
+    : state === "taken" ? `Taken · ${escapeHtml(line.by)}`
+    : state === "review" ? `Reserved for ${escapeHtml(speaker.castBy)} · ${line.review} take${line.review === 1 ? "" : "s"} waiting`
+    : `Reserved for ${escapeHtml(speaker.castBy)}`;
+  const cls = state === "done" ? "s-done" : state === "taken" ? "s-taken" : "s-review";
+  el.innerHTML = `<div class="meta"><span class="state ${cls}">${label}</span> · ${escapeHtml(line.row)}</div><p class="text">${prettyLine(line.text)}</p>`;
+  return el;
 }
 
 function pickMime() {
@@ -198,7 +284,7 @@ function lineView(speaker, line) {
   el.className = "line";
   const key = speaker.id + "|" + line.row;
   el.innerHTML = `
-    <div class="meta"><span class="pay">🎟 ${reward} tickets</span> · ${escapeHtml(line.row)}${line.wanted ? " · no voice yet" : ""}${sent[key] ? ' · <span class="done">you sent this one</span>' : ""}</div>
+    <div class="meta"><span class="pay">🎟 ${reward} tickets</span> · ${escapeHtml(line.row)}${line.state === "review" ? ` · <span class="state s-review">${line.review} take${line.review === 1 ? "" : "s"} waiting for review</span>` : ""}${sent[key] ? ' · <span class="done">you sent this one</span>' : ""}</div>
     <p class="text">${prettyLine(line.text)}</p>
     <div class="controls">
       <button class="act rec">● Record</button>
@@ -276,6 +362,9 @@ function lineView(speaker, line) {
       if (!res.ok) throw new Error(body.error || "That didn't go through.");
       sent[key] = true;
       try { localStorage.setItem("voiceDropSent", JSON.stringify(sent)); } catch {}
+      // It is in the review pile now (the counts catch up on the next visit).
+      line.review = (line.review || 0) + 1;
+      if (!line.state || line.state === "open") line.state = "review";
       if (current === speaker) showReward(speaker);
       setStatus("Sent! Thank you.", "ok");
       sendBtn.classList.add("hidden");
