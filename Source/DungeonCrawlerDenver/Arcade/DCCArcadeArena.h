@@ -94,6 +94,13 @@ public:
 	virtual void OnRespawned(APlayerController* PC) {}
 	/** Server: a crawler's spray tag (DCCSpray) went up at At. A game can make a spot mean something. */
 	virtual void OnTagged(class ADCCCharacterBase* Painter, const FVector& At) {}
+	/** A character's sound (an attack, a hit) played at At. Dead Air logs them for its reel (2026-11-22). Every machine. */
+	virtual void OnWorldSound(class USoundBase* Sound, const FVector& At) {}
+	/** Tell the arena in WorldContext's world, if there is one, that Sound played at At. */
+	static void NoteWorldSound(const UObject* WorldContext, class USoundBase* Sound, const FVector& At);
+	/** Every machine: Attacker swung at Target (bHit: it landed). Dead Air gives its monsters a voice (2026-11-22). */
+	virtual void OnAttackSeen(class ADCCCharacterBase* Attacker, class ADCCCharacterBase* Target, bool bHit) {}
+	static void NoteAttack(class ADCCCharacterBase* Attacker, class ADCCCharacterBase* Target, bool bHit);
 
 	/** This game's id in DCCArcade::Games() ("Climb"...), for PLAY AGAIN. None for the lobby and the front door. */
 	virtual FName GetGameId() const { return NAME_None; }

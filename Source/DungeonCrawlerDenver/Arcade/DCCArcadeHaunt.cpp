@@ -1526,6 +1526,7 @@ void ADCCArcadeHaunt::TickRocksLocal()
 		{
 			RocksKnocked.Add(Rock.Id);
 			PlayKnock(GetWorld(), Rock.At + FVector(0, 0, WallHeight - 60.0f));
+			NoteSound(KnockPcm(), KnockRate, Rock.At + FVector(0, 0, WallHeight - 60.0f), 1.0f, 3500.0f);
 			// Dust trickling from the roof where it will come down.
 			Burst(TEXT("/Game/Legendary_Forge/Fx/Smoke/NS_smoke"), Rock.At + FVector(0, 0, WallHeight - 60.0f), 4.0, 0.6f);
 		}
@@ -1904,6 +1905,76 @@ void ADCCArcadeHaunt::PlaceTraps()
 	}
 }
 
+namespace
+{
+	/** A creature lunging: a rough, throaty snarl that rises and breaks (2026-11-22; they had no voice at all). */
+	const TArray<int16>& SnarlPcm(int32 Variant)
+	{
+		static TArray<int16> Pcm[3];
+		TArray<int16>& Out = Pcm[Variant % 3];
+		if (Out.IsEmpty())
+		{
+			FRandomStream R(301 + Variant * 17);
+			const int32 N = int32(KnockRate * (0.55f + 0.1f * Variant));
+			Out.SetNumUninitialized(N);
+			float Low = 0.0f, Phase = 0.0f;
+			const float Base = 70.0f + 18.0f * Variant;
+			for (int32 i = 0; i < N; ++i)
+			{
+				const float T = float(i) / KnockRate;
+				const float Env = FMath::Min(1.0f, T / 0.06f) * FMath::Exp(-T * 3.2f);
+				Low += (R.FRandRange(-1.0f, 1.0f) - Low) * 0.18f;
+				Phase += 2.0f * PI * Base * (1.0f + 0.35f * FMath::Sin(T * 9.0f)) / KnockRate;
+				const float Rasp = FMath::Sin(Phase) * (0.6f + 0.4f * Low) + Low * 0.9f;
+				Out[i] = int16(FMath::Clamp(Rasp * Env * 1.3f, -1.0f, 1.0f) * 26000.0f);
+			}
+		}
+		return Out;
+	}
+
+	/** A blow landing: a short dull thump. */
+	const TArray<int16>& ThumpPcm()
+	{
+		static TArray<int16> Pcm;
+		if (Pcm.IsEmpty())
+		{
+			FRandomStream R(88);
+			const int32 N = int32(KnockRate * 0.3f);
+			Pcm.SetNumUninitialized(N);
+			for (int32 i = 0; i < N; ++i)
+			{
+				const float T = float(i) / KnockRate;
+				const float V = FMath::Sin(2.0f * PI * (90.0f + 60.0f * FMath::Exp(-T * 30.0f)) * T) * FMath::Exp(-T * 16.0f)
+					+ R.FRandRange(-1.0f, 1.0f) * FMath::Exp(-T * 120.0f) * 0.5f;
+				Pcm[i] = int16(FMath::Clamp(V, -1.0f, 1.0f) * 27000.0f);
+			}
+		}
+		return Pcm;
+	}
+}
+
+void ADCCArcadeHaunt::OnAttackSeen(ADCCCharacterBase* Attacker, ADCCCharacterBase* Target, bool bHit)
+{
+	// The mine's monsters had no sound at all, so a fight on tape was silent. Each lunge now snarls, and a blow that
+	// lands thumps; heard live, and logged so the reel plays it back.
+	UWorld* World = GetWorld();
+	const ADCCEnemyCharacter* Monster = Cast<ADCCEnemyCharacter>(Attacker);
+	if (!World || World->GetNetMode() == NM_DedicatedServer || !Monster || Monster->IsCrawler() || ReelPhase != 0)
+	{
+		return;
+	}
+	const FVector Mouth = Attacker->GetActorLocation() + FVector(0, 0, 60.0f);
+	const TArray<int16>& Snarl = SnarlPcm(int32(Attacker->GetUniqueID() % 3));
+	PlayPcm(World, Snarl, Mouth, 0.9f, 2600.0f);
+	NoteSound(Snarl, KnockRate, Mouth, 0.9f, 2600.0f);
+	if (bHit && Target)
+	{
+		const FVector Struck = Target->GetActorLocation() + FVector(0, 0, 40.0f);
+		PlayPcm(World, ThumpPcm(), Struck, 1.0f, 2200.0f);
+		NoteSound(ThumpPcm(), KnockRate, Struck, 1.0f, 2200.0f);
+	}
+}
+
 void ADCCArcadeHaunt::OnDamageLanded(ADCCCharacterBase* Dealer, ADCCCharacterBase* Target, int32 Amount)
 {
 	// A fight next to a powder crate can set it off.
@@ -2248,12 +2319,14 @@ void ADCCArcadeHaunt::TickTrapsLocal(float DeltaSeconds)
 				}
 				Planks[E.Index].bBroken = true;
 				PlayKnock(World, E.At);
+				NoteSound(KnockPcm(), KnockRate, E.At, 1.0f, 3500.0f);
 			}
 			break;
 		case 2: // the cart
 			if (bFirst)
 			{
 				PlayPcm(World, CartPcm(), E.At, 1.0f, 4000.0f);
+				NoteSound(CartPcm(), KnockRate, E.At, 1.0f, 4000.0f);
 			}
 			if (Carts.IsValidIndex(E.Index))
 			{
@@ -2274,6 +2347,7 @@ void ADCCArcadeHaunt::TickTrapsLocal(float DeltaSeconds)
 			if (bFirst)
 			{
 				PlayPcm(World, BoomPcm(), E.At, 1.4f, 6000.0f);
+				NoteSound(BoomPcm(), KnockRate, E.At, 1.4f, 6000.0f);
 				if (Crates.IsValidIndex(E.Index))
 				{
 					for (const TWeakObjectPtr<AActor>& V : Crates[E.Index].Visuals)
@@ -2296,6 +2370,7 @@ void ADCCArcadeHaunt::TickTrapsLocal(float DeltaSeconds)
 			if (bFirst)
 			{
 				PlayPcm(World, BoomPcm(), E.At, 1.0f, 5000.0f);
+				NoteSound(BoomPcm(), KnockRate, E.At, 1.0f, 5000.0f);
 				if (AActor* Flash = Shape(TEXT("Sphere"), E.At + FVector(0, 0, WallHeight * 0.6f), FVector(900, 900, 300), FLinearColor(0.4f, 0.6f, 1.0f), FRotator::ZeroRotator, false))
 				{
 					Flash->SetLifeSpan(0.2f);
@@ -2672,6 +2747,7 @@ void ADCCArcadeHaunt::ClientTick(float DeltaSeconds)
 	{
 		BellsHeard = BellRings;
 		PlayBell(GetWorld(), VanBox.IsValid ? VanBox.GetCenter() + FVector(0, 0, 300) : GetActorLocation());
+		NoteSound(BellPcm(), KnockRate, VanBox.IsValid ? VanBox.GetCenter() + FVector(0, 0, 300) : GetActorLocation(), 0.7f, 0.0f, true);
 	}
 
 	// A helmet lamp on every crawler, built locally on every machine.

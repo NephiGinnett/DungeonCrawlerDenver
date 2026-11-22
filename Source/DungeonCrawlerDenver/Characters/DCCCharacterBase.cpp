@@ -6,6 +6,7 @@
 #include "Engine/OverlapResult.h"
 #include "Arcade/DCCClimbItems.h"
 #include "Arcade/DCCArcade.h"
+#include "Arcade/DCCArcadeArena.h"
 #include "Arcade/DCCArcadeGames.h"
 #include "Arcade/DCCCasino.h"
 #include "Arcade/DCCSummons.h"
@@ -7506,6 +7507,7 @@ void ADCCCharacterBase::Multicast_PlayAttack_Implementation(ADCCCharacterBase* T
 		PlayOneShotAnimation(AttackAnimation);
 	}
 	PlayCharacterSound(AttackSound);
+	ADCCArcadeArena::NoteAttack(this, Target, bHit);
 
 	BP_OnAttackPerformed(Target, bHit);
 }
@@ -7518,6 +7520,7 @@ void ADCCCharacterBase::PlayCharacterSound(USoundBase* Sound) const
 	if (Sound && GetWorld())
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, Sound, GetActorLocation());
+		ADCCArcadeArena::NoteWorldSound(this, Sound, GetActorLocation()); // Dead Air's reel keeps it
 	}
 }
 

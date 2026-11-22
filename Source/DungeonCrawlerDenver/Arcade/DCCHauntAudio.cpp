@@ -188,9 +188,12 @@ void ADCCArcadeHaunt::TickMineAudio(float DeltaSeconds)
 
 	APlayerController* PC = World->GetFirstPlayerController();
 	const APawn* Me = PC ? PC->GetPawn() : nullptr;
-	const FVector Ear = Me ? Me->GetActorLocation() : GetActorLocation();
+	// While the feed plays a post, the mine is heard from that post's camera (2026-11-22): the found footage has its
+	// own air, drips and creaks under the sounds the round logged (PlayReelSound). The song stays off for it.
+	const bool bReelAir = ReelPhase == 2 && bReelEarValid;
+	const FVector Ear = bReelAir ? ReelEar.GetLocation() : (Me ? Me->GetActorLocation() : GetActorLocation());
 	const float Deep = DepthAt(Ear);
-	const bool bOver = ReelPhase != 0; // the round is done: the feed and the vote have the sound
+	const bool bOver = ReelPhase != 0 && !bReelAir; // extraction and the vote: quiet
 
 	// The bed.
 	if (!S.Bed.IsValid())
@@ -238,7 +241,7 @@ void ADCCArcadeHaunt::TickMineAudio(float DeltaSeconds)
 	}
 
 	// The song, very low, looping with a breath between plays.
-	if (!bOver && Now >= S.NextSong && (!S.Song.IsValid() || !S.Song->IsPlaying()))
+	if (ReelPhase == 0 && Now >= S.NextSong && (!S.Song.IsValid() || !S.Song->IsPlaying()))
 	{
 		if (USoundBase* Song = LoadObject<USoundBase>(nullptr, TEXT("/Game/Songs/Platinum_Dust_Mine.Platinum_Dust_Mine")))
 		{
@@ -250,7 +253,7 @@ void ADCCArcadeHaunt::TickMineAudio(float DeltaSeconds)
 			S.NextSong = Now + 600.0; // not imported: the mine still has its own sounds
 		}
 	}
-	if (bOver && S.Song.IsValid())
+	if (ReelPhase != 0 && S.Song.IsValid())
 	{
 		S.Song->FadeOut(2.0f, 0.0f);
 		S.Song.Reset();
@@ -276,7 +279,8 @@ void ADCCArcadeHaunt::TickMineAudio(float DeltaSeconds)
 	};
 	auto Play = [&](const TArray<int16>& Pcm, const FVector& At, USoundAttenuation* Att, float Volume, float Pitch)
 	{
-		UGameplayStatics::PlaySoundAtLocation(World, MineWave(World, Pcm), At, Volume, Pitch, 0.0f, Att);
+		// In a clip, the point near the camera is carried over to the viewer's ears.
+		UGameplayStatics::PlaySoundAtLocation(World, MineWave(World, Pcm), bReelAir ? ReelToListener(At) : At, Volume, Pitch, 0.0f, Att);
 	};
 
 	if (Now >= S.NextDrip)

@@ -232,6 +232,14 @@ public:
 	virtual UDCCDungeonGrid* GetChaseGrid() const override { return Grid; }
 	/** A tag on the cage makes the stream: footage, once a round each, and an achievement. */
 	virtual void OnTagged(class ADCCCharacterBase* Painter, const FVector& At) override;
+	virtual void OnWorldSound(class USoundBase* Sound, const FVector& At) override;
+	virtual void OnAttackSeen(class ADCCCharacterBase* Attacker, class ADCCCharacterBase* Target, bool bHit) override;
+	/** Dev (DCC.HauntEnd): the clock runs out now, so the reel can be checked without a five-minute round. Server. */
+	void DebugEndRound()
+	{
+		UE_LOG(LogTemp, Log, TEXT("[DCC Haunt] the clock runs out (dev); %d sound(s) logged this round"), SoundLog.Num());
+		EndsAt = ServerTime();
+	}
 	/** Footage for a spray or an emote while the body cam is rolling. */
 	void GrantFootage(const FString& Name, float Amount);
 
@@ -464,6 +472,37 @@ private:
 	struct FRecCam { FString Name; FVector Loc = FVector::ZeroVector; FRotator Rot = FRotator::ZeroRotator; };
 	struct FRecFrame { double T = 0.0; TArray<FRecBody> Bodies; TArray<FRecCam> Cams; };
 	TArray<FRecFrame> Recording;
+
+	/**
+	 * The round's sound, for the reel (2026-11-22, Zoe: "make sure that our game properly captures audio and includes
+	 * it in the dead air filming"). Like Recording, every machine keeps its own: what played, where, how loud, when.
+	 * The reel plays back what falls inside each clip, placed as the clip's camera heard it, over the mine's own air.
+	 */
+	struct FRecSound
+	{
+		double T = 0.0;
+		/** A generated sound (knock, cart, blast, bell): its samples live as long as the game. */
+		const TArray<int16>* Pcm = nullptr;
+		int32 Rate = 22050;
+		/** Or a sound asset (a character's attack). */
+		TWeakObjectPtr<class USoundBase> Asset;
+		FVector At = FVector::ZeroVector;
+		float Volume = 1.0f;
+		float Pitch = 1.0f;
+		float Falloff = 3500.0f;
+		bool b2D = false;
+	};
+	TArray<FRecSound> SoundLog;
+	void NoteSound(const TArray<int16>& Pcm, int32 Rate, const FVector& At, float Volume, float Falloff, bool b2D = false);
+	/** Play a logged sound now, moved from where the clip's camera heard it to where the viewer is listening. */
+	void PlayReelSound(const FRecSound& Sound);
+	/** Where a point in the clip (seen from its camera) sits for this machine's listener. */
+	FVector ReelToListener(const FVector& At) const;
+	/** The clip camera this frame (the first one, on a MULTICAM post), and whether there is one. */
+	FTransform ReelEar = FTransform::Identity;
+	bool bReelEarValid = false;
+	int32 ReelSoundClip = -1;
+	double ReelSoundCursor = 0.0;
 	double NextRecordAt = 0.0;
 	void RecordFrame();
 	void TickReelLocal(float DeltaSeconds);

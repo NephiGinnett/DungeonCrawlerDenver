@@ -95,6 +95,34 @@ void ADCCArcadeArena::BeginPlay()
 	}
 }
 
+void ADCCArcadeArena::NoteWorldSound(const UObject* WorldContext, USoundBase* Sound, const FVector& At)
+{
+	UWorld* World = WorldContext ? WorldContext->GetWorld() : nullptr;
+	if (!World || !Sound)
+	{
+		return;
+	}
+	for (TActorIterator<ADCCArcadeArena> It(World); It; ++It)
+	{
+		It->OnWorldSound(Sound, At);
+		return;
+	}
+}
+
+void ADCCArcadeArena::NoteAttack(ADCCCharacterBase* Attacker, ADCCCharacterBase* Target, bool bHit)
+{
+	UWorld* World = Attacker ? Attacker->GetWorld() : nullptr;
+	if (!World)
+	{
+		return;
+	}
+	for (TActorIterator<ADCCArcadeArena> It(World); It; ++It)
+	{
+		It->OnAttackSeen(Attacker, Target, bHit);
+		return;
+	}
+}
+
 void ADCCArcadeArena::UpdateNavBounds()
 {
 	// The geometry settles in the first half minute (the casino floor, the Gate dungeon once its seed lands).

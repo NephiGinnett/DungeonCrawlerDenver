@@ -33,6 +33,12 @@
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/PlayerState.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "Components/AudioComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "HAL/IConsoleManager.h"
+#include "TimerManager.h"
+#include "Sound/SoundAttenuation.h"
+#include "Sound/SoundWaveProcedural.h"
 
 namespace
 {
@@ -292,6 +298,123 @@ bool ADCCArcadeHaunt::CurrentClip(int32& OutIndex, double& OutPlayTime, double& 
 	OutPlayTime = Post.From + FMath::Fmod(OutIntoClip, Len); // a post loops, like on the feed
 	return true;
 }
+
+// ---- every machine: the round's sound, for the reel (2026-11-22) -----------------------------------------------------
+
+void ADCCArcadeHaunt::NoteSound(const TArray<int16>& Pcm, int32 Rate, const FVector& At, float Volume, float Falloff, bool b2D)
+{
+	if (ReelPhase != 0 || Pcm.IsEmpty())
+	{
+		return; // only the round itself: not the reel playing it back
+	}
+	FRecSound& S = SoundLog.AddDefaulted_GetRef();
+	S.T = ServerTime();
+	S.Pcm = &Pcm;
+	S.Rate = Rate;
+	S.At = At;
+	S.Volume = Volume;
+	S.Falloff = Falloff;
+	S.b2D = b2D;
+	if (SoundLog.Num() > 4000)
+	{
+		SoundLog.RemoveAt(0, 400);
+	}
+}
+
+void ADCCArcadeHaunt::OnWorldSound(USoundBase* Sound, const FVector& At)
+{
+	if (ReelPhase != 0 || !Sound)
+	{
+		return;
+	}
+	FRecSound& S = SoundLog.AddDefaulted_GetRef();
+	S.T = ServerTime();
+	S.Asset = Sound;
+	S.At = At;
+	if (SoundLog.Num() > 4000)
+	{
+		SoundLog.RemoveAt(0, 400);
+	}
+}
+
+FVector ADCCArcadeHaunt::ReelToListener(const FVector& At) const
+{
+	// The sound's place relative to the clip camera, carried over to the viewer's own ears: a blast to the left of the
+	// shot is to your left, a creak behind the camera is behind you.
+	const APlayerController* PC = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr;
+	if (!PC || !bReelEarValid)
+	{
+		return At;
+	}
+	FVector Ear, Front, Right;
+	PC->GetAudioListenerPosition(Ear, Front, Right);
+	const FVector Local = ReelEar.InverseTransformPositionNoScale(At);
+	const FTransform Listener(FRotationMatrix::MakeFromXY(Front, Right).Rotator(), Ear);
+	return Listener.TransformPositionNoScale(Local);
+}
+
+void ADCCArcadeHaunt::PlayReelSound(const FRecSound& S)
+{
+	UWorld* World = GetWorld();
+	if (!World || World->GetNetMode() == NM_DedicatedServer)
+	{
+		return;
+	}
+	if (USoundBase* Asset = S.Asset.Get())
+	{
+		UGameplayStatics::PlaySoundAtLocation(World, Asset, ReelToListener(S.At), S.Volume, S.Pitch);
+		return;
+	}
+	if (!S.Pcm || S.Pcm->IsEmpty())
+	{
+		return;
+	}
+	USoundWaveProcedural* Wave = NewObject<USoundWaveProcedural>(World);
+	Wave->SetSampleRate(S.Rate);
+	Wave->NumChannels = 1;
+	Wave->Duration = float(S.Pcm->Num()) / S.Rate;
+	Wave->SoundGroup = SOUNDGROUP_Effects;
+	Wave->bLooping = false;
+	Wave->QueueAudio(reinterpret_cast<const uint8*>(S.Pcm->GetData()), S.Pcm->Num() * sizeof(int16));
+	UAudioComponent* Voice = nullptr;
+	if (S.b2D)
+	{
+		Voice = UGameplayStatics::SpawnSound2D(World, Wave, S.Volume, S.Pitch);
+	}
+	else
+	{
+		USoundAttenuation* Att = NewObject<USoundAttenuation>(World);
+		Att->Attenuation.bAttenuate = true;
+		Att->Attenuation.bSpatialize = true;
+		Att->Attenuation.AttenuationShape = EAttenuationShape::Sphere;
+		Att->Attenuation.AttenuationShapeExtents = FVector(500.0f, 0, 0);
+		Att->Attenuation.FalloffDistance = FMath::Max(500.0f, S.Falloff);
+		Voice = UGameplayStatics::SpawnSoundAtLocation(World, Wave, ReelToListener(S.At), FRotator::ZeroRotator, S.Volume, S.Pitch, 0.0f, Att);
+	}
+	// A generated wave never ends by itself; stop it when its samples run out.
+	if (Voice)
+	{
+		Voice->StopDelayed(Wave->Duration / FMath::Max(0.1f, S.Pitch) + 0.1f);
+	}
+}
+
+static FAutoConsoleCommandWithWorldAndArgs GDevHauntEnd(TEXT("DCC.HauntEnd"), TEXT("DCC.HauntEnd [delay]: (dev) in Dead Air, run the clock out now."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		const float Delay = Args.Num() > 0 ? FCString::Atof(*Args.Last()) : 0.0f;
+		TWeakObjectPtr<UWorld> Weak(World);
+		auto Go = [Weak]()
+		{
+			for (TActorIterator<ADCCArcadeHaunt> It(Weak.Get()); It; ++It)
+			{
+				It->DebugEndRound();
+			}
+		};
+		if (!World) { return; }
+		if (Delay <= 0.0f) { Go(); return; }
+		FTimerHandle Handle;
+		World->GetTimerManager().SetTimer(Handle, FTimerDelegate::CreateLambda(Go), Delay, false);
+	}));
 
 // ---- every machine: record the round ---------------------------------------------------------------------------------
 
@@ -638,6 +761,37 @@ void ADCCArcadeHaunt::TickReelLocal(float DeltaSeconds)
 			Capture->SetWorldLocationAndRotation(Loc, Rot + Shake);
 		}
 	}
+
+	// The clip's sound: the first camera is the ear. What the round logged in this stretch plays again, on cue.
+	bReelEarValid = false;
+	if (USceneCaptureComponent2D* Ear = ReelCaptures.IsValidIndex(0) ? ReelCaptures[0].Get() : nullptr)
+	{
+		if (Clip.Cams.IsValidIndex(0))
+		{
+			ReelEar = FTransform(Ear->GetComponentRotation(), Ear->GetComponentLocation());
+			bReelEarValid = true;
+		}
+	}
+	if (ReelSoundClip != ClipIndex || PlayTime < ReelSoundCursor)
+	{
+		if (ReelSoundClip != ClipIndex)
+		{
+			int32 InClip = 0;
+			for (const FRecSound& Sound : SoundLog) { InClip += (Sound.T >= Clip.From && Sound.T <= Clip.To) ? 1 : 0; }
+			UE_LOG(LogTemp, Log, TEXT("[DCC Haunt] reel post %d: %d logged sound(s) in it, ear %s"), ClipIndex, InClip, bReelEarValid ? TEXT("set") : TEXT("missing"));
+		}
+		ReelSoundClip = ClipIndex;
+		ReelSoundCursor = Clip.From - 0.001; // a new post, or this one looping: from its start
+	}
+	for (const FRecSound& Sound : SoundLog)
+	{
+		if (Sound.T > ReelSoundCursor && Sound.T <= PlayTime && Sound.T >= Clip.From)
+		{
+			PlayReelSound(Sound);
+			UE_LOG(LogTemp, Verbose, TEXT("[DCC Haunt] reel sound at %.1f"), Sound.T);
+		}
+	}
+	ReelSoundCursor = PlayTime;
 
 	// The trap moments in this stretch happen again, on cue.
 	if (ReelPlayedClip != ClipIndex || PlayTime < ReelLastPlayTime)
