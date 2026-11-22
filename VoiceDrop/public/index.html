@@ -30,8 +30,13 @@
     color: var(--ink); font: inherit; }
   .speaker:hover { border-color: var(--accent2); }
   .speaker.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .speaker { display: flex; align-items: center; gap: 12px; }
+  .speaker img { width: 56px; height: 56px; flex: none; border-radius: 50%; }
   .speaker b { display: block; }
   .speaker small { color: var(--dim); }
+  .reading { display: flex; align-items: center; gap: 14px; margin: 0 0 12px; }
+  .reading img { width: 84px; height: 84px; flex: none; border-radius: 50%; }
+  .reading h2 { margin: 0; }
   .tips { color: var(--dim); font-size: 14px; margin: 0; padding-left: 18px; }
   .line { border-top: 1px solid var(--line); padding: 14px 0; }
   .line:first-child { border-top: 0; }
@@ -84,7 +89,7 @@
   </section>
 
   <section class="card hidden" id="linesCard">
-    <h2 id="linesTitle">3. Read the lines</h2>
+    <div class="reading"><img id="linesFace" alt="" hidden><h2 id="linesTitle">3. Read the lines</h2></div>
     <ul class="tips">
       <li>A quiet room is better than a good mic. Phones are fine.</li>
       <li><span class="dir">[Words in brackets]</span> are directions. Act them, don't read them.</li>
@@ -134,7 +139,7 @@ async function load() {
     const b = document.createElement("button");
     b.className = "speaker";
     const wanted = s.lines.filter((l) => l.wanted).length;
-    b.innerHTML = `<b>${escapeHtml(s.name)}</b><small>${s.lines.length} line${s.lines.length === 1 ? "" : "s"}${wanted ? ` · ${wanted} with no voice yet` : ""}</small>`;
+    b.innerHTML = `<img src="portraits/${encodeURIComponent(s.id)}.svg" alt="" loading="lazy" onerror="this.remove()"><span><b>${escapeHtml(s.name)}</b><small>${s.lines.length} line${s.lines.length === 1 ? "" : "s"}${wanted ? ` · ${wanted} with no voice yet` : ""}</small></span>`;
     if (s.blurb) b.title = s.blurb;
     b.onclick = () => pick(s, b);
     box.appendChild(b);
@@ -146,6 +151,10 @@ function pick(speaker, button) {
   document.querySelectorAll(".speaker").forEach((el) => el.classList.toggle("on", el === button));
   $("linesCard").classList.remove("hidden");
   $("linesTitle").textContent = `3. Read as ${speaker.name}`;
+  const face = $("linesFace");
+  face.hidden = false; face.alt = speaker.name;
+  face.onerror = () => { face.hidden = true; };
+  face.src = `portraits/${encodeURIComponent(speaker.id)}.svg`;
   const list = $("lines");
   list.innerHTML = "";
   const ordered = [...speaker.lines].sort((a, b) => (b.wanted ? 1 : 0) - (a.wanted ? 1 : 0));
