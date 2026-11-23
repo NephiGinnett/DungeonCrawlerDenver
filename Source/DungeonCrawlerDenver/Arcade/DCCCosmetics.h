@@ -21,6 +21,8 @@ namespace DCCCosmetics
 	extern const FName Back;
 	extern const FName Shoulders;
 	extern const FName Aura;
+	/** Damage skins (UI/DCCDamageSkins): how your damage numbers look. No parts on the body. */
+	extern const FName Numbers;
 
 	enum class EAnchor : uint8 { HeadTop, UpperBack };
 

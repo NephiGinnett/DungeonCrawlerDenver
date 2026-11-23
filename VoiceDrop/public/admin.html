@@ -67,7 +67,13 @@ try { token = localStorage.getItem("voiceDropAdmin") || ""; } catch {}
 let filter = "progress";
 // "progress" is the overview: every character, who voices it, and where each line stands (2026-11-22).
 const STATUSES = ["progress", "new", "approved", "shipped", "rejected", "all"];
-const STATE_LABEL = { open: "Open", review: "In review", taken: "Approved", done: "Shipped" };
+const STATE_LABEL = { open: "Open", review: "In review", taken: "Approved", done: "Shipped", locked: "Locked" };
+// Auditioning characters (Hiss Cranson): speaker id -> { row, prize, chosen, unlocked }. Filled by render().
+let auditionInfo = {};
+async function setAudition(speaker, body) {
+  await api(`/api/admin/auditions/${encodeURIComponent(speaker)}`, { method: "POST", body: JSON.stringify(body) });
+  render();
+}
 
 async function api(path, options = {}) {
   const res = await fetch(path, { ...options, headers: { "x-admin-token": token, "Content-Type": "application/json", ...(options.headers || {}) } });
@@ -105,6 +111,10 @@ function tabs() {
 
 async function render() {
   tabs();
+  try {
+    auditionInfo = {};
+    for (const sp of await api("/api/admin/progress")) { if (sp.audition) auditionInfo[sp.id] = sp.audition; }
+  } catch {}
   if (filter === "progress") return renderProgress();
   const list = await api("/api/admin/submissions?status=" + filter);
   $("count").textContent = `${list.length} take${list.length === 1 ? "" : "s"}`;
@@ -134,7 +144,19 @@ async function renderProgress() {
         <span>${sp.castBy ? "Voiced by <b>" + esc(sp.castBy) + "</b>" : "Not cast yet"}</span>
         <span>${c.done} shipped · ${c.taken} approved · ${c.review} in review · ${c.open} open</span></div>
       <div class="bar"><i style="width:${pct(c.done)};background:var(--ship)"></i><i style="width:${pct(c.taken)};background:var(--good)"></i><i style="width:${pct(c.review)};background:var(--warn)"></i></div>
+      ${sp.audition ? `<div class="row audition">
+        <b>AUDITION</b> <span>sample line ${esc(sp.audition.row)} · prize: ${esc(sp.audition.prize)}</span>
+        <span>${sp.audition.chosen ? `Chosen: <b>${esc(sp.audition.chosen)}</b>` : "No voice chosen yet: pick one from their sample take in the New or Approved tab."}</span>
+        ${sp.audition.chosen ? `<button class="act ${sp.audition.unlocked ? "plain" : "ok"}" data-unlock>${sp.audition.unlocked ? "Lock the lines again" : `Unlock the rest for ${esc(sp.audition.chosen)}`}</button>
+          <button class="act no" data-unchoose>Clear the choice</button>` : ""}
+      </div>` : ""}
       <div class="lines"></div>`;
+    if (sp.audition) {
+      const u = el.querySelector("[data-unlock]");
+      if (u) u.onclick = () => setAudition(sp.id, { unlocked: !sp.audition.unlocked });
+      const x = el.querySelector("[data-unchoose]");
+      if (x) x.onclick = () => { if (confirm("Clear the chosen voice? The audition opens again.")) setAudition(sp.id, { chosen: "", unlocked: false }); };
+    }
     const lines = el.querySelector(".lines");
     for (const l of sp.lines) {
       const row = document.createElement("div");
@@ -179,7 +201,18 @@ function card(s) {
       <button class="act no" data-s="rejected">Reject</button>
       <button class="act plain" data-s="new">Back to new</button>
       <button class="act no" data-del>Delete</button>
-    </div>`;
+    </div>
+    ${auditionInfo[s.speaker] && s.status !== "rejected" ? `<div class="row">
+      ${auditionInfo[s.speaker].chosen && auditionInfo[s.speaker].chosen.toLowerCase() === (s.gameName || s.name).toLowerCase()
+        ? `<b>★ The chosen voice of ${esc(s.speakerName)}</b>`
+        : `<button class="act ok" data-choose>★ Choose ${esc(s.gameName || s.name)} as the voice of ${esc(s.speakerName)} (${esc(auditionInfo[s.speaker].prize)})</button>`}
+    </div>` : ""}`;
+  const choose = el.querySelector("[data-choose]");
+  if (choose) choose.onclick = () => {
+    if (confirm(`Choose ${s.gameName || s.name} as the voice? They get the prize when you next pull, and you unlock the rest in the Progress tab.`)) {
+      setAudition(s.speaker, { chosen: s.gameName || s.name });
+    }
+  };
   const fields = () => ({ reward: el.querySelector('[data-f="reward"]').value, gameName: el.querySelector('[data-f="gameName"]').value });
   el.querySelectorAll("[data-s]").forEach((b) => b.onclick = async () => {
     await api(`/api/admin/submissions/${s.id}`, { method: "POST", body: JSON.stringify({ ...fields(), status: b.dataset.s }) });

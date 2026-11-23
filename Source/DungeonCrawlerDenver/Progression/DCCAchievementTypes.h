@@ -99,6 +99,9 @@ enum class EDCCAchievementStat : uint8
 	/** Casino Cascade: one count each time a single payout is 50 tickets or more. */
 	CasinoJackpot       UMETA(DisplayName = "Casino Jackpot"),
 
+	/** Strikes from the Integrity Office (Session/DCCIntegrity). Yes, this is an achievement too. */
+	CheatsCaught        UMETA(DisplayName = "Cheats Caught"),
+
 	MAX                 UMETA(Hidden)
 };
 

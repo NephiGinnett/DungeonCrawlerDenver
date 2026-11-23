@@ -1,4 +1,5 @@
 #include "Skills/DCCSkillComponent.h"
+#include "Arcade/DCCWalletComponent.h"
 #include "Skills/DCCSpellBook.h"
 #include "Skills/DCCSpellFx.h"
 #include "Classes/DCCClassPerks.h"
@@ -752,10 +753,22 @@ FDCCSkillResult UDCCSkillComponent::ActivateSkillInternal(const FDCCSkillDef& Sk
 
 	if (bSucceeded)
 	{
+		// The Hot Mic (2026-11-23): a live mic amplifies this spell (40% harder, 30% wider) and plays the holder's clip.
+		ADCCCharacterBase* MicHolder = GetOwningCharacter();
+		const bool bAmped = MicHolder && MicHolder->Wallet && (Skill.Archetype == EDCCSkillArchetype::Damage || Skill.Archetype == EDCCSkillArchetype::Heal)
+			&& MicHolder->Wallet->ConsumeHotMic();
+		FDCCSkillDef Amped = Skill;
+		if (bAmped)
+		{
+			Amped.Radius *= 1.3f;
+			Amped.ConeHalfAngleDegrees = FMath::Min(80.0f, Amped.ConeHalfAngleDegrees * 1.2f);
+			MicHolder->Multicast_HotMic(true);
+		}
 		TArray<ADCCCharacterBase*> Targets;
-		GatherTargets(Skill, Target, Targets);
+		GatherTargets(Amped, Target, Targets);
 
 		const int32 AbilityModifier = Ruleset->GetAbilityModifier(Stats->GetEnhanced().GetScore(Skill.CastingAbility));
+		const float PowerScale = Ruleset->GetScorePowerMultiplier(Stats->GetEnhanced().GetScore(Skill.CastingAbility)) * (bAmped ? 1.4f : 1.0f);
 
 		for (ADCCCharacterBase* Affected : Targets)
 		{
@@ -771,7 +784,7 @@ FDCCSkillResult UDCCSkillComponent::ActivateSkillInternal(const FDCCSkillDef& Sk
 			{
 				// Rolled per target rather than once and shared, so an AoE reads
 				// like several separate hits instead of a flat number.
-				int32 Magnitude = FMath::Max(1, FMath::RandRange(1, FMath::Max(1, Skill.PowerDie)) + AbilityModifier);
+				int32 Magnitude = FMath::Max(1, FMath::RoundToInt((FMath::RandRange(1, FMath::Max(1, Skill.PowerDie)) + AbilityModifier) * PowerScale));
 				if (const ADCCCharacterBase* Caster = GetOwningCharacter())
 				{
 					const int32 Bonus = DCCBasicClasses::SpellPercent(Caster);
@@ -791,7 +804,7 @@ FDCCSkillResult UDCCSkillComponent::ActivateSkillInternal(const FDCCSkillDef& Sk
 			}
 			case EDCCSkillArchetype::Heal:
 			{
-				int32 Magnitude = FMath::Max(1, FMath::RandRange(1, FMath::Max(1, Skill.PowerDie)) + AbilityModifier);
+				int32 Magnitude = FMath::Max(1, FMath::RoundToInt((FMath::RandRange(1, FMath::Max(1, Skill.PowerDie)) + AbilityModifier) * PowerScale));
 				if (const ADCCCharacterBase* Caster = GetOwningCharacter())
 				{
 					const int32 Bonus = DCCBasicClasses::HealPercent(Caster);

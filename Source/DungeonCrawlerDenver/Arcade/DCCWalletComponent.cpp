@@ -1,4 +1,9 @@
 #include "Arcade/DCCWalletComponent.h"
+#include "Characters/DCCCharacterBase.h"
+#include "GameFramework/PlayerState.h"
+#include "Items/DCCInventoryComponent.h"
+#include "Items/DCCLootBoxTypes.h"
+#include "Session/DCCIntegrity.h"
 #include "Session/DCCProfile.h"
 #include "Dom/JsonObject.h"
 #include "Misc/FileHelper.h"
@@ -21,6 +26,10 @@ namespace DCCVoiceCredits
 		FString Speaker;
 		FString Text;
 		int32 Tickets = 0;
+		/** Besides tickets (2026-11-23): a loot box tier, a nameplate title, an item ("HotMic"). */
+		FString Box;
+		FString Title;
+		FString Item;
 	};
 
 	const TArray<FCredit>& All()
@@ -52,7 +61,11 @@ namespace DCCVoiceCredits
 				Credit.Speaker = Row->GetStringField(TEXT("speaker"));
 				Credit.Text = Row->GetStringField(TEXT("text"));
 				Credit.Tickets = static_cast<int32>(Row->GetNumberField(TEXT("tickets")));
-				if (!Credit.Id.IsEmpty() && !Credit.Player.IsEmpty() && Credit.Tickets > 0)
+				Row->TryGetStringField(TEXT("box"), Credit.Box);
+				Row->TryGetStringField(TEXT("title"), Credit.Title);
+				Row->TryGetStringField(TEXT("item"), Credit.Item);
+				if (!Credit.Id.IsEmpty() && !Credit.Player.IsEmpty()
+					&& (Credit.Tickets > 0 || !Credit.Box.IsEmpty() || !Credit.Title.IsEmpty() || !Credit.Item.IsEmpty()))
 				{
 					Credits.Add(Credit);
 				}
@@ -78,13 +91,53 @@ namespace DCCVoiceCredits
 			}
 			DCCProfile::SetForKey(Key, TEXT("Voice"), Stat, 1.0f);
 			const FString Quote = Credit.Text.Len() > 50 ? Credit.Text.Left(47) + TEXT("...") : Credit.Text;
-			UDCCWalletComponent::AwardTickets(State, Credit.Tickets,
-				FString::Printf(TEXT("your voice line shipped (%s: \"%s\")"), *Credit.Speaker, *Quote));
+			if (Credit.Tickets > 0)
+			{
+				UDCCWalletComponent::AwardTickets(State, Credit.Tickets,
+					FString::Printf(TEXT("your voice line shipped (%s: \"%s\")"), *Credit.Speaker, *Quote));
+			}
+			ADCCCharacterBase* Crawler = State ? Cast<ADCCCharacterBase>(State->GetPawn()) : nullptr;
+			if (!Credit.Box.IsEmpty() && Crawler && Crawler->Inventory)
+			{
+				static const TCHAR* Tiers[] = { TEXT("None"), TEXT("Bronze"), TEXT("Silver"), TEXT("Gold"), TEXT("Platinum"), TEXT("Legendary"), TEXT("Celestial") };
+				for (int32 t = 1; t < UE_ARRAY_COUNT(Tiers); ++t)
+				{
+					if (Credit.Box.Equals(Tiers[t], ESearchCase::IgnoreCase))
+					{
+						Crawler->Inventory->GrantLootBox(static_cast<EDCCLootBoxTier>(t));
+						if (Crawler->Wallet)
+						{
+							Crawler->Wallet->Tell(FString::Printf(TEXT("%s: a %s loot box. Open it from Tab, LOOT BOXES."), *Credit.Speaker, Tiers[t]));
+						}
+					}
+				}
+			}
+			if (!Credit.Title.IsEmpty())
+			{
+				DCCProfile::SetForKey(Key, TEXT("Titles"), FName(*Credit.Title), 1.0f);
+				if (Crawler && Crawler->Wallet)
+				{
+					Crawler->Wallet->NameTitle = Credit.Title;
+					Crawler->RefreshNameplateNow();
+					Crawler->Wallet->Tell(FString::Printf(TEXT("New nameplate title: %s"), *Credit.Title));
+				}
+			}
+			if (Credit.Item.Equals(TEXT("HotMic"), ESearchCase::IgnoreCase))
+			{
+				DCCProfile::GrantCosmetic(Key, UDCCWalletComponent::HotMicId);
+				if (Crawler && Crawler->Wallet)
+				{
+					Crawler->Wallet->RefreshFromProfile();
+					Crawler->Wallet->Tell(TEXT("THE HOT MIC (Epic) is yours: you are the voice of Hiss Cranson. It is on your belt."));
+				}
+			}
 			UE_LOG(LogTemp, Log, TEXT("[DCC Voice] paid %s %d tickets for %s %s"), *Key, Credit.Tickets, *Credit.Speaker, *Credit.Id);
 		}
 	}
 }
 #include "Combat/DCCGameState.h"
+#include "Arcade/DCCAudience.h"
+#include "GameFramework/GameStateBase.h"
 #include "Characters/DCCAllyCharacters.h"
 #include "Arcade/DCCSummons.h"
 #include "Characters/DCCReactions.h"
@@ -155,6 +208,11 @@ void UDCCWalletComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	// Tickets and what you own matter only to you; what you wear, everyone sees.
 	DOREPLIFETIME_CONDITION(UDCCWalletComponent, Tickets, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(UDCCWalletComponent, Fame, COND_OwnerOnly);
+	DOREPLIFETIME(UDCCWalletComponent, FameLevel); // everyone: the talk show board and the host read it
+	DOREPLIFETIME(UDCCWalletComponent, NameTitle);
+	DOREPLIFETIME_CONDITION(UDCCWalletComponent, HotMicLiveUntil, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(UDCCWalletComponent, HotMicReadyAt, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(UDCCWalletComponent, Owned, COND_OwnerOnly);
 	DOREPLIFETIME(UDCCWalletComponent, Worn);
 	DOREPLIFETIME_CONDITION(UDCCWalletComponent, ClimbTools, COND_OwnerOnly);
@@ -245,8 +303,13 @@ void UDCCWalletComponent::Server_SyncProfile_Implementation(const TArray<uint8>&
 	{
 		return;
 	}
-	if (DCCProfile::MergeFromClient(Key, Current, Base))
+	FString Suspicion;
+	if (DCCProfile::MergeFromClient(Key, Current, Base, &Suspicion))
 	{
+		if (!Suspicion.IsEmpty())
+		{
+			DCCIntegrity::Flag(Cast<ADCCCharacterBase>(GetOwner()), Suspicion);
+		}
 		PushToClients(Key); // tickets, items and the rest, now including what they earned away from this PC
 		bProfileSent = true;
 		DCCProfile::TakeDirty(Key);
@@ -290,6 +353,12 @@ FName UDCCWalletComponent::WornIn(FName Slot) const
 void UDCCWalletComponent::PushToClients(const FString& Key)
 {
 	Tickets = DCCProfile::GetTickets(Key);
+	if (DCCProfile::GetForKey(Key, TEXT("Titles"), TEXT("OPEN MIC"), 0.0f) > 0.5f)
+	{
+		NameTitle = TEXT("OPEN MIC");
+	}
+	Fame = FMath::RoundToInt(DCCProfile::GetForKey(Key, TEXT("Audience"), TEXT("Fame"), 0.0f));
+	FameLevel = FMath::RoundToInt(DCCProfile::GetForKey(Key, TEXT("Audience"), TEXT("FameLevel"), 0.0f));
 	Owned = DCCProfile::GetCosmetics(Key);
 	Worn.Reset();
 	for (const TPair<FName, FName>& Pair : DCCProfile::GetWearing(Key))
@@ -328,6 +397,10 @@ void UDCCWalletComponent::RefreshTrophies()
 
 void UDCCWalletComponent::Server_SellTrophy_Implementation(FName ArtifactId)
 {
+	if (!DCCIntegrity::Allow(Cast<ADCCCharacterBase>(GetOwner()), TEXT("shop"), 5.0f, 10.0f))
+	{
+		return;
+	}
 	const FString Key = ProfileKey();
 	int32 Value = 0;
 	const TCHAR* Name = nullptr;
@@ -378,6 +451,10 @@ void UDCCWalletComponent::Server_Spray_Implementation(FVector At, FVector Normal
 
 void UDCCWalletComponent::Server_Buy_Implementation(FName CosmeticId)
 {
+	if (!DCCIntegrity::Allow(Cast<ADCCCharacterBase>(GetOwner()), TEXT("shop"), 5.0f, 10.0f))
+	{
+		return;
+	}
 	const FString Key = ProfileKey();
 	if (Key.IsEmpty())
 	{
@@ -754,6 +831,10 @@ void UDCCWalletComponent::RefreshBounties()
 
 void UDCCWalletComponent::Server_ClaimBounty_Implementation(FName BountyId)
 {
+	if (!DCCIntegrity::Allow(Cast<ADCCCharacterBase>(GetOwner()), TEXT("shop"), 5.0f, 10.0f))
+	{
+		return;
+	}
 	APawn* Pawn = Cast<APawn>(GetOwner());
 	if (Pawn && DCCBounties::Claim(Pawn->GetPlayerState(), BountyId))
 	{
@@ -865,6 +946,10 @@ int32 UDCCWalletComponent::ChopLevel(FName UpgradeId) const
 
 void UDCCWalletComponent::Server_BuyChop_Implementation(FName UpgradeId)
 {
+	if (!DCCIntegrity::Allow(Cast<ADCCCharacterBase>(GetOwner()), TEXT("shop"), 5.0f, 10.0f))
+	{
+		return;
+	}
 	const FString Key = ProfileKey();
 	if (Key.IsEmpty())
 	{
@@ -962,6 +1047,10 @@ void UDCCWalletComponent::Client_PasswordResult_Implementation(bool bChanged, co
 
 void UDCCWalletComponent::Server_BuySupply_Implementation(FName ItemId)
 {
+	if (!DCCIntegrity::Allow(Cast<ADCCCharacterBase>(GetOwner()), TEXT("shop"), 5.0f, 10.0f))
+	{
+		return;
+	}
 	const FString Key = ProfileKey();
 	ADCCCharacterBase* Crawler = Cast<ADCCCharacterBase>(GetOwner());
 	const DCCClimbItems::FItem* Item = DCCClimbItems::Find(ItemId);
@@ -1040,6 +1129,10 @@ void UDCCWalletComponent::Client_GrappleThrown_Implementation(float Seconds)
 
 void UDCCWalletComponent::Server_Summon_Implementation(uint8 Tube)
 {
+	if (!DCCIntegrity::Allow(Cast<ADCCCharacterBase>(GetOwner()), TEXT("summon"), 1.0f, 3.0f))
+	{
+		return;
+	}
 	DoSummon(Tube, false);
 }
 
@@ -1097,6 +1190,202 @@ void UDCCWalletComponent::DoSummon(uint8 Tube, bool bFree)
 	Client_SummonResult(Pull.Friend, Pull.Tier, Pull.Variant, Pull.Weapon);
 	ADCCGameState::Log(this, EDCCLogCategory::Announcement, FText::FromString(FString::Printf(TEXT("%s pulled a %s%s %s out of F.I.A.T."),
 		*Key, Pull.Variant ? *FString(DCCSummons::VariantName(Pull.Variant)).ToUpper().Append(TEXT(" ")) : TEXT(""), DCCSummons::TierName(Pull.Tier), *Pull.Friend.ToString())));
+}
+
+const FName UDCCWalletComponent::HotMicId(TEXT("HotMic"));
+
+void UDCCWalletComponent::RefreshFromProfile()
+{
+	PushToClients(ProfileKey());
+}
+
+void UDCCWalletComponent::Server_HotMic_Implementation()
+{
+	ADCCCharacterBase* Crawler = Cast<ADCCCharacterBase>(GetOwner());
+	UWorld* World = GetWorld();
+	const AGameStateBase* GS = World ? World->GetGameState() : nullptr;
+	if (!Crawler || !GS || !Owns(HotMicId) || !Crawler->IsAlive())
+	{
+		return;
+	}
+	const double Now = GS->GetServerWorldTimeSeconds();
+	if (Now < HotMicReadyAt)
+	{
+		return;
+	}
+	HotMicLiveUntil = Now + 8.0;
+	HotMicReadyAt = Now + 45.0;
+	Crawler->Multicast_HotMic(false);
+	DCCAudience::Moment(Crawler, Crawler, DCCAudience::EMoment::Trick);
+}
+
+bool UDCCWalletComponent::ConsumeHotMic()
+{
+	const UWorld* World = GetWorld();
+	const AGameStateBase* GS = World ? World->GetGameState() : nullptr;
+	if (!GS || HotMicLiveUntil <= 0.0 || GS->GetServerWorldTimeSeconds() > HotMicLiveUntil)
+	{
+		return false;
+	}
+	HotMicLiveUntil = 0.0;
+	return true;
+}
+
+void UDCCWalletComponent::Client_FameLevel_Implementation(int32 Level, uint8 Tier)
+{
+	const ADCCCharacterBase* Crawler = Cast<ADCCCharacterBase>(GetOwner());
+	const APlayerController* PC = Crawler ? Cast<APlayerController>(Crawler->GetController()) : nullptr;
+	if (ADCCHUD* Hud = PC ? Cast<ADCCHUD>(PC->GetHUD()) : nullptr)
+	{
+		static const TCHAR* Names[] = { TEXT("?"), TEXT("Bronze"), TEXT("Silver"), TEXT("Gold"), TEXT("Platinum"), TEXT("Legendary"), TEXT("Celestial") };
+		Hud->PushAchievement(FString::Printf(TEXT("FAME LEVEL %d"), Level),
+			FString::Printf(TEXT("%s loot box. Open it from Tab, LOOT BOXES."), Names[FMath::Clamp<int32>(Tier, 0, 6)]));
+	}
+}
+
+void UDCCWalletComponent::Server_SummonTen_Implementation(uint8 Tube)
+{
+	DoSummonTen(Tube, false);
+}
+
+void UDCCWalletComponent::DoSummonTen(uint8 Tube, bool bFree)
+{
+	ADCCCharacterBase* Crawler = Cast<ADCCCharacterBase>(GetOwner());
+	UWorld* World = GetWorld();
+	if (!Crawler || !World || !Crawler->IsAlive() || !DCCIntegrity::Allow(Crawler, TEXT("summon"), 1.0f, 3.0f))
+	{
+		return;
+	}
+	ADCCArcadeLobby* Lobby = nullptr;
+	for (TActorIterator<ADCCArcadeLobby> It(World); It; ++It) { Lobby = *It; break; }
+	if (!Lobby || Tube >= ADCCArcadeLobby::TubeCount || (!bFree && Lobby->PodiumNear(Crawler->GetActorLocation()) != int32(Tube)))
+	{
+		return;
+	}
+	const FString Key = DCCProfile::KeyFor(Crawler->GetPlayerState());
+	const int32 Free = DCCSummons::MaxAllies - DCCSummons::Party().FindOrAdd(Key).Num();
+	if (Free <= 0)
+	{
+		Client_Message(TEXT("Your party is full. One has to fall before another comes down."), false);
+		return;
+	}
+	if (TenTube >= 0)
+	{
+		Client_Message(TEXT("Ten friends are already waiting in the tube. Pick who stays first."), false);
+		return;
+	}
+	if (!bFree && !DCCProfile::SpendTickets(Key, DCCSummons::TenPrice))
+	{
+		Client_Message(FString::Printf(TEXT("A ten-pull costs %d tickets. You have %d."), DCCSummons::TenPrice, DCCProfile::GetTickets(Key)), false);
+		return;
+	}
+	Tickets = DCCProfile::GetTickets(Key);
+
+	TArray<uint8> Tiers = Lobby->FriendTiers;
+	if (Tiers.IsEmpty())
+	{
+		DCCSummons::ComputeTiers(Tiers);
+	}
+	const UDataTable* Table = Crawler->Equipment ? Crawler->Equipment->EquipmentTable.Get() : nullptr;
+	TArray<DCCSummons::FSummon> Pulls;
+	bool bRare = false;
+	for (int32 i = 0; i < 10; ++i)
+	{
+		Pulls.Add(DCCSummons::Roll(Tiers, Key, Table));
+		bRare |= Pulls.Last().Tier >= 1;
+	}
+	// The guarantee: if nothing came up Rare or better, the last one is rerolled until it does.
+	for (int32 Try = 0; !bRare && Try < 60; ++Try)
+	{
+		Pulls[9] = DCCSummons::Roll(Tiers, Key, Table);
+		bRare = Pulls[9].Tier >= 1;
+	}
+	if (Pulls[0].Friend.IsNone())
+	{
+		if (!bFree) { DCCProfile::AddTickets(Key, DCCSummons::TenPrice); } // nobody to summon: the tickets back
+		Tickets = DCCProfile::GetTickets(Key);
+		return;
+	}
+	TenFriends.Reset(); TenTiers.Reset(); TenVariants.Reset(); TenWeapons.Reset();
+	for (const DCCSummons::FSummon& P : Pulls)
+	{
+		TenFriends.Add(P.Friend);
+		TenTiers.Add(P.Tier);
+		TenVariants.Add(P.Variant);
+		TenWeapons.Add(P.Weapon);
+	}
+	TenTube = Tube;
+	Client_SummonTen(TenFriends, TenTiers, TenVariants, TenWeapons, Free);
+	ADCCGameState::Log(this, EDCCLogCategory::Announcement, FText::FromString(FString::Printf(
+		TEXT("%s fed F.I.A.T. %d tickets at once. Ten friends are crammed in the tube, waiting to hear who gets to stay."), *Key, DCCSummons::TenPrice)));
+}
+
+void UDCCWalletComponent::Server_KeepSummons_Implementation(const TArray<uint8>& Keep)
+{
+	ADCCCharacterBase* Crawler = Cast<ADCCCharacterBase>(GetOwner());
+	UWorld* World = GetWorld();
+	if (!Crawler || !World || TenTube < 0 || TenFriends.Num() != 10)
+	{
+		return;
+	}
+	ADCCArcadeLobby* Lobby = nullptr;
+	for (TActorIterator<ADCCArcadeLobby> It(World); It; ++It) { Lobby = *It; break; }
+	const uint8 Tube = uint8(TenTube);
+	TenTube = -1;
+	const FString Key = DCCProfile::KeyFor(Crawler->GetPlayerState());
+	TArray<DCCSummons::FSummon>& Mine = DCCSummons::Party().FindOrAdd(Key);
+	TSet<uint8> Picked;
+	uint8 Best = 0;
+	int32 Kept = 0;
+	for (const uint8 Index : Keep)
+	{
+		if (Index >= 10 || Picked.Contains(Index) || Mine.Num() >= DCCSummons::MaxAllies || !Lobby)
+		{
+			continue;
+		}
+		Picked.Add(Index);
+		DCCSummons::FSummon Pull;
+		Pull.Friend = TenFriends[Index];
+		Pull.Tier = TenTiers[Index];
+		Pull.Variant = TenVariants[Index];
+		Pull.Weapon = TenWeapons[Index];
+		const FVector Spot = Lobby->TubeCenter(Tube) + FVector(0, 0, 70.0f) + FVector(Kept * 90.0f, 0.0f, 0.0f);
+		if (ADCCSummonedAlly* Ally = DCCSummons::SpawnAlly(World, Pull, Crawler, Spot, 640.0f + Kept * 200.0f, Lobby->TubeExit(Tube)))
+		{
+			Mine.Add(Pull);
+			DCCSummons::Track(World, Key, Ally);
+			Client_SummonResult(Pull.Friend, Pull.Tier, Pull.Variant, Pull.Weapon);
+			Best = FMath::Max(Best, Pull.Tier);
+			++Kept;
+		}
+	}
+	if (Lobby && Kept > 0)
+	{
+		Lobby->StartTube(Tube, Best);
+	}
+	const int32 Gone = 10 - Kept;
+	ADCCGameState::Log(this, EDCCLogCategory::Announcement, FText::FromString(Kept > 0
+		? FString::Printf(TEXT("%s kept %d. The other %d evaporated with a small, polite pop. The tube smells like ozone and regret."), *Key, Kept, Gone)
+		: FString::Printf(TEXT("%s kept nobody. All ten evaporated. The audience is not sure whether that was cold or strategic."), *Key)));
+	TenFriends.Reset(); TenTiers.Reset(); TenVariants.Reset(); TenWeapons.Reset();
+}
+
+void UDCCWalletComponent::Client_SummonTen_Implementation(const TArray<FName>& Friends, const TArray<uint8>& Tiers, const TArray<uint8>& Variants,
+	const TArray<FName>& Weapons, int32 Slots)
+{
+	const ADCCCharacterBase* Crawler = Cast<ADCCCharacterBase>(GetOwner());
+	const APlayerController* PC = Crawler ? Cast<APlayerController>(Crawler->GetController()) : nullptr;
+	if (ADCCHUD* Hud = PC ? Cast<ADCCHUD>(PC->GetHUD()) : nullptr)
+	{
+		TArray<FString> WeaponNames;
+		for (const FName& Weapon : Weapons)
+		{
+			FDCCEquipmentDef Def;
+			WeaponNames.Add(!Weapon.IsNone() && Crawler->Equipment && Crawler->Equipment->FindItem(Weapon, Def)
+				? (Def.DisplayName.IsEmpty() ? Weapon.ToString() : Def.DisplayName.ToString()) : FString());
+		}
+		Hud->ShowSummonTen(Friends, Tiers, Variants, WeaponNames, Slots);
+	}
 }
 
 void UDCCWalletComponent::Client_SummonResult_Implementation(FName Friend, uint8 Tier, uint8 Variant, FName Weapon)

@@ -1,4 +1,5 @@
 #include "Arcade/DCCArcadeGames.h"
+#include "Arcade/DCCAudience.h"
 #include "Arcade/DCCSummons.h"
 #include "Characters/DCCAllyCharacters.h"
 #include "Components/PointLightComponent.h"
@@ -23,6 +24,8 @@
 #include "Engine/PointLight.h"
 #include "Arcade/DCCWalletComponent.h"
 #include "Arcade/DCCChopShop.h"
+#include "Arcade/DCCTalkShowHost.h"
+#include "Arcade/DCCShopkeeperNPC.h"
 #include "Arcade/DCCFortTiner.h"
 #include "UI/DCCHUD.h"
 #include "Arcade/DCCNeonTraffic.h"
@@ -229,6 +232,7 @@ void ADCCArcadeLobby::BuildLocal()
 	Light(Chop + FVector(-300, -360, 320), FLinearColor(1.0f, 0.5f, 0.2f), 2500.0f, 500.0f);
 
 	BuildTubes();
+	BuildTalkShow();
 	ADCCCasinoCascade::Dress(this);
 }
 
@@ -242,6 +246,10 @@ void ADCCArcadeLobby::ServerBegin()
 	FActorSpawnParameters Params;
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 	World->SpawnActor<ADCCCasinoCascade>(GetActorLocation(), FRotator::ZeroRotator, Params);
+	// Hiss Cranson, behind his desk, facing the room.
+	World->SpawnActor<ADCCTalkShowHost>(TalkShowCenter() + FVector(-250.0f, -230.0f, 120.0f), FRotator::ZeroRotator, Params);
+	// Cillinan, behind the prize counter, facing the gold pad (2026-11-23).
+	World->SpawnActor<ADCCShopkeeperNPC>(ShopPadCenter() + FVector(160.0f, -615.0f, 122.0f) /* on a step behind the counter */, FRotator(0.0f, 90.0f, 0.0f), Params);
 }
 
 void ADCCArcadeLobby::TickPads(float DeltaSeconds)
@@ -498,6 +506,7 @@ void ADCCArcadeLobby::TickTubes()
 void ADCCArcadeLobby::ClientTick(float DeltaSeconds)
 {
 	TickTubes();
+	TickTalkShow();
 	TickPads(DeltaSeconds);
 	// Each pad's board shows its game's record, kept current as people play.
 	for (int32 i = 0; i < RecordSigns.Num() && i < PadRecords.Num(); ++i)
@@ -3635,7 +3644,7 @@ void ADCCArcadeKart::ServerTick(float DeltaSeconds)
 	if (!bGo && Now >= GoAt)
 	{
 		bGo = true;
-		ShiftEnd = Now + ShiftSeconds;
+		ShiftEnd = Now + (bPractice ? 1.0e7 : ShiftSeconds); // practice never clocks out
 		ShiftEndsAt = ShiftEnd;
 		for (int32 i = 0; i < Marks.Num(); ++i)
 		{
@@ -3914,7 +3923,7 @@ void ADCCArcadeKart::TickCity(float DeltaSeconds)
 		{
 			const float Cruise = RepoRole(Truck.Role).Pace * RepoRole(Truck.Role).Engine * 5600.0f;
 			const float Fast = Speed > Cruise * 1.25f ? 2.2f : 1.0f;
-			Truck.Fuel = FMath::Max(0.0f, Truck.Fuel - 1.55f * RepoRole(Truck.Role).Burn * DCCChopShop::FuelBurn(Truck.ChopTank) * Fast * DeltaSeconds);
+			if (!bPractice) { Truck.Fuel = FMath::Max(0.0f, Truck.Fuel - 1.55f * RepoRole(Truck.Role).Burn * DCCChopShop::FuelBurn(Truck.ChopTank) * Fast * DeltaSeconds); }
 		}
 
 		bool bAtStreet = false;
@@ -4300,52 +4309,81 @@ void ADCCArcadeKart::TickCity(float DeltaSeconds)
 			{
 				TowerCar->RallyMagnet = FMath::Clamp(
 					TowerCar->RallyMagnet + TowerCar->GetSteerInput() * 1.6f * DeltaSeconds, -1.0f, 1.0f);
-				const bool bLevel = FMath::Abs(TowerCar->RallyTilt) < 25.0f;
-				const bool bPop = TowerCar->bRallyTrickPop;
-				const float Sign = TowerCar->RallyTilt >= 0.0f ? 1.0f : -1.0f;
-				TowerCar->RallyTilt += (Sign * 28.0f - TowerCar->RallyMagnet * 90.0f) * DeltaSeconds;
-				TowerCar->RallyTilt = FMath::Clamp(TowerCar->RallyTilt, -100.0f, 100.0f);
-				if (TowerCar->bRallyDevHold && FMath::IsNearlyZero(TowerCar->GetSteerInput()))
+				// The trick ring (2026-11-23). The car stays level now: the tilt that could drop it is gone, and the
+				// skill is the timing. See ADCCRover's ring notes.
+				TowerCar->RallyTilt = 0.0f;
+				const double Clock = TowerCar->RallyClock();
+				auto NextRing = [&](float Breath)
 				{
-					TowerCar->RallyTilt = FMath::Clamp(TowerCar->RallyTilt, -10.0f, 10.0f);
+					TowerCar->RallyBeatLength = ADCCRover::RallyRungSeconds(TowerCar->RallyTrickChain);
+					TowerCar->RallyBeatAt = Clock + Breath + TowerCar->RallyBeatLength;
+				};
+				auto Judge = [&](uint8 Call)
+				{
+					TowerCar->RallyJudge = Call;
+					++TowerCar->RallyJudgeSerial;
+				};
+				if (TowerCar->RallyBeatAt <= 0.0)
+				{
+					NextRing(0.6f);
 				}
-				if (bLevel)
+				const bool bCompanionTruck = Tower && Tower->bCompanion;
+				if (bCompanionTruck && !TowerCar->bRallyPressed && Clock >= TowerCar->RallyBeatAt - 0.02)
 				{
-					if (TowerCar->RallyTrickPhase < 1.0f)
+					// A companion presses on the beat, mostly well.
+					TowerCar->bRallyPressed = true;
+					TowerCar->RallyPressOffset = FMath::FRandRange(-0.14f, 0.12f);
+				}
+				if (TowerCar->bRallyPressed)
+				{
+					TowerCar->bRallyPressed = false;
+					// The driver's own screen decides, within reason: a guest's press can be up to 300 ms older than
+					// the host's clock says, never earlier than the host saw it (DCCIntegrity spirit: no free Perfects).
+					const float Seen = float(Clock - TowerCar->RallyBeatAt);
+					const float Off = FMath::Clamp(TowerCar->RallyPressOffset, Seen - 0.3f, Seen + 0.02f);
+					if (Off < -0.45f)
 					{
-						TowerCar->RallyTrickPhase = FMath::Min(1.0f, TowerCar->RallyTrickPhase + DeltaSeconds / 0.8f);
+						// Far too early: the ring is still wide. Ignored, so mashing does not count as a miss either.
 					}
-					if (TowerCar->RallyTrickPhase >= 1.0f)
+					else if (FMath::Abs(Off) <= 0.17f)
 					{
-						TowerCar->RallyCleanHold += DeltaSeconds;
-					}
-					const float Rate = 14.0f + 8.0f * static_cast<float>(TowerCar->RallyTrickChain);
-					TowerCar->RallyTrickScore += FMath::Max(1, FMath::RoundToInt(Rate * DeltaSeconds));
-					if (TowerCar->RallyTrickPhase >= 1.0f && (bPop || TowerCar->RallyCleanHold >= 1.4f))
-					{
-						static const uint8 Moves[] = { 1, 2, 3, 4 };
-						const bool bPicked = bPop && TowerCar->RallyTrickQueued >= 1 && TowerCar->RallyTrickQueued <= 4;
-						TowerCar->RallyTrickChain += 1;
-						TowerCar->RallyTrickMove = bPicked
-							? TowerCar->RallyTrickQueued
-							: Moves[(TowerCar->RallyTrickChain - 1) & 3];
+						const bool bPerfect = FMath::Abs(Off) <= 0.07f;
+						const int32 Rung = TowerCar->RallyTrickChain;
+						const int32 Points = FMath::RoundToInt(ADCCRover::RallyRungPoints(Rung) * (bPerfect ? 1.5f : 1.0f));
+						TowerCar->RallyTrickScore += Points;
+						TowerCar->RallyTrickChain = FMath::Min(Rung + 1, 50);
+						TowerCar->RallyTrickMove = uint8(FMath::Min(Rung, 6) + 1);
 						TowerCar->RallyTrickPhase = 0.0f;
-						TowerCar->RallyCleanHold = 0.0f;
-						TowerCar->bRallyTrickPop = false;
-						TowerCar->RallyTrickQueued = 0;
-						TowerCar->RallyTrickScore += (bPicked ? 20 : 8) + 4 * TowerCar->RallyTrickChain;
-						UE_LOG(LogTemp, Log, TEXT("[DCC Drive] trick %d %s pick %d score %d"),
-							TowerCar->RallyTrickChain, TowerCar->RallyTrickLabel(), bPicked ? 1 : 0, TowerCar->RallyTrickScore);
+						Judge(bPerfect ? 2 : 1);
+						NextRing(0.8f);
+						if (ADCCCharacterBase* Driver = TowerCar->Driver)
+						{
+							DCCAudience::Moment(this, Driver, bPerfect && Rung >= 3 ? DCCAudience::EMoment::PerfectTrick : DCCAudience::EMoment::Trick);
+						}
+						UE_LOG(LogTemp, Log, TEXT("[DCC Drive] ring %s %s +%d style %d (off %.3f)"), bPerfect ? TEXT("PERFECT") : TEXT("good"),
+							TowerCar->RallyTrickLabel(), Points, TowerCar->RallyTrickScore, Off);
+					}
+					else
+					{
+						TowerCar->RallyTrickChain = 0;
+						Judge(3);
+						NextRing(1.0f);
+						UE_LOG(LogTemp, Log, TEXT("[DCC Drive] ring miss (off %.3f) style %d"), Off, TowerCar->RallyTrickScore);
 					}
 				}
-				else if (bPop)
+				else if (Clock > TowerCar->RallyBeatAt + 0.17 + 0.35)
 				{
-					TowerCar->bRallyTrickPop = false;
-					TowerCar->RallyTrickQueued = 0;
-					Tell(TowerCar, TEXT("Too tilted to trick."));
+					// Let it pass: the ladder starts over. The points stay.
+					TowerCar->RallyTrickChain = 0;
+					Judge(3);
+					NextRing(0.6f);
+				}
+				if (TowerCar->RallyTrickPhase < 1.0f)
+				{
+					TowerCar->RallyTrickPhase = FMath::Min(1.0f, TowerCar->RallyTrickPhase + DeltaSeconds / 0.75f);
 				}
 				const bool bFlipping = TowerCar->RallyTrickPhase < 1.0f && TowerCar->RallyTrickMove != 0;
-				TowerCar->RallySpin += DeltaSeconds * (bFlipping ? 40.0f : 220.0f);
+				TowerCar->RallySpin += DeltaSeconds * (bFlipping ? 40.0f : 120.0f);
 				float ExtraPitch = 0.0f;
 				float ExtraRoll = 0.0f;
 				if (bFlipping)
@@ -4356,7 +4394,10 @@ void ADCCArcadeKart::TickCity(float DeltaSeconds)
 					case 1: ExtraPitch = Arc; break;
 					case 2: ExtraRoll = Arc; break;
 					case 3: ExtraPitch = -Arc; break;
-					default: ExtraPitch = Arc; ExtraRoll = Arc; break;
+					case 4: ExtraPitch = Arc; ExtraRoll = Arc; break;
+					case 5: ExtraPitch = Arc * 2.0f; ExtraRoll = Arc * 2.0f; break;
+					case 6: TowerCar->RallySpin += DeltaSeconds * 900.0f; ExtraPitch = FMath::Sin(Arc * PI / 180.0f) * 30.0f; break;
+					default: ExtraPitch = Arc * 2.0f; ExtraRoll = -Arc * 2.0f; TowerCar->RallySpin += DeltaSeconds * 600.0f; break;
 					}
 				}
 				const FVector Overhead = TowerCar->GetActorLocation()
@@ -4367,23 +4408,7 @@ void ADCCArcadeKart::TickCity(float DeltaSeconds)
 					TowerCar->RallyTilt + ExtraPitch,
 					TowerCar->GetActorRotation().Yaw + TowerCar->RallySpin,
 					TowerCar->RallyMagnet * 18.0f + ExtraRoll));
-				if (FMath::Abs(TowerCar->RallyTilt) > 70.0f)
-				{
-					TowerCar->RallyOffBalance += DeltaSeconds;
-					if (TowerCar->RallyOffBalance > 0.35f)
-					{
-						UE_LOG(LogTemp, Log, TEXT("[DCC Drive] flip dropped tilt %.0f score %d chain %d"),
-							TowerCar->RallyTilt, TowerCar->RallyTrickScore, TowerCar->RallyTrickChain);
-						TowerCar->RallyTrickScore = 0;
-						Release(mi, true);
-						Tell(TowerCar, TEXT("Lost it."));
-						continue;
-					}
-				}
-				else
-				{
-					TowerCar->RallyOffBalance = 0.0f;
-				}
+				TowerCar->RallyOffBalance = 0.0f;
 			}
 			else if (Mark.bDocked)
 			{
@@ -4671,10 +4696,18 @@ void ADCCArcadeKart::Deliver(int32 Slot)
 	const float TimePay = FMath::Max(0.0f, 40.0f - Seconds);
 	const float Clean = (100.0f - Damage) * 0.45f;
 	float Pay = (40.0f + TimePay + Clean) * Mark.PayMul;
-	if (TowerCar && TowerCar->RallyTrickMul > 1.01f)
+	// The style multiplier is paid here, at the turn-in, and only here (2026-11-23).
+	int32 Style = 0;
+	float StyleMul = 1.0f;
+	if (TowerCar && TowerCar->RallyTrickScore > 0)
 	{
-		Pay *= TowerCar->RallyTrickMul;
-		UE_LOG(LogTemp, Log, TEXT("[DCC Drive] flip pay x%.2f -> %.0f"), TowerCar->RallyTrickMul, Pay);
+		Style = TowerCar->RallyTrickScore;
+		StyleMul = ADCCRover::RallyStyleMultiplier(Style);
+		Pay *= StyleMul;
+		UE_LOG(LogTemp, Log, TEXT("[DCC Drive] style %d pay x%.2f -> %.0f"), Style, StyleMul, Pay);
+	}
+	if (TowerCar)
+	{
 		TowerCar->RallyTrickMul = 1.0f;
 	}
 	if (TowerCar)
@@ -4697,7 +4730,7 @@ void ADCCArcadeKart::Deliver(int32 Slot)
 		Tower->Score += Pay;
 		Tower->Ledger += 18.0f;
 		++Tower->Nabs;
-		if (Tower->bPlayer && Tower->Nabs == 10 && TowerCar)
+		if (Tower->bPlayer && Tower->Nabs == 10 && TowerCar && !bPractice)
 		{
 			DCCArcade::CompleteSeriesQuest(TowerCar->GetPlayerState(), TEXT("Kart"), DCCArcade::SeriesQuestXp());
 		}
@@ -4707,7 +4740,7 @@ void ADCCArcadeKart::Deliver(int32 Slot)
 		}
 		Tower->HookedId = -1;
 		// Scrap for the Chop Shop: every drop pays, a quick clean one pays more.
-		if (TowerCar)
+		if (TowerCar && !bPractice)
 		{
 			const int32 Scrap = Mark.bHeavy ? (bWreck ? 12 : 28) : (bWreck ? 4 : Seconds < 25.0f ? 15 : 10);
 			UDCCWalletComponent::AwardScrap(TowerCar->GetPlayerState(), Scrap,
@@ -4720,7 +4753,9 @@ void ADCCArcadeKart::Deliver(int32 Slot)
 		}
 		else
 		{
-			Tell(TowerCar, FString::Printf(TEXT("Dropped %s in %.0f seconds. %.0f points."), *Mark.Name, Seconds, Pay));
+			Tell(TowerCar, Style > 0
+				? FString::Printf(TEXT("Dropped %s in %.0f seconds. Style %d, pay x%.2f. %.0f points."), *Mark.Name, Seconds, Style, StyleMul, Pay)
+				: FString::Printf(TEXT("Dropped %s in %.0f seconds. %.0f points."), *Mark.Name, Seconds, Pay));
 			Radio(TowerCar, TEXT("RR_Disp_Drop"));
 		}
 		if (Before < 0.0f && Tower->Ledger >= 0.0f)
@@ -5104,38 +5139,10 @@ void ADCCArcadeKart::UseTool(ADCCRover* Car)
 			Tell(Car, TEXT("Still fighting the line."));
 			return;
 		}
-		if (Mark.bDocked && Car->RallyTrick == 2)
+		if (Mark.bDocked && Car->RallyTrick == 2 && !InYard(Car))
 		{
-			// Banking comes before the yard drop, so a truck that drove itself in can still cash the chain.
-			// The next Q, once the car is back on the hitch, is the drop.
-			if (FMath::Abs(Car->RallyTilt) < 25.0f)
-			{
-				const int32 Score = Car->RallyTrickScore;
-				const int32 Chain = Car->RallyTrickChain;
-				const float Bank = FMath::Clamp(Score / 100.0f + Chain * 0.12f, 0.15f, 3.5f);
-				Car->RallyTrickMul += Bank;
-				const float BonusCap = DCCChopShop::TankCapacity(Truck->ChopTank) * 1.6f;
-				const float BeforeFuel = Truck->Fuel;
-				Truck->Fuel = FMath::Min(BonusCap, Truck->Fuel + 12.0f);
-				Car->RallyTrick = 0;
-				Car->RallyTilt = 0.0f;
-				Car->RallySpin = 0.0f;
-				Car->RallyMagnet = 0.0f;
-				Car->RallyTrickScore = 0;
-				Car->ClearOverheadTrick();
-				Tell(Car, FString::Printf(TEXT("Banked. Pay x%.2f. Chain %d. %s"), Car->RallyTrickMul, Chain,
-					InYard(Car) ? TEXT("Q drops it in the yard.") : TEXT("Drive it in, or lift it again.")));
-				UE_LOG(LogTemp, Log, TEXT("[DCC Drive] bank score %d chain %d mul %.2f fuel %.0f -> %.0f"),
-					Score, Chain, Car->RallyTrickMul, BeforeFuel, Truck->Fuel);
-			}
-			else
-			{
-				UE_LOG(LogTemp, Log, TEXT("[DCC Drive] Q dropped tilt %.0f chain %d"), Car->RallyTilt, Car->RallyTrickChain);
-				Car->RallyTrickScore = 0;
-				Release(Truck->HookedId, true);
-				Tell(Car, TEXT("Too tilted. It fell."));
-			}
-			SyncKit(*Truck);
+			// No mid-tow banking any more (2026-11-23): the tricks pay at the turn-in.
+			Tell(Car, TEXT("Keep it up there. Q drops it once you are in the yard."));
 			return;
 		}
 		if (Mark.bDocked && InYard(Car))
@@ -5152,7 +5159,7 @@ void ADCCArcadeKart::UseTool(ADCCRover* Car)
 			Car->RallyTrickScore = 0;
 			Car->RallyOffBalance = 0.0f;
 			Car->ClearOverheadTrick();
-			Tell(Car, TEXT("Overhead. The truck takes the outer lane to the yard. A and D hold it level. Space front flip, Shift barrel, Ctrl back flip, left click corkscrew. Q banks it."));
+			Tell(Car, TEXT("Overhead. The truck drives itself to the yard. Press SPACE as the ring closes. Each hit is a bigger trick, and the yard pays for style."));
 			UE_LOG(LogTemp, Log, TEXT("[DCC Drive] hoist"));
 			SyncKit(*Truck);
 			return;
@@ -5333,6 +5340,7 @@ void ADCCArcadeKart::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(ADCCArcadeKart, Nets);
 	DOREPLIFETIME(ADCCArcadeKart, ShiftEndsAt);
+	DOREPLIFETIME(ADCCArcadeKart, bPractice);
 	DOREPLIFETIME(ADCCArcadeKart, Crew);
 	DOREPLIFETIME(ADCCArcadeKart, Board);
 	DOREPLIFETIME(ADCCArcadeKart, FlagAt);

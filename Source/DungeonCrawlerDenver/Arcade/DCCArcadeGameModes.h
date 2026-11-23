@@ -52,6 +52,14 @@ protected:
 };
 
 UCLASS()
+class DUNGEONCRAWLERDENVER_API ADCCKartPracticeGameMode : public ADCCArcadeGameMode
+{
+	GENERATED_BODY()
+protected:
+	virtual TSubclassOf<ADCCArcadeArena> GetArenaClass() const override;
+};
+
+UCLASS()
 class DUNGEONCRAWLERDENVER_API ADCCNeonGameMode : public ADCCArcadeGameMode
 {
 	GENERATED_BODY()

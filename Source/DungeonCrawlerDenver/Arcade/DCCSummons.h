@@ -26,6 +26,8 @@ class UDataTable;
 namespace DCCSummons
 {
 	constexpr int32 Price = 100;
+	/** Ten at once for the price of nine, with at least one Rare or better (2026-11-22). */
+	constexpr int32 TenPrice = Price * 9;
 	constexpr int32 MaxAllies = 2;
 	constexpr int32 TierCount = 4;
 

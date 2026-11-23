@@ -1,5 +1,7 @@
 #include "Combat/DCCGameState.h"
 
+#include "Arcade/DCCAudience.h"
+
 #include "Quests/DCCQuestComponent.h"
 #include "Narration/DCCNarratorComponent.h"
 
@@ -252,6 +254,13 @@ void ADCCGameState::RollChatterBatch(int32 Count)
 			|| Category == EDCCLogCategory::Encounter)
 		{
 			RecentEventText = EventLog[Index].Text.ToString();
+			// Chat quotes the feed, and the feed sometimes names an actor by its code name
+			// (DCCEnemyCharacter_SlagDog_3, BP_ThirdPersonCharacter_C_0). Viewers never say those.
+			if (RecentEventText.Contains(TEXT("DCC")) || RecentEventText.Contains(TEXT("BP_")) || RecentEventText.Contains(TEXT("_C_")))
+			{
+				RecentEventText.Reset();
+				continue;
+			}
 			break;
 		}
 	}
@@ -437,11 +446,25 @@ void ADCCGameState::RollChatterBatch(int32 Count)
 	}
 }
 
+void ADCCGameState::BeginPlay()
+{
+	Super::BeginPlay();
+	if (HasAuthority())
+	{
+		GetWorldTimerManager().SetTimer(AudienceTimer, FTimerDelegate::CreateWeakLambda(this, [this]()
+		{
+			DCCAudience::Tick(this, 0.5f);
+		}), 0.5f, true, 1.0f);
+	}
+}
+
 void ADCCGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(ADCCGameState, bCombatPaused);
+	DOREPLIFETIME(ADCCGameState, LiveViewers);
+	DOREPLIFETIME(ADCCGameState, Hype);
 	DOREPLIFETIME(ADCCGameState, QueuedActions);
 	DOREPLIFETIME(ADCCGameState, EventLog);
 	DOREPLIFETIME(ADCCGameState, ChatMessages);

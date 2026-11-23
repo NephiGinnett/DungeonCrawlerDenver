@@ -283,17 +283,41 @@ public:
 	bool bRallyYardNoted = false;
 
 	/** What the card calls the move that is playing. */
-	const TCHAR* RallyTrickLabel() const
-	{
-		switch (RallyTrickMove)
-		{
-		case 1: return TEXT("Front flip");
-		case 2: return TEXT("Barrel roll");
-		case 3: return TEXT("Back flip");
-		case 4: return TEXT("Corkscrew");
-		default: return TEXT("Spin");
-		}
-	}
+	const TCHAR* RallyTrickLabel() const { return RallyRungName(RallyTrickMove); }
+
+	// --- The trick ring (2026-11-23, Zoe: "just doing timed button presses to land gradually more impressive tricks
+	// and award more points as it goes on", and "only awarding a multiplier after a car is turned in") ----------------
+	// While a car is overhead, a ring closes on a target. Press Space as it lands: Good or Perfect lands the next rung of
+	// the ladder (bigger trick, more style points); a miss drops you back to the first rung but keeps the points. At the
+	// yard, the style points become the multiplier on that car's pay. RallyTrickChain is the rung, RallyTrickScore
+	// the style, RallyTrickMove the move playing (1-7).
+
+	/** Server clock (GetServerWorldTimeSeconds) when the ring closes. 0: no ring. */
+	UPROPERTY(Replicated)
+	double RallyBeatAt = 0.0;
+	/** Seconds the ring takes to close. Shorter on higher rungs. */
+	UPROPERTY(Replicated)
+	float RallyBeatLength = 1.4f;
+	/** The last call: 0 none, 1 good, 2 perfect, 3 miss. The serial moves every call so the HUD can flash it. */
+	UPROPERTY(Replicated)
+	uint8 RallyJudge = 0;
+	UPROPERTY(Replicated)
+	uint8 RallyJudgeSerial = 0;
+	/** The driver pressed. ClientOffset is how far from the ring's close their screen was (negative: early). */
+	UFUNCTION(Server, Reliable)
+	void Server_RallyPress(float ClientOffset);
+	/** Server: the press waiting for the rally tick. */
+	bool bRallyPressed = false;
+	float RallyPressOffset = 0.0f;
+	/** The server's clock, on any machine. */
+	double RallyClock() const;
+
+	/** The ladder: 1 Front Flip ... 7 The Full Repossession. */
+	static const TCHAR* RallyRungName(uint8 Move);
+	static int32 RallyRungPoints(int32 Rung);
+	static float RallyRungSeconds(int32 Rung);
+	/** Style points to the pay multiplier at the yard: 1 + style / 250, at most 5. */
+	static float RallyStyleMultiplier(int32 Style) { return FMath::Min(5.0f, 1.0f + Style / 250.0f); }
 
 	/** Zeros the chain. The hoist, a bank, a drop and a cut all call this. */
 	void ClearOverheadTrick();
@@ -968,6 +992,9 @@ protected:
 
 	/** Last RadioTuneSerial this machine actually started, so two rep notifies don't restart the song. */
 	int32 AppliedRadioSerial = -1;
+	/** -1 until the first check: whether this machine's player is in this car and so hears its radio. */
+	int8 RadioHeardHere = -1;
+	void UpdateRadioListener();
 
 	void ApplyWreckerLook();
 	void UpdateWreckerCrane(float DeltaSeconds);

@@ -436,6 +436,16 @@ void ADCCHUD::DrawRallyClock(const ADCCArcadeKart* Kart)
 	UFont* Large = GEngine->GetLargeFont();
 	const float T = float(GetWorld()->GetRealTimeSeconds());
 
+	if (Kart->bPractice)
+	{
+		// Practice: no clock to show, just what this is and how to leave.
+		const float PW = 380.0f * S, PH = 64.0f * S;
+		const float PX = (Canvas->SizeX - PW) * 0.5f, PY = 16.0f;
+		RallyPanel(PX, PY, PW, PH, Pink);
+		RallyText(TEXT("REPO RALLY  -  PRACTICE"), Dim, PX + 14.0f * S, PY + 10.0f * S, Small, 1.2f * S);
+		RallyText(TEXT("No clock, no pay. Leave from the Tab menu."), FLinearColor(0.85f, 0.83f, 0.92f), PX + 14.0f * S, PY + 34.0f * S, Small, 1.0f * S);
+		return;
+	}
 	const double Left = FMath::Max(0.0, Kart->GetShiftEndsAt() - Kart->GetNow());
 	const int32 Sec = FMath::CeilToInt(Left);
 	const bool bLate = Left <= 30.0;

@@ -1,5 +1,7 @@
 #include "Items/DCCChestSound.h"
 
+#include "Characters/DCCSynthAudio.h"
+
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
 #include "Sound/SoundAttenuation.h"
@@ -59,23 +61,85 @@ namespace
 		}
 	}
 
+	/** A heavy wooden lid landing open against its stop: a dull knock with a low body. */
+	void AddThud(TArray<float>& Out, float AtSeconds, float Gain, FRandomStream& R)
+	{
+		const int32 Start = int32(AtSeconds * Rate);
+		float Low = 0.0f;
+		for (int32 i = 0; i < int32(0.25f * Rate) && Start + i < Out.Num(); ++i)
+		{
+			const float T = float(i) / Rate;
+			Low += (R.FRandRange(-1.0f, 1.0f) - Low) * 0.15f;
+			Out[Start + i] += Gain * ((FMath::Sin(2.0f * PI * 105.0f * T) + 0.5f * FMath::Sin(2.0f * PI * 232.0f * T)) * FMath::Exp(-T * 22.0f)
+				+ Low * 2.0f * FMath::Exp(-T * 60.0f));
+		}
+	}
+
+	/** Coins shifting inside: little bright bells, scattered. */
+	void AddCoins(TArray<float>& Out, float AtSeconds, float Seconds, float Gain, FRandomStream& R)
+	{
+		for (int32 c = 0; c < 9; ++c)
+		{
+			const int32 Start = int32((AtSeconds + R.FRandRange(0.0f, Seconds)) * Rate);
+			const float Hz = R.FRandRange(3600.0f, 6200.0f);
+			for (int32 i = 0; i < int32(0.18f * Rate) && Start + i < Out.Num(); ++i)
+			{
+				const float T = float(i) / Rate;
+				Out[Start + i] += Gain * (FMath::Sin(2.0f * PI * Hz * T) + 0.4f * FMath::Sin(2.0f * PI * Hz * 1.51f * T)) * FMath::Exp(-T * 28.0f);
+			}
+		}
+	}
+
+	/** The reward: a quick rising sparkle, the sound of "something good is in here". */
+	void AddChime(TArray<float>& Out, float AtSeconds, float Gain)
+	{
+		const float Notes[] = { 1046.5f, 1318.5f, 1568.0f, 2093.0f };
+		for (int32 n = 0; n < 4; ++n)
+		{
+			const int32 Start = int32((AtSeconds + n * 0.07f) * Rate);
+			for (int32 i = 0; i < int32(0.7f * Rate) && Start + i < Out.Num(); ++i)
+			{
+				const float T = float(i) / Rate;
+				const float Env = FMath::Min(1.0f, T / 0.005f) * FMath::Exp(-T * 5.5f);
+				Out[Start + i] += Gain * Env * (FMath::Sin(2.0f * PI * Notes[n] * T) + 0.3f * FMath::Sin(2.0f * PI * Notes[n] * 2.0f * T));
+			}
+		}
+	}
+
+	/** A chunky latch: a low clack under the metal ring. */
+	void AddLatch(TArray<float>& Out, float AtSeconds, float Gain, FRandomStream& R)
+	{
+		AddClick(Out, AtSeconds, Gain * 0.6f, R);
+		const int32 Start = int32(AtSeconds * Rate);
+		for (int32 i = 0; i < int32(0.08f * Rate) && Start + i < Out.Num(); ++i)
+		{
+			const float T = float(i) / Rate;
+			Out[Start + i] += Gain * FMath::Sin(2.0f * PI * 150.0f * T) * FMath::Exp(-T * 45.0f);
+		}
+	}
+
 	const TArray<int16>& OpenPcm()
 	{
+		// 2026-11-23 (Zoe: "We need better chest sounds"): a chunky latch, the hinge, the lid hitting its stop, coins
+		// shifting inside, and a rising sparkle. About 1.6 s.
 		static TArray<int16> Pcm;
 		if (Pcm.IsEmpty())
 		{
 			FRandomStream R(907);
 			TArray<float> Mix;
-			Mix.Init(0.0f, int32(Rate * 0.95f));
-			AddClick(Mix, 0.00f, 0.55f, R);  // the latch
-			AddClick(Mix, 0.055f, 0.3f, R);  // ...and it drops back
-			AddCreak(Mix, 0.11f, 0.75f, 0.45f, R);
+			Mix.Init(0.0f, int32(Rate * 1.6f));
+			AddLatch(Mix, 0.00f, 0.6f, R);
+			AddLatch(Mix, 0.06f, 0.3f, R);
+			AddCreak(Mix, 0.12f, 0.55f, 0.38f, R);
+			AddThud(Mix, 0.66f, 0.55f, R);
+			AddCoins(Mix, 0.70f, 0.35f, 0.16f, R);
+			AddChime(Mix, 0.72f, 0.2f);
 			float Peak = 0.01f;
 			for (float V : Mix) { Peak = FMath::Max(Peak, FMath::Abs(V)); }
 			Pcm.SetNumUninitialized(Mix.Num());
 			for (int32 i = 0; i < Mix.Num(); ++i)
 			{
-				Pcm[i] = int16(FMath::Clamp(Mix[i] / Peak, -1.0f, 1.0f) * 24000.0f);
+				Pcm[i] = int16(FMath::Clamp(Mix[i] / Peak, -1.0f, 1.0f) * 26000.0f);
 			}
 		}
 		return Pcm;
@@ -101,14 +165,7 @@ namespace DCCChestSound
 			Att->Attenuation.AttenuationShapeExtents = FVector(400.0f, 0, 0);
 			Att->Attenuation.FalloffDistance = 2600.0f;
 		}
-		const TArray<int16>& Pcm = OpenPcm();
-		USoundWaveProcedural* Wave = NewObject<USoundWaveProcedural>(World);
-		Wave->SetSampleRate(Rate);
-		Wave->NumChannels = 1;
-		Wave->Duration = float(Pcm.Num()) / Rate;
-		Wave->SoundGroup = SOUNDGROUP_Effects;
-		Wave->bLooping = false;
-		Wave->QueueAudio(reinterpret_cast<const uint8*>(Pcm.GetData()), Pcm.Num() * sizeof(int16));
-		UGameplayStatics::PlaySoundAtLocation(World, Wave, At, 0.9f, FMath::FRandRange(0.94f, 1.06f), 0.0f, Att.Get());
+		const FVector Where = At;
+		DCCSynth::PlayPcm(World, OpenPcm(), Rate, &Where, 1.0f, FMath::FRandRange(0.96f, 1.04f), Att.Get());
 	}
 }

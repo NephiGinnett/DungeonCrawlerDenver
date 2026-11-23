@@ -19,6 +19,12 @@ What pull does with each approved take:
   * marks the take "shipped" on the site;
   * once every line of a character has shipped for the same player, adds a one-time full-set bonus credit
     (SET_BONUS on the site, 300 tickets unless changed there).
+  * OPEN MIC WEEK (2026-11-23): counts each player's approved and shipped takes per week (Monday to Sunday, UTC) and
+    adds a credit for every milestone reached: 1 line a Bronze box, 3 a Silver box and 50 tickets, 6 a Gold box and
+    the OPEN MIC nameplate. Each milestone pays once per week.
+  * Auditions: when Zoe has chosen a voice for an auditioning character in /admin (Hiss Cranson), that player gets the
+    audition's prize once (the Hot Mic). A Hot Mic clip take is converted to SourceArt/Voice/NPC/_Clips/<player>.wav,
+    the first 4 seconds, and plays when their amplified spell goes off.
 """
 
 import argparse
@@ -67,20 +73,24 @@ def build_catalog() -> dict:
     """Every line in every *_lines.json. A character cast to a reader in cast.json is left off the site."""
     cast = load_json(CAST, {})
     taken = {cid for reader, ids in cast.items() if not reader.startswith("_") for cid in ids}
+    ai = load_json(REPO / "SourceArt" / "Voice" / "Radio" / "ai_takes.json", {})
     speakers: dict[str, dict] = {}
     for f in sorted(NPC_DIR.glob("*_lines.json")):
         data = load_json(f, {})
         names = {s["id"]: s.get("name", s["id"]) for s in data.get("speakers", [])}
+        auditions = {s["id"]: s["audition"] for s in data.get("speakers", []) if s.get("audition")}
         for line in data.get("lines", []):
             sid = line["speaker"]
             if sid in taken:
                 continue
             s = speakers.setdefault(sid, {"id": sid, "name": names.get(sid, sid), "open": True, "source": f.stem, "lines": []})
+            if sid in auditions:
+                s["audition"] = auditions[sid]
             s["lines"].append({
                 "row": line["row"],
                 "text": line["text"],
-                # No recording at all yet: these show first on the site.
-                "wanted": not (NPC_DIR / sid / f"VO_{line['row']}.wav").exists(),
+                # No real recording yet (none, or only a machine take): these show first on the site.
+                "wanted": not (NPC_DIR / sid / f"VO_{line['row']}.wav").exists() or line["row"] in ai,
             })
     return {
         "title": "Voice Drop",
@@ -99,13 +109,14 @@ def cmd_catalog(args):
         print("Live site:", call("POST", "/api/admin/catalog", cat))
 
 
-def convert(src: Path, dest: Path):
+def convert(src: Path, dest: Path, seconds: float = 0.0):
     dest.parent.mkdir(parents=True, exist_ok=True)
     if dest.exists():
         dest.replace(dest.with_suffix(".wav.bak"))
     trim = "silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.1"
+    cut = ["-t", f"{seconds:.2f}"] if seconds > 0 else []
     r = subprocess.run([str(FFMPEG), "-y", "-hide_banner", "-i", str(src), "-af",
-                        f"{trim},areverse,{trim},areverse,loudnorm=I=-20:TP=-2:LRA=11",
+                        f"{trim},areverse,{trim},areverse,loudnorm=I=-20:TP=-2:LRA=11", *cut,
                         "-ac", "1", "-ar", "48000", "-c:a", "pcm_s16le", str(dest)],
                        capture_output=True, text=True, encoding="utf-8", errors="replace")
     if r.returncode != 0:
@@ -122,6 +133,21 @@ def cmd_pull(args):
     INBOX.mkdir(parents=True, exist_ok=True)
     for s in approved:
         player = (s.get("gameName") or s["name"]).strip()
+        if s.get("kind") == "clip":
+            dest = NPC_DIR / "_Clips" / f"{player}.wav"
+            print(f"Hot Mic clip by {s['name']} -> {dest.relative_to(REPO)}")
+            if args.dry_run:
+                continue
+            raw = INBOX / f"{s['id']}{Path(s['file']).suffix or '.bin'}"
+            raw.write_bytes(call("GET", f"/api/admin/audio/{s['id']}", raw=True))
+            try:
+                convert(raw, dest, seconds=4.0)
+            except RuntimeError as e:
+                print(f"  ffmpeg could not read it, left as approved:\n{e}")
+                continue
+            call("POST", f"/api/admin/submissions/{s['id']}", {"status": "shipped"})
+            print("  shipped")
+            continue
         dest = NPC_DIR / s["speaker"] / f"VO_{s['row']}.wav"
         print(f"{s['speakerName']} {s['row']} by {s['name']} -> {dest.relative_to(REPO)}  ({s['reward']} tickets to {player})")
         if args.dry_run:
@@ -146,6 +172,8 @@ def cmd_pull(args):
         print("  shipped")
     if not args.dry_run:
         add_set_bonuses(credits)
+        add_event_rewards(credits)
+        add_audition_prizes(credits)
         print(f"\nCredits: {CREDITS.relative_to(REPO)} ({len(credits['credits'])} in all). They pay out in the next build or run.")
 
 
@@ -178,6 +206,56 @@ def add_set_bonuses(credits):
                 })
                 have.add(bid)
                 print(f"  full set: {player} voiced all {len(rows)} of {sp['name']}'s lines, +{bonus} tickets")
+    CREDITS.write_text(json.dumps(credits, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def add_event_rewards(credits):
+    """OPEN MIC WEEK: a credit for every milestone each player reached, once per week."""
+    from datetime import datetime, timedelta, timezone
+    event = call("GET", "/api/admin/event")
+    milestones = event.get("milestones", [])
+    every = call("GET", "/api/admin/submissions?status=all")
+    counts = {}
+    for t in every:
+        if t.get("kind") == "clip" or t["status"] not in ("approved", "shipped"):
+            continue
+        when = datetime.fromisoformat((t.get("approvedAt") or t["createdAt"]).replace("Z", "+00:00"))
+        monday = (when - timedelta(days=when.weekday())).date().isoformat()
+        player = (t.get("gameName") or t["name"]).strip()
+        key = (player.lower(), monday)
+        counts[key] = (player, counts.get(key, (player, 0))[1] + 1)
+    have = {c["id"] for c in credits["credits"]}
+    for (key, monday), (player, n) in sorted(counts.items()):
+        for m in milestones:
+            cid = f"evt-{monday}-{key}-{m['lines']}"
+            if n >= m["lines"] and cid not in have:
+                credit = {"id": cid, "player": player, "tickets": int(m.get("tickets", 0)), "speaker": "OPEN MIC WEEK",
+                          "row": "EVENT", "text": f"{m['lines']} line(s) the week of {monday}: {m['reward']}"}
+                if m.get("box"):
+                    credit["box"] = m["box"]
+                if m.get("title"):
+                    credit["title"] = m["title"]
+                credits["credits"].append(credit)
+                have.add(cid)
+                print(f"  OPEN MIC WEEK: {player} reached {m['lines']} ({m['reward']})")
+    CREDITS.write_text(json.dumps(credits, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def add_audition_prizes(credits):
+    """The chosen voice of an auditioning character gets its prize once (Hiss Cranson: the Hot Mic)."""
+    auditions = call("GET", "/api/admin/auditions")
+    speakers = {sp["id"]: sp for sp in call("GET", "/api/admin/catalog")["speakers"]}
+    have = {c["id"] for c in credits["credits"]}
+    for sid, a in auditions.items():
+        chosen = (a or {}).get("chosen", "").strip()
+        sp = speakers.get(sid, {})
+        prize = (sp.get("audition") or {}).get("item", "")
+        cid = f"cast-{sid}-{chosen.lower()}"
+        if chosen and prize and cid not in have:
+            credits["credits"].append({"id": cid, "player": chosen, "tickets": 0, "item": prize, "speaker": sp.get("name", sid),
+                                       "row": "CAST", "text": f"chosen as the voice of {sp.get('name', sid)}"})
+            have.add(cid)
+            print(f"  {chosen} is the voice of {sp.get('name', sid)}: {prize}")
     CREDITS.write_text(json.dumps(credits, indent=2, ensure_ascii=False), encoding="utf-8")
 
 

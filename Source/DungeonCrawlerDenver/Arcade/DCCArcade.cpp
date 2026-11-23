@@ -36,6 +36,10 @@ namespace DCCArcade
 				TEXT("A shift in the city. Drive a wrecker, aim the hook, and tow marked cars back to the yard. Quick and clean pays. Don't hook the wrong car."),
 				TEXT("/Engine/Maps/Entry"), TEXT("/Script/DungeonCrawlerDenver.DCCKartGameMode"),
 				TEXT("BestScore"), true, TEXT("best shift"), TEXT("pts"), FLinearColor(0.85f, 0.5f, 0.25f) },
+			{ TEXT("RallyPractice"), TEXT("Rally Practice"),
+				TEXT("Repo Rally with no clock and no pay. Learn the hook and the trick ring. Leave from the Tab menu."),
+				TEXT("/Engine/Maps/Entry"), TEXT("/Script/DungeonCrawlerDenver.DCCKartPracticeGameMode"),
+				TEXT("PracticeStyle"), true, TEXT("best style"), TEXT("style"), FLinearColor(0.55f, 0.4f, 0.2f) },
 			{ TEXT("Neon"), TEXT("Neon Mile"),
 				TEXT("Endless synthwave highway. Go as far as you can without hitting anything."),
 				TEXT("/Engine/Maps/Entry"), TEXT("/Script/DungeonCrawlerDenver.DCCNeonGameMode"),
@@ -78,7 +82,7 @@ namespace DCCArcade
 
 	bool IsSeriesOpen(const APlayerState* Player, FName GameId)
 	{
-		if (GameId == TEXT("Crawler") || GameId == TEXT("Neon") || GameId == TEXT("Climb") || GameId.IsNone())
+		if (GameId == TEXT("Crawler") || GameId == TEXT("Neon") || GameId == TEXT("Climb") || GameId == TEXT("RallyPractice") || GameId.IsNone())
 		{
 			return true;
 		}

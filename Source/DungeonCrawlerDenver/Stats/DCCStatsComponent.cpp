@@ -1,5 +1,6 @@
 #include "Stats/DCCStatsComponent.h"
 
+#include "Session/DCCIntegrity.h"
 #include "Stats/DCCRuleset.h"
 #include "Equipment/DCCEquipmentComponent.h"
 #include "Classes/DCCClassComponent.h"
@@ -744,6 +745,10 @@ void UDCCStatsComponent::AddExperience(int32 Amount)
 
 void UDCCStatsComponent::Server_RaiseAbility_Implementation(EDCCAbility Ability)
 {
+	if (!DCCIntegrity::Allow(GetOwner(), TEXT("stat point"), 6.0f, 10.0f))
+	{
+		return;
+	}
 	const int32 Index = static_cast<int32>(Ability);
 	if (Index < 0 || Index >= static_cast<int32>(EDCCAbility::MAX) || GetUnspentStatPoints() <= 0)
 	{

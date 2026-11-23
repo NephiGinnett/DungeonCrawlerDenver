@@ -1,4 +1,5 @@
 #include "Progression/DCCAchievementComponent.h"
+#include "Arcade/DCCAudience.h"
 #include "Characters/DCCReactions.h"
 
 #include "Characters/DCCCharacterBase.h"
@@ -52,6 +53,14 @@ namespace
 		Add(TEXT("RegularAtThePit"), TEXT("Regular At The Pit"),
 			TEXT("Ten hands, taken off the house. June has stopped explaining the rules."),
 			EDCCAchievementStat::CasinoWins, 10, 100, 15);
+		// The Integrity Office's (2026-11-22, Zoe: "Can you also add an achievement for cheating"). The audience pays
+		// favor for a villain. The XP is zero, because the System has some standards.
+		Add(TEXT("TamperingWithTheEvidence"), TEXT("Tampering With The Evidence"),
+			TEXT("Caught with a hand in the numbers. The audience has never been more engaged. Legal has been notified. Legal is also engaged."),
+			EDCCAchievementStat::CheatsCaught, 1, 0, 25);
+		Add(TEXT("RepeatOffender"), TEXT("Repeat Offender"),
+			TEXT("Three strikes. In most places that means out. Here it means merchandise."),
+			EDCCAchievementStat::CheatsCaught, 3, 0, 40);
 		Add(TEXT("TheLoudOne"), TEXT("The Loud One"),
 			TEXT("One spin paid fifty or more. The wheel is still moving in the replay. So is the chat."),
 			EDCCAchievementStat::CasinoJackpot, 1, 80, 20);
@@ -236,6 +245,7 @@ void UDCCAchievementComponent::Unlock(const FDCCAchievementDef& Achievement)
 	// a session that unlocks six achievements mid-fight gets six things to open
 	// afterward rather than six numbers that ticked up somewhere off-screen.
 	OnAchievementUnlocked.Broadcast(this, Achievement);
+	DCCAudience::Moment(this, Cast<ADCCCharacterBase>(GetOwner()), DCCAudience::EMoment::Achievement);
 	if (ADCCCharacterBase* Achiever = Cast<ADCCCharacterBase>(GetOwner()))
 	{
 		Achiever->ReactTo(DCCReactions::MomentWin, false);

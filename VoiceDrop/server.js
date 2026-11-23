@@ -23,6 +23,7 @@ const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(__dirname, "data
 const UPLOADS = path.join(DATA_DIR, "uploads");
 const DB_FILE = path.join(DATA_DIR, "submissions.json");
 const CATALOG_FILE = path.join(DATA_DIR, "catalog.json");
+const AUDITIONS_FILE = path.join(DATA_DIR, "auditions.json");
 const BUNDLED_CATALOG = path.join(__dirname, "catalog.json");
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "";
 const PUBLIC_URL = (process.env.PUBLIC_URL || "").replace(/\/$/, "");
@@ -51,6 +52,48 @@ function writeJson(file, value) {
 }
 let submissions = readJson(DB_FILE, []);
 const save = () => writeJson(DB_FILE, submissions);
+
+// ---- auditions (2026-11-23, Zoe: Hiss Cranson's voice is the only way to the Hot Mic. "let players only submit one
+// voice line for him, a good sample voice line, and the rest stay locked until a player is chosen. Then I manually
+// unlock the section."). A catalog speaker with "audition": {"row": "<sample row>"} is an audition: everyone may send
+// that one line, once. Zoe picks a voice in /admin ("chosen"), then unlocks the rest for that person ("unlocked").
+let auditions = readJson(AUDITIONS_FILE, {});
+const saveAuditions = () => writeJson(AUDITIONS_FILE, auditions);
+function auditionOf(speaker) {
+  if (!speaker || !speaker.audition) return null;
+  const a = auditions[speaker.id] || {};
+  return { row: speaker.audition.row, prize: speaker.audition.prize || "", chosen: a.chosen || "", unlocked: Boolean(a.unlocked) };
+}
+const same = (a, b) => String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase();
+
+// ---- the weekly event (2026-11-23): OPEN MIC WEEK. Every approved or shipped take of the week counts for whoever
+// sent it (by the name they play as, else their name). Rewards are paid in the game by Tools/voice_inbox.py pull.
+const EVENT = {
+  title: "OPEN MIC WEEK",
+  blurb: "Every line Zoe approves this week moves you up the track. It resets Monday.",
+  milestones: [
+    { lines: 1, reward: "Bronze loot box", box: "Bronze" },
+    { lines: 3, reward: "Silver loot box + 50 tickets", box: "Silver", tickets: 50 },
+    { lines: 6, reward: "Gold loot box + the OPEN MIC nameplate", box: "Gold", title: "OPEN MIC" },
+  ],
+};
+function weekStart(when) {
+  const d = new Date(when);
+  const day = (d.getUTCDay() + 6) % 7; // Monday 0
+  d.setUTCHours(0, 0, 0, 0);
+  d.setUTCDate(d.getUTCDate() - day);
+  return d;
+}
+function eventFor(name) {
+  const start = weekStart(Date.now());
+  const end = new Date(start.getTime() + 7 * 86400 * 1000);
+  const count = name ? submissions.filter((s) => (s.status === "approved" || s.status === "shipped") && s.kind !== "clip"
+    && (same(s.gameName, name) || same(s.name, name)) && new Date(s.approvedAt || s.createdAt) >= start).length : 0;
+  const waiting = name ? submissions.filter((s) => s.status === "new" && s.kind !== "clip"
+    && (same(s.gameName, name) || same(s.name, name))).length : 0;
+  return { ...EVENT, weekStart: start.toISOString(), weekEnd: end.toISOString(), name: name || "", count, waiting,
+    next: EVENT.milestones.find((m) => m.lines > count) || null };
+}
 
 function catalog() {
   return readJson(CATALOG_FILE, null) || readJson(BUNDLED_CATALOG, { title: "Voice Drop", speakers: [] });
@@ -87,16 +130,25 @@ function progress() {
     }
   }
   return catalog().speakers.filter((sp) => sp.open !== false).map((sp) => {
-    const counts = { open: 0, review: 0, taken: 0, done: 0, total: sp.lines.length };
+    const audition = auditionOf(sp);
+    const counts = { open: 0, review: 0, taken: 0, done: 0, locked: 0, total: sp.lines.length };
     const lines = sp.lines.map((l) => {
       const key = sp.id + "|" + l.row;
       const top = best.get(key);
-      const state = top && top.status === "shipped" ? "done" : top && top.status === "approved" ? "taken" : waiting.get(key) ? "review" : "open";
+      let state = top && top.status === "shipped" ? "done" : top && top.status === "approved" ? "taken" : waiting.get(key) ? "review" : "open";
+      // An audition: only the sample line is open until Zoe has chosen a voice and unlocked the rest. The sample
+      // stays open to everyone however many people have sent it.
+      if (audition && !audition.unlocked) {
+        state = l.row === audition.row && !audition.chosen ? "open" : "locked";
+      }
       counts[state]++;
-      return { ...l, state, by: state === "done" || state === "taken" ? top.name : "", review: waiting.get(key) || 0 };
+      return { ...l, state, by: state === "done" || state === "taken" ? top.name : "", review: waiting.get(key) || 0,
+        sample: Boolean(audition && l.row === audition.row) };
     });
     const c = cast.get(sp.id);
-    return { ...sp, lines, counts, castBy: c ? c.name : "" };
+    const castBy = audition ? audition.chosen : c ? c.name : "";
+    return { ...sp, lines, counts, castBy, audition: audition ? { row: audition.row, prize: audition.prize,
+      chosen: audition.chosen, unlocked: audition.unlocked } : null };
   });
 }
 
@@ -134,6 +186,8 @@ app.use(express.json({ limit: "2mb" }));
 app.use(express.static(path.join(__dirname, "public")));
 app.get("/admin", (req, res) => res.sendFile(path.join(__dirname, "public", "admin.html")));
 app.get("/healthz", (req, res) => res.json({ ok: true }));
+
+app.get("/api/event", (req, res) => res.json(eventFor(String(req.query.name || "").trim().slice(0, 60))));
 
 app.get("/api/catalog", (req, res) => {
   const c = catalog();
@@ -180,6 +234,25 @@ app.post("/api/submit", (req, res) => {
     if (!name) { drop(); return res.status(400).json({ error: "Tell us your name first." }); }
     if (!found) { drop(); return res.status(400).json({ error: "That line isn't on the list any more." }); }
     if (req.body.consent !== "yes") { drop(); return res.status(400).json({ error: "Tick the box saying we can use it in the game." }); }
+    const audition = auditionOf(found.speaker);
+    if (audition) {
+      const player = field("gameName", 60) || name;
+      if (!audition.unlocked) {
+        if (audition.chosen) {
+          drop(); return res.status(400).json({ error: `${found.speaker.name}'s voice has been chosen. The rest of the lines open for them soon.` });
+        }
+        if (found.line.row !== audition.row) {
+          drop(); return res.status(400).json({ error: `${found.speaker.name} is auditioning. Only the sample line is open for now.` });
+        }
+        const already = submissions.some((s) => s.speaker === found.speaker.id && s.status !== "rejected"
+          && (same(s.name, name) || same(s.gameName, player)));
+        if (already) {
+          drop(); return res.status(400).json({ error: `One audition each for ${found.speaker.name}. Yours is in. Good luck!` });
+        }
+      } else if (!(same(audition.chosen, name) || same(audition.chosen, player))) {
+        drop(); return res.status(400).json({ error: `${found.speaker.name} has been cast. These lines are for ${audition.chosen}.` });
+      }
+    }
     const sub = {
       id: crypto.randomBytes(6).toString("hex"),
       createdAt: new Date().toISOString(),
@@ -197,6 +270,33 @@ app.post("/api/submit", (req, res) => {
       status: "new",
       reward: DEFAULT_REWARD,
       adminNote: "",
+    };
+    submissions.push(sub);
+    save();
+    res.json({ ok: true, id: sub.id });
+    notify(sub).catch((e) => console.warn("[voice-drop] notify failed:", e));
+  });
+});
+
+// The Hot Mic clip (2026-11-23): whoever holds the Hot Mic sends a short clip (4 seconds is used) that plays in the game
+// when their amplified spell goes off. Zoe approves it like any take; voice_inbox.py pull turns it into the game's file.
+app.post("/api/clip", (req, res) => {
+  if (rateLimited(req.ip)) {
+    return res.status(429).json({ error: "Too many uploads this hour. Try again soon." });
+  }
+  upload.single("audio")(req, res, (err) => {
+    if (err || !req.file) return res.status(400).json({ error: "That upload didn't work. Use mp3, m4a, wav, ogg, webm or flac." });
+    const field = (k, max) => String(req.body[k] || "").trim().slice(0, max);
+    const name = field("name", 60);
+    const player = field("gameName", 60) || name;
+    const holder = Object.values(auditions).some((a) => a && a.chosen && (same(a.chosen, name) || same(a.chosen, player)));
+    if (!name || !holder) { fs.rm(req.file.path, () => {}); return res.status(403).json({ error: "Only the Hot Mic's holder can send a clip." }); }
+    const sub = {
+      id: crypto.randomBytes(6).toString("hex"), createdAt: new Date().toISOString(), kind: "clip",
+      name, gameName: field("gameName", 60), contact: "", note: field("note", 300),
+      speaker: "HotMic", speakerName: "Hot Mic clip", row: "CLIP", text: "(the Hot Mic clip)",
+      file: path.basename(req.file.path), mime: req.file.mimetype, size: req.file.size,
+      status: "new", reward: 0, adminNote: "",
     };
     submissions.push(sub);
     save();
@@ -236,6 +336,7 @@ app.post("/api/admin/submissions/:id", admin, (req, res) => {
     if (!STATUSES.includes(b.status)) return res.status(400).json({ error: "Unknown status." });
     sub.status = b.status;
     if (b.status === "shipped") sub.shippedAt = new Date().toISOString();
+    if (b.status === "approved" && !sub.approvedAt) sub.approvedAt = new Date().toISOString();
   }
   if (b.reward !== undefined) sub.reward = Math.max(0, Math.min(1000, parseInt(b.reward, 10) || 0));
   if (b.gameName !== undefined) sub.gameName = String(b.gameName).trim().slice(0, 60);
@@ -254,6 +355,19 @@ app.delete("/api/admin/submissions/:id", admin, (req, res) => {
 });
 
 app.get("/api/admin/progress", admin, (req, res) => res.json(progress()));
+app.get("/api/admin/auditions", admin, (req, res) => res.json(auditions));
+app.post("/api/admin/auditions/:speaker", admin, (req, res) => {
+  const b = req.body || {};
+  const a = auditions[req.params.speaker] || { chosen: "", unlocked: false };
+  if (b.chosen !== undefined) a.chosen = String(b.chosen).trim().slice(0, 60);
+  if (b.unlocked !== undefined) a.unlocked = Boolean(b.unlocked);
+  if (!a.chosen) a.unlocked = false; // nothing to unlock for
+  auditions[req.params.speaker] = a;
+  saveAuditions();
+  res.json(a);
+});
+// Everyone's event progress, for /admin and for voice_inbox.py (which pays the milestones by week).
+app.get("/api/admin/event", admin, (req, res) => res.json({ ...EVENT, current: weekStart(Date.now()).toISOString() }));
 app.get("/api/admin/catalog", admin, (req, res) => res.json(catalog()));
 app.post("/api/admin/catalog", admin, (req, res) => {
   const c = req.body;

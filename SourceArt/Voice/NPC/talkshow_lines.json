@@ -1,0 +1,436 @@
+{
+  "speakers": [
+    {
+      "id": "Hiss",
+      "name": "Hiss Cranson",
+      "body": "office_311",
+      "audition": {
+        "row": "TS_Open_01",
+        "prize": "The Hot Mic (Epic)",
+        "item": "HotMic"
+      }
+    }
+  ],
+  "lines": [
+    {
+      "speaker": "Hiss",
+      "row": "TS_Open_01",
+      "tag": "OPEN",
+      "text": "Good evening, Denver, and welcome to Primetime! I'm Hiss Cranson, and yes, the hiss is silent. Except when it isn't."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Open_02",
+      "tag": "OPEN",
+      "text": "We are live! We are always live. There is no off switch. I asked."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Open_03",
+      "tag": "OPEN",
+      "text": "Welcome back to Primetime, brought to you by Mile High Recovery Solutions. If you can read this, your car is already ours."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Open_04",
+      "tag": "OPEN",
+      "text": "Hello, hello, hello! Tonight's audience is enormous, invisible, and extremely hungry for content."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Open_05",
+      "tag": "OPEN",
+      "text": "Primetime is back, baby! The only show filmed in a safe room, which, legally, is not safe."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Open_06",
+      "tag": "OPEN",
+      "text": "Welcome to the Safe Room, the coziest holding pen in the System. Let's meet tonight's crawlers!"
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Open_07",
+      "tag": "OPEN",
+      "text": "Lights, camera, liability! It's Primetime!"
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Open_08",
+      "tag": "OPEN",
+      "text": "Ladies, gentlemen, and whatever is watching from the third moon, welcome to Primetime."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Intro_CJ_01",
+      "tag": "INTRO_CJ",
+      "text": "Give it up for CJ! Hockey jersey, real fire, zero regrets."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Intro_CJ_02",
+      "tag": "INTRO_CJ",
+      "text": "It's CJ, everybody! The jersey is on fire and so, frankly, are the ratings."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Intro_CJ_03",
+      "tag": "INTRO_CJ",
+      "text": "CJ is here! Sponsors love a man who dresses for the penalty box."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Intro_Scott_01",
+      "tag": "INTRO_Scott",
+      "text": "Scott, everybody! Scott! Somebody get Scott a chair, he looks like he has a plan."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Intro_Scott_02",
+      "tag": "INTRO_Scott",
+      "text": "Put your hands together for Scott, who I'm told has filed a complaint about this introduction already."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Intro_Scott_03",
+      "tag": "INTRO_Scott",
+      "text": "Here's Scott! Calm, collected, and only a little bit airborne."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Intro_Marcel_01",
+      "tag": "INTRO_Marcel",
+      "text": "Marcel is in the building! Marcel, the audience asked me to tell you they have notes."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Intro_Marcel_02",
+      "tag": "INTRO_Marcel",
+      "text": "Give it up for Marcel! Every wall in this city is a canvas if you are brave enough."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Intro_Marcel_03",
+      "tag": "INTRO_Marcel",
+      "text": "Marcel! Our resident artist, vandal, and part time tow truck enthusiast."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Intro_Vaughn_01",
+      "tag": "INTRO_Vaughn",
+      "text": "And here's Vaughn! The Integrity Office would like a word. Several words. Many forms."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Intro_Vaughn_02",
+      "tag": "INTRO_Vaughn",
+      "text": "Vaughn, everybody! The audience counted their tickets twice when he walked in."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Intro_Vaughn_03",
+      "tag": "INTRO_Vaughn",
+      "text": "Vaughn is here! Our producers have asked me to keep my wallet in view at all times."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Intro_Kyle_01",
+      "tag": "INTRO_Kyle",
+      "text": "Kyle! Kyle is here! The tube spat him out and he landed on his feet. Mostly."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Intro_Kyle_02",
+      "tag": "INTRO_Kyle",
+      "text": "Give it up for Kyle, a man the gacha machine calls by his first name."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Intro_Kyle_03",
+      "tag": "INTRO_Kyle",
+      "text": "Here comes Kyle, everybody. Lock up the snacks."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Intro_Zoe_01",
+      "tag": "INTRO_Zoe",
+      "text": "And the one who built this whole place, Zoe! Please don't delete me, Zoe."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Intro_Zoe_02",
+      "tag": "INTRO_Zoe",
+      "text": "Zoe is in the room! The System runs on her code and, I'm told, a great deal of coffee."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Intro_Zoe_03",
+      "tag": "INTRO_Zoe",
+      "text": "Give it up for Zoe, our showrunner, our architect, and the reason I have a face."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Intro_Any_01",
+      "tag": "INTRO_ANY",
+      "text": "And joining us, a crawler with a name I have been told not to mispronounce. Give it up!"
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Intro_Any_02",
+      "tag": "INTRO_ANY",
+      "text": "A new face! The audience loves a new face. They love it more when it is a little scared."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Intro_Any_03",
+      "tag": "INTRO_ANY",
+      "text": "Welcome, welcome! Find a seat, find a game, find out what Fame can do for you."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_FameLow_01",
+      "tag": "FAME_LOW",
+      "text": "Fame, still a little low. Don't worry. Nobody is famous until something explodes near them."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_FameLow_02",
+      "tag": "FAME_LOW",
+      "text": "The Fame meter says, and I quote, who? We can fix that. Go do something stupid on camera."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_FameLow_03",
+      "tag": "FAME_LOW",
+      "text": "Fresh off the bench! The first Fame level pays a loot box. Go earn it."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_FameMid_01",
+      "tag": "FAME_MID",
+      "text": "Look at that Fame! The audience knows your name. Some of them can even spell it."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_FameMid_02",
+      "tag": "FAME_MID",
+      "text": "A respectable Fame level. Respectable is just famous with good posture."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_FameMid_03",
+      "tag": "FAME_MID",
+      "text": "That Fame is climbing. Gold boxes are coming. I can smell the shrink wrap."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_FameHigh_01",
+      "tag": "FAME_HIGH",
+      "text": "That is a serious Fame level. Sponsors have started naming yachts after you."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_FameHigh_02",
+      "tag": "FAME_HIGH",
+      "text": "Look at this star! The audience is chanting. The audience is always chanting, but tonight it's for you."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_FameHigh_03",
+      "tag": "FAME_HIGH",
+      "text": "Legendary boxes territory. Please sign my forehead."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Cheat_01",
+      "tag": "CHEAT",
+      "text": "Our records show a few strikes from the Integrity Office. The audience loves a villain. The house does not."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Cheat_02",
+      "tag": "CHEAT",
+      "text": "Ooh, an Integrity strike! Folks, while that nameplate says cheater, you are all allowed to hit them. It's in the contract."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Cheat_03",
+      "tag": "CHEAT",
+      "text": "A cheater on Primetime! Ratings up, trust down, and the fines are delicious."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Fame_01",
+      "tag": "FAME",
+      "text": "Look down in the corner. That's the live feed. How many people are watching you right now, and how excited they are."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Fame_02",
+      "tag": "FAME",
+      "text": "Under the viewer count is your Fame bar. Kills, tricks, revives, jackpots, they all fill it. Fill it up and a loot box shows up."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Fame_03",
+      "tag": "FAME",
+      "text": "Every Fame level pays a loot box. Bronze first, then Silver, Gold, Platinum, Legendary. Every tenth level, Celestial."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Fame_04",
+      "tag": "FAME",
+      "text": "When the hype bar turns pink, the room is on fire, and everything you do is worth double Fame. Strike while it's hot."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Fame_05",
+      "tag": "FAME",
+      "text": "The chat in the corner is real. Well, it's real to them. Do something big and they will absolutely talk about it."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Fame_06",
+      "tag": "FAME",
+      "text": "Saving a friend who's down is the best Fame in the house. The audience loves a rescue more than a kill. Weird crowd."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Fame_07",
+      "tag": "FAME",
+      "text": "Your loot boxes wait in the Tab menu, under loot boxes. Open them on camera. Always on camera."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Fame_08",
+      "tag": "FAME",
+      "text": "Fame follows you into every game. Gate runs, the rally, the casino. The audience doesn't care where, only how loud."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Tip_01",
+      "tag": "TIP",
+      "text": "New to Repo Rally? There's a practice pad now. No clock, no pay, all the tow truck ballet you can stand."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Tip_02",
+      "tag": "TIP",
+      "text": "In Repo Rally, lift the car overhead and hit space as the ring closes. Perfect timing climbs the trick ladder. The yard pays for style."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Tip_03",
+      "tag": "TIP",
+      "text": "The Friend In A Tube machine does ten-pulls now. Ten friends, one guaranteed rare, keep your favorites, evaporate the rest. Sad, but efficient."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Tip_04",
+      "tag": "TIP",
+      "text": "Want your damage numbers on fire? The prize counter sells damage skins. Inferno, Frostbite, Past Due. Very tasteful. Very loud."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Tip_05",
+      "tag": "TIP",
+      "text": "Spend your stat points! Every point above four makes that stat hit five percent harder. The math department insisted I say that."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Tip_06",
+      "tag": "TIP",
+      "text": "Your class perks are a commitment now. First pick is free. Changing your mind costs gold. Commitment is sexy."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Tip_07",
+      "tag": "TIP",
+      "text": "The casino keeps a regulars card. Play enough and the house gives a little back. Never enough. A little."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Tip_08",
+      "tag": "TIP",
+      "text": "Gate Run tip! Each gate has a theme, a hazard, and contracts in the corner. Finish a contract and the payout gets fancy."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Tip_09",
+      "tag": "TIP",
+      "text": "If the floor glows, don't stand on it. That's not a tip, that's a life philosophy."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Tip_10",
+      "tag": "TIP",
+      "text": "Bleeding out? Press space to roll your death saves now. The dice still decide. The dice always decide."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Close_01",
+      "tag": "CLOSE",
+      "text": "That's our show! Stand on a pad to vote for the next game. Majority wins. Democracy, but with tow trucks."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Close_02",
+      "tag": "CLOSE",
+      "text": "Go out there and be watchable! I'll be right here. I'm always right here. I can't leave the desk."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Close_03",
+      "tag": "CLOSE",
+      "text": "Thank you, Denver! Remember, the cameras love you, and the cameras never blink."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Close_04",
+      "tag": "CLOSE",
+      "text": "This has been Primetime. Tell your friends. Tell your enemies. Tell the third moon."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Close_05",
+      "tag": "CLOSE",
+      "text": "Back after these messages from Mile High Recovery Solutions. Please do not run from the messages."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Idle_01",
+      "tag": "IDLE",
+      "text": "Stick around, folks. Next segment in a moment. My makeup person is reapplying my smile."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Idle_02",
+      "tag": "IDLE",
+      "text": "If you're just joining us, the Fame board is behind me. Look how famous everyone is. Look how famous I am."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Idle_03",
+      "tag": "IDLE",
+      "text": "Somebody tell the audience to stop throwing popcorn at the camera. Thank you."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Idle_04",
+      "tag": "IDLE",
+      "text": "I have been asked by the network to remind you all that I am a beloved personality."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Idle_05",
+      "tag": "IDLE",
+      "text": "Fun fact, this desk is load-bearing. Please do not lean on it during the apocalypse."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "TS_Idle_06",
+      "tag": "IDLE",
+      "text": "Still here! Still smiling! Still under contract!"
+    }
+  ]
+}

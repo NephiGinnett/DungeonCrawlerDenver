@@ -155,6 +155,55 @@ public:
 	/** Who came down, for this player's reveal banner. */
 	UFUNCTION(Client, Reliable)
 	void Client_SummonResult(FName Friend, uint8 Tier, uint8 Variant, FName Weapon);
+
+	/**
+	 * The ten-pull (2026-11-22, Zoe: "Like a real gacha where a batch of 10 guarantees a rare or higher and you can just
+	 * select which ones you keep and the rest get evaporated"). Ten friends for the price of nine, at least one Rare or
+	 * better. They wait in the tube while the player picks up to their free ally slots. The rest evaporate.
+	 */
+	UFUNCTION(Server, Reliable)
+	void Server_SummonTen(uint8 Tube);
+	/** Server: the ten-pull itself. bFree skips the tickets and the podium (DCC.SummonTenFree). */
+	void DoSummonTen(uint8 Tube, bool bFree);
+	/** Which of the ten to keep, by index. Everything else evaporates. */
+	UFUNCTION(Server, Reliable)
+	void Server_KeepSummons(const TArray<uint8>& Keep);
+	/** A title under the name on the nameplate, earned off the arcade (OPEN MIC from OPEN MIC WEEK). Everyone sees it. */
+	UPROPERTY(Replicated)
+	FString NameTitle;
+
+	// --- The Hot Mic (2026-11-23): Epic, only for the chosen voice of Hiss Cranson (Voice Drop). A belt item: press it to
+	// go live for 8 s; the next spell in that time hits 40% harder over a 30% wider area and plays its holder's clip
+	// (SourceArt/Voice/NPC/_Clips/<name>.wav, from Voice Drop) for everyone. 45 s between uses.
+	static const FName HotMicId;
+	/** Server: send this player their profile again (an item or title just arrived). */
+	void RefreshFromProfile();
+	UFUNCTION(Server, Reliable)
+	void Server_HotMic();
+	/** Server clock. Live until then (the next spell is amplified), ready again at HotMicReadyAt. */
+	UPROPERTY(Replicated)
+	double HotMicLiveUntil = 0.0;
+	UPROPERTY(Replicated)
+	double HotMicReadyAt = 0.0;
+	/** Server: true (once) if the Hot Mic is live now; it is spent by asking. */
+	bool ConsumeHotMic();
+
+	/** Fame (Arcade/DCCAudience, 2026-11-23): this player's progress on the audience track, for their own HUD. */
+	UPROPERTY(Replicated)
+	int32 Fame = 0;
+	UPROPERTY(Replicated)
+	int32 FameLevel = 0;
+	/** A Fame level was reached: the toast, with the box it paid. */
+	UFUNCTION(Client, Reliable)
+	void Client_FameLevel(int32 Level, uint8 Tier);
+
+	/** The ten, for this player's pick screen, and how many they can keep. */
+	UFUNCTION(Client, Reliable)
+	void Client_SummonTen(const TArray<FName>& Friends, const TArray<uint8>& Tiers, const TArray<uint8>& Variants, const TArray<FName>& Weapons, int32 Slots);
+	/** Server: the ten waiting in the tube. */
+	TArray<FName> TenFriends, TenWeapons;
+	TArray<uint8> TenTiers, TenVariants;
+	int32 TenTube = -1;
 	/** The server threw your hook: it is back in Seconds. The HUD counts down from here, on this PC's own clock. */
 	UFUNCTION(Client, Reliable)
 	void Client_GrappleThrown(float Seconds);

@@ -1,4 +1,6 @@
 #include "UI/DCCCosmeticShopWidget.h"
+
+#include "UI/DCCDamageSkins.h"
 #include "EngineUtils.h"
 #include "Arcade/DCCArcadeGames.h"
 
@@ -71,8 +73,9 @@ namespace
 				TEXT("YOUR TAG"), Pink, DCCSpray::Price });
 			for (const DCCCosmetics::FItem& Item : DCCCosmetics::Catalog())
 			{
+				const DCCDamageSkins::FSkin* Skin = DCCDamageSkins::Find(Item.Id);
 				FEntry E{ EKind::Cosmetic, Item.Id, Item.Name, Item.Blurb, DCCCosmetics::SlotLabel(Item.Slot).ToUpper(),
-					Item.Parts.IsEmpty() ? Cyan : Item.Parts[0].Colour.GetClamped(), Item.Price, Item.Slot };
+					Skin ? Skin->Main : Item.Parts.IsEmpty() ? Cyan : Item.Parts[0].Colour.GetClamped(), Item.Price, Item.Slot };
 				Lists[0].Add(E);
 			}
 			for (const DCCCosmetics::FBoothWeapon& Gun : DCCCosmetics::BoothWeapons())

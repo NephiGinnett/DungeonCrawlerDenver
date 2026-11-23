@@ -36,6 +36,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Ruleset")
 	virtual int32 GetAbilityModifier(int32 Score) const;
 
+	/**
+	 * Every point counts (2026-11-23, Zoe: "are stats currently actually tied to things like stamina and melee / spell
+	 * damage?"). The banded modifier gives 3, 4 and 5 the same +2, so a stat point usually changed nothing a player
+	 * could feel. This multiplies damage and healing by 5% for each point of the deciding score above 4.
+	 */
+	virtual float GetScorePowerMultiplier(int32 Score) const { return 1.0f + 0.05f * FMath::Max(0, Score - 4); }
+
 	/** Sides on the check die. Isolated so a ruleset using a different core die can override it. */
 	UFUNCTION(BlueprintCallable, Category = "Ruleset")
 	virtual int32 GetCheckDieSides() const;

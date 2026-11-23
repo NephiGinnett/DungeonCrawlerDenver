@@ -88,12 +88,34 @@
   .state.s-done { color: var(--good); } .state.s-taken { color: var(--accent2); } .state.s-review { color: var(--warn); }
   .castnote { background: rgba(67,230,208,.08); border: 1px solid rgba(67,230,208,.35); border-radius: 10px; padding: 10px 14px; margin: 0 0 14px; font-size: 14px; }
   footer { color: var(--dim); font-size: 13px; margin-top: 30px; }
+  /* OPEN MIC WEEK (2026-11-23): the weekly track, gacha style. */
+  .event { background: linear-gradient(135deg, #2a1240, #13203a); border: 1px solid #6b3fa0; border-radius: 14px; padding: 18px; margin-bottom: 18px; }
+  .event h2 { margin: 0; font-size: 22px; letter-spacing: .06em; background: linear-gradient(90deg, #ff4fa3, #ffb347); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .event .when { color: var(--dim); font-size: 13px; margin: 2px 0 12px; }
+  .track { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .milestone { background: rgba(0,0,0,.28); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; position: relative; }
+  .milestone b { display: block; font-size: 13px; color: var(--dim); letter-spacing: .05em; }
+  .milestone span { font-size: 15px; }
+  .milestone.got { border-color: var(--good); box-shadow: 0 0 14px rgba(107,224,122,.25) inset; }
+  .milestone.got b { color: var(--good); }
+  .milestone.next { border-color: var(--warn); }
+  .milestone.top span { color: #ffd76a; font-weight: 700; }
+  .ebar { height: 10px; border-radius: 5px; background: rgba(0,0,0,.35); overflow: hidden; margin: 12px 0 6px; }
+  .ebar i { display: block; height: 100%; background: linear-gradient(90deg, #43e6d0, #ff4fa3); }
+  .event .you { font-size: 14px; }
+  @media (max-width: 600px) { .track { grid-template-columns: 1fr; } }
+  .badge.audition { background: linear-gradient(90deg, rgba(255,79,163,.25), rgba(255,215,106,.25)); color: #ffd76a; }
+  .audition-note { background: linear-gradient(135deg, rgba(255,79,163,.12), rgba(255,215,106,.1)); border: 1px solid rgba(255,215,106,.5); border-radius: 10px; padding: 12px 14px; margin: 0 0 14px; font-size: 15px; }
+  .audition-note b { color: #ffd76a; }
+  .hotmic { border-color: #ffd76a; }
 </style>
 </head>
 <body>
 <main>
   <h1>Voice <span>Drop</span></h1>
   <p class="sub" id="intro">Lend a character your voice. Record right here, or upload a take from your phone. When a line ships in the game, the name you play under gets tickets.</p>
+
+  <section class="event" id="event" hidden></section>
 
   <section class="card">
     <h2>1. Who's reading</h2>
@@ -115,6 +137,17 @@
   <section class="card">
     <h2>2. Pick a character</h2>
     <div class="speakers" id="speakers"><p class="status busy">Loading the cast...</p></div>
+  </section>
+
+  <section class="card hotmic hidden" id="clipCard">
+    <h2>🎤 Your Hot Mic clip</h2>
+    <p class="sub" style="margin:0 0 10px">You hold the Hot Mic. Send a short clip (the first 4 seconds are used): it plays for everyone when your amplified spell goes off. Zoe listens first.</p>
+    <div class="controls">
+      <span class="act ghost file"><button class="act ghost" tabindex="-1">Choose a clip (mp3, m4a, wav...)</button><input type="file" id="clipFile" accept="audio/*,.m4a,.mp3,.wav,.ogg,.webm,.flac"></span>
+      <audio controls class="hidden" id="clipAudio"></audio>
+      <button class="act send hidden" id="clipSend">Send clip</button>
+      <span class="status" id="clipStatus"></span>
+    </div>
   </section>
 
   <section class="card hidden" id="linesCard">
@@ -171,14 +204,18 @@ async function load() {
   }
   // Characters with lines still to record first; finished ones last.
   const left = (s) => s.counts ? s.counts.open + s.counts.review : s.lines.length;
-  const speakers = [...catalog.speakers].sort((a, b) => (left(b) > 0) - (left(a) > 0) || (!!a.castBy - !!b.castBy) || a.name.localeCompare(b.name));
+  const auditionFirst = (s) => (s.audition && !s.audition.unlocked && !s.audition.chosen ? 1 : 0);
+  const speakers = [...catalog.speakers].sort((a, b) => auditionFirst(b) - auditionFirst(a) || (left(b) > 0) - (left(a) > 0) || (!!a.castBy - !!b.castBy) || a.name.localeCompare(b.name));
   for (const s of speakers) {
     const b = document.createElement("button");
     const c = s.counts || { open: s.lines.length, review: 0, taken: 0, done: 0, total: s.lines.length };
-    const complete = c.open + c.review === 0;
+    const complete = c.open + c.review === 0 && !(s.audition && !s.audition.unlocked);
     b.className = "speaker" + (complete ? " complete" : "");
     const set = s.lines.length > 1 && setBonus && !complete ? ` · +${setBonus} for all ${s.lines.length}` : "";
-    const badge = complete ? '<span class="badge full">Complete</span>'
+    const auditioning = s.audition && !s.audition.unlocked;
+    const badge = auditioning ? (s.audition.chosen ? `<span class="badge cast">Voice chosen: ${escapeHtml(s.audition.chosen)}</span>`
+        : `<span class="badge audition">★ AUDITION · win the ${escapeHtml(s.audition.prize || "role")}</span>`)
+      : complete ? '<span class="badge full">Complete</span>'
       : s.castBy ? `<span class="badge cast">Voiced by ${escapeHtml(s.castBy)}</span>` : '<span class="badge open">Open for anyone</span>';
     const bits = [c.open && `${c.open} open`, c.review && `${c.review} in review`, c.taken && `${c.taken} taken`, c.done && `${c.done} in the game`].filter(Boolean).join(" · ");
     b.innerHTML = `<img src="portraits/${encodeURIComponent(s.id)}.svg" alt="" loading="lazy" onerror="this.remove()"><span><b>${escapeHtml(s.name)}</b>${badge}<small class="counts">${c.total} line${c.total === 1 ? "" : "s"}: ${bits}</small>${complete ? "" : `<small class="tix">🎟 ${reward} a line${set}</small>`}</span>`;
@@ -227,8 +264,17 @@ function pick(speaker, button, quiet) {
   summary.innerHTML = `<div class="progress"><i class="p-done" style="width:${pct(c.done)}"></i><i class="p-taken" style="width:${pct(c.taken)}"></i><i class="p-review" style="width:${pct(c.review)}"></i></div>
     <div class="legend"><span class="l-done">${c.done} in the game</span><span class="l-taken">${c.taken} taken</span><span class="l-review">${c.review} in review</span><span>${c.open} still open</span></div>`;
   list.appendChild(summary);
-  const mine = isCast(speaker);
-  if (speaker.castBy) {
+  const auditioning = speaker.audition && !speaker.audition.unlocked;
+  const mine = auditioning ? !speaker.audition.chosen : isCast(speaker);
+  if (auditioning) {
+    const note = document.createElement("div");
+    note.className = "audition-note";
+    note.innerHTML = speaker.audition.chosen
+      ? `Zoe has chosen <b>${escapeHtml(speaker.audition.chosen)}</b> as the voice of ${escapeHtml(speaker.name)}. The rest of his lines open for them soon.`
+      : `<b>${escapeHtml(speaker.name)} is auditioning.</b> Send the one sample line below, once. Zoe picks the voice, and the winner gets
+         the <b>${escapeHtml(speaker.audition.prize || "prize")}</b> and all ${speaker.lines.length} of his lines. Give it everything.`;
+    list.appendChild(note);
+  } else if (speaker.castBy) {
     const note = document.createElement("div");
     note.className = "castnote";
     note.innerHTML = c.open + c.review === 0
@@ -245,13 +291,14 @@ function pick(speaker, button, quiet) {
     ["review", "Waiting for review", ""],
     ["taken", "Taken: approved, on its way into the game", ""],
     ["done", "In the game", ""],
+    ["locked", "Locked until the voice is chosen", ""],
   ];
   for (const [state, title, cls] of groups) {
     const lines = speaker.lines.filter((l) => (l.state || "open") === state);
     if (!lines.length) continue;
     const h = document.createElement("div");
     h.className = "group " + (mine ? cls : "");
-    h.textContent = `${state === "open" && !mine ? `Still to record, by ${speaker.castBy}` : title} (${lines.length})`;
+    h.textContent = `${state === "open" && !mine ? `Still to record, by ${speaker.castBy}` : state === "open" && auditioning ? "The audition line" : title} (${lines.length})`;
     list.appendChild(h);
     for (const line of lines) {
       const recordable = (state === "open" || state === "review") && mine;
@@ -265,11 +312,12 @@ function pick(speaker, button, quiet) {
 function closedView(speaker, line, state) {
   const el = document.createElement("div");
   el.className = "line closed";
-  const label = state === "done" ? `In the game · ${escapeHtml(line.by)}`
+  const label = state === "locked" ? "Locked"
+    : state === "done" ? `In the game · ${escapeHtml(line.by)}`
     : state === "taken" ? `Taken · ${escapeHtml(line.by)}`
     : state === "review" ? `Reserved for ${escapeHtml(speaker.castBy)} · ${line.review} take${line.review === 1 ? "" : "s"} waiting`
     : `Reserved for ${escapeHtml(speaker.castBy)}`;
-  const cls = state === "done" ? "s-done" : state === "taken" ? "s-taken" : "s-review";
+  const cls = state === "done" ? "s-done" : state === "taken" ? "s-taken" : state === "locked" ? "" : "s-review";
   el.innerHTML = `<div class="meta"><span class="state ${cls}">${label}</span> · ${escapeHtml(line.row)}</div><p class="text">${prettyLine(line.text)}</p>`;
   return el;
 }
@@ -376,7 +424,64 @@ function lineView(speaker, line) {
   return el;
 }
 
-load();
+// ---- OPEN MIC WEEK --------------------------------------------------------------------------------------------
+async function loadEvent() {
+  const who = ($("gameName").value.trim() || $("name").value.trim());
+  let ev;
+  try { ev = await (await fetch("/api/event?name=" + encodeURIComponent(who))).json(); } catch { return; }
+  const box = $("event");
+  const end = new Date(ev.weekEnd);
+  const days = Math.max(0, Math.ceil((end - Date.now()) / 86400000));
+  const top = ev.milestones[ev.milestones.length - 1];
+  const pct = Math.min(100, (ev.count / top.lines) * 100);
+  const cells = ev.milestones.map((m, i) => {
+    const got = ev.count >= m.lines, next = ev.next && ev.next.lines === m.lines;
+    return `<div class="milestone${got ? " got" : ""}${next ? " next" : ""}${i === ev.milestones.length - 1 ? " top" : ""}">
+      <b>${got ? "✓ " : ""}${m.lines} LINE${m.lines === 1 ? "" : "S"}</b><span>${escapeHtml(m.reward)}</span></div>`;
+  }).join("");
+  box.innerHTML = `<h2>🎤 ${escapeHtml(ev.title)}</h2>
+    <div class="when">${escapeHtml(ev.blurb)} ${days} day${days === 1 ? "" : "s"} left this week.</div>
+    <div class="track">${cells}</div>
+    <div class="ebar"><i style="width:${pct}%"></i></div>
+    <div class="you">${who ? `<b>${escapeHtml(who)}</b>: ${ev.count} approved this week${ev.waiting ? `, ${ev.waiting} waiting for review` : ""}.
+      ${ev.next ? `Next: <b>${escapeHtml(ev.next.reward)}</b> at ${ev.next.lines}.` : "Track complete this week! 🎉"}` : "Put your name in below to see your progress."}
+      <small style="display:block;color:var(--dim);margin-top:4px">Rewards land in the game after Zoe ships the lines. Want the <b style="color:#ffd76a">Hot Mic (Epic)</b>? Only one way: win the Hiss Cranson audition.</small></div>`;
+  box.hidden = false;
+}
+for (const id of ["name", "gameName"]) $(id).addEventListener("change", () => { loadEvent(); showClip(); });
+
+// ---- the Hot Mic clip, for its holder ----------------------------------------------------------------------------
+function showClip() {
+  if (!catalog) return;
+  const who = [$("name").value.trim(), $("gameName").value.trim()].filter(Boolean);
+  const holder = catalog.speakers.some((s) => s.audition && s.audition.chosen && who.some((w) => sameName(w, s.audition.chosen)));
+  $("clipCard").classList.toggle("hidden", !holder);
+}
+let clipBlob = null;
+$("clipFile").onchange = () => {
+  clipBlob = $("clipFile").files[0] || null;
+  if (!clipBlob) return;
+  $("clipAudio").src = URL.createObjectURL(clipBlob);
+  $("clipAudio").classList.remove("hidden");
+  $("clipSend").classList.remove("hidden");
+};
+$("clipSend").onclick = async () => {
+  if (!clipBlob) return;
+  const form = new FormData();
+  form.append("name", $("name").value.trim());
+  form.append("gameName", $("gameName").value.trim());
+  form.append("audio", clipBlob, clipBlob.name || "clip.webm");
+  $("clipStatus").textContent = "Sending...";
+  try {
+    const res = await fetch("/api/clip", { method: "POST", body: form });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.error || "That didn't go through.");
+    $("clipStatus").textContent = "Sent! It plays in the game once Zoe ships it.";
+    $("clipSend").classList.add("hidden");
+  } catch (e) { $("clipStatus").textContent = e.message; }
+};
+
+load().then(() => { loadEvent(); showClip(); });
 </script>
 </body>
 </html>

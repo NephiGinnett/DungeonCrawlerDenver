@@ -1,5 +1,7 @@
 #include "Arcade/DCCCasino.h"
 
+#include "Arcade/DCCAudience.h"
+#include "Session/DCCIntegrity.h"
 #include "Arcade/DCCArcade.h"
 #include "Arcade/DCCArcadeGames.h"
 #include "Arcade/DCCWalletComponent.h"
@@ -2192,6 +2194,18 @@ bool ADCCCasinoCascade::SpendFor(ADCCCharacterBase* Who, int32 Price)
 		Who->Wallet->Tickets = DCCProfile::GetTickets(Key);
 	}
 	Tell(Who, FString::Printf(TEXT("-%d tickets."), Price));
+
+	// The regulars' card (2026-11-22, Zoe: "I'd also like if some of the casino things ... rewarded higher usage").
+	// Every 100 tickets played stamps it full, and a full card pays 8 back. That trims the house's ~10% edge to ~2%:
+	// playing more is rewarded, and still never a ticket tap.
+	const float Played = DCCProfile::GetForKey(Key, TEXT("Casino"), TEXT("CardTowardPunch"), 0.0f) + Price;
+	const int32 Full = FMath::FloorToInt32(Played / 100.0f);
+	DCCProfile::SetForKey(Key, TEXT("Casino"), TEXT("CardTowardPunch"), Played - Full * 100.0f);
+	if (Full > 0)
+	{
+		UDCCWalletComponent::AwardTickets(State, Full * 8, TEXT("regulars' card full"));
+		Tell(Who, TEXT("Regulars' card full. The house comps 8 tickets and punches a fresh one."));
+	}
 	return true;
 }
 
@@ -2259,7 +2273,9 @@ void ADCCCasinoCascade::BuyCard(ADCCCharacterBase* Who)
 		Card->Owner = Name;
 	}
 	// Decide the card first, then deal the cells: the winning amount three times, every other amount at most twice.
-	const int32 Win = FMath::FRand() < 0.45f ? Weighted(CardWeights, 6) : -1;
+	// 38%, not 45% (2026-11-22). At 45% a card paid back 2.14 tickets on a 2-ticket price, so buying cards as fast as
+	// possible printed money, and someone found out. At 38% it pays back 1.81: the house keeps about 10%, like the slots.
+	const int32 Win = FMath::FRand() < 0.38f ? Weighted(CardWeights, 6) : -1;
 	TArray<uint8> Cells;
 	int32 Count[6] = {};
 	if (Win >= 0)
@@ -2522,6 +2538,10 @@ void ADCCCasinoCascade::Give(ADCCCharacterBase* Who, int32 Amount, const FString
 		return;
 	}
 	UDCCAchievementComponent::RecordFor(Who, EDCCAchievementStat::CasinoTicketsWon, Amount);
+	if (Amount >= 25)
+	{
+		DCCAudience::Moment(this, Who, DCCAudience::EMoment::Jackpot);
+	}
 	if (!Why.StartsWith(TEXT("skee")))
 	{
 		UDCCAchievementComponent::RecordFor(Who, EDCCAchievementStat::CasinoWins, 1);
@@ -3443,6 +3463,11 @@ void ADCCCasinoCascade::LocalConfirm(ADCCCharacterBase* Who)
 
 void ADCCCharacterBase::Server_CasinoAction_Implementation(uint8 Action, int32 Arg)
 {
+	// A hand presses about eight times a second. A script presses a thousand (DCCIntegrity, 2026-11-22).
+	if (Action >= 2 && !DCCIntegrity::Allow(this, TEXT("casino"), 6.0f, 12.0f))
+	{
+		return;
+	}
 	ADCCCasinoCascade* Casino = ADCCCasinoCascade::Get(GetWorld());
 	if (!Casino)
 	{

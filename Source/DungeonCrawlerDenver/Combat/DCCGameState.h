@@ -72,6 +72,18 @@ public:
 	ADCCGameState();
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual void BeginPlay() override;
+
+	// --- The live audience (Arcade/DCCAudience, 2026-11-23) ------------------------------------------------------------
+	/** People watching right now. Rises with big moments, settles when nothing happens. */
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "DCC|Audience")
+	int32 LiveViewers = 0;
+	/** 0 to 1: how hot the room is. At 1 a sponsor tips whoever set it off. */
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "DCC|Audience")
+	float Hype = 0.0f;
+	/** Server: seconds until chat says something on its own. */
+	float NextAudienceChat = 3.0f;
+	FTimerHandle AudienceTimer;
 
 	/** The party's shared quest log. Assign its QuestTable to give the game goals. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "DCC|Quests")

@@ -1,5 +1,7 @@
 #include "Session/DCCProfile.h"
 
+#include "Session/DCCIntegrity.h"
+
 #include "Engine/World.h"
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/PlayerState.h"
@@ -206,6 +208,12 @@ namespace DCCProfile
 			return 0;
 		}
 		float& Balance = Profile->Stats.FindOrAdd(StatKey(TEXT("Arcade"), TEXT("Tickets")));
+		// Garnished winnings (DCCIntegrity): what a caught cheater earns goes to the house for a while.
+		if (Delta > 0 && DCCIntegrity::IsGarnished(Key))
+		{
+			UE_LOG(LogTemp, Log, TEXT("[DCC Integrity] %s: %d tickets garnished"), *Key, Delta);
+			return FMath::RoundToInt(Balance);
+		}
 		Balance = FMath::Max(0.0f, Balance + Delta);
 		if (Delta > 0)
 		{
@@ -350,7 +358,20 @@ namespace DCCProfile
 		return Bytes;
 	}
 
-	bool MergeFromClient(const FString& Key, const TArray<uint8>& CurrentBytes, const TArray<uint8>& BaseBytes)
+	/** The most tickets a visiting profile may bring: on a first visit, and earned away from this PC since the last. */
+	static constexpr float MaxBroughtTickets = 3000.0f;
+	static constexpr float MaxAwayTickets = 1500.0f;
+
+	void BumpRevision(const FString& Key, int32 By)
+	{
+		if (UDCCProfileSave* Profile = Open(Key))
+		{
+			Profile->Revision += By;
+			Write(Profile);
+		}
+	}
+
+	bool MergeFromClient(const FString& Key, const TArray<uint8>& CurrentBytes, const TArray<uint8>& BaseBytes, FString* OutSuspicion)
 	{
 		UDCCProfileSave* Host = Open(Key);
 		const UDCCProfileSave* Visitor = FromBytes(CurrentBytes);
@@ -365,6 +386,15 @@ namespace DCCProfile
 		{
 			// This PC's copy is new or stale (the crawler has been merged somewhere newer since): theirs wins outright.
 			Host->Stats = Visitor->Stats;
+			// A first visit brings the whole copy. Its tickets are capped at what a lot of honest play could earn.
+			if (float* Brought = Host->Stats.Find(StatKey(TEXT("Arcade"), TEXT("Tickets"))))
+			{
+				if (*Brought > MaxBroughtTickets)
+				{
+					if (OutSuspicion) { *OutSuspicion = FString::Printf(TEXT("arriving with %d tickets nobody saw them earn"), FMath::RoundToInt(*Brought)); }
+					*Brought = MaxBroughtTickets;
+				}
+			}
 			Host->Cosmetics = Visitor->Cosmetics;
 			Host->Wearing = Visitor->Wearing;
 			Host->Trophies = Visitor->Trophies;
@@ -399,7 +429,14 @@ namespace DCCProfile
 				}
 				else
 				{
-					Result += (Theirs ? *Theirs : 0.0f) - (Was ? *Was : 0.0f);
+					float Gain = (Theirs ? *Theirs : 0.0f) - (Was ? *Was : 0.0f);
+					// Tickets earned away from this PC: a long solo night is a few hundred, never thousands (DCCIntegrity).
+					if (Name == StatKey(TEXT("Arcade"), TEXT("Tickets")) && Gain > MaxAwayTickets)
+					{
+						if (OutSuspicion) { *OutSuspicion = FString::Printf(TEXT("bringing in %d tickets from their own PC"), FMath::RoundToInt(Gain)); }
+						Gain = MaxAwayTickets;
+					}
+					Result += Gain;
 					Result = FMath::Max(0.0f, Result);
 				}
 				Host->Stats.Add(Name, Result);

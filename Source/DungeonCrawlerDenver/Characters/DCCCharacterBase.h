@@ -76,7 +76,7 @@ DECLARE_MULTICAST_DELEGATE_ThreeParams(FDCCDamageLanded, ADCCCharacterBase* /*De
  * hands are busy, so every slot works straight from its number there. Built fresh each time it is asked for, from
  * what this crawler has right now in this game. Local.
  */
-enum class EDCCBelt : uint8 { Skill, Grapple, Tool, Quick, Spray, Lightstick, Lamp, BodyCam, Throw, Stow };
+enum class EDCCBelt : uint8 { Skill, Grapple, Tool, Quick, Spray, Lightstick, Lamp, BodyCam, Throw, Stow, HotMic };
 
 struct FDCCBeltEntry
 {
@@ -105,6 +105,32 @@ public:
 	ADCCCharacterBase();
 
 	virtual void Tick(float DeltaSeconds) override;
+
+	// --- The Integrity Office (Session/DCCIntegrity, 2026-11-22) ---------------------------------------------------
+	/** Strikes this visit. 1 or 2 puts UNDER REVIEW on the nameplate, 3 or more CHEATER. Server writes, all see it. */
+	UPROPERTY(ReplicatedUsing = OnRep_CheatStrikes, BlueprintReadOnly, Category = "DCC|Integrity")
+	uint8 CheatStrikes = 0;
+	UFUNCTION()
+	void OnRep_CheatStrikes();
+	/** Server: set the count and redraw the nameplate here. */
+	void NoteCheatStrikes(int32 Count);
+	/** A guest's game: what its own screen shows, every few seconds (DCCIntegrity::CheckReport). */
+	UFUNCTION(Server, Unreliable)
+	void Server_IntegrityReport(const TArray<int32>& Seen);
+	/** The host's own crawler (or a solo game): the only one the DM's buttons answer to. */
+	bool IsHostsOwnCrawler() const { return HasAuthority() && IsLocallyControlled(); }
+	float IntegrityReportIn = 5.0f;
+
+	/** A hit with its dealer, for everyone's damage numbers (colour and damage skin, UI/DCCDamageSkins). Cosmetic. */
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_DamageNumber(int32 Amount, ADCCCharacterBase* Dealer);
+
+	/** The Hot Mic (UDCCWalletComponent): bFired false is going live (feedback whine), true is the amplified spell going
+	 *  off (the holder's clip, or an air horn). Every machine plays it at this crawler. */
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_HotMic(bool bFired);
+	/** Redraw the nameplate (a title arrived). */
+	void RefreshNameplateNow() { RefreshNameplate(); }
 
 	/**
 	 * Server only. Where a character learns it belongs to a person.
@@ -1003,6 +1029,9 @@ public:
 	/** Seconds between death-save rolls while downed. 6s matches a d&d/DCC combat round. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Downed", meta = (ClampMin = "0.1"))
 	float DeathSaveIntervalSeconds = 6.0f;
+
+	/** Set by Server_BleedOut: the saves that are left roll back to back. Cleared when the crawler goes down again. */
+	bool bBleedingOutFast = false;
 
 	/** d20 result needed to succeed. 11 means "above a 10", per how this was specified. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "DCC|Downed", meta = (ClampMin = "1", ClampMax = "20"))

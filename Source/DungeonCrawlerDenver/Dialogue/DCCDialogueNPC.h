@@ -154,6 +154,8 @@ public:
 	virtual void TryPlayerInteract(ADCCCharacterBase* Interactor);
 
 protected:
+	/** Mid-line, or in the pause after one. */
+	bool IsBusyTalking() const { return bSpeaking || LineTimeRemaining > 0.0f; }
 	UFUNCTION()
 	void HandleTalkOverlapBegin(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& Sweep);

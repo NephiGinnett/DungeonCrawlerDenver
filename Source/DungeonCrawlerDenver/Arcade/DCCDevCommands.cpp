@@ -5,11 +5,18 @@
 //   DCC.SkillTick <Skill> [delay]   one practice tick on a skill of the local crawler (grants it if unknown)
 //   DCC.Scrap <amount> [delay]      give the local player scrap
 
+#include "Engine/SkeletalMesh.h"
+#include "Components/PointLightComponent.h"
+#include "Engine/PointLight.h"
+#include "Components/TextRenderComponent.h"
+#include "Engine/TextRenderActor.h"
+#include "Animation/SkeletalMeshActor.h"
 #include "Classes/DCCClassComponent.h"
 #include "Stats/DCCStatsComponent.h"
 #include "Arcade/DCCSpray.h"
 #include "Session/DCCProfile.h"
 #include "Arcade/DCCWalletComponent.h"
+#include "Arcade/DCCCosmetics.h"
 #include "CoreMinimal.h"
 #include "HAL/IConsoleManager.h"
 #include "Engine/World.h"
@@ -642,6 +649,22 @@ static FAutoConsoleCommandWithWorldAndArgs GDevSummonFree(TEXT("DCC.SummonFree")
 		});
 	}));
 
+static FAutoConsoleCommandWithWorldAndArgs GDevSummonTenFree(TEXT("DCC.SummonTenFree"), TEXT("DCC.SummonTenFree <tube 1-4> [delay]: (dev) a free ten-pull."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		const int32 Tube = FMath::Clamp(Args.Num() > 0 ? FCString::Atoi(*Args[0]) : 1, 1, ADCCArcadeLobby::TubeCount) - 1;
+		After(World, Args.Num() > 1 ? FCString::Atof(*Args[1]) : 0.0f, [Tube](UWorld* W)
+		{
+			ADCCCharacterBase* Me = LocalCrawler(W);
+			APlayerController* PC = W->GetFirstPlayerController();
+			if (ADCCHUD* Hud = PC ? Cast<ADCCHUD>(PC->GetHUD()) : nullptr)
+			{
+				if (Hud->IsSummonPanelOpen() && !Hud->IsTenPickOpen()) { Hud->ToggleSummonPanel(Tube); }
+			}
+			if (Me && Me->Wallet) { Me->Wallet->DoSummonTen(uint8(Tube), true); }
+		});
+	}));
+
 // DCC.Equip <Row> [delay]: (dev) wear a gear row. DCC.Hit <BoxName> [delay]: (dev) press a canvas button by name.
 static FAutoConsoleCommandWithWorldAndArgs GDevEquip(TEXT("DCC.Equip"), TEXT("DCC.Equip <RowName> [delay]: (dev) equip a gear row on the local crawler."),
 	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
@@ -651,6 +674,100 @@ static FAutoConsoleCommandWithWorldAndArgs GDevEquip(TEXT("DCC.Equip"), TEXT("DC
 		After(World, Args.Num() > 1 ? FCString::Atof(*Args[1]) : 0.0f, [Id](UWorld* W)
 		{
 			if (ADCCCharacterBase* Crawler = LocalCrawler(W)) { Crawler->DCCEquip(Id); }
+		});
+	}));
+
+// DCC.ClickAt <x> <y> [delay]: (dev) a left click at a canvas position, through the same hit test the mouse uses.
+static FAutoConsoleCommandWithWorldAndArgs GDevClickAt(TEXT("DCC.ClickAt"), TEXT("DCC.ClickAt <x> <y> [delay]: (dev) click the canvas at x,y."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		if (Args.Num() < 2) { return; }
+		const FVector2D At(FCString::Atof(*Args[0]), FCString::Atof(*Args[1]));
+		After(World, Args.Num() > 2 ? FCString::Atof(*Args[2]) : 0.0f, [At](UWorld* W)
+		{
+			APlayerController* PC = W ? W->GetFirstPlayerController() : nullptr;
+			if (AHUD* Hud = PC ? PC->GetHUD() : nullptr)
+			{
+				UE_LOG(LogTemp, Log, TEXT("[DCC ClickAt] %s, any box there: %d"), *At.ToString(), Hud->AnyCurrentHitBoxHits() ? 1 : 0);
+				Hud->UpdateHitBoxCandidates(TArray<FVector2D>{ At });
+				Hud->UpdateAndDispatchHitBoxClickEvents(At, IE_Pressed);
+				Hud->UpdateAndDispatchHitBoxClickEvents(At, IE_Released);
+			}
+		});
+	}));
+
+// DCC.TrySkin <SkinId> [delay]: (dev) wear a damage skin for this session only. Nothing is bought or saved.
+static FAutoConsoleCommandWithWorldAndArgs GDevTrySkin(TEXT("DCC.TrySkin"), TEXT("DCC.TrySkin <SkinId> [delay]: (dev) wear a damage skin, unsaved."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		if (Args.Num() < 1) { return; }
+		const FName Id(*Args[0]);
+		After(World, Args.Num() > 1 ? FCString::Atof(*Args[1]) : 0.0f, [Id](UWorld* W)
+		{
+			ADCCCharacterBase* Me = LocalCrawler(W);
+			if (!Me || !Me->Wallet) { return; }
+			Me->Wallet->Worn.RemoveAll([](const FDCCWornCosmetic& Each) { return Each.Slot == DCCCosmetics::Numbers; });
+			FDCCWornCosmetic Entry;
+			Entry.Slot = DCCCosmetics::Numbers;
+			Entry.Id = Id;
+			Me->Wallet->Worn.Add(Entry);
+			UE_LOG(LogTemp, Log, TEXT("[DCC Skin] trying %s"), *Id.ToString());
+		});
+	}));
+
+// DCC.ImportCompare [delay] [mesh A] [mesh B]: (dev, 2026-11-23) the same model imported two ways, side by side in front
+// of you, with a neutral light: on the left the old road (a colour-only material), on the right Unreal's glTF importer
+// with every PBR map (Tools/import_glb_pbr.py --compare).
+static FAutoConsoleCommandWithWorldAndArgs GDevImportCompare(TEXT("DCC.ImportCompare"), TEXT("DCC.ImportCompare [delay] [old mesh] [new mesh]: (dev) old vs new import, side by side."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		const FString OldPath = Args.Num() > 1 ? Args[1] : TEXT("/Game/DCC/ImportTest/Alchemist_OldWay/Meshy_AI_Character_output_OldWay.Meshy_AI_Character_output_OldWay") /* recreate with import_glb_pbr.py --compare */;
+		const FString NewPath = Args.Num() > 2 ? Args[2] : TEXT("/Game/DCC/Characters/Cillinan/Meshy_AI_Character_output/SkeletalMeshes/Meshy_AI_Character_output.Meshy_AI_Character_output");
+		After(World, Args.Num() > 0 ? FCString::Atof(*Args[0]) : 0.0f, [OldPath, NewPath](UWorld* W)
+		{
+			ADCCCharacterBase* Me = LocalCrawler(W);
+			APlayerController* PC = W ? W->GetFirstPlayerController() : nullptr;
+			if (!Me || !PC)
+			{
+				return;
+			}
+			const FRotator Facing(0.0f, PC->GetControlRotation().Yaw, 0.0f);
+			const FVector Fwd = Facing.Vector();
+			const FVector Right = FRotationMatrix(Facing).GetUnitAxis(EAxis::Y);
+			const FVector Feet = Me->GetActorLocation() - FVector(0, 0, 90.0f) + Fwd * 330.0f;
+			auto Place = [&](const FString& Path, float Side, const TCHAR* Label)
+			{
+				USkeletalMesh* Mesh = LoadObject<USkeletalMesh>(nullptr, *Path);
+				if (!Mesh)
+				{
+					UE_LOG(LogTemp, Warning, TEXT("[DCC ImportCompare] missing %s"), *Path);
+					return;
+				}
+				const FVector At = Feet + Right * Side;
+				ASkeletalMeshActor* Actor = W->SpawnActor<ASkeletalMeshActor>(At, Facing + FRotator(0.0f, 90.0f, 0.0f)); // glTF faces +Y
+				if (Actor && Actor->GetSkeletalMeshComponent())
+				{
+					Actor->GetSkeletalMeshComponent()->SetSkeletalMesh(Mesh);
+				}
+				if (ATextRenderActor* Sign = W->SpawnActor<ATextRenderActor>(At + FVector(0, 0, 230.0f), Facing + FRotator(0.0f, 180.0f, 0.0f)))
+				{
+					Sign->GetTextRender()->SetText(FText::FromString(Label));
+					Sign->GetTextRender()->SetHorizontalAlignment(EHTA_Center);
+					Sign->GetTextRender()->SetWorldSize(22.0f);
+					Sign->GetTextRender()->SetTextRenderColor(FColor(255, 230, 160));
+				}
+				UE_LOG(LogTemp, Log, TEXT("[DCC ImportCompare] %s: %s, bounds %s"), Label, *Mesh->GetName(), *Mesh->GetBounds().BoxExtent.ToString());
+			};
+			// Both to the right of you, so your own crawler does not stand in front of either.
+			Place(OldPath, 120.0f, TEXT("OLD WAY: colour only"));
+			Place(NewPath, 330.0f, TEXT("NEW: glTF, full PBR"));
+			// A plain white key light over both, so the room's colours do not decide the comparison.
+			if (APointLight* Key = W->SpawnActor<APointLight>(Feet + Fwd * -150.0f + FVector(0, 0, 320.0f), FRotator::ZeroRotator))
+			{
+				Key->PointLightComponent->SetIntensity(60000.0f);
+				Key->PointLightComponent->SetAttenuationRadius(1400.0f);
+				Key->PointLightComponent->SetLightColor(FLinearColor::White);
+			}
 		});
 	}));
 
@@ -759,7 +876,7 @@ static FAutoConsoleCommandWithWorldAndArgs GDevWhisper(TEXT("DCC.Whisper"), TEXT
 static FAutoConsoleCommandWithWorldAndArgs GDevRallyTrick(TEXT("DCC.RallyTrick"), TEXT("DCC.RallyTrick <1-4> [delay]: (dev) queue an overhead trick."),
 	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
 	{
-		const uint8 Move = static_cast<uint8>(FMath::Clamp(Args.Num() > 0 ? FCString::Atoi(*Args[0]) : 1, 1, 4));
+		const uint8 Move = static_cast<uint8>(FMath::Clamp(Args.Num() > 0 ? FCString::Atoi(*Args[0]) : 1, 1, 20));
 		After(World, Args.Num() > 1 ? FCString::Atof(*Args[1]) : 0.0f, [Move](UWorld* W)
 		{
 			ADCCRover* Truck = nullptr;
@@ -771,7 +888,7 @@ static FAutoConsoleCommandWithWorldAndArgs GDevRallyTrick(TEXT("DCC.RallyTrick")
 			{
 				for (TActorIterator<ADCCRover> It(W); It; ++It)
 				{
-					if (It->RallyTrick == 2 && It->Driver)
+					if (It->RallyTrick == 2)
 					{
 						Truck = *It;
 						break;
@@ -783,8 +900,30 @@ static FAutoConsoleCommandWithWorldAndArgs GDevRallyTrick(TEXT("DCC.RallyTrick")
 				UE_LOG(LogTemp, Warning, TEXT("[DCC Drive] trick button %d: no truck"), Move);
 				return;
 			}
-			Truck->Server_RallyPickTrick(Move);
-			UE_LOG(LogTemp, Log, TEXT("[DCC Drive] trick button %d"), Move);
+			// The ring (2026-11-23): Move is how many presses to make, each on the beat. A 5th and later press is
+			// deliberately late, so a test sees a miss too.
+			struct FAuto { TWeakObjectPtr<ADCCRover> Truck; int32 Left = 0; int32 Done = 0; double LastBeat = 0.0; };
+			TSharedRef<FAuto> State = MakeShared<FAuto>();
+			State->Truck = Truck;
+			State->Left = Move;
+			TSharedRef<FTimerHandle> Handle = MakeShared<FTimerHandle>();
+			W->GetTimerManager().SetTimer(*Handle, FTimerDelegate::CreateLambda([State, Handle, W]()
+			{
+				ADCCRover* T = State->Truck.Get();
+				if (!T || State->Left <= 0)
+				{
+					W->GetTimerManager().ClearTimer(*Handle);
+					return;
+				}
+				const double Clock = T->RallyClock();
+				if (T->RallyBeatAt > 0.0 && T->RallyBeatAt != State->LastBeat && Clock >= T->RallyBeatAt - 0.01)
+				{
+					State->LastBeat = T->RallyBeatAt;
+					T->Server_RallyPress(float(Clock - T->RallyBeatAt));
+					--State->Left;
+				}
+			}), 0.01f, true);
+			UE_LOG(LogTemp, Log, TEXT("[DCC Drive] auto-pressing %d beats"), Move);
 		});
 	}));
 

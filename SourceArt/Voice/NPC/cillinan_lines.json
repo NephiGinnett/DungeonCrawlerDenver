@@ -1,0 +1,119 @@
+{
+  "speakers": [
+    {
+      "id": "Cillinan",
+      "name": "Cillinan",
+      "body": "Cillinan"
+    }
+  ],
+  "lines": [
+    {
+      "speaker": "Cillinan",
+      "row": "CL_Greet_01",
+      "tag": "GREET",
+      "text": "Ah. A customer. Mind the vials, some of them are opinions."
+    },
+    {
+      "speaker": "Cillinan",
+      "row": "CL_Greet_02",
+      "tag": "GREET",
+      "text": "Welcome to the prize counter. I am Cillinan. Everything here is for sale, including, eventually, me."
+    },
+    {
+      "speaker": "Cillinan",
+      "row": "CL_Greet_03",
+      "tag": "GREET",
+      "text": "Tickets? Wonderful. Tickets are the only currency I accept, and the only one that has never once lied to me."
+    },
+    {
+      "speaker": "Cillinan",
+      "row": "CL_Greet_04",
+      "tag": "GREET",
+      "text": "Step up, step up. Do not touch the green one. The green one touches back."
+    },
+    {
+      "speaker": "Cillinan",
+      "row": "CL_Greet_05",
+      "tag": "GREET",
+      "text": "Back again? Good. The shelves were getting lonely, and so, I admit, was I."
+    },
+    {
+      "speaker": "Cillinan",
+      "row": "CL_Pitch_01",
+      "tag": "PITCH",
+      "text": "Damage skins, fresh from the still. Inferno for the dramatic, Frostbite for the smug, Past Due for the cruel."
+    },
+    {
+      "speaker": "Cillinan",
+      "row": "CL_Pitch_02",
+      "tag": "PITCH",
+      "text": "The spray can is the finest thing I sell. Your picture, on their wall, forever. Or until the host scrubs it."
+    },
+    {
+      "speaker": "Cillinan",
+      "row": "CL_Pitch_03",
+      "tag": "PITCH",
+      "text": "Hats, halos, and a jetpack of questionable provenance. All of it looks better on a winner."
+    },
+    {
+      "speaker": "Cillinan",
+      "row": "CL_Pitch_04",
+      "tag": "PITCH",
+      "text": "The Hot Mic is not for sale. Believe me, I have offered. Only the voice of Hiss Cranson holds it."
+    },
+    {
+      "speaker": "Cillinan",
+      "row": "CL_Pitch_05",
+      "tag": "PITCH",
+      "text": "Truck upgrades are next door at the Chop Shop. Scrap, not tickets. I do not touch scrap. It gets in the robes."
+    },
+    {
+      "speaker": "Cillinan",
+      "row": "CL_Pitch_06",
+      "tag": "PITCH",
+      "text": "The friend tubes are over there. Ten at a time is cheaper. I mention this purely as a professional courtesy."
+    },
+    {
+      "speaker": "Cillinan",
+      "row": "CL_Pitch_07",
+      "tag": "PITCH",
+      "text": "Stand on the gold pad and the whole counter opens up. Browse. Linger. Spend."
+    },
+    {
+      "speaker": "Cillinan",
+      "row": "CL_Quip_01",
+      "tag": "QUIP",
+      "text": "This one is antifreeze. That one is antifreeze with a nicer label."
+    },
+    {
+      "speaker": "Cillinan",
+      "row": "CL_Quip_02",
+      "tag": "QUIP",
+      "text": "Do not drink anything on the top shelf. Do not ask why the top shelf is warm."
+    },
+    {
+      "speaker": "Cillinan",
+      "row": "CL_Quip_03",
+      "tag": "QUIP",
+      "text": "I was a real alchemist, once. Then the System arrived and asked if I could do retail."
+    },
+    {
+      "speaker": "Cillinan",
+      "row": "CL_Quip_04",
+      "tag": "QUIP",
+      "text": "Fill your Fame bar and the boxes come. I sell the outfit you will be famous in."
+    },
+    {
+      "speaker": "Cillinan",
+      "row": "CL_Quip_05",
+      "tag": "QUIP",
+      "text": "If you see a bubbling flask, no you didn't."
+    },
+    {
+      "speaker": "Cillinan",
+      "row": "CL_Quip_06",
+      "tag": "QUIP",
+      "text": "Hiss Cranson owes me forty tickets and a cravat. Tell him I said so. Loudly."
+    }
+  ]
+}

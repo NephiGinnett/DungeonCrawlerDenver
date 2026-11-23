@@ -62,8 +62,8 @@ namespace
 			Attenuation->Attenuation.bAttenuate = true;
 			Attenuation->Attenuation.bSpatialize = true;
 			Attenuation->Attenuation.AttenuationShape = EAttenuationShape::Sphere;
-			Attenuation->Attenuation.AttenuationShapeExtents = FVector(600.0f, 0.0f, 0.0f); // full volume within 6 m
-			Attenuation->Attenuation.FalloffDistance = 2000.0f;                              // gone by about 26 m
+			Attenuation->Attenuation.AttenuationShapeExtents = FVector(900.0f, 0.0f, 0.0f); // full volume within 9 m (2026-11-23: louder)
+			Attenuation->Attenuation.FalloffDistance = 2800.0f;                              // gone by about 37 m
 			Attenuation->AddToRoot();
 			Cached = Attenuation;
 		}
@@ -114,6 +114,12 @@ namespace DCCVoice
 		Wave->bLooping = false;
 		Wave->QueueAudio(Pcm.GetData(), Pcm.Num());
 
-		return UGameplayStatics::SpawnSoundAtLocation(World, Wave, Location, FRotator::ZeroRotator, Volume, 1.0f, 0.0f, VoiceAttenuation());
+		// 1.8x (2026-11-23, Zoe: "NPC voices should be a bit louder"). The Kokoro lines come out quiet next to the music.
+		UAudioComponent* Voice = UGameplayStatics::SpawnSoundAtLocation(World, Wave, Location, FRotator::ZeroRotator, Volume * 1.8f, 1.0f, 0.0f, VoiceAttenuation(), nullptr, true);
+		if (Voice)
+		{
+			Voice->StopDelayed(Wave->Duration + 0.1f); // a procedural wave never ends by itself
+		}
+		return Voice;
 	}
 }

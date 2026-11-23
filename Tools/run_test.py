@@ -51,7 +51,7 @@ def main() -> int:
     exec_cmds = "stat none" + (", " + cmds if cmds.strip() else "")
     game = subprocess.Popen([
         str(ENGINE), str(ROOT / "DungeonCrawlerDenver.uproject"),
-        f"/Engine/Maps/Entry?game=/Script/DungeonCrawlerDenver.{mode}",
+        f"/Engine/Maps/Entry?game=/Script/DungeonCrawlerDenver.{mode}" + os.environ.get("DCC_TEST_URL", ""),  # e.g. DCC_TEST_URL="?Crawler=Marcel"
         "-game", "-windowed", "-ResX=1280", "-ResY=720", f"-log={name}.log", f"-ExecCmds={exec_cmds}",
         # Extra flags, e.g. DCC_TEST_ARGS="-GateSeed=13 -GateTheme=2".
         *os.environ.get("DCC_TEST_ARGS", "").split(),

@@ -1,4 +1,11 @@
 #include "Characters/DCCCharacterBase.h"
+#include "Arcade/DCCAudience.h"
+#include "Session/DCCIntegrity.h"
+#include "Characters/DCCSynthAudio.h"
+#include "GameFramework/GameStateBase.h"
+#include "Misc/Paths.h"
+#include "Sound/SoundAttenuation.h"
+#include "Dialogue/DCCVoiceLines.h"
 #include "Characters/DCCReactions.h"
 #include "Interfaces/MovementBaseInterface.h"
 #include "Items/DCCChestSound.h"
@@ -91,6 +98,7 @@ void ADCCCharacterBase::NoteDamageDealtTo(ADCCCharacterBase* Target, int32 Amoun
 	if (HasAuthority() && Target && Amount > 0)
 	{
 		OnAnyDamageLanded.Broadcast(this, Target, Amount);
+		Target->Multicast_DamageNumber(Amount, this);
 	}
 }
 
@@ -218,6 +226,7 @@ void ADCCCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	DOREPLIFETIME(ADCCCharacterBase, bIsMounted);
 	DOREPLIFETIME(ADCCCharacterBase, bIsCasting);
 	DOREPLIFETIME(ADCCCharacterBase, bBefriended);
+	DOREPLIFETIME(ADCCCharacterBase, CheatStrikes);
 	DOREPLIFETIME(ADCCCharacterBase, CurrentRoomDisplayName);
 	DOREPLIFETIME(ADCCCharacterBase, bInSafeRoom);
 	DOREPLIFETIME(ADCCCharacterBase, bIsDowned);
@@ -348,7 +357,91 @@ void ADCCCharacterBase::HandleHealthChangedForTicker(UDCCStatsComponent* InStats
 	const float HalfHeight = GetCapsuleComponent() ? GetCapsuleComponent()->GetScaledCapsuleHalfHeight() : 90.0f;
 	const FVector SpawnLocation = GetActorLocation() + FVector(0.0f, 0.0f, HalfHeight + 30.0f);
 
+	if (Delta < 0)
+	{
+		ADCCFloatingText::SpawnDamage(this, SpawnLocation, -Delta, IsCrawler(), nullptr);
+		return;
+	}
 	ADCCFloatingText::Spawn(this, SpawnLocation, Delta, IsCrawler());
+}
+
+static void ShowLocalNoticeIfMine(ADCCCharacterBase* Who, const TCHAR* Text)
+{
+	if (Who && Who->IsLocallyControlled())
+	{
+		Who->ShowLocalNotice(FText::FromString(Text));
+	}
+}
+
+void ADCCCharacterBase::Multicast_HotMic_Implementation(bool bFired)
+{
+	UWorld* World = GetWorld();
+	if (!World || World->GetNetMode() == NM_DedicatedServer)
+	{
+		return;
+	}
+	const FVector Mouth = GetActorLocation() + FVector(0, 0, 70);
+	static USoundAttenuation* Att = DCCSynth::Falloff(900.0f, 3500.0f);
+	UE_LOG(LogTemp, Log, TEXT("[DCC HotMic] %s %s"), *GetName(), bFired ? TEXT("fired: amplified spell") : TEXT("went live"));
+	if (!bFired)
+	{
+		// Going live: a short rising feedback whine.
+		static TArray<int16> Whine;
+		if (Whine.IsEmpty())
+		{
+			const int32 Rate = 22050;
+			Whine.SetNumUninitialized(int32(0.7f * Rate));
+			float Phase = 0.0f;
+			for (int32 i = 0; i < Whine.Num(); ++i)
+			{
+				const float T = float(i) / Rate;
+				Phase += 2.0f * PI * (1800.0f + 1600.0f * T) / Rate;
+				const float Env = FMath::Min(1.0f, T / 0.05f) * FMath::Clamp((0.7f - T) / 0.15f, 0.0f, 1.0f);
+				Whine[i] = int16(FMath::Sin(Phase) * Env * 9000.0f);
+			}
+		}
+		DCCSynth::PlayPcm(World, Whine, 22050, &Mouth, 0.7f, 1.0f, Att);
+		ShowLocalNoticeIfMine(this, TEXT("ON AIR. Your next spell is amplified."));
+		return;
+	}
+	// The amplified spell: the holder's own clip, from Voice Drop, or an air horn.
+	const FString Name = GetPlayerState() ? GetPlayerState()->GetPlayerName() : FString();
+	const FString Candidates[] = {
+		FPaths::Combine(FPaths::ProjectDir(), TEXT("SourceArt/Voice/NPC/_Clips"), Name + TEXT(".wav")),
+		FPaths::Combine(FPaths::ProjectDir(), TEXT("Voice/NPC/_Clips"), Name + TEXT(".wav")),
+	};
+	for (const FString& Path : Candidates)
+	{
+		if (FPaths::FileExists(Path) && DCCVoice::PlayAt(this, Path, Mouth, 1.2f))
+		{
+			UE_LOG(LogTemp, Log, TEXT("[DCC HotMic] played clip %s"), *Path);
+			return;
+		}
+	}
+	static TArray<int16> Horn;
+	if (Horn.IsEmpty())
+	{
+		const int32 Rate = 22050;
+		Horn.SetNumUninitialized(int32(1.2f * Rate));
+		for (int32 i = 0; i < Horn.Num(); ++i)
+		{
+			const float T = float(i) / Rate;
+			const float Blast = (T < 0.32f || (T > 0.42f && T < 1.15f)) ? 1.0f : 0.0f;
+			float V = 0.0f;
+			for (int32 h = 1; h <= 6; ++h)
+			{
+				V += FMath::Sign(FMath::Sin(2.0f * PI * 466.0f * h * T)) / h;
+			}
+			Horn[i] = int16(FMath::Clamp(V * 0.35f * Blast, -1.0f, 1.0f) * 20000.0f);
+		}
+	}
+	DCCSynth::PlayPcm(World, Horn, 22050, &Mouth, 1.0f, 1.0f, Att);
+}
+
+void ADCCCharacterBase::Multicast_DamageNumber_Implementation(int32 Amount, ADCCCharacterBase* Dealer)
+{
+	const float HalfHeight = GetCapsuleComponent() ? GetCapsuleComponent()->GetScaledCapsuleHalfHeight() : 90.0f;
+	ADCCFloatingText::SpawnDamage(this, GetActorLocation() + FVector(0.0f, 0.0f, HalfHeight + 30.0f), Amount, IsCrawler(), Dealer);
 }
 
 void ADCCCharacterBase::SetMovementSpeedOverride(float NewSpeed)
@@ -897,6 +990,22 @@ FText ADCCCharacterBase::GetNameplateText() const
 		? FText::FromString(GetActorNameOrLabel())
 		: DisplayName;
 
+	// The Integrity Office's mark (2026-11-22). It outranks every other tag.
+	if (CheatStrikes >= 3)
+	{
+		return FText::Format(NSLOCTEXT("DCC", "NameplateCheater", "{0}\nCHEATER"), Name);
+	}
+	if (CheatStrikes > 0)
+	{
+		return FText::Format(NSLOCTEXT("DCC", "NameplateReview", "{0}\nUNDER REVIEW"), Name);
+	}
+
+	// A title earned off the arcade (OPEN MIC). Players only: their crawler is their name.
+	if (Wallet && !Wallet->NameTitle.IsEmpty() && IsPlayerControlled())
+	{
+		return FText::Format(NSLOCTEXT("DCC", "NameplateTitle", "{0}\n{1}"), Name, FText::FromString(Wallet->NameTitle));
+	}
+
 	if (!IsCrawler())
 	{
 		return Name;
@@ -909,6 +1018,25 @@ FText ADCCCharacterBase::GetNameplateText() const
 			? NSLOCTEXT("DCC", "NameplateFriend", "{0}\nFRIEND")
 			: NSLOCTEXT("DCC", "NameplateAlly", "{0}\nALLY"),
 		Name);
+}
+
+void ADCCCharacterBase::OnRep_CheatStrikes()
+{
+	RefreshNameplate();
+}
+
+void ADCCCharacterBase::NoteCheatStrikes(int32 Count)
+{
+	CheatStrikes = uint8(FMath::Clamp(Count, 0, 255));
+	RefreshNameplate();
+}
+
+void ADCCCharacterBase::Server_IntegrityReport_Implementation(const TArray<int32>& Seen)
+{
+	if (Seen.Num() <= 16)
+	{
+		DCCIntegrity::CheckReport(this, Seen);
+	}
 }
 
 void ADCCCharacterBase::RefreshNameplate()
@@ -3860,6 +3988,10 @@ void ADCCCharacterBase::ShopSell(AActor* VendorActor, int32 BagIndex)
 
 void ADCCCharacterBase::Server_ShopBuy_Implementation(AActor* VendorActor, FName ItemId, bool bConsumable)
 {
+	if (!DCCIntegrity::Allow(this, TEXT("shop"), 5.0f, 10.0f))
+	{
+		return;
+	}
 	const ADCCVendorNPC* Vendor = Cast<ADCCVendorNPC>(VendorActor);
 	if (!Vendor || !Stats || !Inventory || !IsAlive() || IsDowned()
 		|| FVector::Dist(GetActorLocation(), Vendor->GetActorLocation()) > InteractionRange * 1.5f)
@@ -3910,6 +4042,10 @@ void ADCCCharacterBase::Server_ShopBuy_Implementation(AActor* VendorActor, FName
 
 void ADCCCharacterBase::Server_ShopSell_Implementation(AActor* VendorActor, int32 BagIndex)
 {
+	if (!DCCIntegrity::Allow(this, TEXT("shop"), 5.0f, 10.0f))
+	{
+		return;
+	}
 	const ADCCVendorNPC* Vendor = Cast<ADCCVendorNPC>(VendorActor);
 	if (!Vendor || !Stats || !Inventory || !Inventory->Items.IsValidIndex(BagIndex) || !IsAlive() || IsDowned()
 		|| FVector::Dist(GetActorLocation(), Vendor->GetActorLocation()) > InteractionRange * 1.5f)
@@ -3931,6 +4067,10 @@ void ADCCCharacterBase::Server_ShopSell_Implementation(AActor* VendorActor, int3
 
 void ADCCCharacterBase::Server_PurchaseEquipment_Implementation(AActor* VendorActor, FName ItemId)
 {
+	if (!DCCIntegrity::Allow(this, TEXT("shop"), 5.0f, 10.0f))
+	{
+		return;
+	}
 	const ADCCVendorNPC* Vendor = Cast<ADCCVendorNPC>(VendorActor);
 	if (!Vendor || !Vendor->SellableEquipmentIds.Contains(ItemId) || !IsAlive() || IsDowned())
 	{
@@ -4001,6 +4141,10 @@ void ADCCCharacterBase::ApplyConsumableEffects(const TArray<FDCCConsumableEffect
 
 void ADCCCharacterBase::Server_PurchaseDrink_Implementation(AActor* VendorActor, FName ConsumableItemId, bool bDrinkNow)
 {
+	if (!DCCIntegrity::Allow(this, TEXT("shop"), 5.0f, 10.0f))
+	{
+		return;
+	}
 	const ADCCVendorNPC* Vendor = Cast<ADCCVendorNPC>(VendorActor);
 	if (!Vendor || !Vendor->SellableConsumableIds.Contains(ConsumableItemId) || !IsAlive() || IsDowned() || !Stats || !Inventory)
 	{
@@ -4117,6 +4261,10 @@ void ADCCCharacterBase::OpenLootBox(EDCCLootBoxTier Tier)
 
 void ADCCCharacterBase::Server_OpenLootBox_Implementation(EDCCLootBoxTier Tier)
 {
+	if (!DCCIntegrity::Allow(this, TEXT("loot box"), 4.0f, 8.0f))
+	{
+		return;
+	}
 	// Re-verified here, not trusted from the client's own HUD state - the
 	// exact reason every other server entry point in this project re-checks
 	// its own gate rather than assuming a client only ever asks when allowed.
@@ -4184,6 +4332,10 @@ void ADCCCharacterBase::ClaimAndOpenAllLootBoxes()
 
 void ADCCCharacterBase::Server_ClaimAndOpenAllLootBoxes_Implementation()
 {
+	if (!DCCIntegrity::Allow(this, TEXT("loot box"), 4.0f, 8.0f))
+	{
+		return;
+	}
 	if (!IsAlive() || IsDowned())
 	{
 		return;
@@ -4611,6 +4763,10 @@ void ADCCCharacterBase::RequestOpenLootBoxes(EDCCLootBoxTier Tier, int32 Count)
 
 void ADCCCharacterBase::Server_OpenLootBoxBatch_Implementation(EDCCLootBoxTier Tier, int32 Count)
 {
+	if (!DCCIntegrity::Allow(this, TEXT("loot box"), 4.0f, 8.0f))
+	{
+		return;
+	}
 	FDCCLootBoxReveal Reveal;
 	Reveal.Tier = Tier;
 
@@ -5212,6 +5368,12 @@ void ADCCCharacterBase::DCCGrantSkill(const FString& SkillId, int32 Rank)
 
 void ADCCCharacterBase::Server_GrantSkill_Implementation(FName SkillId, int32 Rank)
 {
+	// The DM's buttons answer to the host's own crawler only (DCCIntegrity, 2026-11-22). A guest pressing one is a strike.
+	if (!IsHostsOwnCrawler())
+	{
+		DCCIntegrity::Flag(this, TEXT("pressing the DM's buttons"));
+		return;
+	}
 	if (!Skills)
 	{
 		return;
@@ -5275,6 +5437,12 @@ void ADCCCharacterBase::DCCEquip(const FString& ItemId)
 
 void ADCCCharacterBase::Server_EquipItem_Implementation(FName ItemId)
 {
+	// The DM's buttons answer to the host's own crawler only (DCCIntegrity, 2026-11-22). A guest pressing one is a strike.
+	if (!IsHostsOwnCrawler())
+	{
+		DCCIntegrity::Flag(this, TEXT("pressing the DM's buttons"));
+		return;
+	}
 	if (!Equipment)
 	{
 		return;
@@ -5304,6 +5472,12 @@ void ADCCCharacterBase::DCCRefill()
 
 void ADCCCharacterBase::Server_Refill_Implementation()
 {
+	// The DM's buttons answer to the host's own crawler only (DCCIntegrity, 2026-11-22). A guest pressing one is a strike.
+	if (!IsHostsOwnCrawler())
+	{
+		DCCIntegrity::Flag(this, TEXT("pressing the DM's buttons"));
+		return;
+	}
 	if (!Stats)
 	{
 		return;
@@ -5319,6 +5493,12 @@ void ADCCCharacterBase::Server_Refill_Implementation()
 
 void ADCCCharacterBase::ToggleAdminPanel()
 {
+	// The DM panel is the host's (2026-11-22). A guest gets told so, and the buttons would refuse them anyway.
+	if (GetNetMode() == NM_Client)
+	{
+		ShowLocalNotice(NSLOCTEXT("DCC", "AdminHostOnly", "The DM panel belongs to the host."));
+		return;
+	}
 	const APlayerController* PC = Cast<APlayerController>(GetController());
 	if (ADCCHUD* DCCHUD = PC ? Cast<ADCCHUD>(PC->GetHUD()) : nullptr)
 	{
@@ -5337,6 +5517,12 @@ void ADCCCharacterBase::ToggleSessionMenu()
 
 void ADCCCharacterBase::Server_AdminSpawn_Implementation(TSubclassOf<AActor> ActorClass, bool bAsAlly)
 {
+	// The DM's buttons answer to the host's own crawler only (DCCIntegrity, 2026-11-22). A guest pressing one is a strike.
+	if (!IsHostsOwnCrawler())
+	{
+		DCCIntegrity::Flag(this, TEXT("pressing the DM's buttons"));
+		return;
+	}
 	UWorld* World = GetWorld();
 	if (!World || !ActorClass)
 	{
@@ -5372,6 +5558,12 @@ void ADCCCharacterBase::Server_AdminSpawn_Implementation(TSubclassOf<AActor> Act
 
 void ADCCCharacterBase::Server_AdminClearHostiles_Implementation()
 {
+	// The DM's buttons answer to the host's own crawler only (DCCIntegrity, 2026-11-22). A guest pressing one is a strike.
+	if (!IsHostsOwnCrawler())
+	{
+		DCCIntegrity::Flag(this, TEXT("pressing the DM's buttons"));
+		return;
+	}
 	UWorld* World = GetWorld();
 	if (!World)
 	{
@@ -5401,6 +5593,12 @@ void ADCCCharacterBase::Server_AdminClearHostiles_Implementation()
 
 void ADCCCharacterBase::Server_AdminGauntlet_Implementation(bool bReset)
 {
+	// The DM's buttons answer to the host's own crawler only (DCCIntegrity, 2026-11-22). A guest pressing one is a strike.
+	if (!IsHostsOwnCrawler())
+	{
+		DCCIntegrity::Flag(this, TEXT("pressing the DM's buttons"));
+		return;
+	}
 	ADCCGauntletEncounter* Gauntlet = ADCCGauntletEncounter::FindNearest(this, GetActorLocation());
 	if (!Gauntlet)
 	{
@@ -5420,6 +5618,12 @@ void ADCCCharacterBase::Server_AdminGauntlet_Implementation(bool bReset)
 
 void ADCCCharacterBase::Server_AdminSetInvulnerable_Implementation(bool bInvulnerable)
 {
+	// The DM's buttons answer to the host's own crawler only (DCCIntegrity, 2026-11-22). A guest pressing one is a strike.
+	if (!IsHostsOwnCrawler())
+	{
+		DCCIntegrity::Flag(this, TEXT("pressing the DM's buttons"));
+		return;
+	}
 	if (Stats)
 	{
 		Stats->SetInvulnerable(bInvulnerable);
@@ -5432,6 +5636,12 @@ void ADCCCharacterBase::Server_AdminSetInvulnerable_Implementation(bool bInvulne
 
 void ADCCCharacterBase::Server_AdminAddGold_Implementation(int32 Amount)
 {
+	// The DM's buttons answer to the host's own crawler only (DCCIntegrity, 2026-11-22). A guest pressing one is a strike.
+	if (!IsHostsOwnCrawler())
+	{
+		DCCIntegrity::Flag(this, TEXT("pressing the DM's buttons"));
+		return;
+	}
 	if (Stats)
 	{
 		Stats->AddGold(Amount);
@@ -5440,6 +5650,12 @@ void ADCCCharacterBase::Server_AdminAddGold_Implementation(int32 Amount)
 
 void ADCCCharacterBase::Server_AdminLevelUp_Implementation()
 {
+	// The DM's buttons answer to the host's own crawler only (DCCIntegrity, 2026-11-22). A guest pressing one is a strike.
+	if (!IsHostsOwnCrawler())
+	{
+		DCCIntegrity::Flag(this, TEXT("pressing the DM's buttons"));
+		return;
+	}
 	if (!Stats)
 	{
 		return;
@@ -5869,6 +6085,7 @@ void ADCCCharacterBase::AwardKillExperience(ADCCCharacterBase* Victim)
 	}
 
 	// Class perks: XP on top, and a little health back per kill.
+	DCCAudience::Moment(this, this, DCCAudience::EMoment::Kill);
 	const int32 Gained = FMath::RoundToInt(Ruleset->GetExperienceForKill(Victim->Stats->Level, Stats->Level)
 		* (100 + DCCClassPerks::Sum(this, &DCCClassPerks::FPerk::Xp)) / 100.0f);
 	if (const int32 KillHeal = DCCClassPerks::Sum(this, &DCCClassPerks::FPerk::KillHeal))
@@ -6264,6 +6481,14 @@ bool ADCCCharacterBase::IsHostileTo(const ADCCCharacterBase* Other) const
 	if (!Other || Other == this)
 	{
 		return false;
+	}
+
+	// Open season (2026-11-23, Zoe: "how about having a cheater tag making you prone to pvp damage?", then "the cheater
+	// should only be able to take damage and not give it to others"). Any player may hit a player wearing the CHEATER
+	// tag (3+ Integrity strikes). One way: the cheater still cannot hit other players. Allies and mobs stay out of it.
+	if (Other->CheatStrikes >= 3 && CheatStrikes < 3 && IsPlayerControlled() && Other->IsPlayerControlled())
+	{
+		return true;
 	}
 
 	return IsCrawler() != Other->IsCrawler();
@@ -6984,6 +7209,18 @@ void ADCCCharacterBase::GetBelt(TArray<FDCCBeltEntry>& Out) const
 		Can.bAimed = true;
 		Out.Add(Can);
 	}
+	// The Hot Mic (2026-11-23), for the voice of Hiss Cranson.
+	if (Wallet && Wallet->Owns(UDCCWalletComponent::HotMicId))
+	{
+		FDCCBeltEntry Mic;
+		Mic.Kind = EDCCBelt::HotMic;
+		Mic.Name = TEXT("Hot Mic");
+		const AGameStateBase* GS = World->GetGameState();
+		const double Now = GS ? GS->GetServerWorldTimeSeconds() : World->GetTimeSeconds();
+		Mic.Cooldown = float(FMath::Max(0.0, Wallet->HotMicReadyAt - Now));
+		Mic.bOn = Wallet->HotMicLiveUntil > Now;
+		Out.Add(Mic);
+	}
 	// Something in your hands: throw it, or put it in your bag.
 	if (Carry && Carry->IsCarrying())
 	{
@@ -7130,6 +7367,12 @@ void ADCCCharacterBase::UseBeltEntry(const FDCCBeltEntry& Entry)
 		break;
 	case EDCCBelt::Spray:
 		DCCSpray::TryLocalSpray(PC);
+		break;
+	case EDCCBelt::HotMic:
+		if (Wallet)
+		{
+			Wallet->Server_HotMic();
+		}
 		break;
 	case EDCCBelt::Lightstick:
 		if (Entry.Count == 0)
@@ -7388,7 +7631,11 @@ void ADCCCharacterBase::Tick(float DeltaSeconds)
 
 		const bool bJet = Wallet->WornIn(DCCCosmetics::Back) == FName(TEXT("HobbyJetpack"));
 		UCharacterMovementComponent* Move = GetCharacterMovement();
-		const bool bDrive = bJet && Move && !IsClimbing() && (HasAuthority() || IsLocallyControlled());
+		// The owner's machine flies the jetpack, and the host takes its word for where they are while airborne
+		// (2026-11-22: a guest "wasn't able to ascend quickly with the jetpack"). The host used to push its own
+		// thrust from bPressedJump, which a host only holds for a moment per move, so it kept correcting the guest
+		// back down. The Integrity speed check still watches how far a guest moves.
+		const bool bDrive = bJet && Move && !IsClimbing() && IsLocallyControlled();
 		const APlayerController* PC = (bDrive && IsLocallyControlled()) ? Cast<APlayerController>(GetController()) : nullptr;
 		// bPressedJump is what the server actually has for a remote jumper. The key is what the owner has.
 		const bool bDown = bPressedJump || (PC && PC->IsInputKeyDown(EKeys::SpaceBar));
@@ -7412,6 +7659,20 @@ void ADCCCharacterBase::Tick(float DeltaSeconds)
 			}
 		}
 		State.bWasDown = bDown;
+	}
+
+	// A guest's climb, ledge crawl, or jetpack flight: the host stops correcting their machine. Climbing moves the
+	// body by hand on both machines at the same speed, and the corrections in between were the "bounce up and down
+	// in place" (2026-11-22). The jetpack goes further and takes the guest's position as given while airborne.
+	if (HasAuthority() && !IsLocallyControlled())
+	{
+		if (UCharacterMovementComponent* Move = GetCharacterMovement())
+		{
+			const bool bJetFlying = Wallet && Wallet->WornIn(DCCCosmetics::Back) == FName(TEXT("HobbyJetpack")) && Move->IsFalling();
+			const bool bHandsOff = IsClimbing() || bCrawling || bJetFlying;
+			Move->bIgnoreClientMovementErrorChecksAndCorrection = bHandsOff;
+			Move->bServerAcceptClientAuthoritativePosition = bJetFlying;
+		}
 	}
 
 	// Safety net for Selfie Mode's own exit chain - see
@@ -7452,6 +7713,21 @@ void ADCCCharacterBase::Tick(float DeltaSeconds)
 	// its clip from the movement it can already see, rather than replicating a
 	// state that velocity already implies.
 	UpdateLocomotionAnimation();
+
+	DCCFootsteps::Tick(this, DeltaSeconds); // a quiet step every stride, every game (2026-11-23)
+
+	// A guest's game tells the host what its screen shows (DCCIntegrity). The host checks it against the books.
+	if (GetNetMode() == NM_Client && IsLocallyControlled())
+	{
+		IntegrityReportIn -= DeltaSeconds;
+		if (IntegrityReportIn <= 0.0f)
+		{
+			IntegrityReportIn = 5.0f;
+			TArray<int32> Seen;
+			DCCIntegrity::BuildReport(this, Seen);
+			Server_IntegrityReport(Seen);
+		}
+	}
 
 	// Stamina is mechanical, so only the server spends it. Clients see the
 	// result through the replicated value.
@@ -7766,11 +8042,13 @@ void ADCCCharacterBase::HandleDied(UDCCStatsComponent* InStats)
 		bIsDowned = true;
 		DeathSaveSuccesses = 0;
 		DeathSaveFailures = 0;
+		bBleedingOutFast = false;
 		ApplyCollapsedBody();
 		PlayCharacterSound(DownedSound);
 
 		if (HasAuthority())
 		{
+			DCCAudience::Moment(this, this, DCCAudience::EMoment::Downed);
 			GetWorldTimerManager().SetTimer(
 				DeathSaveTimer, this, &ADCCCharacterBase::RollDeathSave, DeathSaveIntervalSeconds, /*bLoop=*/true);
 
@@ -7848,18 +8126,19 @@ void ADCCCharacterBase::Server_BleedOut_Implementation()
 		return;
 	}
 
-	GetWorldTimerManager().ClearTimer(DeathSaveTimer);
-	DeathSaveFailures = DeathSavesToExpire;
-	UE_LOG(LogTemp, Log, TEXT("[DCC Down] %s chose to bleed out"), *GetName());
-
-	// Same ending as the third failed save, just without the wait between rolls.
-	if (ADCCTaleFloor::InterceptDeath(this))
+	// 2026-11-22 (Zoe: "he would just respawn a few seconds later rather than doing his death checks"): bleeding out
+	// early used to count as three failed saves. It now rolls the saves that are left, back to back, so the dice
+	// still decide. Only the wait between rolls is skipped.
+	if (bBleedingOutFast)
 	{
 		return;
 	}
-
-	bIsDowned = false;
-	FinishDying();
+	bBleedingOutFast = true;
+	UE_LOG(LogTemp, Log, TEXT("[DCC Down] %s chose to roll the death saves now"), *GetName());
+	ADCCGameState::Log(this, EDCCLogCategory::Death, FText::Format(
+		NSLOCTEXT("DCC", "LogBleedFast", "{0} would rather know now. Rolling the death saves."),
+		DisplayName.IsEmpty() ? FText::FromString(GetActorNameOrLabel()) : DisplayName));
+	GetWorldTimerManager().SetTimer(DeathSaveTimer, this, &ADCCCharacterBase::RollDeathSave, 0.9f, /*bLoop=*/true, 0.4f);
 }
 
 void ADCCCharacterBase::ReleaseClimbIfClimbing()
@@ -8029,6 +8308,7 @@ void ADCCCharacterBase::Revive(ADCCCharacterBase* Rescuer)
 		Rescuer ? FText::FromString(Rescuer->GetActorNameOrLabel()) : FText::FromString(TEXT("Someone")),
 		DisplayName.IsEmpty() ? FText::FromString(GetActorNameOrLabel()) : DisplayName));
 
+	DCCAudience::Moment(this, Rescuer, DCCAudience::EMoment::Revive);
 	// Saving somebody is watchable. The producer pays for it.
 	if (Rescuer && Rescuer->Favor)
 	{

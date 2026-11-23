@@ -227,6 +227,10 @@ void ADCCRover::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetim
 	DOREPLIFETIME(ADCCRover, RallyTrickMul);
 	DOREPLIFETIME(ADCCRover, RallyTrickChain);
 	DOREPLIFETIME(ADCCRover, RallyTrickMove);
+	DOREPLIFETIME(ADCCRover, RallyBeatAt);
+	DOREPLIFETIME(ADCCRover, RallyBeatLength);
+	DOREPLIFETIME(ADCCRover, RallyJudge);
+	DOREPLIFETIME(ADCCRover, RallyJudgeSerial);
 	DOREPLIFETIME(ADCCRover, RallyClampUntil);
 	DOREPLIFETIME(ADCCRover, RallyHookRange);
 	DOREPLIFETIME_CONDITION(ADCCRover, RallyFuel, COND_OwnerOnly);
@@ -767,6 +771,26 @@ void ADCCRover::ApplyRadioState()
 	RadioAudio->FadeIn(0.45f, 0.72f, Offset);
 }
 
+void ADCCRover::UpdateRadioListener()
+{
+	// 2026-11-22 (Zoe: Repo Rally "spawned like 8 trucks ... but also it played the radio on all of those and that
+	// sucked"). A car's radio is for the people in it: this machine hears it only while its own player drives or
+	// rides along (the camera is on this car). Every other truck's radio keeps playing, silently, so getting in
+	// lands mid-song as before.
+	if (!RadioAudio)
+	{
+		return;
+	}
+	const APlayerController* Local = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr;
+	const bool bHere = IsLocallyControlled() || (Local && Local->IsLocalController() && Local->GetViewTarget() == this);
+	if (int8(bHere) != RadioHeardHere)
+	{
+		RadioHeardHere = int8(bHere);
+		// Not zero: a sound at zero volume can be culled and would not resume when you get in.
+		RadioAudio->SetVolumeMultiplier(bHere ? 1.0f : 0.004f);
+	}
+}
+
 void ADCCRover::AdvanceRadio(float DeltaSeconds)
 {
 	if (!HasAuthority() || !bRadioOn || RadioTracks.IsEmpty() || RadioTrackPlaySeconds <= 0.0f)
@@ -1036,6 +1060,8 @@ void ADCCRover::ClearOverheadTrick()
 	bRallyTrickPop = false;
 	RallyTrickQueued = 0;
 	bRallyDevHold = false;
+	RallyBeatAt = 0.0;
+	bRallyPressed = false;
 }
 
 bool ADCCRover::ComputeYardDrive(float& OutThrottle, float& OutSteer, float& OutSpeedCap, float& OutDist, float& OutLane) const
@@ -1445,6 +1471,7 @@ void ADCCRover::Tick(float DeltaSeconds)
 	// pure visual ease toward the replicated bWindowsDown, not gameplay.
 	UpdateWindowOpacity(DeltaSeconds);
 	AdvanceRadio(DeltaSeconds);
+	UpdateRadioListener();
 	UpdateWreckerCrane(DeltaSeconds);
 
 	// --- timers ------------------------------------------------------------
@@ -1508,13 +1535,14 @@ void ADCCRover::Tick(float DeltaSeconds)
 			const bool bMouseDown = PC->IsInputKeyDown(EKeys::LeftMouseButton);
 			VerticalInput = (bSpaceDown ? 1.0f : 0.0f) - (bCtrlDown ? 1.0f : 0.0f);
 
-			// Overhead, these four pick a trick. A and D stay on the magnet. Flight stays airborne-only.
+			// Overhead: Space (or a click) is the trick press, judged against the ring on this screen. Flight stays
+			// airborne-only.
 			if (RallyTrick == 2)
 			{
-				if (bSpaceDown && !bWasSpaceDownLastTick) { Server_RallyPickTrick(1); }
-				if (bShiftDown && !bWasShiftDownLastTick) { Server_RallyPickTrick(2); }
-				if (bCtrlDown && !bWasCtrlDownLastTick) { Server_RallyPickTrick(3); }
-				if (bMouseDown && !bWasMouseDownLastTick) { Server_RallyPickTrick(4); }
+				if ((bSpaceDown && !bWasSpaceDownLastTick) || (bMouseDown && !bWasMouseDownLastTick))
+				{
+					Server_RallyPress(RallyBeatAt > 0.0 ? float(RallyClock() - RallyBeatAt) : -9.0f);
+				}
 			}
 			else if (bSpaceDown && !bWasSpaceDownLastTick && CanEngageFlight())
 			{
@@ -2943,6 +2971,49 @@ void ADCCRover::StopAutoPilot()
 	// Deliberately NOT clearing AutoPilotLapsCompleted: ADCCRaceTrack reads it
 	// after the finish to decide the placings, and a race is only over once
 	// somebody crossed the line. StartAutoPilotRoute zeroes it for the next run.
+}
+
+double ADCCRover::RallyClock() const
+{
+	const UWorld* World = GetWorld();
+	const AGameStateBase* State = World ? World->GetGameState() : nullptr;
+	return State ? State->GetServerWorldTimeSeconds() : (World ? World->GetTimeSeconds() : 0.0);
+}
+
+const TCHAR* ADCCRover::RallyRungName(uint8 Move)
+{
+	switch (Move)
+	{
+	case 1: return TEXT("Front Flip");
+	case 2: return TEXT("Barrel Roll");
+	case 3: return TEXT("Back Flip");
+	case 4: return TEXT("Corkscrew");
+	case 5: return TEXT("Double Corkscrew");
+	case 6: return TEXT("The Helicopter");
+	case 7: return TEXT("The Full Repossession");
+	default: return TEXT("Spin");
+	}
+}
+
+int32 ADCCRover::RallyRungPoints(int32 Rung)
+{
+	static const int32 Points[] = { 15, 25, 40, 60, 90, 130, 180 };
+	return Points[FMath::Clamp(Rung, 0, 6)];
+}
+
+float ADCCRover::RallyRungSeconds(int32 Rung)
+{
+	return FMath::Max(0.75f, 1.45f - 0.1f * Rung);
+}
+
+void ADCCRover::Server_RallyPress_Implementation(float ClientOffset)
+{
+	if (RallyTrick != 2)
+	{
+		return;
+	}
+	bRallyPressed = true;
+	RallyPressOffset = ClientOffset;
 }
 
 void ADCCRover::Server_RallyPickTrick_Implementation(uint8 Move)

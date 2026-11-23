@@ -1,5 +1,6 @@
 // The level-up System window (2026-11-22). Split out of DCCCharacterBase.cpp, which is long enough.
 
+#include "Arcade/DCCAudience.h"
 #include "Characters/DCCCharacterBase.h"
 
 #include "Classes/DCCBasicClasses.h"
@@ -16,6 +17,7 @@ void ADCCCharacterBase::HandleLevelUp(UDCCStatsComponent* LevelledStats, int32 N
 	{
 		return;
 	}
+	DCCAudience::Moment(this, this, DCCAudience::EMoment::LevelUp);
 	if (PendingLevelFrom <= 0)
 	{
 		PendingLevelFrom = NewLevel - 1;

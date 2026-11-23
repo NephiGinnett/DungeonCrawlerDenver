@@ -18,7 +18,9 @@ namespace DCCAttackStyle
 		Blunt,
 		Punch,
 		Shoot,
-		Throw
+		Throw,
+		/** A one-handed chop or bash (hatchet, hammer, pan, mace): the one-handed slash, with the body's own loops. */
+		Chop
 	};
 
 	EStyle FromId(FName ItemId);

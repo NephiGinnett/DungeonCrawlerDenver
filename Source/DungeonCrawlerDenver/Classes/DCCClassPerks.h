@@ -37,6 +37,8 @@ namespace DCCClassPerks
 
 	constexpr int32 TierCount = 4;
 	int32 TierLevel(int32 Tier); // 4, 8, 12, 16
+	/** Gold to change a tier's pick once it is made (the first pick is free): 60, 120, 180, 240. */
+	inline int32 SwapFee(int32 Tier) { return 60 * (Tier + 1); }
 
 	/** The two options of a tier for a class (index into DCCBasicClasses::All()). Null when out of range. */
 	const FPerk* Get(int32 ClassIndex, int32 Tier, int32 Option);

@@ -1,11 +1,14 @@
 #include "Arcade/DCCCosmetics.h"
 
+#include "UI/DCCDamageSkins.h"
+
 namespace DCCCosmetics
 {
 	const FName Head(TEXT("Head"));
 	const FName Back(TEXT("Back"));
 	const FName Shoulders(TEXT("Shoulders"));
 	const FName Aura(TEXT("Aura"));
+	const FName Numbers(TEXT("Numbers"));
 
 	namespace
 	{
@@ -128,6 +131,11 @@ namespace DCCCosmetics
 				}
 				Add(TEXT("SponsorOrbs"), TEXT("Sponsor Orbs"), TEXT("You move a little quicker. They are watching the pace."),
 					Aura, 500, EAnchor::HeadTop, MoveTemp(Orbit));
+			}
+			// ---- Numbers (2026-11-23): damage skins, nothing worn on the body ----
+			for (const DCCDamageSkins::FSkin& Skin : DCCDamageSkins::All())
+			{
+				Add(*Skin.Id.ToString(), Skin.Name, Skin.Blurb, Numbers, Skin.Price, EAnchor::HeadTop, {});
 			}
 			return Items;
 		}

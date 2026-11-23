@@ -21,15 +21,28 @@ namespace DCCAttackStyle
 	{
 		const FString Id = ItemId.ToString().ToLower();
 		if (Id.IsEmpty() || Id == TEXT("none")) { return Punch; }
-		// Small overrides where the row name would lie.
-		if (Id.Contains(TEXT("flaregun")) || Id.Contains(TEXT("nailgun")) || Id.Contains(TEXT("crossbow"))) { return Shoot; }
-		if (Id.Contains(TEXT("knife")) || Id.Contains(TEXT("opener")) || Id.Contains(TEXT("dagger"))) { return Stab; }
-		if (Id.Contains(TEXT("axe")) || Id.Contains(TEXT("sledge")) || Id.Contains(TEXT("hammer")) || Id.Contains(TEXT("mallet"))) { return Overhead; }
-		if (Id.Contains(TEXT("sword")) || Id.Contains(TEXT("trimmer")) || Id.Contains(TEXT("machete"))) { return Slash; }
-		if (Id.Contains(TEXT("gun")) || Id.Contains(TEXT("bow"))) { return Shoot; }
-		if (Id.Contains(TEXT("club")) || Id.Contains(TEXT("bat")) || Id.Contains(TEXT("pan")) || Id.Contains(TEXT("pipe"))) { return Blunt; }
-		if (Id.Contains(TEXT("throw")) || Id.Contains(TEXT("rock")) || Id.Contains(TEXT("bottle"))) { return Throw; }
-		return Blunt;
+		auto Has = [&Id](std::initializer_list<const TCHAR*> Words)
+		{
+			for (const TCHAR* Word : Words) { if (Id.Contains(Word)) { return true; } }
+			return false;
+		};
+		// 2026-11-22 (Zoe: "some one handed weapons used two handed swings"). Overhead is the Mixamo greatsword
+		// attack and Blunt is a baseball swing, both two-handed. Only genuinely two-handed gear gets them now.
+		// Every other melee weapon swings one-handed: Stab for points, Slash for blades, Chop for the rest.
+		if (Has({ TEXT("flaregun"), TEXT("nailgun"), TEXT("crossbow"), TEXT("sodagun"), TEXT("rifle"), TEXT("shotgun"),
+			TEXT("smg"), TEXT("sidearm"), TEXT("pistol"), TEXT("gun"), TEXT("bow") })) { return Shoot; }
+		if (Id.Contains(TEXT("rockies"))) { return Blunt; } // the giveaway bat, not a rock
+		if (Has({ TEXT("throw"), TEXT("rock"), TEXT("bottle"), TEXT("grenade"), TEXT("bomb"), TEXT("molotov"),
+			TEXT("dynamite"), TEXT("pineapple"), TEXT("firework"), TEXT("napalm"), TEXT("charge"), TEXT("satchel") })) { return Throw; }
+		// Two-handed.
+		if (Has({ TEXT("sledge"), TEXT("thunderhammer"), TEXT("fireaxe"), TEXT("halberd"), TEXT("great"), TEXT("maul"),
+			TEXT("longsword"), TEXT("pickaxe") })) { return Overhead; }
+		if (Has({ TEXT("bat"), TEXT("lacrosse"), TEXT("shovel"), TEXT("broom"), TEXT("rake"), TEXT("bungee") })) { return Blunt; }
+		// One-handed.
+		if (Has({ TEXT("knife"), TEXT("opener"), TEXT("dagger"), TEXT("chisel"), TEXT("spear"), TEXT("switchblade"),
+			TEXT("star"), TEXT("screwdriver") })) { return Stab; }
+		if (Has({ TEXT("sword"), TEXT("blade"), TEXT("machete"), TEXT("trimmer"), TEXT("sickle"), TEXT("saw") })) { return Slash; }
+		return Chop;
 	}
 
 	const TCHAR* Name(EStyle Style)
@@ -43,6 +56,7 @@ namespace DCCAttackStyle
 		case Punch: return TEXT("Punch");
 		case Shoot: return TEXT("Shoot");
 		case Throw: return TEXT("Throw");
+		case Chop: return TEXT("Chop");
 		default: return TEXT("Punch");
 		}
 	}
@@ -57,6 +71,7 @@ namespace DCCAttackStyle
 			OutPath = StabPath;
 			break;
 		case Slash:
+		case Chop:
 			OutPath = SlashPath;
 			break;
 		case Overhead:

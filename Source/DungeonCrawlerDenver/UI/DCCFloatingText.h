@@ -47,6 +47,18 @@ public:
 		int32 Delta,
 		bool bOnCrawler);
 
+	/**
+	 * Damage with its dealer known (2026-11-23): coloured for the player who dealt it (their summoned allies too),
+	 * bigger when it is yours, and drawn in their damage skin (UI/DCCDamageSkins). The plain number from the health
+	 * change and this tagged one are matched up, so a hit never shows twice: whichever arrives second restyles or
+	 * skips. Target is who was hit. Dealer null is the plain number.
+	 */
+	static void SpawnDamage(AActor* Target, const FVector& Location, int32 Amount, bool bOnCrawler, const class ADCCCharacterBase* Dealer);
+
+	/** The glow behind the number (a skin's second colour). */
+	UPROPERTY()
+	TObjectPtr<UTextRenderComponent> Glow;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "FloatingText")
 	TObjectPtr<UTextRenderComponent> Text;
 
@@ -66,4 +78,10 @@ private:
 	float ElapsedSeconds = 0.0f;
 
 	FLinearColor BaseColor = FLinearColor::White;
+	FLinearColor GlowColor = FLinearColor(0, 0, 0, 0);
+	uint8 Motion = 0;
+	float BaseSize = 52.0f;
+	FVector Origin = FVector::ZeroVector;
+	float Seed = 0.0f;
+	void ApplyStyle(const class ADCCCharacterBase* Dealer, int32 Amount);
 };

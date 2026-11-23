@@ -42,7 +42,24 @@ void UDCCClassComponent::Server_PickPerk_Implementation(int32 Tier, int32 Option
 	{
 		return;
 	}
-	// Swapping is free: the other option of this tier goes, this one comes in.
+	// A pick is a commitment (2026-11-23, Zoe was surprised she could flip them back and forth freely). The first pick
+	// in a tier is free. Changing it afterwards costs gold: the System calls it a processing fee.
+	const int32 Current = DCCClassPerks::Picked(Crawler, Tier);
+	if (Current == Option)
+	{
+		return;
+	}
+	if (Current >= 0)
+	{
+		const int32 Fee = DCCClassPerks::SwapFee(Tier);
+		if (!Crawler->Stats->SpendGold(Fee))
+		{
+			Crawler->NotifyClimber(FText::FromString(FString::Printf(
+				TEXT("Changing a perk costs %d gold. The System calls it a processing fee."), Fee)));
+			return;
+		}
+		Crawler->NotifyClimber(FText::FromString(FString::Printf(TEXT("Perk changed. %d gold processing fee. Paperwork filed."), Fee)));
+	}
 	Perks.Remove(DCCClassPerks::IdFor(ClassIndex, Tier, 1 - Option));
 	Perks.AddUnique(DCCClassPerks::IdFor(ClassIndex, Tier, Option));
 	UE_LOG(LogTemp, Log, TEXT("[DCC Class] %s picked %s"), *Crawler->GetName(), DCCClassPerks::Get(ClassIndex, Tier, Option)->Name);

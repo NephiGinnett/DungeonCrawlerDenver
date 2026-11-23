@@ -164,8 +164,13 @@ namespace DCCProfile
 	TArray<uint8> Export(const FString& Key);
 	/** The copy this PC last received from a host (ProfileBase_<Key>). Empty if it never has. */
 	TArray<uint8> ExportBase(const FString& Key);
-	/** Host: fold a visiting crawler's copy into this PC's copy of them. False if the bytes are not their profile. */
-	bool MergeFromClient(const FString& Key, const TArray<uint8>& Current, const TArray<uint8>& Base);
+	/**
+	 * Host: fold a visiting crawler's copy into this PC's copy of them. False if the bytes are not their profile.
+	 * OutSuspicion says why, when the copy claims more than a session away from this PC could earn (DCCIntegrity).
+	 */
+	bool MergeFromClient(const FString& Key, const TArray<uint8>& Current, const TArray<uint8>& Base, FString* OutSuspicion = nullptr);
+	/** Host: move Key's revision on by By, so this PC's copy wins the next merge outright (the audit). */
+	void BumpRevision(const FString& Key, int32 By);
 	/** Visitor: the host's merged copy becomes this PC's current copy and its base. */
 	void AdoptFromHost(const TArray<uint8>& Merged);
 	/** True once after each write to Key's profile (the host's cue to send it back to that player). */

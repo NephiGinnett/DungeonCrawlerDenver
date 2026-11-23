@@ -75,6 +75,12 @@ private:
 	FVector ShopPadCenter() const { return GetActorLocation() + FVector(2000.0f, -1050.0f, 0.0f); }
 	/** The Chop Shop (2026-11-14): the same counter screen, opened on its upgrades tab. */
 	FVector ChopPadCenter() const { return GetActorLocation() + FVector(-2000.0f, -1050.0f, 0.0f); }
+	/** PRIMETIME (Arcade/DCCTalkShowHost, 2026-11-23): Hiss Cranson's stage at the west end of the room, facing east. */
+	FVector TalkShowCenter() const;
+	void BuildTalkShow();
+	void TickTalkShow();
+	TWeakObjectPtr<class ATextRenderActor> FameBoard;
+	double NextBoardAt = 0.0;
 	bool bWasOnShopPad = false;
 	/** The Den's music (2026-11-16): our songs in turn, quiet. Silent inside Casino Cascade. Local. */
 	TWeakObjectPtr<class UAudioComponent> DenSong;
@@ -415,6 +421,13 @@ public:
 	virtual bool KeepsStatusPanel() const override { return true; }
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
+	/**
+	 * Practice (2026-11-23, Zoe: "an endless practice mode"): no shift clock, no fuel to buy, no tickets or scrap.
+	 * Marks keep coming. Set by ADCCArcadeKartPractice; replicated so the HUD can say so.
+	 */
+	UPROPERTY(Replicated)
+	bool bPractice = false;
+
 	/** Server: [Q] and [F] from the car. FireHook is the aimed shot; UseTool is everything else Q does. */
 	void UseTool(class ADCCRover* Car);
 	void FireHook(class ADCCRover* Car, FVector Dir);
@@ -699,6 +712,15 @@ public:
 	int32 GasCanBits = 255;
 private:
 	void RefreshBoard();
+};
+
+/** Repo Rally, endless, for learning the hook and the trick ring (2026-11-23). */
+UCLASS()
+class DUNGEONCRAWLERDENVER_API ADCCArcadeKartPractice : public ADCCArcadeKart
+{
+	GENERATED_BODY()
+public:
+	ADCCArcadeKartPractice() { bPractice = true; }
 };
 /** Neon Mile: endless synthwave highway. Distance before a crash, per player. */
 UCLASS()

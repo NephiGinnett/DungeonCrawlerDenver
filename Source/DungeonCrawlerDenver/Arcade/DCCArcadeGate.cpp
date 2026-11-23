@@ -1,5 +1,6 @@
 #include "Arcade/DCCArcadeGate.h"
 
+#include "Arcade/DCCAudience.h"
 #include "Arcade/DCCWalletComponent.h"
 #include "Arcade/DCCGateThemes.h"
 #include "Classes/DCCClassPerks.h"
@@ -283,6 +284,7 @@ void ADCCArcadeGate::ClientTick(float DeltaSeconds)
 		bExitDrawn = true;
 		DrawPortal(Rooms.Last().Center, 700.0f, GateCyan, 0.0f, false, true);
 	}
+	TickGateAudio(DeltaSeconds);
 	const double Now = ServerTime();
 
 	// The theme's floor hazards: a rim that shows when the patch is live. Off: no rim. Warming: a dim flicker. On: bright.
@@ -1419,6 +1421,22 @@ void ADCCArcadeGate::ClearRoom(int32 RoomIndex, const TCHAR* Why)
 	}
 	State.bCleared = true;
 	Score += RolePoints(State.Role);
+	{
+		// On the air: the whole room saw it. Credit goes to whoever is nearest the room.
+		ADCCCharacterBase* Star = nullptr;
+		float Best = 1e12f;
+		TArray<APlayerController*> Watchers;
+		GetPlayers(Watchers);
+		for (APlayerController* PC : Watchers)
+		{
+			if (ADCCCharacterBase* C = PC ? Cast<ADCCCharacterBase>(PC->GetPawn()) : nullptr)
+			{
+				const float D = FVector::DistSquared(C->GetActorLocation(), State.Center);
+				if (D < Best) { Best = D; Star = C; }
+			}
+		}
+		DCCAudience::Moment(this, Star, State.Role == TEXT("boss") ? DCCAudience::EMoment::BossDown : DCCAudience::EMoment::RoomClear);
+	}
 	// Every room pays as it falls, not just the end of the run.
 	{
 		const int32 Base = State.Role == TEXT("boss") ? 12

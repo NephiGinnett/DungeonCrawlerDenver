@@ -139,7 +139,7 @@ FDCCAttackResult UDCCRuleset::ResolveAttack(
 
 		// A landed hit always does something; otherwise a bad modifier turns a
 		// successful swing into a no-op, which reads as a bug to players.
-		Result.Damage = FMath::Max(1, DamageRoll + AbilityBonus);
+		Result.Damage = FMath::Max(1, FMath::RoundToInt((DamageRoll + AbilityBonus) * GetScorePowerMultiplier(AttackerScores.GetScore(AttackAbility))));
 	}
 
 	return Result;

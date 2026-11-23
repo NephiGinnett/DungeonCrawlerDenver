@@ -67,6 +67,9 @@ protected:
 	virtual void ServerBegin() override;
 	virtual void ServerTick(float DeltaSeconds) override;
 	virtual void ClientTick(float DeltaSeconds) override;
+	virtual void OnAttackSeen(class ADCCCharacterBase* Attacker, class ADCCCharacterBase* Target, bool bHit) override;
+	/** The dungeon's sound (DCCGateAudio.cpp): room tone, details, footsteps, the fight drums, hazards. Every machine. */
+	void TickGateAudio(float DeltaSeconds);
 	virtual void GetStartTransforms(TArray<FTransform>& Out) const override;
 	virtual FSky GetSky() const override;
 

@@ -189,11 +189,27 @@ public:
 	// --- The summoning tubes' panel (2026-11-17, Arcade/DCCSummons.h) ---
 	/** E at a podium: open its panel, or close it. */
 	void ToggleSummonPanel(int32 Tube);
-	bool IsSummonPanelOpen() const { return SummonTube >= 0; }
+	bool IsSummonPanelOpen() const { return SummonTube >= 0 || bTenOpen; }
+	bool IsTenPickOpen() const { return bTenOpen; }
+
+	// --- Menu scale (2026-11-23, Zoe: "we have a lot of content written in small font") -----------------------------
+	// The menus were laid out at 1280x720 in fixed pixels, so on a bigger screen everything shrank. Panels are drawn
+	// inside a scale block (FUiScaleScope in DCCHUD.cpp) that grows them with the screen height; their click boxes go
+	// through AddUiHitBox, which scales them to match.
+	float UiScale = 1.0f;
+	UCanvas* GetUiCanvas() const { return Canvas; }
+	/** How much to grow a panel on this screen: screen height over 700, times the SETTINGS menu size. */
+	float MenuUiScale() const;
+	void AddUiHitBox(FVector2D Position, FVector2D Size, FName Name, bool bConsumesInput, int32 Priority)
+	{
+		AddHitBox(Position * UiScale, Size * UiScale, Name, bConsumesInput, Priority);
+	}
 	/** A Mother Lode scratchcard is on screen (2026-11-21). The mouse scratches; it does not swing. */
 	bool IsScratchCardOpen() const { return bScratchOpen; }
 	/** The reveal banner after a pull. */
 	void ShowSummonResult(FName Friend, uint8 Tier, uint8 Variant, const FString& WeaponName);
+	/** The ten-pull's pick screen (2026-11-22): ten friends in the tube, keep up to Slots, the rest evaporate. */
+	void ShowSummonTen(const TArray<FName>& Friends, const TArray<uint8>& Tiers, const TArray<uint8>& Variants, const TArray<FString>& Weapons, int32 Slots);
 	/** The reveal banner alone (also drawn while a trailer is rolling). */
 	void DrawSummonBanner();
 
@@ -574,6 +590,18 @@ protected:
 	/** The podium prompt, the summon panel and the reveal banner. */
 	void DrawSummon(const class ADCCArcadeLobby* Lobby);
 	int32 SummonTube = -1;
+	/** The DM panel's audit button: armed by the first click, fired by the second within five seconds. */
+	FString AuditArmed;
+	double AuditArmedUntil = 0.0;
+	// The ten-pull's pick screen.
+	void DrawSummonTen();
+	bool bTenOpen = false;
+	TArray<FName> TenFriends;
+	TArray<uint8> TenTiers, TenVariants;
+	TArray<FString> TenWeapons;
+	TArray<bool> TenKeep;
+	int32 TenSlots = 0;
+	double TenOpenedAt = 0.0;
 
 	// The scratchcard (2026-11-21). The server dealt the card; these are the coating patches this screen has rubbed off.
 	void DrawScratchCard(class ADCCCasinoCascade* Casino, ADCCCharacterBase* Crawler);
@@ -964,6 +992,11 @@ private:
 	void DrawClimbKit(class ADCCCharacterBase* Crawler);
 
 	/** Repo Rally: tools ([Q]/[F]) and the shift readout. Read off the car, which is the possessed pawn. */
+	void DrawRallyRing(const class ADCCRover* Rover, float US);
+	/** The live audience corner (Arcade/DCCAudience). */
+	void DrawLiveAudience();
+	uint8 RallyJudgeSeen = 0;
+	double RallyJudgeAt = -10.0;
 	void DrawRallyKit(const class ADCCRover* Rover);
 
 	// Repo Rally's screens: work order, board, crew, truck, shift report (UI/DCCHUD_RallyMenus.cpp, 2026-11-14).

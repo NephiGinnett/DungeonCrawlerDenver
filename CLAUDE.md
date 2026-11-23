@@ -1206,6 +1206,27 @@ dev; explain the *why* behind UE-specific idioms when you do explain.
 Prefer asking her to do a quick manual step (restart the editor, flip a setting) over
 spending minutes researching an automatic workaround.
 
+### Cheating: `Session/DCCIntegrity` (2026-11-22)
+The host is the only machine whose numbers count. A new server RPC that pays out (tickets, gold, items, XP) gets a
+`DCCIntegrity::Allow` rate limit; a DM-only RPC gets `if (!IsHostsOwnCrawler())` and a strike. Punish in public with
+strikes (fines, garnished winnings, the CHEATER nameplate), never a ban. Zoe wants it fun. A new casino game must pay back
+less than it costs per play (the house keeps ~10%); the old scratch card paid 107% and was farmed.
+
+### Importing models with full PBR: `Tools/import_glb_pbr.py` (2026-11-23)
+Use this instead of glb -> Blender -> FBX -> MCP for anything new. It runs Unreal's own glTF importer (Interchange) as a
+commandlet with the editor CLOSED, keeps every map (colour, normal, metal/roughness, emissive), and repoints the glTF
+material instances at `/Game/DCC/Materials/Imported/M_GLTF_DCC` (a project copy of the engine's glTF master with the
+skeletal-mesh usage flag on; the engine's own lacks it, so characters drew the grey default material in game). Saves
+must pass `only_if_is_dirty=False` or they are skipped. **Meshy's rigged/animated "biped" exports carry only colour and
+emissive maps**; its plain textured export has the full PBR set, so export that and rig separately. Compare in game with
+`DCC.ImportCompare [delay] [old mesh] [new mesh]`.
+
+### HUD panels, code-made sounds, the audience (2026-11-23)
+- A new menu or panel: draw it inside `FUiScaleScope Scale(this);` and register clicks with `AddUiHitBox`, never
+  `AddHitBox`, so it grows with the screen and the MENU SIZE setting.
+- A sound made in code (USoundWaveProcedural) never ends by itself: play it with `DCCSynth::PlayPcm`, which stops it.
+- Something watchable in a game: call `DCCAudience::Moment(this, Crawler, EMoment::...)`. Viewers, hype, chat and favor follow.
+
 ### Fourteener items, chests and the trailer (2026-11-13)
 Items are in `Arcade/DCCClimbItems` (tools on Q/T, boosts, artifacts) and chests in `Arcade/DCCSupplyChest`. The kit
 lives on the arena (`ADCCArcadeClimb::Kits`) and is mirrored to the owner's `UDCCWalletComponent` for the HUD.
