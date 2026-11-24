@@ -176,6 +176,20 @@ void ADCCArcadeHaunt::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME(ADCCArcadeHaunt, ReelStart);
 	DOREPLIFETIME(ADCCArcadeHaunt, Reel);
 	DOREPLIFETIME(ADCCArcadeHaunt, Uploaders);
+	DOREPLIFETIME(ADCCArcadeHaunt, bPrimetime);
+	DOREPLIFETIME(ADCCArcadeHaunt, ShowPhase);
+	DOREPLIFETIME(ADCCArcadeHaunt, ShowLevel);
+	DOREPLIFETIME(ADCCArcadeHaunt, RoundKind);
+	DOREPLIFETIME(ADCCArcadeHaunt, PhaseEndsAt);
+	DOREPLIFETIME(ADCCArcadeHaunt, Guests);
+	DOREPLIFETIME(ADCCArcadeHaunt, Interviewee);
+	DOREPLIFETIME(ADCCArcadeHaunt, CouchQuestion);
+	DOREPLIFETIME(ADCCArcadeHaunt, Goals);
+	DOREPLIFETIME(ADCCArcadeHaunt, GoalsDone);
+	DOREPLIFETIME(ADCCArcadeHaunt, HoldProgress);
+	DOREPLIFETIME(ADCCArcadeHaunt, bLevelCleared);
+	DOREPLIFETIME(ADCCArcadeHaunt, TeamBlessing);
+	DOREPLIFETIME(ADCCArcadeHaunt, TeamTwist);
 }
 
 ADCCArcadeArena::FSky ADCCArcadeHaunt::GetSky() const
@@ -290,6 +304,9 @@ void ADCCArcadeHaunt::PrepareServer()
 	if (FParse::Value(FCommandLine::Get(), TEXT("MineSeed="), FromLine) && FromLine > 0) { Seed = FromLine; }
 	EnsureGrid();
 	EndsAt = -1.0;
+	// PRIMETIME unless the old found-footage game is asked for (Arcade/DCCHauntPrimetime.cpp).
+	const IConsoleVariable* Classic = IConsoleManager::Get().FindConsoleVariable(TEXT("dcc.DeadAirClassic"));
+	bPrimetime = !(Classic && Classic->GetInt() == 1) && !FParse::Param(FCommandLine::Get(), TEXT("DeadAirClassic"));
 }
 
 void ADCCArcadeHaunt::GetStartTransforms(TArray<FTransform>& Out) const
@@ -2661,6 +2678,10 @@ void ADCCArcadeHaunt::ClientTick(float DeltaSeconds)
 {
 	EnsureGrid();
 	BuildHouse();
+	if (bPrimetime && bHouseBuilt)
+	{
+		BuildStudio();
+	}
 	RefreshBodyGlow();
 
 	const float Time = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
@@ -3174,6 +3195,19 @@ void ADCCArcadeHaunt::ServerTick(float DeltaSeconds)
 				break;
 			}
 		}
+	}
+	if (bPrimetime)
+	{
+		// The show runs the round; the mine still does its own thing (rocks, traps).
+		EndsAt = ServerTime() + RoundSeconds;
+		TimeLeft = ShowPhase == 1 ? FMath::Max(0.0f, static_cast<float>(PhaseEndsAt - ServerTime())) : RoundSeconds;
+		TickShow(DeltaSeconds);
+		if (ShowPhase == 1)
+		{
+			TickRocksServer();
+			TickTrapsServer(DeltaSeconds);
+		}
+		return;
 	}
 	if (EndsAt < 0.0)
 	{

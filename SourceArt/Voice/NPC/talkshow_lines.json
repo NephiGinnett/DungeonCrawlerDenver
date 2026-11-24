@@ -431,6 +431,522 @@
       "row": "TS_Idle_06",
       "tag": "IDLE",
       "text": "Still here! Still smiling! Still under contract!"
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_Open_01",
+      "tag": "P_OPEN",
+      "text": "Good evening and welcome to a very special Primetime, coming to you live from the Lucky Tuesday silver mine, where the shift of 1893 is still on the clock."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_Open_02",
+      "tag": "P_OPEN",
+      "text": "Tonight on Primetime: five brave crawlers, one haunted mine, and a studio audience that has paid good money to see at least one of them cry."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_Open_03",
+      "tag": "P_OPEN",
+      "text": "We're live! Our contestants are going down the mountain one level at a time, and coming back up here to tell me all about it. Some of them."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_Open_04",
+      "tag": "P_OPEN",
+      "text": "Welcome to Dead Air, the only show where the ratings and the casualty list are the same document."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_LevelGauntlet_01",
+      "tag": "P_LEVEL_GAUNTLET",
+      "text": "This round is The Gauntlet. Get down to the stope. All of you. The first one there gets a little something from me."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_LevelGauntlet_02",
+      "tag": "P_LEVEL_GAUNTLET",
+      "text": "The Gauntlet! There is a stope down there with your names on it. Not literally. Legal made me say not literally."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_LevelGauntlet_03",
+      "tag": "P_LEVEL_GAUNTLET",
+      "text": "It's a race to the bottom, folks, which is also our network's slogan. Everybody to the stope!"
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_LevelLights_01",
+      "tag": "P_LEVEL_LIGHTS",
+      "text": "Lights Out! Three switches, somewhere down there in the dark. Your lamps are off. I had them turned off. You're welcome."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_LevelLights_02",
+      "tag": "P_LEVEL_LIGHTS",
+      "text": "This round, we go dark. Find three switches by feel, by sound, or by screaming. Screaming tests very well."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_LevelLights_03",
+      "tag": "P_LEVEL_LIGHTS",
+      "text": "Lights Out, everybody. Throw three switches before the clock runs out. And try not to think about what can see in the dark."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_LevelHold_01",
+      "tag": "P_LEVEL_HOLD",
+      "text": "Hold Out! There's a ring in the stope below you. Stand in it. Stay in it. Things will come. That's the show."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_LevelHold_02",
+      "tag": "P_LEVEL_HOLD",
+      "text": "This one's simple: hold the ring until the bar fills up. The bar fills slowly. The monsters do not."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_LevelHold_03",
+      "tag": "P_LEVEL_HOLD",
+      "text": "Hold Out, ladies and gentlemen! Somebody has to be standing in that ring. Somebody always has to."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_LevelFinale_01",
+      "tag": "P_LEVEL_FINALE",
+      "text": "The finale! The deepest stope in the Lucky Tuesday, and the foreman who never clocked out. Hold the ring. Make it beautiful."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_LevelFinale_02",
+      "tag": "P_LEVEL_FINALE",
+      "text": "This is it, the grand finale. Down to the bottom of the mountain, into the ring, and please, for the sponsors, survive."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_Clear_01",
+      "tag": "P_CLEAR",
+      "text": "And they did it! Bring them up, bring them up! Somebody get them a towel and a liability waiver."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_Clear_02",
+      "tag": "P_CLEAR",
+      "text": "Cleared! The audience is on its feet. The audience is always on its feet. We removed the chairs."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_Clear_03",
+      "tag": "P_CLEAR",
+      "text": "That's a clear, folks! Let's get our survivors up to the couch while they still have opinions."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_Clear_04",
+      "tag": "P_CLEAR",
+      "text": "Beautiful work down there. Truly. I watched most of it."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_Fail_01",
+      "tag": "P_FAIL",
+      "text": "And that's time! Not a clear, but who's counting? Everyone. Everyone is counting. Bring them up."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_Fail_02",
+      "tag": "P_FAIL",
+      "text": "Oh, so close. I mean that in the warmest possible way. Let's get whoever is left up here."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_Fail_03",
+      "tag": "P_FAIL",
+      "text": "Time! The mine wins that one. The mine is undefeated, but we love an underdog."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_Fail_04",
+      "tag": "P_FAIL",
+      "text": "That's the clock, folks. Let's see who's still with us and, more importantly, who isn't."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_Down_01",
+      "tag": "P_DOWN",
+      "text": "Oh! Oh, that's going in the highlight reel."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_Down_02",
+      "tag": "P_DOWN",
+      "text": "And there goes one! Somebody check on them. Or don't. It's very compelling either way."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_Down_03",
+      "tag": "P_DOWN",
+      "text": "Down! We have a crawler down! Ratings are up, which is a coincidence I refuse to examine."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_Down_04",
+      "tag": "P_DOWN",
+      "text": "Ooh. That one hurt me, and I'm in a climate controlled studio."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_Down_05",
+      "tag": "P_DOWN",
+      "text": "Man down! Somebody pick them up, that's a free piece of advice from your host."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_Down_06",
+      "tag": "P_DOWN",
+      "text": "And the audience gasps. Did you hear that? Our sound guy added that, but it was sincere."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_Couch_01",
+      "tag": "P_COUCH",
+      "text": "Welcome back to the couch! Sit, stand, hover, whatever your body will still do. Let's talk."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_Couch_02",
+      "tag": "P_COUCH",
+      "text": "And here they are, our survivors! Come on over. The couch is clean. Mostly."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_Couch_03",
+      "tag": "P_COUCH",
+      "text": "Let's hear from the people who made it. The people who didn't are welcome to listen from the audience."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_Sendoff_01",
+      "tag": "P_SENDOFF",
+      "text": "Before we start, a moment for the crawler we lost down there. Brave. Short, but brave."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_Sendoff_02",
+      "tag": "P_SENDOFF",
+      "text": "We said goodbye to someone down in the mine just now. They'll be watching from the audience, which is honestly the better seat."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_Sendoff_03",
+      "tag": "P_SENDOFF",
+      "text": "A round of applause for our dearly departed. Not departed departed. Departed from the competition. HR asked me to clarify."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_Sendoff_04",
+      "tag": "P_SENDOFF",
+      "text": "To our fallen contestant: you gave it everything you had, and it was, professionally speaking, not enough."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_Sendoff_05",
+      "tag": "P_SENDOFF",
+      "text": "Let's hear it for the one who didn't make it. A legend. A cautionary tale. A very solid ratings bump."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_Sendoff_06",
+      "tag": "P_SENDOFF",
+      "text": "We lost one, folks. Please, take your seat in the audience. Try the snacks. Do not try the punch."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_Sendoff_07",
+      "tag": "P_SENDOFF",
+      "text": "In memoriam. Gone, but not forgotten, at least not until the next commercial break."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_Sendoff_08",
+      "tag": "P_SENDOFF",
+      "text": "Our sincerest condolences to the crawler who went out down there. Sincere. Not too sincere. It's a variety show."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_QNeutral_01",
+      "tag": "P_Q_NEUTRAL",
+      "text": "So. Tell me, in your own words, how did that feel?"
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_QNeutral_02",
+      "tag": "P_Q_NEUTRAL",
+      "text": "Walk me through it. What was going through your head down there?"
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_QNeutral_03",
+      "tag": "P_Q_NEUTRAL",
+      "text": "Our viewers want to know: are you having fun? Be honest. Be marketable."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_QNeutral_04",
+      "tag": "P_Q_NEUTRAL",
+      "text": "Quick question for you, and there are no wrong answers. There are several wrong answers. Ready?"
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_QWarm_01",
+      "tag": "P_Q_WARM",
+      "text": "My favourite! Come here, sit down. Tell everyone how wonderful the show is."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_QWarm_02",
+      "tag": "P_Q_WARM",
+      "text": "Oh, I've been looking forward to this one. You're doing so well. Do you have anyone you'd like to thank? Me, perhaps?"
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_QWarm_03",
+      "tag": "P_Q_WARM",
+      "text": "The audience adores you, and between us, so do I. Anything you'd like to say to your fans?"
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_QCold_01",
+      "tag": "P_Q_COLD",
+      "text": "Oh. It's you again. Go ahead. Say something. I'm sure it'll be lovely."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_QCold_02",
+      "tag": "P_Q_COLD",
+      "text": "Welcome back. I've had my producers look into you. Anything you'd like to get ahead of?"
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_QCold_03",
+      "tag": "P_Q_COLD",
+      "text": "Ah, our little troublemaker. The floor is yours. Briefly. Very briefly."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_RCharm_01",
+      "tag": "P_R_CHARM",
+      "text": "Oh, stop. No, keep going. That's lovely. I'll remember that."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_RCharm_02",
+      "tag": "P_R_CHARM",
+      "text": "See, folks? This is what we call a team player. The network loves a team player."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_RCharm_03",
+      "tag": "P_R_CHARM",
+      "text": "You are an absolute delight, and I'm going to make sure the next level knows it."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_RCharm_04",
+      "tag": "P_R_CHARM",
+      "text": "Charming. Genuinely. I'm putting in a word with the lighting department."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_RBanter_01",
+      "tag": "P_R_BANTER",
+      "text": "Ha! Okay, okay. You're quick. I like quick. Quick tests well."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_RBanter_02",
+      "tag": "P_R_BANTER",
+      "text": "Oh, she's got jokes! Or he's got jokes. Someone has jokes. The audience loved it."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_RBanter_03",
+      "tag": "P_R_BANTER",
+      "text": "That's good television right there. Not good for you necessarily, but good television."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_RBanter_04",
+      "tag": "P_R_BANTER",
+      "text": "A little back and forth! The ratings just did a little dance."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_RDefy_01",
+      "tag": "P_R_DEFY",
+      "text": "Well. Well, well, well. Let's see how funny that is three hundred feet further down."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_RDefy_02",
+      "tag": "P_R_DEFY",
+      "text": "Ha. Ha ha. Producers? Make a note. A big note. Underline it."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_RDefy_03",
+      "tag": "P_R_DEFY",
+      "text": "The audience is going wild, and I am smiling, and I want you to remember this smile."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_RDefy_04",
+      "tag": "P_R_DEFY",
+      "text": "Bold. So bold. I've arranged a little something for your bravery. You'll find it downstairs."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_RDefy_05",
+      "tag": "P_R_DEFY",
+      "text": "Oh, they love you for that. I don't, but they do, and they pay for the lights."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_BlessPet_01",
+      "tag": "P_BLESS_PET",
+      "text": "Now, for my favourite guest tonight: I've had a word with the mine. You'll find it a little gentler."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_BlessPet_02",
+      "tag": "P_BLESS_PET",
+      "text": "One of you has been an absolute joy, so I'm taking the edge off for you down there. Producer's pet!"
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_TwistMarked_01",
+      "tag": "P_TWIST_MARKED",
+      "text": "And for our little critic, I've let a couple of slag dogs have a sniff of your jacket. No hard feelings."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_TwistMarked_02",
+      "tag": "P_TWIST_MARKED",
+      "text": "Someone tonight was rude to me on my own couch. The dogs downstairs have been told your name."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_BlessOvertime_01",
+      "tag": "P_BLESS_OVERTIME",
+      "text": "You've been such a good crew that I'm giving you extra time on the next level. Overtime! On the house."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_BlessOvertime_02",
+      "tag": "P_BLESS_OVERTIME",
+      "text": "The network's feeling generous. Twenty five extra seconds on the clock. Don't spend it all in one stope."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_BlessLights_01",
+      "tag": "P_BLESS_LIGHTS",
+      "text": "Good news! The lighting department likes you. Your lamps are staying on for this one."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_BlessLights_02",
+      "tag": "P_BLESS_LIGHTS",
+      "text": "Since you were all so lovely, the lights stay on next round. I know. I'm a softie."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_BlessTakes_01",
+      "tag": "P_BLESS_TAKES",
+      "text": "And because the audience demanded it, one of our fallen gets a second chance. Come on down, from the audience!"
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_BlessTakes_02",
+      "tag": "P_BLESS_TAKES",
+      "text": "Extra takes! One lucky crawler from the audience goes back in. Television is all about second chances."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_TwistGuest_01",
+      "tag": "P_TWIST_GUEST",
+      "text": "Our next level has a special guest waiting at the bottom. You've been so mean to me that I booked them myself."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_TwistGuest_02",
+      "tag": "P_TWIST_GUEST",
+      "text": "I've invited someone special to the next stope. They're very excited to meet you. Very excited."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_TwistSchedule_01",
+      "tag": "P_TWIST_SCHEDULE",
+      "text": "Unfortunately, we're running long. I'm taking twenty seconds off your next level. Blame your attitudes."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_TwistSchedule_02",
+      "tag": "P_TWIST_SCHEDULE",
+      "text": "Tight schedule, everybody! Less time on the next level. That's not personal. It's a little personal."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_TwistDark_01",
+      "tag": "P_TWIST_DARK",
+      "text": "Budget cuts, I'm afraid. Your lamps start the next level switched off. Somebody was rude, and it was the budget."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_TwistDark_02",
+      "tag": "P_TWIST_DARK",
+      "text": "The power bill came in. Lamps off, everybody. You can thank your own big mouths."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_VerdictNone_01",
+      "tag": "P_VERDICT_NONE",
+      "text": "No favours, no punishments. You've been perfectly fine. Perfectly, perfectly fine. Back down you go."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_VerdictNone_02",
+      "tag": "P_VERDICT_NONE",
+      "text": "I can't decide how I feel about you lot, so the mountain will decide for me. Next level!"
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_Wipe_01",
+      "tag": "P_WIPE",
+      "text": "And that is everyone. All of them. The whole crew. Folks, that is a first for this episode, and a fourth for the season."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_Wipe_02",
+      "tag": "P_WIPE",
+      "text": "Total wipe! Nobody left standing. Let's go to the audience, which is now, technically, the entire cast."
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_Signoff_01",
+      "tag": "P_SIGNOFF",
+      "text": "That's our show! Thank you to our crawlers, our sponsors, and the Lucky Tuesday for its ongoing hospitality. Goodnight, Denver!"
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_Signoff_02",
+      "tag": "P_SIGNOFF",
+      "text": "And that's Primetime! The ratings are in, the mine is quiet, and I am fabulous. Goodnight!"
+    },
+    {
+      "speaker": "Hiss",
+      "row": "PT_Signoff_03",
+      "tag": "P_SIGNOFF",
+      "text": "We're out of time, folks. Stay safe, stay watching, and remember: the hiss is silent. Except when it isn't. Goodnight!"
     }
   ]
 }

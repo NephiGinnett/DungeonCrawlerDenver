@@ -3,6 +3,8 @@
 #include "Brushes/SlateColorBrush.h"
 #include "Brushes/SlateImageBrush.h"
 #include "Brushes/SlateRoundedBoxBrush.h"
+#include "ImageUtils.h"
+#include "Misc/Paths.h"
 #include "Engine/Texture2D.h"
 #include "Styling/CoreStyle.h"
 #include "Styling/SlateTypes.h"
@@ -137,6 +139,36 @@ namespace DCCMenu
 		return Style.Get();
 	}
 
+	UTexture2D* IconTexture(FName ItemId)
+	{
+		static TMap<FName, TWeakObjectPtr<UTexture2D>> Cache;
+		if (ItemId.IsNone())
+		{
+			return nullptr;
+		}
+		if (const TWeakObjectPtr<UTexture2D>* Found = Cache.Find(ItemId))
+		{
+			return Found->Get();
+		}
+		// A hand-made icon asset wins; otherwise the picture DCC.MakeItemIcons rendered from the item's own mesh.
+		const FString Name = FString::Printf(TEXT("T_Icon_%s"), *ItemId.ToString());
+		UTexture2D* Texture = LoadObject<UTexture2D>(nullptr, *FString::Printf(TEXT("/Game/DCC/UI/Icons/%s.%s"), *Name, *Name), nullptr, LOAD_NoWarn | LOAD_Quiet);
+		if (!Texture)
+		{
+			const FString Png = FPaths::ProjectContentDir() / TEXT("DCC/UI/ItemIcons") / (ItemId.ToString() + TEXT(".png"));
+			if (FPaths::FileExists(Png))
+			{
+				Texture = FImageUtils::ImportFileAsTexture2D(Png);
+			}
+		}
+		if (Texture)
+		{
+			Texture->AddToRoot(); // brushes do not hold their texture; the menus open and close all session
+		}
+		Cache.Add(ItemId, Texture);
+		return Texture;
+	}
+
 	const FSlateBrush* IconBrush(FName ItemId)
 	{
 		static TMap<FName, TSharedPtr<FSlateBrush>> Cache;
@@ -144,12 +176,9 @@ namespace DCCMenu
 		{
 			return Found->Get();
 		}
-		const FString Name = FString::Printf(TEXT("T_Icon_%s"), *ItemId.ToString());
-		UTexture2D* Texture = LoadObject<UTexture2D>(nullptr, *FString::Printf(TEXT("/Game/DCC/UI/Icons/%s.%s"), *Name, *Name));
 		TSharedPtr<FSlateBrush> Brush;
-		if (Texture)
+		if (UTexture2D* Texture = IconTexture(ItemId))
 		{
-			Texture->AddToRoot(); // brushes do not hold their texture; the menus open and close all session
 			Brush = MakeShared<FSlateImageBrush>(Texture, FVector2D(256.0f, 256.0f));
 		}
 		Cache.Add(ItemId, Brush);

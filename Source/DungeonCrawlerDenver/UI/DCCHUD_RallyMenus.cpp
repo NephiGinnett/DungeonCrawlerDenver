@@ -117,16 +117,17 @@ void ADCCHUD::RallyText(const FString& Text, const FLinearColor& Colour, float X
 	{
 		return;
 	}
-	FCanvasTextItem Item(FVector2D(X, Y), FText::FromString(Text), DCCRallyUI::SlateFor(Font, Scale), Colour);
-	if (bShadow)
-	{
-		Item.EnableShadow(FLinearColor(0.0f, 0.0f, 0.0f, 0.55f * Colour.A), FVector2D(1.0f, 1.0f));
-	}
-	Canvas->DrawItem(Item);
+	// Through the HUD's Slate layer (in the look's fonts) when it is up; Roboto on the Canvas otherwise.
+	DrawSlateText(Text, IsPaintingThroughSlate() ? DCCHudPaint::FontFor(Font, Scale) : DCCRallyUI::SlateFor(Font, Scale), Colour, X, Y, bShadow);
 }
 
 void ADCCHUD::RallyTextSize(const FString& Text, float& OutW, float& OutH, UFont* Font, float Scale)
 {
+	if (IsPaintingThroughSlate())
+	{
+		GetTextSize(Text, OutW, OutH, Font, Scale);
+		return;
+	}
 	const FVector2D Size = DCCRallyUI::Measure(Text, DCCRallyUI::SlateFor(Font, Scale));
 	OutW = Size.X;
 	OutH = Size.Y;

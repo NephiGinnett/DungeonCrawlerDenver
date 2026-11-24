@@ -69,6 +69,10 @@ private:
 	void LoadEdit();
 	void ApplyEdit();
 	void ResetEdit();
+	/** FIT (2026-11-23, Vaughn: many pieces did not fit his body): grow or shrink the grip being edited. */
+	void Resize(const FVector& Factor);
+	/** Sizes a head or body piece to this body's shoulders, as a this-body grip. */
+	void AutoFit();
 	void SaveAll();
 	/** What Save writes: the entry being edited right now (kind, mesh path, name). */
 	void CurrentEntry(const TCHAR*& Kind, FString& MeshPath, FName& Name) const;

@@ -1095,6 +1095,17 @@ void UDCCWalletComponent::Server_CageVote_Implementation(bool bUp)
 	}
 }
 
+void UDCCWalletComponent::Server_PrimetimeAnswer_Implementation(uint8 Answer)
+{
+	const APawn* Pawn = Cast<APawn>(GetOwner());
+	APlayerController* PC = Pawn ? Cast<APlayerController>(Pawn->GetController()) : nullptr;
+	for (TActorIterator<ADCCArcadeHaunt> It(GetWorld()); It; ++It)
+	{
+		It->AnswerCouch(PC, Answer);
+		break;
+	}
+}
+
 void UDCCWalletComponent::Client_OfferStarterKit_Implementation()
 {
 	const APawn* Pawn = Cast<APawn>(GetOwner());

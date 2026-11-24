@@ -1,5 +1,7 @@
 #pragma once
 
+class UTexture2D;
+
 #include "CoreMinimal.h"
 #include "Fonts/SlateFontInfo.h"
 #include "Input/Reply.h"
@@ -55,6 +57,8 @@ namespace DCCMenu
 	const FEditableTextBoxStyle* TextBoxStyle();
 
 	/** An item's picture (T_Icon_<Id>), or null if there is none. */
+	/** The item's icon picture: T_Icon_<Id> if one was made by hand, else Content/DCC/UI/ItemIcons/<Id>.png. */
+	UTexture2D* IconTexture(FName ItemId);
 	const FSlateBrush* IconBrush(FName ItemId);
 
 	// ---- pieces ---------------------------------------------------------------------------------------------

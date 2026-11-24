@@ -131,6 +131,113 @@ add("IDLE", "TS_Idle_05", "Fun fact, this desk is load-bearing. Please do not le
 add("IDLE", "TS_Idle_06", "Still here! Still smiling! Still under contract!")
 
 
+# ---- PRIMETIME: DEAD AIR (2026-11-23, Docs/dead-air-primetime-plan.md) ------------------------------------------------
+# Dead Air is an episode of the show now: levels down the Lucky Tuesday, the couch between them. Tags start with P_ so the
+# Den's segments never pick them. Read by Arcade/DCCHauntPrimetime.cpp.
+def p(tag, n, text):
+    add(tag, f"PT_{tag[2:].title().replace('_', '')}_{n:02d}", text)
+
+p("P_OPEN", 1, "Good evening and welcome to a very special Primetime, coming to you live from the Lucky Tuesday silver mine, where the shift of 1893 is still on the clock.")
+p("P_OPEN", 2, "Tonight on Primetime: five brave crawlers, one haunted mine, and a studio audience that has paid good money to see at least one of them cry.")
+p("P_OPEN", 3, "We're live! Our contestants are going down the mountain one level at a time, and coming back up here to tell me all about it. Some of them.")
+p("P_OPEN", 4, "Welcome to Dead Air, the only show where the ratings and the casualty list are the same document.")
+
+p("P_LEVEL_GAUNTLET", 1, "This round is The Gauntlet. Get down to the stope. All of you. The first one there gets a little something from me.")
+p("P_LEVEL_GAUNTLET", 2, "The Gauntlet! There is a stope down there with your names on it. Not literally. Legal made me say not literally.")
+p("P_LEVEL_GAUNTLET", 3, "It's a race to the bottom, folks, which is also our network's slogan. Everybody to the stope!")
+
+p("P_LEVEL_LIGHTS", 1, "Lights Out! Three switches, somewhere down there in the dark. Your lamps are off. I had them turned off. You're welcome.")
+p("P_LEVEL_LIGHTS", 2, "This round, we go dark. Find three switches by feel, by sound, or by screaming. Screaming tests very well.")
+p("P_LEVEL_LIGHTS", 3, "Lights Out, everybody. Throw three switches before the clock runs out. And try not to think about what can see in the dark.")
+
+p("P_LEVEL_HOLD", 1, "Hold Out! There's a ring in the stope below you. Stand in it. Stay in it. Things will come. That's the show.")
+p("P_LEVEL_HOLD", 2, "This one's simple: hold the ring until the bar fills up. The bar fills slowly. The monsters do not.")
+p("P_LEVEL_HOLD", 3, "Hold Out, ladies and gentlemen! Somebody has to be standing in that ring. Somebody always has to.")
+
+p("P_LEVEL_FINALE", 1, "The finale! The deepest stope in the Lucky Tuesday, and the foreman who never clocked out. Hold the ring. Make it beautiful.")
+p("P_LEVEL_FINALE", 2, "This is it, the grand finale. Down to the bottom of the mountain, into the ring, and please, for the sponsors, survive.")
+
+p("P_CLEAR", 1, "And they did it! Bring them up, bring them up! Somebody get them a towel and a liability waiver.")
+p("P_CLEAR", 2, "Cleared! The audience is on its feet. The audience is always on its feet. We removed the chairs.")
+p("P_CLEAR", 3, "That's a clear, folks! Let's get our survivors up to the couch while they still have opinions.")
+p("P_CLEAR", 4, "Beautiful work down there. Truly. I watched most of it.")
+
+p("P_FAIL", 1, "And that's time! Not a clear, but who's counting? Everyone. Everyone is counting. Bring them up.")
+p("P_FAIL", 2, "Oh, so close. I mean that in the warmest possible way. Let's get whoever is left up here.")
+p("P_FAIL", 3, "Time! The mine wins that one. The mine is undefeated, but we love an underdog.")
+p("P_FAIL", 4, "That's the clock, folks. Let's see who's still with us and, more importantly, who isn't.")
+
+p("P_DOWN", 1, "Oh! Oh, that's going in the highlight reel.")
+p("P_DOWN", 2, "And there goes one! Somebody check on them. Or don't. It's very compelling either way.")
+p("P_DOWN", 3, "Down! We have a crawler down! Ratings are up, which is a coincidence I refuse to examine.")
+p("P_DOWN", 4, "Ooh. That one hurt me, and I'm in a climate controlled studio.")
+p("P_DOWN", 5, "Man down! Somebody pick them up, that's a free piece of advice from your host.")
+p("P_DOWN", 6, "And the audience gasps. Did you hear that? Our sound guy added that, but it was sincere.")
+
+p("P_COUCH", 1, "Welcome back to the couch! Sit, stand, hover, whatever your body will still do. Let's talk.")
+p("P_COUCH", 2, "And here they are, our survivors! Come on over. The couch is clean. Mostly.")
+p("P_COUCH", 3, "Let's hear from the people who made it. The people who didn't are welcome to listen from the audience.")
+
+p("P_SENDOFF", 1, "Before we start, a moment for the crawler we lost down there. Brave. Short, but brave.")
+p("P_SENDOFF", 2, "We said goodbye to someone down in the mine just now. They'll be watching from the audience, which is honestly the better seat.")
+p("P_SENDOFF", 3, "A round of applause for our dearly departed. Not departed departed. Departed from the competition. HR asked me to clarify.")
+p("P_SENDOFF", 4, "To our fallen contestant: you gave it everything you had, and it was, professionally speaking, not enough.")
+p("P_SENDOFF", 5, "Let's hear it for the one who didn't make it. A legend. A cautionary tale. A very solid ratings bump.")
+p("P_SENDOFF", 6, "We lost one, folks. Please, take your seat in the audience. Try the snacks. Do not try the punch.")
+p("P_SENDOFF", 7, "In memoriam. Gone, but not forgotten, at least not until the next commercial break.")
+p("P_SENDOFF", 8, "Our sincerest condolences to the crawler who went out down there. Sincere. Not too sincere. It's a variety show.")
+
+p("P_Q_NEUTRAL", 1, "So. Tell me, in your own words, how did that feel?")
+p("P_Q_NEUTRAL", 2, "Walk me through it. What was going through your head down there?")
+p("P_Q_NEUTRAL", 3, "Our viewers want to know: are you having fun? Be honest. Be marketable.")
+p("P_Q_NEUTRAL", 4, "Quick question for you, and there are no wrong answers. There are several wrong answers. Ready?")
+p("P_Q_WARM", 1, "My favourite! Come here, sit down. Tell everyone how wonderful the show is.")
+p("P_Q_WARM", 2, "Oh, I've been looking forward to this one. You're doing so well. Do you have anyone you'd like to thank? Me, perhaps?")
+p("P_Q_WARM", 3, "The audience adores you, and between us, so do I. Anything you'd like to say to your fans?")
+p("P_Q_COLD", 1, "Oh. It's you again. Go ahead. Say something. I'm sure it'll be lovely.")
+p("P_Q_COLD", 2, "Welcome back. I've had my producers look into you. Anything you'd like to get ahead of?")
+p("P_Q_COLD", 3, "Ah, our little troublemaker. The floor is yours. Briefly. Very briefly.")
+
+p("P_R_CHARM", 1, "Oh, stop. No, keep going. That's lovely. I'll remember that.")
+p("P_R_CHARM", 2, "See, folks? This is what we call a team player. The network loves a team player.")
+p("P_R_CHARM", 3, "You are an absolute delight, and I'm going to make sure the next level knows it.")
+p("P_R_CHARM", 4, "Charming. Genuinely. I'm putting in a word with the lighting department.")
+p("P_R_BANTER", 1, "Ha! Okay, okay. You're quick. I like quick. Quick tests well.")
+p("P_R_BANTER", 2, "Oh, she's got jokes! Or he's got jokes. Someone has jokes. The audience loved it.")
+p("P_R_BANTER", 3, "That's good television right there. Not good for you necessarily, but good television.")
+p("P_R_BANTER", 4, "A little back and forth! The ratings just did a little dance.")
+p("P_R_DEFY", 1, "Well. Well, well, well. Let's see how funny that is three hundred feet further down.")
+p("P_R_DEFY", 2, "Ha. Ha ha. Producers? Make a note. A big note. Underline it.")
+p("P_R_DEFY", 3, "The audience is going wild, and I am smiling, and I want you to remember this smile.")
+p("P_R_DEFY", 4, "Bold. So bold. I've arranged a little something for your bravery. You'll find it downstairs.")
+p("P_R_DEFY", 5, "Oh, they love you for that. I don't, but they do, and they pay for the lights.")
+
+p("P_BLESS_PET", 1, "Now, for my favourite guest tonight: I've had a word with the mine. You'll find it a little gentler.")
+p("P_BLESS_PET", 2, "One of you has been an absolute joy, so I'm taking the edge off for you down there. Producer's pet!")
+p("P_TWIST_MARKED", 1, "And for our little critic, I've let a couple of slag dogs have a sniff of your jacket. No hard feelings.")
+p("P_TWIST_MARKED", 2, "Someone tonight was rude to me on my own couch. The dogs downstairs have been told your name.")
+p("P_BLESS_OVERTIME", 1, "You've been such a good crew that I'm giving you extra time on the next level. Overtime! On the house.")
+p("P_BLESS_OVERTIME", 2, "The network's feeling generous. Twenty five extra seconds on the clock. Don't spend it all in one stope.")
+p("P_BLESS_LIGHTS", 1, "Good news! The lighting department likes you. Your lamps are staying on for this one.")
+p("P_BLESS_LIGHTS", 2, "Since you were all so lovely, the lights stay on next round. I know. I'm a softie.")
+p("P_BLESS_TAKES", 1, "And because the audience demanded it, one of our fallen gets a second chance. Come on down, from the audience!")
+p("P_BLESS_TAKES", 2, "Extra takes! One lucky crawler from the audience goes back in. Television is all about second chances.")
+p("P_TWIST_GUEST", 1, "Our next level has a special guest waiting at the bottom. You've been so mean to me that I booked them myself.")
+p("P_TWIST_GUEST", 2, "I've invited someone special to the next stope. They're very excited to meet you. Very excited.")
+p("P_TWIST_SCHEDULE", 1, "Unfortunately, we're running long. I'm taking twenty seconds off your next level. Blame your attitudes.")
+p("P_TWIST_SCHEDULE", 2, "Tight schedule, everybody! Less time on the next level. That's not personal. It's a little personal.")
+p("P_TWIST_DARK", 1, "Budget cuts, I'm afraid. Your lamps start the next level switched off. Somebody was rude, and it was the budget.")
+p("P_TWIST_DARK", 2, "The power bill came in. Lamps off, everybody. You can thank your own big mouths.")
+p("P_VERDICT_NONE", 1, "No favours, no punishments. You've been perfectly fine. Perfectly, perfectly fine. Back down you go.")
+p("P_VERDICT_NONE", 2, "I can't decide how I feel about you lot, so the mountain will decide for me. Next level!")
+
+p("P_WIPE", 1, "And that is everyone. All of them. The whole crew. Folks, that is a first for this episode, and a fourth for the season.")
+p("P_WIPE", 2, "Total wipe! Nobody left standing. Let's go to the audience, which is now, technically, the entire cast.")
+p("P_SIGNOFF", 1, "That's our show! Thank you to our crawlers, our sponsors, and the Lucky Tuesday for its ongoing hospitality. Goodnight, Denver!")
+p("P_SIGNOFF", 2, "And that's Primetime! The ratings are in, the mine is quiet, and I am fabulous. Goodnight!")
+p("P_SIGNOFF", 3, "We're out of time, folks. Stay safe, stay watching, and remember: the hiss is silent. Except when it isn't. Goodnight!")
+
+
 def write_json(reset: bool) -> dict:
     data = {"speakers": [SPEAKER], "lines": L}
     if JSON_PATH.exists() and not reset:

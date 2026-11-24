@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/HUD.h"
 #include "UI/DCCChatTypes.h"
+#include "UI/DCCHudPaint.h"
 #include "Stats/DCCAbilityTypes.h"
 #include "Rooms/DCCGauntletEncounter.h"
 #include "Onboarding/DCCOnboardingTypes.h"
@@ -16,6 +17,8 @@ class UDCCChatInputWidget;
 class UDCCSessionMenuWidget;
 class UDCCCharacterSelectWidget;
 class UDCCCosmeticShopWidget;
+class UDCCCharacterSheetWidget;
+class UDCCEventPanelWidget;
 class UDCCRoundOverWidget;
 class UDCCLootScreenInput;
 class UDCCGearBenchWidget;
@@ -155,6 +158,32 @@ class DUNGEONCRAWLERDENVER_API ADCCHUD : public AHUD
 
 public:
 	virtual void DrawHUD() override;
+	virtual void PostRender() override;
+
+	// --- The HUD through Slate (2026-11-23, UI/DCCHudPaint.h) -----------------------------------------------------
+	// These hide AHUD's own four draw calls (same arguments), so every panel in this class records into a list that a
+	// full-screen Slate layer paints in the look's fonts and rounded panels. Inside a FCanvasOnly scope, or when the
+	// layer is not up, they fall through to the Canvas exactly as before.
+	void DrawRect(FLinearColor RectColor, float ScreenX, float ScreenY, float ScreenW, float ScreenH);
+	void DrawText(const FString& Text, FLinearColor TextColor, float ScreenX, float ScreenY, UFont* Font = nullptr, float Scale = 1.0f, bool bScalePosition = false);
+	void GetTextSize(const FString& Text, float& OutWidth, float& OutHeight, UFont* Font = nullptr, float Scale = 1.0f) const;
+	void DrawLine(float StartScreenX, float StartScreenY, float EndScreenX, float EndScreenY, FLinearColor LineColor, float LineThickness = 0.0f);
+	void DrawTexture(UTexture* Texture, float ScreenX, float ScreenY, float ScreenW, float ScreenH, float TextureU, float TextureV, float TextureUWidth,
+		float TextureVHeight, FLinearColor TintColor = FLinearColor::White, EBlendMode BlendMode = BLEND_Translucent, float Scale = 1.0f,
+		bool bScalePosition = false, float Rotation = 0.0f, FVector2D RotPivot = FVector2D::ZeroVector);
+	/** A box with its own colour, rounding and edge (no panel restyle): speaker boxes. */
+	void DrawStyledRect(const FLinearColor& Colour, float X, float Y, float W, float H, float Radius, const FLinearColor& Edge);
+	/** Text in an explicit Slate font, recorded like DrawText (Repo Rally's crisp text). */
+	void DrawSlateText(const FString& Text, const FSlateFontInfo& Font, const FLinearColor& Colour, float X, float Y, bool bShadow = true);
+	/** Draws inside this scope go straight to the Canvas (triangles, additive pictures, render targets). */
+	struct FCanvasOnly
+	{
+		ADCCHUD* Hud;
+		explicit FCanvasOnly(ADCCHUD* InHud) : Hud(InHud) { ++Hud->CanvasOnlyDepth; }
+		~FCanvasOnly() { --Hud->CanvasOnlyDepth; }
+	};
+	bool IsPaintingThroughSlate() const;
+	int32 CanvasOnlyDepth = 0;
 
 	/** Onboarding: has this crawler been issued this part of the HUD yet? Always true with no onboarding in the level. */
 	bool IsHudFeatureUnlocked(EDCCHudFeature Feature) const;
@@ -266,6 +295,17 @@ public:
 	FString GuideCacheKey;
 	float RoverGuideSeconds = 0.0f;
 	void CloseCosmeticShop();
+	/** OPEN MIC WEEK's event page (UI/DCCEventPanelWidget.h): the Tab menu's OPEN MIC WEEK button. */
+	void ToggleEventPanel();
+	/** A voice over everyone's speakers (Hiss on PRIMETIME): shown as that speaker's subtitle for Seconds, over any NPC. */
+	void ShowBroadcast(const FString& Speaker, const FString& Text, float Seconds);
+	/** PRIMETIME's own HUD (UI/DCCHUD_Primetime.cpp): the level banner, the goal markers, the couch buttons, the verdict. */
+	void DrawPrimetime();
+	FString BroadcastSpeaker;
+	FString BroadcastText;
+	double BroadcastUntil = 0.0;
+	bool bPrimeCursor = false;
+	bool IsEventPanelOpen() const;
 	bool IsCosmeticShopOpen() const;
 
 	/** The party menu (F2): host, invite, join, who's here, start the run. */
@@ -276,6 +316,7 @@ public:
 	// Every sealed box in a row. Hold Space (or hold the mouse on a box) to
 	// open one, and keep holding to open the next. Hold R to open them all.
 	void ToggleLootBoxScreen();
+	bool IsLootScreenOpen() const { return bLootScreenOpen; }
 	/** Dev (DCC.LootOpen): open the screen if needed and open one of the best boxes you have. */
 	void DevOpenBestLootBox();
 	bool IsLootBoxScreenOpen() const { return bLootScreenOpen; }
@@ -820,6 +861,16 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UDCCCosmeticShopWidget> CosmeticShop;
 
+	/** The Tab menu's CHARACTER page in Slate (UI/DCCCharacterSheetWidget.h). Shown while that tab is open. */
+	UPROPERTY(Transient)
+	TObjectPtr<UDCCCharacterSheetWidget> CharacterSheet;
+	UPROPERTY(Transient)
+	TObjectPtr<UDCCEventPanelWidget> EventPanel;
+	TSharedPtr<SDCCHudPaint> HudPaint;
+	TArray<FDCCHudCmd> HudRecording;
+	void EnsureHudPaint();
+	void ShowCharacterSheet(bool bShow);
+
 	/** PLAY AGAIN / BACK TO THE DEN, while an arcade arena's round is over. */
 	UPROPERTY(Transient)
 	TObjectPtr<UDCCRoundOverWidget> RoundOver;
@@ -885,7 +936,10 @@ private:
 	void SendLootOpen(EDCCLootBoxTier Tier, int32 Count, bool bAll);
 	void DrawGiftBox(float CentreX, float BaseY, float Size, const FLinearColor& Colour, float Alpha, float Glow);
 	/** A real chest (UI/DCCLootStage), standing on BaseY; falls back to DrawGiftBox if the stage is missing. */
-	void DrawChest(float CentreX, float BaseY, float Size, const FLinearColor& Colour, float Alpha, float Glow);
+	void DrawChest(float CentreX, float BaseY, float Size, const FLinearColor& Colour, float Alpha, float Glow, int32 Tier = 0);
+	/** A rarity's aura around a point (2026-11-23): a halo for all, turning rays from Gold up, sparkles from Platinum up,
+	 *  a shifting colour for Celestial. Tier is EDCCLootBoxTier as a number (1 Bronze .. 6 Celestial). Canvas, additive. */
+	void DrawTierAura(float CX, float CY, float Size, int32 Tier, const FLinearColor& Colour, float Strength);
 	/** Text cut into lines that fit MaxWidth (at most MaxLines; the last one ends in "..." if it had to be cut). */
 	TArray<FString> WrapToWidth(const FString& Text, class UFont* Font, float MaxWidth, int32 MaxLines);
 	/** The loot screen's photo studio, and the picture of each item in the current reveal. */

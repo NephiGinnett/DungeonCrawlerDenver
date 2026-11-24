@@ -101,6 +101,7 @@ namespace DCCGauges
 
 void ADCCHUD::DrawSpeedGauge()
 {
+	FCanvasOnly CanvasOnly(this); // triangles / additive pictures / render targets: see UI/DCCHudPaint.h
 	using namespace DCCGauges;
 
 	const ADCCRover* Rover = GetOwningRover();

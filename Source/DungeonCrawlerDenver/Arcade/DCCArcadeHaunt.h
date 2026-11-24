@@ -211,6 +211,42 @@ struct FDCCMineRock
  * The mine is the dungeon generator's layout (UDCCDungeonGrid) from a replicated seed: timbered drifts with rails,
  * stopes with carts and spoil, lanterns that gutter, helmet lamps on everyone, and knocking in the rock.
  */
+/**
+ * One contestant on PRIMETIME (2026-11-23, Docs/dead-air-primetime-plan.md): whether they are still in, what Hiss thinks
+ * of them, what they last said on his couch, and their ratings. Replicated for the HUD.
+ */
+USTRUCT()
+struct FDCCShowGuest
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	FString Player;
+
+	/** Out of the episode: they watch from the studio audience. */
+	UPROPERTY()
+	bool bOut = false;
+
+	/** Hiss's mood toward them, -3 (antagonized) .. +3 (adoring). */
+	UPROPERTY()
+	int32 Mood = 0;
+
+	/** Their answer on the couch this time: -1 none yet, 0 Charm, 1 Banter, 2 Defy. */
+	UPROPERTY()
+	int32 Answer = -1;
+
+	/** Personal verdict for the coming level: 0 none, 1 Producer's Pet (Hiss halves the hits), 2 Marked (slag dogs on your scent). */
+	UPROPERTY()
+	uint8 Personal = 0;
+
+	UPROPERTY()
+	int32 Ratings = 0;
+
+	/** Which level they went out on (0 = still in). */
+	UPROPERTY()
+	int32 OutOnLevel = 0;
+};
+
 UCLASS()
 class DUNGEONCRAWLERDENVER_API ADCCArcadeHaunt : public ADCCArcadeArena
 {
@@ -337,11 +373,131 @@ public:
 	static constexpr float RoundSeconds = 300.0f;
 	static constexpr float ViewsPerPoint = 137.0f;
 
+	// ---- PRIMETIME (2026-11-23, Docs/dead-air-primetime-plan.md) ------------------------------------------------------
+	// Dead Air is now an episode of Hiss Cranson's show. The crew goes down the mine one level at a time; after each
+	// level the survivors are pulled up to his studio, high above the mine, for the couch. How they answer sets his mood,
+	// and his mood buffs (a Blessing) or booby-traps (a Twist) the next level. The out sit in the studio audience.
+	// The body cam, tape, cage and reel are off while bPrimetime (the old code is all still here).
+
+	/** On (the show) unless dcc.DeadAirClassic is 1. */
+	UPROPERTY(Replicated)
+	bool bPrimetime = true;
+
+	/** 0 the opening in the studio, 1 a level in the mine, 2 the couch, 3 the verdict, 4 the end of the episode. */
+	UPROPERTY(Replicated)
+	uint8 ShowPhase = 0;
+
+	/** 1.. the level being played (or just played, on the couch). */
+	UPROPERTY(Replicated)
+	int32 ShowLevel = 0;
+
+	/** This level's kind: 0 The Gauntlet (get to the stope), 1 Lights Out (three switches in the dark), 2 Hold Out
+	 *  (keep someone in the ring while they come), 3 the finale (Hold Out with the shift boss let loose). */
+	UPROPERTY(Replicated)
+	uint8 RoundKind = 0;
+
+	/** Server clock: when this phase (or this couch guest's turn) ends. */
+	UPROPERTY(Replicated)
+	double PhaseEndsAt = 0.0;
+
+	UPROPERTY(Replicated)
+	TArray<FDCCShowGuest> Guests;
+
+	/** On the couch right now (empty between guests). */
+	UPROPERTY(Replicated)
+	FString Interviewee;
+
+	/** Hiss's question to the guest on the couch (shown with the answer buttons). */
+	UPROPERTY(Replicated)
+	FString CouchQuestion;
+
+	/** This level's goals: the stope to reach or hold, or the three switches. Done flags alongside. */
+	UPROPERTY(Replicated)
+	TArray<FVector> Goals;
+	UPROPERTY(Replicated)
+	TArray<bool> GoalsDone;
+
+	/** Hold Out: how full the ring is, 0..1. */
+	UPROPERTY(Replicated)
+	float HoldProgress = 0.0f;
+
+	/** The level just played was cleared. */
+	UPROPERTY(Replicated)
+	bool bLevelCleared = false;
+
+	/** The team's Blessing and Twist on this level (0 none): Blessings 1 Overtime, 2 Lighting Department, 3 Extra Takes;
+	 *  Twists 1 Special Guest, 2 Tight Schedule, 3 Budget Cuts. */
+	UPROPERTY(Replicated)
+	uint8 TeamBlessing = 0;
+	UPROPERTY(Replicated)
+	uint8 TeamTwist = 0;
+
+	static constexpr int32 ShowLevels = 4;
+	static constexpr float LevelSeconds = 110.0f;
+	static constexpr float HoldSeconds = 25.0f;
+
+	const FDCCShowGuest* FindGuest(const FString& Player) const
+	{
+		return Guests.FindByPredicate([&Player](const FDCCShowGuest& G) { return G.Player == Player; });
+	}
+	static const TCHAR* RoundName(uint8 Kind);
+	static const TCHAR* BlessingName(uint8 Id);
+	static const TCHAR* TwistName(uint8 Id);
+	/** Where the studio is (every machine builds it there). */
+	FVector StudioOrigin() const { return GetActorLocation() + FVector(0.0f, 0.0f, 30000.0f); }
+
+	/** Server, from UDCCWalletComponent::Server_PrimetimeAnswer: the guest on the couch answers. */
+	void AnswerCouch(APlayerController* PC, int32 Answer);
+
+	/** Hiss says a line to everyone, wherever they are: his voice and the gold lower third. */
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_HissSays(const FString& Row, const FString& Text);
+
+	/** Dev (DCC.Primetime): 1 ends the level as cleared, 2 as failed, 3 skips the couch. Server. */
+	void DebugShow(int32 What);
+
+	virtual void OnRespawned(APlayerController* PC) override;
+
 protected:
 	friend class ADCCHauntTrailerDirector;
 	virtual void PrepareServer() override;
 	virtual void ServerTick(float DeltaSeconds) override;
 	virtual void ClientTick(float DeltaSeconds) override;
+	// PRIMETIME internals (Arcade/DCCHauntPrimetime.cpp).
+	void TickShow(float DeltaSeconds);
+	void BuildStudio();
+	void StartLevel();
+	void EndLevel(bool bCleared);
+	void StartCouch();
+	void NextCouchGuest();
+	void StartVerdict();
+	void EndEpisode();
+	void PlanLevel(int32 Level);
+	void SendToStudio(APawn* Pawn, bool bAudience, int32 Slot);
+	void SendToMine(APawn* Pawn, int32 Slot);
+	FDCCShowGuest& GuestFor(const FString& Player);
+	/** Picks a line by tag (P_...) from talkshow_lines.json and says it. Returns false if there is none. */
+	bool Hiss(const TCHAR* Tag);
+	bool bStudioBuilt = false;
+	/** Where this level starts (the last level's stope, or the cage). */
+	FVector LevelStart = FVector::ZeroVector;
+	/** Rooms in order of depth (indices into the grid's rooms), and the one the last level ended in. */
+	TArray<int32> RoomsByDepth;
+	int32 LastGoalRoom = 0;
+	TArray<FString> CouchQueue;
+	bool bCouchAnswered = false;
+	double CouchReplyAt = 0.0;
+	TMap<FString, int32> PetHealth;
+	TSet<FString> LinesUsed;
+	double NextDownLineAt = 0.0;
+	TSet<FString> SeenDown;
+	double HoldWaveAt = 0.0;
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<AActor>> GoalMarkers;
+	TArray<FVector> MarkersFor;
+	/** The studio's Hiss and audience, built locally. */
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<AActor>> StudioActors;
 	virtual void GetStartTransforms(TArray<FTransform>& Out) const override;
 	virtual FSky GetSky() const override;
 

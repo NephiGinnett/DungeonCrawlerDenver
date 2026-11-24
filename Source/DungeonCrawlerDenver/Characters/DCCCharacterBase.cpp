@@ -1840,6 +1840,15 @@ int32 ADCCCharacterBase::ModifyIncomingDamage(int32 Damage, ADCCCharacterBase* A
 	return FMath::Max(1, FMath::RoundToInt(Damage * Keep * ClassScale));
 }
 
+void ADCCCharacterBase::ForgetFall(double SafeSeconds)
+{
+	FallPeakZ = GetActorLocation().Z;
+	if (const UWorld* World = GetWorld())
+	{
+		FallSafeUntil = World->GetTimeSeconds() + SafeSeconds;
+	}
+}
+
 void ADCCCharacterBase::Landed(const FHitResult& Hit)
 {
 	Super::Landed(Hit);
@@ -4908,6 +4917,11 @@ void ADCCCharacterBase::ToggleRecording()
 void ADCCCharacterBase::Server_SetRecording_Implementation(bool bRecording)
 {
 	bRecordingFootage = bRecording && IsAlive() && !IsDowned();
+	for (TActorIterator<ADCCArcadeHaunt> It(GetWorld()); It; ++It)
+	{
+		bRecordingFootage &= !It->bPrimetime;
+		break;
+	}
 }
 
 void ADCCCharacterBase::ToggleGearBench()
@@ -7180,11 +7194,14 @@ void ADCCCharacterBase::GetBelt(TArray<FDCCBeltEntry>& Out) const
 	// Dead Air: the body cam, the lamp, lightsticks.
 	if (Haunt)
 	{
-		FDCCBeltEntry Cam;
-		Cam.Kind = EDCCBelt::BodyCam;
-		Cam.Name = TEXT("Body Cam");
-		Cam.bOn = bRecordingFootage;
-		Out.Add(Cam);
+		if (!Haunt->bPrimetime) // PRIMETIME has no body cam: the show's cameras are always on
+		{
+			FDCCBeltEntry Cam;
+			Cam.Kind = EDCCBelt::BodyCam;
+			Cam.Name = TEXT("Body Cam");
+			Cam.bOn = bRecordingFootage;
+			Out.Add(Cam);
+		}
 		FDCCBeltEntry Lamp;
 		Lamp.Kind = EDCCBelt::Lamp;
 		Lamp.Name = TEXT("Lamp");

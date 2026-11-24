@@ -41,6 +41,8 @@
 #include "Progression/DCCAchievementComponent.h"
 #include "Characters/DCCAttackStyle.h"
 #include "UI/DCCChatTypes.h"
+#include "UI/DCCLook.h"
+#include "UI/DCCEventPanelWidget.h"
 
 namespace
 {
@@ -402,6 +404,62 @@ static FAutoConsoleCommandWithWorldAndArgs GDevMenuTab(TEXT("DCC.MenuTab"), TEXT
 			if (ADCCHUD* Hud = PC ? Cast<ADCCHUD>(PC->GetHUD()) : nullptr)
 			{
 				Hud->OpenMenuTab(static_cast<EDCCMenuTab>(FMath::Clamp(Tab, 0, int32(EDCCMenuTab::MAX) - 1)));
+			}
+		});
+	}));
+
+// DCC.SheetLook <0-2> [delay]: (dev) the CHARACTER page's look: 0 SYSTEM GLASS, 1 NEON ARCADE, 2 BROADCAST.
+static FAutoConsoleCommandWithWorldAndArgs GDevSheetLook(TEXT("DCC.SheetLook"), TEXT("DCC.SheetLook <0-2> [delay]: (dev) the character sheet's look."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		const int32 Look = Args.Num() > 0 ? FCString::Atoi(*Args[0]) : 0;
+		After(World, Args.Num() > 1 ? FCString::Atof(*Args[1]) : 0.0f, [Look](UWorld*)
+		{
+			DCCLook::Set(Look);
+		});
+	}));
+
+// DCC.EventPanel [delay] [lines]: (dev) open the OPEN MIC WEEK page, optionally showing a made-up line count.
+static FAutoConsoleCommandWithWorldAndArgs GDevEventPanel(TEXT("DCC.EventPanel"), TEXT("DCC.EventPanel [delay]: (dev) open the OPEN MIC WEEK page."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		const int32 Preview = Args.Num() > 1 ? FCString::Atoi(*Args[1]) : -1;
+		After(World, Args.Num() > 0 ? FCString::Atof(*Args[0]) : 0.0f, [Preview](UWorld* W)
+		{
+			APlayerController* PC = W ? W->GetFirstPlayerController() : nullptr;
+			if (ADCCHUD* Hud = PC ? Cast<ADCCHUD>(PC->GetHUD()) : nullptr)
+			{
+				UDCCEventPanelWidget::PreviewLines = Preview;
+				Hud->ToggleEventPanel();
+			}
+		});
+	}));
+
+// DCC.Primetime <what> [delay]: (dev) 0 skips the opening, 1 ends the level cleared, 2 failed, 3 skips the couch.
+static FAutoConsoleCommandWithWorldAndArgs GDevPrimetime(TEXT("DCC.Primetime"), TEXT("DCC.Primetime <0-3> [delay]: (dev) push PRIMETIME along."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		const int32 What = Args.Num() > 0 ? FCString::Atoi(*Args[0]) : 1;
+		After(World, Args.Num() > 1 ? FCString::Atof(*Args[1]) : 0.0f, [What](UWorld* W)
+		{
+			for (TActorIterator<ADCCArcadeHaunt> It(W); It; ++It)
+			{
+				It->DebugShow(What);
+				break;
+			}
+		});
+	}));
+
+// DCC.Answer <0-2> [delay]: (dev) answer Hiss on the couch as if the button was clicked.
+static FAutoConsoleCommandWithWorldAndArgs GDevAnswer(TEXT("DCC.Answer"), TEXT("DCC.Answer <0-2> [delay]: (dev) Charm, Banter or Defy."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		const int32 What = Args.Num() > 0 ? FCString::Atoi(*Args[0]) : 0;
+		After(World, Args.Num() > 1 ? FCString::Atof(*Args[1]) : 0.0f, [What](UWorld* W)
+		{
+			if (ADCCCharacterBase* Crawler = LocalCrawler(W))
+			{
+				if (Crawler->Wallet) { Crawler->Wallet->Server_PrimetimeAnswer(uint8(What)); }
 			}
 		});
 	}));

@@ -18,6 +18,7 @@
 #include "Engine/DataTable.h"
 #include "Engine/SkeletalMesh.h"
 #include "Engine/SkeletalMeshSocket.h"
+#include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
 #include "Styling/CoreStyle.h"
@@ -735,6 +736,74 @@ void UDCCGearBenchWidget::ResetEdit()
 	Status = TEXT("Reset to the authored value. Save to make that stick.");
 }
 
+void UDCCGearBenchWidget::Resize(const FVector& Factor)
+{
+	if (SelectedItem.IsNone() && (Target == ETarget::GripAll || Target == ETarget::GripBody))
+	{
+		Status = TEXT("Pick a piece first.");
+		return;
+	}
+	Edit.Scale = (Edit.Scale * Factor).ComponentMax(FVector(0.05f));
+	ApplyEdit();
+	Status = FString::Printf(TEXT("Size %.2f x %.2f x %.2f. Save to keep it."), Edit.Scale.X, Edit.Scale.Y, Edit.Scale.Z);
+}
+
+void UDCCGearBenchWidget::AutoFit()
+{
+	ADCCCharacterBase* Body = Crawler.Get();
+	USkeletalMeshComponent* Skin = GetBodyComponent();
+	FDCCEquipmentDef Def;
+	if (!Body || !Skin || !Body->Equipment || SelectedItem.IsNone() || IsCosmeticKey(SelectedItem) || !Body->Equipment->FindItem(SelectedItem, Def))
+	{
+		Status = TEXT("Auto-fit works on a head or body piece from the gear list.");
+		return;
+	}
+	if (Def.Slot != EDCCEquipmentSlot::Head && Def.Slot != EDCCEquipmentSlot::Body)
+	{
+		Status = TEXT("Auto-fit is for head and body pieces. Use the size buttons for the rest.");
+		return;
+	}
+	UStaticMesh* Mesh = Def.Mesh.LoadSynchronous();
+	if (!Mesh)
+	{
+		Status = TEXT("That piece has no worn model.");
+		return;
+	}
+	// Shoulder width: the first pair of arm bones this skeleton has (Meshy, the Mannequin, MakeHuman).
+	static const TCHAR* Pairs[][2] = {
+		{ TEXT("LeftArm"), TEXT("RightArm") }, { TEXT("upperarm_l"), TEXT("upperarm_r") },
+		{ TEXT("LeftShoulder"), TEXT("RightShoulder") }, { TEXT("clavicle_l"), TEXT("clavicle_r") },
+		{ TEXT("upperarm01.L"), TEXT("upperarm01.R") },
+	};
+	float Shoulders = 0.0f;
+	for (const auto& Pair : Pairs)
+	{
+		if (Skin->GetBoneIndex(Pair[0]) != INDEX_NONE && Skin->GetBoneIndex(Pair[1]) != INDEX_NONE)
+		{
+			Shoulders = FVector::Dist(Skin->GetBoneLocation(Pair[0]), Skin->GetBoneLocation(Pair[1]));
+			break;
+		}
+	}
+	if (Shoulders < 1.0f)
+	{
+		Status = TEXT("Could not find this body's shoulders. Use the size buttons.");
+		return;
+	}
+	// A helmet is a bit over half the shoulders wide; a vest or chestplate a bit wider than them.
+	const FVector Size = Mesh->GetBounds().BoxExtent * 2.0;
+	const float Wide = FMath::Max(1.0f, float(FMath::Max(Size.X, Size.Y)));
+	const float Want = Def.Slot == EDCCEquipmentSlot::Head ? Shoulders * 0.62f : Shoulders * 1.3f;
+	const float S = FMath::Clamp(Want / Wide, 0.2f, 5.0f);
+	if (Target != ETarget::GripBody)
+	{
+		Target = ETarget::GripBody;
+		LoadEdit();
+	}
+	Edit.Scale = FVector(S);
+	ApplyEdit();
+	Status = FString::Printf(TEXT("Fitted to this body's shoulders (%.0f cm): size %.2f. Nudge it, then Save."), Shoulders, S);
+}
+
 void UDCCGearBenchWidget::CurrentEntry(const TCHAR*& Kind, FString& MeshPath, FName& Name) const
 {
 	switch (Target)
@@ -1231,6 +1300,29 @@ TSharedRef<SWidget> UDCCGearBenchWidget::RebuildWidget()
 							Field(TEXT("X"), 0.01f, Num([](const UDCCGearBenchWidget& W) { return float(W.Edit.Scale.X); }), SetNum([](UDCCGearBenchWidget& W, float V) { W.Edit.Scale.X = FMath::Max(0.01f, V); })),
 							Field(TEXT("Y"), 0.01f, Num([](const UDCCGearBenchWidget& W) { return float(W.Edit.Scale.Y); }), SetNum([](UDCCGearBenchWidget& W, float V) { W.Edit.Scale.Y = FMath::Max(0.01f, V); })),
 							Field(TEXT("Z"), 0.01f, Num([](const UDCCGearBenchWidget& W) { return float(W.Edit.Scale.Z); }), SetNum([](UDCCGearBenchWidget& W, float V) { W.Edit.Scale.Z = FMath::Max(0.01f, V); })))
+					]
+					// FIT: armour that does not fit a body, fixed with buttons instead of typing scales.
+					+ SVerticalBox::Slot().AutoHeight().Padding(0, 10, 0, 2)[ Heading(NSLOCTEXT("DCC", "BenchFit", "FIT")) ]
+					+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 3)
+					[
+						Row3(
+							Button(NSLOCTEXT("DCC", "BenchSmaller", "Smaller"), Do([](UDCCGearBenchWidget& W) { W.Resize(FVector(0.95f)); })),
+							Button(NSLOCTEXT("DCC", "BenchBigger", "Bigger"), Do([](UDCCGearBenchWidget& W) { W.Resize(FVector(1.05f)); })),
+							Button(NSLOCTEXT("DCC", "BenchAutoFit", "Auto-fit"), Do([](UDCCGearBenchWidget& W) { W.AutoFit(); })))
+					]
+					+ SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 3)
+					[
+						Row3(
+							Button(NSLOCTEXT("DCC", "BenchSlimmer", "Slimmer"), Do([](UDCCGearBenchWidget& W) { W.Resize(FVector(0.95f, 0.95f, 1.0f)); })),
+							Button(NSLOCTEXT("DCC", "BenchWider", "Wider"), Do([](UDCCGearBenchWidget& W) { W.Resize(FVector(1.05f, 1.05f, 1.0f)); })),
+							Button(NSLOCTEXT("DCC", "BenchTaller", "Taller"), Do([](UDCCGearBenchWidget& W) { W.Resize(FVector(1.0f, 1.0f, 1.05f)); })))
+					]
+					+ SVerticalBox::Slot().AutoHeight()
+					[
+						Row3(
+							Button(NSLOCTEXT("DCC", "BenchShorter", "Shorter"), Do([](UDCCGearBenchWidget& W) { W.Resize(FVector(1.0f, 1.0f, 0.95f)); })),
+							Button(NSLOCTEXT("DCC", "BenchThinner", "Thinner"), Do([](UDCCGearBenchWidget& W) { W.Resize(FVector(1.0f, 0.95f, 1.0f)); })),
+							Button(NSLOCTEXT("DCC", "BenchDeeper", "Deeper"), Do([](UDCCGearBenchWidget& W) { W.Resize(FVector(1.0f, 1.05f, 1.0f)); })))
 					]
 					+ SVerticalBox::Slot().AutoHeight().Padding(0, 10, 0, 0)
 					[

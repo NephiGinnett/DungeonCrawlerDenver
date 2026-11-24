@@ -1817,6 +1817,8 @@ public:
 
 	/** Server: no fall damage until this world time (roped in, a respawn). */
 	double FallSafeUntil = 0.0;
+	/** A teleport is not a fall (2026-11-23: PRIMETIME's trip from the studio to the mine counted as 300 m). */
+	void ForgetFall(double SafeSeconds = 2.0);
 
 	/** Falls up to this many metres are free; past it, damage grows until FatalFallMetres. */
 	UPROPERTY(EditDefaultsOnly, Category = "DCC|Climb", meta = (ClampMin = "0.0"))

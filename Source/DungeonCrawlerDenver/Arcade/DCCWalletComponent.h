@@ -115,6 +115,10 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_CageVote(bool bUp);
 
+	/** PRIMETIME's couch (2026-11-23): 0 Charm, 1 Banter, 2 Defy. Only the guest in the hot seat is heard. */
+	UFUNCTION(Server, Reliable)
+	void Server_PrimetimeAnswer(uint8 Answer);
+
 	/** Starter kits (Session/DCCStarterKits): the host offers the choice once, the player picks one. */
 	UFUNCTION(Client, Reliable)
 	void Client_OfferStarterKit();

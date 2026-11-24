@@ -16,6 +16,8 @@
 // UDCCLootScreenInput only captures input while the screen is up.
 
 #include "UI/DCCHUD.h"
+#include "UI/DCCMenuStyle.h"
+#include "UI/DCCFxTextures.h"
 
 #include "UI/DCCItemVisuals.h"
 #include "UI/DCCLootScreenInput.h"
@@ -298,8 +300,7 @@ void ADCCHUD::ReceiveLootBoxReveal(const FDCCLootBoxReveal& Reveal)
 				}
 				if (!Mesh)
 				{
-					const FString Icon = FString::Printf(TEXT("T_Icon_%s"), *Id.ToString());
-					Picture = LoadObject<UTexture2D>(nullptr, *FString::Printf(TEXT("/Game/DCC/UI/Icons/%s.%s"), *Icon, *Icon));
+					Picture = DCCMenu::IconTexture(Id);
 				}
 			}
 			UTexture* Photo = Stage->Photo(i, Mesh);
@@ -428,6 +429,7 @@ void ADCCHUD::DrawGiftBox(float CentreX, float BaseY, float Size, const FLinearC
 
 void ADCCHUD::DrawLootReveal(double Now)
 {
+	FCanvasOnly CanvasOnly(this); // triangles / additive pictures / render targets: see UI/DCCHudPaint.h
 	using namespace DCCItemToast;
 
 	const float T = static_cast<float>(Now - LootRevealStart);
@@ -454,7 +456,7 @@ void ADCCHUD::DrawLootReveal(double Now)
 		{
 			// The chest itself shakes and glows on its stage; here it only grows a touch as it builds.
 			const float Size = 380.0f + U * 40.0f;
-			DrawRect(WithAlpha(TierColour, 0.10f * U * U), CX - Size * 0.5f, CY - Size * 0.5f, Size, Size);
+			DrawTierAura(CX, CY, Size * 0.8f, int32(LootReveal.Tier), TierColour, 0.3f + U * 0.7f);
 			DrawTexture(ChestPicture, CX - Size * 0.5f, CY - Size * 0.5f, Size, Size, 0.0f, 0.0f, 1.0f, 1.0f, FLinearColor::White, BLEND_Additive);
 			return;
 		}
@@ -482,6 +484,9 @@ void ADCCHUD::DrawLootReveal(double Now)
 			DrawLine(CX + C * Inner, CY + S * Inner, CX + C * Outer, CY + S * Outer, WithAlpha(TierColour, 0.75f * Fade), 3.0f);
 		}
 	}
+
+	// The rarity's aura stays behind the cards, settling down after the burst.
+	DrawTierAura(CX, CY, 420.0f, int32(LootReveal.Tier), TierColour, FMath::Lerp(1.0f, 0.45f, FMath::Clamp(B / 1.5f, 0.0f, 1.0f)));
 
 	// The open chest, light pouring out of it, fading as the cards come out.
 	if (ChestPicture && B < 1.4f)
@@ -626,6 +631,7 @@ void ADCCHUD::DrawLootReveal(double Now)
 
 void ADCCHUD::DrawLootBoxScreen()
 {
+	FCanvasOnly CanvasOnly(this); // triangles / additive pictures / render targets: see UI/DCCHudPaint.h
 	if (!bLootScreenOpen || !Canvas || !GetWorld())
 	{
 		return;
@@ -810,7 +816,7 @@ void ADCCHUD::DrawLootBoxScreen()
 		}
 
 		const FLinearColor Colour = RarityColour(Row[i]);
-		DrawChest(X, Y, Size, Colour, Alpha, Glow);
+		DrawChest(X, Y, Size, Colour, Alpha, Glow, int32(Row[i]));
 		LootBoxRects[i] = FBox2D(FVector2D(X - Size * 0.6f, Y - Size), FVector2D(X + Size * 0.6f, Y + 8.0f));
 
 		if (bSelected)
@@ -902,24 +908,72 @@ ADCCLootStage* ADCCHUD::GetLootStage()
 	return LootStage;
 }
 
-void ADCCHUD::DrawChest(float CentreX, float BaseY, float Size, const FLinearColor& Colour, float Alpha, float Glow)
+void ADCCHUD::DrawChest(float CentreX, float BaseY, float Size, const FLinearColor& Colour, float Alpha, float Glow, int32 Tier)
 {
 	UTextureRenderTarget2D* Picture = LootStage ? LootStage->IdleImage() : nullptr;
+	const float S = Size * 1.5f;
+	// The rarity's aura behind it, so a Celestial never looks like a Bronze (2026-11-23).
+	DrawTierAura(CentreX, BaseY - S * 0.45f, S, Tier, Colour, Alpha * (0.4f + Glow));
 	if (!Picture)
 	{
 		DrawGiftBox(CentreX, BaseY, Size, Colour, Alpha, Glow);
 		return;
 	}
-	// A glow in the box's colour behind it, and the chest itself tinted toward that colour so the tiers tell apart.
-	const float S = Size * 1.5f;
-	if (Glow > 0.0f)
-	{
-		const float G = S * (0.1f + Glow * 0.2f);
-		DrawRect(WithAlpha(Colour, 0.10f * Glow * Alpha), CentreX - S * 0.5f - G, BaseY - S - G * 0.5f, S + G * 2.0f, S + G);
-	}
-	DrawRect(WithAlpha(Colour, 0.55f * Alpha), CentreX - S * 0.32f, BaseY - 2.0f, S * 0.64f, 3.0f); // the tier's line under it
-	const FLinearColor Tint = FMath::Lerp(FLinearColor::White, Colour, 0.4f) * Alpha;
+	const float Lift = FMath::Clamp(Tier, 0, 6) / 6.0f;
+	// The tier's plinth line: thicker and brighter the rarer it is.
+	DrawRect(WithAlpha(Colour, (0.45f + 0.4f * Lift) * Alpha), CentreX - S * 0.32f, BaseY - 2.0f, S * 0.64f, 3.0f + 3.0f * Lift);
+	// The chest itself tinted toward the tier's colour, more strongly the rarer it is.
+	const FLinearColor Tint = FMath::Lerp(FLinearColor::White, Colour, 0.55f + 0.25f * Lift) * Alpha;
 	DrawTexture(Picture, CentreX - S * 0.5f, BaseY - S * 0.92f, S, S, 0.0f, 0.0f, 1.0f, 1.0f, FLinearColor(Tint.R, Tint.G, Tint.B, 1.0f), BLEND_Additive);
+}
+
+void ADCCHUD::DrawTierAura(float CX, float CY, float Size, int32 Tier, const FLinearColor& InColour, float Strength)
+{
+	if (Tier <= 0 || Strength <= 0.0f || !GetWorld())
+	{
+		return;
+	}
+	FCanvasOnly CanvasOnly(this);
+	const float Now = GetWorld()->GetRealTimeSeconds();
+	FLinearColor Colour = InColour;
+	if (Tier >= int32(EDCCLootBoxTier::Celestial))
+	{
+		// Celestial cycles through the colours of the others.
+		Colour = FLinearColor::MakeFromHSV8(uint8(FMath::Fmod(Now * 40.0f, 255.0f)), 170, 255);
+	}
+	auto Add = [this](UTexture2D* Tex, float X, float Y, float W, const FLinearColor& C, float Rotation)
+	{
+		if (Tex)
+		{
+			DrawTexture(Tex, X - W * 0.5f, Y - W * 0.5f, W, W, 0.0f, 0.0f, 1.0f, 1.0f, C, BLEND_Additive, 1.0f, false, Rotation, FVector2D(0.5f, 0.5f));
+		}
+	};
+	const float Pulse = 0.85f + 0.15f * FMath::Sin(Now * (2.0f + Tier * 0.6f));
+	// Every tier: a halo, bigger and brighter as rarity climbs.
+	Add(DCCFx::Glow(), CX, CY, Size * (1.0f + 0.18f * Tier) * Pulse, Colour * (0.10f + 0.06f * Tier) * Strength, 0.0f);
+	// Gold and up: rays, turning; Legendary and up a second set the other way.
+	if (Tier >= int32(EDCCLootBoxTier::Gold))
+	{
+		Add(DCCFx::Rays(), CX, CY, Size * (1.3f + 0.12f * Tier), Colour * (0.10f + 0.045f * Tier) * Strength, Now * (8.0f + 3.0f * Tier));
+	}
+	if (Tier >= int32(EDCCLootBoxTier::Legendary))
+	{
+		Add(DCCFx::Rays(), CX, CY, Size * 1.9f, (Colour * 0.5f + FLinearColor::White * 0.5f) * 0.15f * Strength, -Now * 14.0f + 11.0f);
+	}
+	// Platinum and up: sparkles twinkling around it, more of them each tier.
+	if (Tier >= int32(EDCCLootBoxTier::Platinum))
+	{
+		const int32 Count = 4 + (Tier - int32(EDCCLootBoxTier::Platinum)) * 4;
+		for (int32 i = 0; i < Count; ++i)
+		{
+			const float Seed = i * 2.399f; // the golden angle: spread evenly, never in a ring
+			const float R = Size * (0.35f + 0.35f * FMath::Frac(i * 0.618f));
+			const float A = Seed + Now * 0.25f;
+			const float Twinkle = FMath::Max(0.0f, FMath::Sin(Now * (2.5f + FMath::Frac(i * 0.37f) * 3.0f) + Seed * 3.0f));
+			Add(DCCFx::Sparkle(), CX + FMath::Cos(A) * R, CY + FMath::Sin(A) * R * 0.8f, Size * (0.14f + 0.1f * Twinkle),
+				(Colour * 0.4f + FLinearColor::White * 0.6f) * Twinkle * Strength, 0.0f);
+		}
+	}
 }
 
 TArray<FString> ADCCHUD::WrapToWidth(const FString& Text, UFont* Font, float MaxWidth, int32 MaxLines)
@@ -1023,4 +1077,25 @@ static FAutoConsoleCommandWithWorldAndArgs GLootOpenCommand(TEXT("DCC.LootOpen")
 		}
 		FTimerHandle Handle;
 		World->GetTimerManager().SetTimer(Handle, FTimerDelegate::CreateLambda(Open), Delay, false);
+	}));
+
+// DCC.LootScreen [delay]: (dev) open the loot screen without opening anything, to look at the row of boxes.
+static FAutoConsoleCommandWithWorldAndArgs GLootScreenCommand(TEXT("DCC.LootScreen"), TEXT("DCC.LootScreen [delay]: (dev) open the loot screen."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		if (!World)
+		{
+			return;
+		}
+		TWeakObjectPtr<UWorld> Weak(World);
+		FTimerHandle Handle;
+		World->GetTimerManager().SetTimer(Handle, FTimerDelegate::CreateLambda([Weak]()
+		{
+			APlayerController* PC = Weak.IsValid() ? Weak->GetFirstPlayerController() : nullptr;
+			ADCCHUD* Hud = PC ? Cast<ADCCHUD>(PC->GetHUD()) : nullptr;
+			if (Hud && !Hud->IsLootScreenOpen())
+			{
+				Hud->ToggleLootBoxScreen();
+			}
+		}), FMath::Max(0.01f, Args.Num() > 0 ? FCString::Atof(*Args[0]) : 0.0f), false);
 	}));

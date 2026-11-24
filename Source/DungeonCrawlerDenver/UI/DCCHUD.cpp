@@ -48,6 +48,9 @@
 #include "UI/DCCCharacterSelectWidget.h"
 #include "Dialogue/DCCDialogueNPC.h"
 #include "UI/DCCCosmeticShopWidget.h"
+#include "UI/DCCCharacterSheetWidget.h"
+#include "UI/DCCEventPanelWidget.h"
+#include "UI/DCCLook.h"
 #include "UI/DCCRoundOverWidget.h"
 #include "UI/DCCCageVoteWidget.h"
 #include "UI/DCCStarterKitWidget.h"
@@ -63,6 +66,8 @@
 #include "Arcade/DCCRallyItems.h"
 #include "Arcade/DCCArcadeGames.h"
 #include "Engine/GameViewportClient.h"
+#include "Engine/LocalPlayer.h"
+#include "Framework/Application/SlateApplication.h"
 #include "GameFramework/GameStateBase.h"
 #include "UI/DCCLootScreenInput.h"
 #include "Bench/DCCGearBenchWidget.h"
@@ -113,12 +118,7 @@ namespace
 
 	int32 UiStyle()
 	{
-		int32 Style = 0;
-		if (GConfig)
-		{
-			GConfig->GetInt(TEXT("DCCUi"), TEXT("Style"), Style, GGameUserSettingsIni);
-		}
-		return FMath::Clamp(Style, 0, 2);
+		return DCCLook::Index(); // 0 SYSTEM GLASS, 1 NEON ARCADE, 2 BROADCAST (UI/DCCLook.h)
 	}
 
 	/** SETTINGS > MENU SIZE: 0 small, 1 normal, 2 large, 3 huge. */
@@ -150,12 +150,8 @@ namespace
 	void SetUiStyle(int32 Style)
 	{
 		Style = FMath::Clamp(Style, 0, 2);
-		if (GConfig)
-		{
-			GConfig->SetInt(TEXT("DCCUi"), TEXT("Style"), Style, GGameUserSettingsIni);
-			GConfig->Flush(false, GGameUserSettingsIni);
-		}
-		const TCHAR* Id = Style == 1 ? TEXT("UiNeon") : Style == 2 ? TEXT("UiTabletop") : TEXT("UiCrystal");
+		DCCLook::Set(Style);
+		const TCHAR* Id = Style == 1 ? TEXT("UiNeon") : Style == 2 ? TEXT("UiBroadcast") : TEXT("UiCrystal");
 		UE_LOG(LogTemp, Log, TEXT("[DCC Ui] style %d cosmetic %s (not gated)"), Style, Id);
 	}
 
@@ -464,17 +460,28 @@ void ADCCHUD::NotifyHitBoxClick(FName BoxName)
 	}
 
 	// The Tab menu's buttons for what used to have keys (2026-11-16).
+	// PRIMETIME's couch: Charm, Banter, Defy.
+	if (AsString.StartsWith(TEXT("Prime|")))
+	{
+		if (ADCCCharacterBase* Me = GetOwningCrawler())
+		{
+			if (Me->Wallet) { Me->Wallet->Server_PrimetimeAnswer(uint8(FCString::Atoi(*AsString.RightChop(6)))); }
+		}
+		return;
+	}
+
 	if (AsString.StartsWith(TEXT("Quick|")))
 	{
 		const FString What = AsString.RightChop(6);
 		if (ADCCCharacterBase* Me = GetOwningCrawler())
 		{
-			if (What == TEXT("Loot") || What == TEXT("Party") || What == TEXT("Bench"))
+			if (What == TEXT("Loot") || What == TEXT("Party") || What == TEXT("Bench") || What == TEXT("Event"))
 			{
 				Me->ToggleCharacterMenu(); // close the menu first: each of these opens its own screen
 			}
 			if (What == TEXT("Loot")) { Me->ToggleLootBoxScreen(); }
 			else if (What == TEXT("Party")) { Me->ToggleSessionMenu(); }
+			else if (What == TEXT("Event")) { ToggleEventPanel(); }
 			else if (What == TEXT("Bench")) { Me->ToggleGearBench(); }
 			else if (What == TEXT("Feed")) { Me->CycleFeedVisibility(); }
 			else if (What == TEXT("Log")) { Me->CycleLogFilter(); }
@@ -860,6 +867,7 @@ void ADCCHUD::DrawHUDContents()
 	DrawBossBanner();
 	DrawQuestCompleteBanner();
 	DrawItemToasts();
+	DrawPrimetime();
 	DrawNPCSubtitle();
 	DrawArcadeStatus();
 	DrawXpStrip(Crawler);
@@ -959,6 +967,7 @@ void ADCCHUD::DrawHUDContents()
 
 	if (!bShowMenu || !Crawler)
 	{
+		ShowCharacterSheet(false);
 		if (!bShowMenu && IsHudFeatureUnlocked(EDCCHudFeature::MenuCharacter) && !Arena)
 		{
 			DrawText(TEXT("[Tab] Character"), DimColour, 24.0f, 24.0f);
@@ -990,51 +999,24 @@ void ADCCHUD::DrawHUDContents()
 		}
 	}
 
-	// The menu look (crystal / neon / tabletop). Colours are restored before this function returns
-	// so the rest of the HUD keeps its own ink.
-	HeadingColour = HeadingDefault;
-	BodyColour = BodyDefault;
-	DimColour = DimDefault;
-	FLinearColor Panel(0.02f, 0.03f, 0.06f, 0.78f);
-	FLinearColor Hairline(0.95f, 0.82f, 0.40f, 0.0f);
-	switch (UiStyle())
+	// CHARACTER is a Slate page now (2026-11-23); the Canvas one below is the fallback if it cannot be made.
+	ShowCharacterSheet(MenuTab == EDCCMenuTab::Character);
+	if (MenuTab == EDCCMenuTab::Character && CharacterSheet && CharacterSheet->IsInViewport())
 	{
-	case 1:
-		Panel = FLinearColor(0.05f, 0.02f, 0.12f, 0.88f);
-		Hairline = FLinearColor(1.0f, 0.35f, 0.85f, 0.95f);
-		HeadingColour = FLinearColor(1.0f, 0.45f, 0.85f);
-		BodyColour = FLinearColor(0.55f, 1.0f, 0.95f);
-		DimColour = FLinearColor(0.70f, 0.45f, 0.95f);
-		break;
-	case 2:
-		Panel = FLinearColor(0.76f, 0.62f, 0.40f, 0.94f);
-		Hairline = FLinearColor(0.25f, 0.14f, 0.05f, 0.9f);
-		HeadingColour = FLinearColor(0.22f, 0.12f, 0.05f);
-		BodyColour = FLinearColor(0.12f, 0.08f, 0.04f);
-		DimColour = FLinearColor(0.35f, 0.24f, 0.12f);
-		break;
-	default:
-		// Dark frosted glass (2026-11-18): the first crystal was a pale blue-white wash behind white text and could
-		// not be read. Deep blue-black, the frost is a soft band along the top (drawn below).
-		Panel = FLinearColor(0.035f, 0.06f, 0.11f, 0.84f);
-		Hairline = FLinearColor(0.80f, 0.90f, 1.0f, 0.90f);
-		HeadingColour = FLinearColor(0.98f, 0.99f, 1.0f);
-		BodyColour = FLinearColor(0.96f, 0.98f, 1.0f);
-		DimColour = FLinearColor(0.78f, 0.84f, 0.92f);
-		break;
+		PreviousDrawnMenuTab = MenuTab;
+		return;
 	}
+
+	// The menu look (UI/DCCLook.h, the same three looks as the CHARACTER sheet). Colours are restored before this
+	// function returns so the rest of the HUD keeps its own ink.
+	const DCCLook::FLook& Look = DCCLook::Get();
+	const FLinearColor Panel = Look.Fill;
+	const FLinearColor Hairline = Look.Accent;
+	HeadingColour = Look.Accent;
+	BodyColour = Look.Ink;
+	DimColour = Look.Dim;
 	FUiScaleScope MenuScale(this); // the rest of this function draws the Tab menu, grown to the screen
 	DrawRect(Panel, 16.0f, 16.0f, 460.0f, Canvas->SizeY - 32.0f);
-	if (UiStyle() == 0)
-	{
-		// The frost: a light band fading down from the top edge, and a faint light rim down each side.
-		for (int32 k = 0; k < 6; ++k)
-		{
-			DrawRect(FLinearColor(0.70f, 0.82f, 1.0f, 0.07f * (1.0f - k / 6.0f)), 16.0f, 18.0f + k * 10.0f, 460.0f, 10.0f);
-		}
-		DrawRect(FLinearColor(0.70f, 0.82f, 1.0f, 0.18f), 16.0f, 16.0f, 1.0f, Canvas->SizeY - 32.0f);
-		DrawRect(FLinearColor(0.70f, 0.82f, 1.0f, 0.18f), 475.0f, 16.0f, 1.0f, Canvas->SizeY - 32.0f);
-	}
 	DrawRect(Hairline, 16.0f, 16.0f, 460.0f, 2.0f);
 
 	float Y = 28.0f;
@@ -1941,6 +1923,7 @@ float ADCCHUD::DrawMenuTabs(float X, float Y)
 		TArray<TPair<FString, FString>> Buttons;
 		Buttons.Emplace(TEXT("LOOT BOXES"), TEXT("Loot"));
 		Buttons.Emplace(TEXT("PARTY"), TEXT("Party"));
+		Buttons.Emplace(TEXT("OPEN MIC WEEK"), TEXT("Event"));
 		(void)FeedLabel; // the pose bench and the feed/log toggles are in SETTINGS now
 		(void)LogLabel;
 		if (bCanLeave)
@@ -6205,6 +6188,86 @@ void ADCCHUD::ToggleSessionMenu()
 	ApplyCursorForOpenPanels();
 }
 
+void ADCCHUD::ShowCharacterSheet(bool bShow)
+{
+	const bool bOpen = CharacterSheet && CharacterSheet->IsInViewport();
+	if (bShow == bOpen || !PlayerOwner)
+	{
+		return;
+	}
+	if (!bShow)
+	{
+		CharacterSheet->RemoveFromParent();
+		return;
+	}
+	if (!CharacterSheet)
+	{
+		CharacterSheet = CreateWidget<UDCCCharacterSheetWidget>(PlayerOwner, UDCCCharacterSheetWidget::StaticClass());
+		if (!CharacterSheet)
+		{
+			return;
+		}
+		TWeakObjectPtr<ADCCHUD> WeakHud(this);
+		CharacterSheet->OnTabRequested = [WeakHud](int32 Tab)
+		{
+			if (WeakHud.IsValid())
+			{
+				WeakHud->OpenMenuTab(static_cast<EDCCMenuTab>(Tab));
+			}
+		};
+		CharacterSheet->OnCloseRequested = [WeakHud]()
+		{
+			if (WeakHud.IsValid() && WeakHud->IsMenuVisible())
+			{
+				WeakHud->ToggleMenu();
+			}
+		};
+	}
+	CharacterSheet->AddToViewport(40);
+}
+
+void ADCCHUD::ShowBroadcast(const FString& Speaker, const FString& Text, float Seconds)
+{
+	BroadcastSpeaker = Speaker;
+	BroadcastText = Text;
+	BroadcastUntil = GetWorld() ? GetWorld()->GetRealTimeSeconds() + Seconds : 0.0;
+}
+
+bool ADCCHUD::IsEventPanelOpen() const
+{
+	return EventPanel && EventPanel->IsInViewport();
+}
+
+void ADCCHUD::ToggleEventPanel()
+{
+	if (!PlayerOwner)
+	{
+		return;
+	}
+	if (IsEventPanelOpen())
+	{
+		EventPanel->RemoveFromParent();
+		EventPanel = nullptr; // built fresh each time it opens, so its numbers are current
+		ApplyCursorForOpenPanels();
+		return;
+	}
+	EventPanel = CreateWidget<UDCCEventPanelWidget>(PlayerOwner, UDCCEventPanelWidget::StaticClass());
+	if (!EventPanel)
+	{
+		return;
+	}
+	TWeakObjectPtr<ADCCHUD> WeakHud(this);
+	EventPanel->OnCloseRequested = [WeakHud]()
+	{
+		if (WeakHud.IsValid() && WeakHud->IsEventPanelOpen())
+		{
+			WeakHud->ToggleEventPanel();
+		}
+	};
+	EventPanel->AddToViewport(64);
+	ApplyCursorForOpenPanels();
+}
+
 bool ADCCHUD::IsCosmeticShopOpen() const
 {
 	return CosmeticShop && CosmeticShop->IsInViewport();
@@ -6307,6 +6370,21 @@ void ADCCHUD::UpdateRoundOver()
 
 void ADCCHUD::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	if (EventPanel)
+	{
+		EventPanel->RemoveFromParent();
+	}
+	if (HudPaint.IsValid())
+	{
+		if (ULocalPlayer* LP = PlayerOwner ? PlayerOwner->GetLocalPlayer() : nullptr)
+		{
+			if (LP->ViewportClient)
+			{
+				LP->ViewportClient->RemoveViewportWidgetContent(HudPaint.ToSharedRef());
+			}
+		}
+		HudPaint.Reset();
+	}
 	// Like the select screen, these belong to this level, not the next one.
 	if (CosmeticShop)
 	{
@@ -6362,6 +6440,18 @@ void ADCCHUD::ApplyCursorForOpenPanels()
 {
 	if (!PlayerOwner)
 	{
+		return;
+	}
+
+	// The event page is modal too.
+	if (IsEventPanelOpen())
+	{
+		PlayerOwner->bShowMouseCursor = true;
+		PlayerOwner->bEnableClickEvents = true;
+		FInputModeUIOnly InputMode;
+		InputMode.SetWidgetToFocus(EventPanel->TakeWidget());
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		PlayerOwner->SetInputMode(InputMode);
 		return;
 	}
 
@@ -7048,6 +7138,7 @@ void ADCCHUD::DrawRallyKit(const ADCCRover* Rover)
 
 void ADCCHUD::DrawRepoMinimap(const ADCCRover* Self)
 {
+	FCanvasOnly CanvasOnly(this); // triangles / additive pictures / render targets: see UI/DCCHudPaint.h
 	// The city map (2026-11-14 polish): dark city blocks between neon streets, the yard in green, gas stations,
 	// the marks as diamonds in their board colour and number, rival crews in red, angry owners as red dots,
 	// and you as an arrow that points the way the truck faces. A legend inside the panel.
@@ -7266,35 +7357,52 @@ void ADCCHUD::DrawNPCSubtitle()
 	{
 		return;
 	}
-	const ADCCDialogueNPC* Speaker = nullptr;
-	float Best = 1500.0f * 1500.0f;
-	for (TActorIterator<ADCCDialogueNPC> It(GetWorld()); It; ++It)
+	// A broadcast (Hiss on PRIMETIME) wins over whoever is nearby.
+	FString SpeakerKey, Name, LineText;
+	FLinearColor SpeakerColour = FLinearColor(0.95f, 0.9f, 0.7f);
+	if (GetWorld()->GetRealTimeSeconds() < BroadcastUntil && !BroadcastText.IsEmpty())
 	{
-		const float D = FVector::DistSquared(It->GetActorLocation(), Pawn->GetActorLocation());
-		if (!It->GetCurrentLine().IsEmpty() && D < Best)
-		{
-			Best = D;
-			Speaker = *It;
-		}
+		SpeakerKey = Name = BroadcastSpeaker;
+		LineText = BroadcastText;
 	}
-	if (!Speaker)
+	else
 	{
-		return;
+		const ADCCDialogueNPC* Speaker = nullptr;
+		float Best = 1500.0f * 1500.0f;
+		for (TActorIterator<ADCCDialogueNPC> It(GetWorld()); It; ++It)
+		{
+			const float D = FVector::DistSquared(It->GetActorLocation(), Pawn->GetActorLocation());
+			if (!It->GetCurrentLine().IsEmpty() && D < Best)
+			{
+				Best = D;
+				Speaker = *It;
+			}
+		}
+		if (!Speaker)
+		{
+			return;
+		}
+		SpeakerKey = Speaker->SpeakerId.ToString() + TEXT(" ") + Speaker->DisplayName.ToString();
+		Name = Speaker->DisplayName.IsEmpty() ? Speaker->SpeakerId.ToString() : Speaker->DisplayName.ToString();
+		LineText = Speaker->GetCurrentLine().ToString();
+		SpeakerColour = Speaker->SpeechColour;
 	}
 
-	// "Name: line", wrapped to fit, in a dark band just above the hotbar.
+	// Who is talking decides the box (2026-11-23, Zoe: "specific color boxes or design style based on who's speaking"):
+	// a name tab in their colour over the line, their own box and edge, and for Hiss a TV lower third (UI/DCCLook.h).
+	const DCCLook::FVoice Voice = DCCLook::VoiceFor(SpeakerKey, SpeakerColour);
 	UFont* Font = GEngine->GetMediumFont();
-	const FString Name = Speaker->DisplayName.IsEmpty() ? FString() : Speaker->DisplayName.ToString() + TEXT(":  ");
+	const float TextScale = 1.15f;
 	TArray<FString> Words;
-	Speaker->GetCurrentLine().ToString().ParseIntoArrayWS(Words);
+	LineText.ParseIntoArrayWS(Words);
 	TArray<FString> Rows;
-	FString Row = Name;
+	FString Row;
 	const float MaxW = FMath::Min(900.0f, Canvas->SizeX * 0.6f);
 	for (const FString& Word : Words)
 	{
 		const FString Try = Row.IsEmpty() ? Word : Row + TEXT(" ") + Word;
 		float W = 0.0f, H = 0.0f;
-		GetTextSize(Try, W, H, Font, 1.0f);
+		GetTextSize(Try, W, H, Font, TextScale);
 		if (W > MaxW && !Row.IsEmpty())
 		{
 			Rows.Add(Row);
@@ -7311,20 +7419,68 @@ void ADCCHUD::DrawNPCSubtitle()
 	for (const FString& R : Rows)
 	{
 		float W = 0.0f;
-		GetTextSize(R, W, LineH, Font, 1.0f);
+		GetTextSize(R, W, LineH, Font, TextScale);
 		LineW = FMath::Max(LineW, W);
 	}
-	const float PanelH = Rows.Num() * (LineH + 2.0f) + 16.0f;
-	const float X = (Canvas->SizeX - LineW - 32.0f) * 0.5f;
-	const float Y = Canvas->SizeY - 150.0f - PanelH;
-	DrawRect(FLinearColor(0.0f, 0.0f, 0.0f, 0.6f), X, Y, LineW + 32.0f, PanelH);
-	float TY = Y + 8.0f;
-	for (int32 i = 0; i < Rows.Num(); ++i)
+	float NameW = 0.0f, NameH = 0.0f, TagW = 0.0f, TagH = 0.0f;
+	const FString NameUpper = Name.ToUpper();
+	GetTextSize(NameUpper, NameW, NameH, GEngine->GetLargeFont(), 1.0f);
+	const FString Tag = Voice.Tag;
+	if (!Tag.IsEmpty())
+	{
+		GetTextSize(Tag, TagW, TagH, GEngine->GetSmallFont(), 1.0f);
+	}
+	const float Pad = 18.0f;
+	const float BoxW = FMath::Max(LineW, NameW + TagW + 40.0f) + Pad * 2.0f;
+	const float BoxH = Rows.Num() * (LineH + 3.0f) + Pad * 1.4f;
+	const float TabH = NameH + 10.0f;
+
+	if (Voice.bLowerThird)
+	{
+		// A lower third: a full-colour name bar over a black strip, hard edges, an accent stripe down the left.
+		const float X = Canvas->SizeX * 0.5f - BoxW * 0.5f;
+		const float Y = Canvas->SizeY - 160.0f - BoxH;
+		DrawRect(Voice.Edge, X, Y - TabH, NameW + 28.0f, TabH);
+		DrawText(NameUpper, FLinearColor(0.03f, 0.03f, 0.03f), X + 14.0f, Y - TabH + 5.0f, GEngine->GetLargeFont(), 1.0f);
+		if (!Tag.IsEmpty())
+		{
+			// A blinking red dot before ON AIR.
+			const bool bOn = FMath::Fmod(GetWorld()->GetTimeSeconds(), 1.2f) < 0.8f;
+			const float TX = X + NameW + 40.0f;
+			DrawRect(FLinearColor(0.85f, 0.08f, 0.08f, 0.95f), TX - 6.0f, Y - TabH + 4.0f, TagW + 30.0f, TabH - 8.0f);
+			DrawRect(FLinearColor(1.0f, 1.0f, 1.0f, bOn ? 1.0f : 0.25f), TX + 2.0f, Y - TabH * 0.5f - 3.0f, 6.0f, 6.0f);
+			DrawText(Tag, FLinearColor::White, TX + 14.0f, Y - TabH * 0.5f - TagH * 0.5f, GEngine->GetSmallFont(), 1.0f);
+		}
+		DrawStyledRect(Voice.Box, X, Y, BoxW, BoxH, 0.0f, FLinearColor::Transparent); // hard edged, whatever the look
+		DrawRect(Voice.Edge, X, Y, 5.0f, BoxH);
+		float TY = Y + Pad * 0.7f;
+		for (const FString& R : Rows)
+		{
+			DrawText(R, Voice.Text, X + Pad + 6.0f, TY, Font, TextScale);
+			TY += LineH + 3.0f;
+		}
+		return;
+	}
+
+	// A box in the speaker's colours, with their name on a tab above its left edge.
+	const float X = (Canvas->SizeX - BoxW) * 0.5f;
+	const float Y = Canvas->SizeY - 160.0f - BoxH;
+	DrawStyledRect(Voice.Box, X, Y, BoxW, BoxH, DCCLook::Get().Radius + 4.0f, FLinearColor(Voice.Edge.R, Voice.Edge.G, Voice.Edge.B, 0.55f));
+	DrawRect(FLinearColor(Voice.Edge.R, Voice.Edge.G, Voice.Edge.B, 0.9f), X + 10.0f, Y + BoxH - 3.0f, BoxW - 20.0f, 3.0f);
+	DrawRect(FLinearColor(Voice.Edge.R * 0.25f, Voice.Edge.G * 0.25f, Voice.Edge.B * 0.25f, 0.95f), X + 14.0f, Y - TabH + 4.0f, NameW + TagW + (Tag.IsEmpty() ? 24.0f : 44.0f), TabH);
+	DrawText(NameUpper, Voice.Name, X + 26.0f, Y - TabH + 8.0f, GEngine->GetLargeFont(), 1.0f);
+	if (!Tag.IsEmpty())
+	{
+		DrawText(Tag, FLinearColor(Voice.Edge.R, Voice.Edge.G, Voice.Edge.B, 0.8f), X + 26.0f + NameW + 16.0f, Y - TabH + 8.0f + (NameH - TagH) * 0.6f,
+			GEngine->GetSmallFont(), 1.0f);
+	}
+	float TY = Y + Pad * 0.8f;
+	for (const FString& R : Rows)
 	{
 		float W = 0.0f, H = 0.0f;
-		GetTextSize(Rows[i], W, H, Font, 1.0f);
-		DrawText(Rows[i], i == 0 ? FLinearColor(1.0f, 0.86f, 0.6f) : FLinearColor(0.96f, 0.94f, 0.9f), (Canvas->SizeX - W) * 0.5f, TY, Font, 1.0f);
-		TY += LineH + 2.0f;
+		GetTextSize(R, W, H, Font, TextScale);
+		DrawText(R, Voice.Text, X + (BoxW - W) * 0.5f, TY, Font, TextScale);
+		TY += LineH + 3.0f;
 	}
 }
 
@@ -7532,6 +7688,7 @@ void ADCCHUD::DrawArcadeTip(const ADCCArcadeArena* Arena)
 
 void ADCCHUD::DrawMineReel()
 {
+	FCanvasOnly CanvasOnly(this); // triangles / additive pictures / render targets: see UI/DCCHudPaint.h
 	if (!Canvas || !GetWorld())
 	{
 		return;
@@ -7724,7 +7881,7 @@ void ADCCHUD::DrawMineNote()
 	}
 
 	// Tape full: a banner that stays until the round ends, so nobody films on into nothing.
-	if (Haunt && Entry && Haunt->ReelPhase == 0 && Entry->Tape <= 0.0f && Haunt->TimeLeft > 0.0f)
+	if (Haunt && Entry && !Haunt->bPrimetime && Haunt->ReelPhase == 0 && Entry->Tape <= 0.0f && Haunt->TimeLeft > 0.0f)
 	{
 		UFont* Medium = GEngine->GetMediumFont();
 		const FString Banner = TEXT("TAPE FULL  -  get it back to the cage");
@@ -8123,7 +8280,7 @@ float ADCCHUD::DrawSettingsTab(float X, float Y, ADCCCharacterBase* Crawler)
 	Y += LineHeight;
 	{
 		const int32 Style = UiStyle();
-		const TCHAR* Names[] = { TEXT("CRYSTAL"), TEXT("NEON"), TEXT("TABLETOP") };
+		const TCHAR* Names[] = { TEXT("GLASS"), TEXT("NEON"), TEXT("BROADCAST") };
 		for (int32 i = 0; i < 3; ++i)
 		{
 			Button(X + i * 112.0f, Y, 104.0f, Names[i], FString::Printf(TEXT("Style|%d"), i), Style == i);
@@ -8278,8 +8435,8 @@ void ADCCHUD::HandleSettingsClick(const FString& Command)
 		ShowNotice(Index == 1
 			? NSLOCTEXT("DCC", "UiNeon", "Neon Arcade.")
 			: Index == 2
-			? NSLOCTEXT("DCC", "UiTable", "Tabletop.")
-			: NSLOCTEXT("DCC", "UiCrystal", "Frosted crystal."));
+			? NSLOCTEXT("DCC", "UiBroadcast", "Broadcast.")
+			: NSLOCTEXT("DCC", "UiCrystal", "System glass."));
 	}
 	else if (Kind == TEXT("Reset"))
 	{
@@ -8945,4 +9102,194 @@ void ADCCHUD::DrawXpStrip(ADCCCharacterBase* Crawler)
 		DrawText(Note, FLinearColor(0.45f, 1.0f, 0.55f, 0.75f + 0.25f * FMath::Sin(float(Now) * 4.0f)),
 			X + W + 20.0f + RW, Y - RH * 0.5f + H * 0.5f, Small, 1.0f);
 	}
+}
+
+// ---- the HUD through Slate (UI/DCCHudPaint.h) -------------------------------------------------------------------
+
+void ADCCHUD::EnsureHudPaint()
+{
+	if (HudPaint.IsValid() || !PlayerOwner || !PlayerOwner->IsLocalController())
+	{
+		return;
+	}
+	ULocalPlayer* LP = PlayerOwner->GetLocalPlayer();
+	if (!LP || !LP->ViewportClient || !FSlateApplication::IsInitialized())
+	{
+		return;
+	}
+	HudPaint = SNew(SDCCHudPaint);
+	// Under every menu widget (the sheet is 40, the shop 62), over the 3D view.
+	LP->ViewportClient->AddViewportWidgetContent(HudPaint.ToSharedRef(), -10);
+}
+
+void ADCCHUD::PostRender()
+{
+	EnsureHudPaint();
+	HudRecording.Reset();
+	CanvasOnlyDepth = 0;
+	Super::PostRender();
+	if (bLootScreenOpen)
+	{
+		HudRecording.Reset(); // the loot box screen is drawn on the Canvas, under this layer: keep it clear
+	}
+	if (HudPaint.IsValid())
+	{
+		HudPaint->Publish(MoveTemp(HudRecording));
+		HudRecording.Reset();
+	}
+}
+
+bool ADCCHUD::IsPaintingThroughSlate() const
+{
+	return HudPaint.IsValid() && CanvasOnlyDepth == 0 && Canvas != nullptr;
+}
+
+void ADCCHUD::DrawRect(FLinearColor RectColor, float ScreenX, float ScreenY, float ScreenW, float ScreenH)
+{
+	if (!IsPaintingThroughSlate())
+	{
+		AHUD::DrawRect(RectColor, ScreenX, ScreenY, ScreenW, ScreenH);
+		return;
+	}
+	if (RectColor.A <= 0.001f || ScreenW <= 0.0f || ScreenH <= 0.0f)
+	{
+		return;
+	}
+	const DCCLook::FLook& Look = DCCLook::Get();
+	FDCCHudCmd& C = HudRecording.AddDefaulted_GetRef();
+	C.Kind = FDCCHudCmd::KBox;
+	C.Pos = FVector2f(ScreenX, ScreenY) * UiScale;
+	C.Size = FVector2f(ScreenW, ScreenH) * UiScale;
+	C.Colour = RectColor;
+	const bool bFullScreen = Canvas && ScreenW >= Canvas->SizeX * 0.9f && ScreenH >= Canvas->SizeY * 0.9f;
+	if (!bFullScreen && DCCHudPaint::IsPanel(RectColor, ScreenW, ScreenH))
+	{
+		// A panel: the look's window colour (keeping how see-through it was meant to be), rounded, with a fine edge.
+		C.Colour = FLinearColor(Look.Fill.R, Look.Fill.G, Look.Fill.B, FMath::Min(0.96f, RectColor.A + 0.08f));
+		C.Radius = Look.Radius * UiScale;
+		C.Edge = FLinearColor(Look.Accent.R, Look.Accent.G, Look.Accent.B, 0.38f);
+	}
+	else if (ScreenW >= 6.0f && ScreenH >= 6.0f && !bFullScreen)
+	{
+		// Bars, chips and cards: softly rounded (pills for thin bars), never sharper than the look.
+		C.Radius = FMath::Min(Look.Radius * 0.75f, FMath::Min(ScreenW, ScreenH) * 0.5f) * UiScale;
+	}
+}
+
+void ADCCHUD::DrawStyledRect(const FLinearColor& Colour, float X, float Y, float W, float H, float Radius, const FLinearColor& Edge)
+{
+	if (!IsPaintingThroughSlate())
+	{
+		AHUD::DrawRect(Colour, X, Y, W, H);
+		return;
+	}
+	FDCCHudCmd& C = HudRecording.AddDefaulted_GetRef();
+	C.Kind = FDCCHudCmd::KBox;
+	C.Pos = FVector2f(X, Y) * UiScale;
+	C.Size = FVector2f(W, H) * UiScale;
+	C.Colour = Colour;
+	C.Radius = Radius * UiScale;
+	C.Edge = Edge;
+}
+
+void ADCCHUD::DrawText(const FString& Text, FLinearColor TextColor, float ScreenX, float ScreenY, UFont* Font, float Scale, bool bScalePosition)
+{
+	if (!IsPaintingThroughSlate())
+	{
+		AHUD::DrawText(Text, TextColor, ScreenX, ScreenY, Font, Scale, bScalePosition);
+		return;
+	}
+	if (Text.IsEmpty() || TextColor.A <= 0.001f)
+	{
+		return;
+	}
+	if (bScalePosition)
+	{
+		ScreenX *= Scale;
+		ScreenY *= Scale;
+	}
+	DrawSlateText(Text, DCCHudPaint::FontFor(Font, Scale), TextColor, ScreenX, ScreenY, true);
+}
+
+void ADCCHUD::DrawSlateText(const FString& Text, const FSlateFontInfo& Font, const FLinearColor& Colour, float X, float Y, bool bShadow)
+{
+	if (Text.IsEmpty())
+	{
+		return;
+	}
+	if (!IsPaintingThroughSlate())
+	{
+		if (Canvas)
+		{
+			FCanvasTextItem Item(FVector2D(X, Y), FText::FromString(Text), Font, Colour);
+			if (bShadow)
+			{
+				Item.EnableShadow(FLinearColor(0.0f, 0.0f, 0.0f, 0.55f * Colour.A), FVector2D(1.0f, 1.0f));
+			}
+			Canvas->DrawItem(Item);
+		}
+		return;
+	}
+	FDCCHudCmd& C = HudRecording.AddDefaulted_GetRef();
+	C.Kind = FDCCHudCmd::KText;
+	C.Pos = FVector2f(X, Y) * UiScale;
+	C.Colour = Colour;
+	C.Text = Text;
+	C.Font = Font;
+	C.Font.Size = Font.Size * UiScale;
+	C.bShadow = bShadow;
+}
+
+void ADCCHUD::GetTextSize(const FString& Text, float& OutWidth, float& OutHeight, UFont* Font, float Scale) const
+{
+	if (!IsPaintingThroughSlate())
+	{
+		AHUD::GetTextSize(Text, OutWidth, OutHeight, Font, Scale);
+		return;
+	}
+	const FVector2D Size = DCCHudPaint::Measure(Text, DCCHudPaint::FontFor(Font, Scale));
+	OutWidth = Size.X;
+	OutHeight = Size.Y;
+}
+
+void ADCCHUD::DrawLine(float StartScreenX, float StartScreenY, float EndScreenX, float EndScreenY, FLinearColor LineColor, float LineThickness)
+{
+	if (!IsPaintingThroughSlate())
+	{
+		AHUD::DrawLine(StartScreenX, StartScreenY, EndScreenX, EndScreenY, LineColor, LineThickness);
+		return;
+	}
+	FDCCHudCmd& C = HudRecording.AddDefaulted_GetRef();
+	C.Kind = FDCCHudCmd::KLine;
+	C.Pos = FVector2f(StartScreenX, StartScreenY) * UiScale;
+	C.Size = FVector2f(EndScreenX, EndScreenY) * UiScale;
+	C.Colour = LineColor;
+	C.Radius = FMath::Max(1.0f, LineThickness) * UiScale;
+}
+
+void ADCCHUD::DrawTexture(UTexture* Texture, float ScreenX, float ScreenY, float ScreenW, float ScreenH, float TextureU, float TextureV,
+	float TextureUWidth, float TextureVHeight, FLinearColor TintColor, EBlendMode BlendMode, float Scale, bool bScalePosition, float Rotation,
+	FVector2D RotPivot)
+{
+	// Slate has no additive blend and no rotation here: those stay on the Canvas.
+	if (!IsPaintingThroughSlate() || !Texture || BlendMode == BLEND_Additive || Rotation != 0.0f)
+	{
+		AHUD::DrawTexture(Texture, ScreenX, ScreenY, ScreenW, ScreenH, TextureU, TextureV, TextureUWidth, TextureVHeight, TintColor, BlendMode,
+			Scale, bScalePosition, Rotation, RotPivot);
+		return;
+	}
+	if (bScalePosition)
+	{
+		ScreenX *= Scale;
+		ScreenY *= Scale;
+	}
+	FDCCHudCmd& C = HudRecording.AddDefaulted_GetRef();
+	C.Kind = FDCCHudCmd::KImage;
+	C.Pos = FVector2f(ScreenX, ScreenY) * UiScale;
+	C.Size = FVector2f(ScreenW, ScreenH) * Scale * UiScale;
+	C.Colour = TintColor;
+	C.Brush.SetResourceObject(Texture);
+	C.Brush.ImageSize = FVector2D(ScreenW, ScreenH);
+	C.Brush.DrawAs = ESlateBrushDrawType::Image;
+	C.Brush.SetUVRegion(FBox2f(FVector2f(TextureU, TextureV), FVector2f(TextureU + TextureUWidth, TextureV + TextureVHeight)));
 }

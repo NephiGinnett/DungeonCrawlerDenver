@@ -224,6 +224,11 @@ def add_event_rewards(credits):
         player = (t.get("gameName") or t["name"]).strip()
         key = (player.lower(), monday)
         counts[key] = (player, counts.get(key, (player, 0))[1] + 1)
+    # This week's line counts, for the game's OPEN MIC WEEK page (UI/DCCEventPanelWidget.cpp).
+    today = datetime.now(timezone.utc)
+    this_monday = (today - timedelta(days=today.weekday())).date().isoformat()
+    credits["week"] = {"monday": this_monday,
+                       "counts": {k: n for (k, m), (_, n) in counts.items() if m == this_monday}}
     have = {c["id"] for c in credits["credits"]}
     for (key, monday), (player, n) in sorted(counts.items()):
         for m in milestones:
