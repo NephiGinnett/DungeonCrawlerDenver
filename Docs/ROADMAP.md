@@ -1957,3 +1957,9 @@ The morning note that the Fab spell catalogue was still waiting is out of date. 
 
 Claude's later notes were read and not started. Ring stages are still named "Stage N" (Part H5). Part I after the doors Claude already built (door sounds, lockdowns, loose props, seats, flickering lamps) is still open.
 
+### 2026-11-25 (Grok): friend build 2026-11-25.1640
+
+Git `433845f` is on `main` (tower defense, the Ring, the spell pass, set doors, EOS parties). The Fab sample heroes stayed off git. The friend build is stamped `2026-11-25.1640` and was pushed to `zoebubble/dungeon-crawler-denver:windows`.
+
+The first cook failed on one empty file, `Content/Polytope_Studio/Demo/Characters/Mannequins/Textures/Quinn/T_Quinn_01_CCRCCPlastic_MSK.uasset` (0 bytes, the same as the vault copy; the night log already called it unreadable). It was replaced from that pack's Modular Armors copy (12.4 MB, a real package). Nothing else in `Content` was empty. The second cook succeeded. Zip: `D:\Builds\DungeonCrawlerDenver-2026-11-25.1640.zip` (about 4.5 GB). EOS sign-in is in this build and still needs a friend on another PC.
+
