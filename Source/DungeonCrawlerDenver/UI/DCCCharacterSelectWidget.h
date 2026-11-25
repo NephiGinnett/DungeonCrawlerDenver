@@ -12,7 +12,8 @@
  *   - the six crawlers (the body on stage swaps as you pick), with their records
  *   - PLAY: into the Den, solo
  *   - HOST A PARTY: into the Den, open to friends; the party menu there has the invite
- *   - JOIN A PARTY: joins the invite on the clipboard (copy the host's message, click)
+ *   - JOIN A PARTY: the open parties from Epic Online Services, one button each (Session/DCCOnline); with EOS
+ *     off, or by choice, the invite on the clipboard (copy the host's message, click)
  *   - QUIT
  *
  * The crawler pick is remembered between launches, so a returning player just
@@ -42,6 +43,13 @@ private:
 	void Play();
 	void HostParty();
 	void JoinParty();
+	/** Joins the invite on the clipboard (the way JOIN A PARTY worked before EOS, and still the fallback). */
+	void JoinFromInvite();
+	/** Asks EOS for open parties and rebuilds the list. */
+	void RefreshParties();
+	void JoinOnline(int32 Index);
+	/** True when the picked crawler's password is ready to send to a host; says why not otherwise. */
+	bool ReadyToJoin();
 	void RejoinLast();
 	void Quit();
 	void OpenPoseBench();
@@ -66,4 +74,10 @@ private:
 	FString Message;
 	bool bMessageIsError = false;
 	bool bLeaving = false;
+
+	// The party list (2026-11-25, EOS): shown under JOIN A PARTY once clicked.
+	bool bPartyPicker = false;
+	bool bSearching = false;
+	FString PartyNote;
+	TSharedPtr<class SVerticalBox> PartyList;
 };

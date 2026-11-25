@@ -1,0 +1,1171 @@
+{
+ "pack": "Forest_village",
+ "maps": [
+  {
+   "path": "/Game/Forest_village/Level/Asset_showcase.Asset_showcase",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/Forest_village/Level/L_showcase_level.L_showcase_level",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/Forest_village/Level/Level_instance/Build_update.Build_update",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/Forest_village/Level/Level_instance/PLA_02.PLA_02",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/Forest_village/Level/Level_instance/PLA_03.PLA_03",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/Forest_village/Level/Level_instance/PLA_04.PLA_04",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/Forest_village/Level/Level_instance/PLA_Update_01.PLA_Update_01",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/Forest_village/Level/Level_instance/PLA_Update_02.PLA_Update_02",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/Forest_village/Level/Level_instance/Prefab_01.Prefab_01",
+   "partitioned": true
+  }
+ ],
+ "meshes": [
+  {
+   "path": "/Game/Forest_village/Meshes/Mountains/SM_mountain.SM_mountain",
+   "name": "SM_mountain",
+   "size": [
+    47978.0,
+    47978.0,
+    24530.0
+   ],
+   "tris": 61952,
+   "nanite": "False",
+   "role": "big"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Vegetation/SM_pine_tree_02.SM_pine_tree_02",
+   "name": "SM_pine_tree_02",
+   "size": [
+    5568.0,
+    5444.0,
+    13145.0
+   ],
+   "tris": 22358,
+   "nanite": "False",
+   "role": "big"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Vegetation/SM_pine_tree_03.SM_pine_tree_03",
+   "name": "SM_pine_tree_03",
+   "size": [
+    5568.0,
+    5444.0,
+    13106.0
+   ],
+   "tris": 15846,
+   "nanite": "False",
+   "role": "big"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Vegetation/SM_pine_tree_04.SM_pine_tree_04",
+   "name": "SM_pine_tree_04",
+   "size": [
+    5568.0,
+    5444.0,
+    13080.0
+   ],
+   "tris": 15846,
+   "nanite": "False",
+   "role": "big"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Vegetation/SM_pine_tree_05.SM_pine_tree_05",
+   "name": "SM_pine_tree_05",
+   "size": [
+    5568.0,
+    5444.0,
+    13104.0
+   ],
+   "tris": 15846,
+   "nanite": "False",
+   "role": "big"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Vegetation/Update/SM_tree_01_Update.SM_tree_01_Update",
+   "name": "SM_tree_01_Update",
+   "size": [
+    5568.0,
+    5444.0,
+    12145.0
+   ],
+   "tris": 12516,
+   "nanite": "False",
+   "role": "big"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Vegetation/Update/SM_tree_02_Update.SM_tree_02_Update",
+   "name": "SM_tree_02_Update",
+   "size": [
+    5568.0,
+    5444.0,
+    10974.0
+   ],
+   "tris": 12504,
+   "nanite": "False",
+   "role": "big"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Door/SM_door_alone.SM_door_alone",
+   "name": "SM_door_alone",
+   "size": [
+    131.0,
+    15.0,
+    248.0
+   ],
+   "tris": 7500,
+   "nanite": "False",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Door/SM_door_alone_02.SM_door_alone_02",
+   "name": "SM_door_alone_02",
+   "size": [
+    131.0,
+    26.0,
+    248.0
+   ],
+   "tris": 15024,
+   "nanite": "False",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Door/SM_door_complete.SM_door_complete",
+   "name": "SM_door_complete",
+   "size": [
+    162.0,
+    33.0,
+    265.0
+   ],
+   "tris": 8112,
+   "nanite": "False",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Door/SM_door_frame.SM_door_frame",
+   "name": "SM_door_frame",
+   "size": [
+    162.0,
+    34.0,
+    263.0
+   ],
+   "tris": 612,
+   "nanite": "False",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Kit/SM_door_frame_module.SM_door_frame_module",
+   "name": "SM_door_frame_module",
+   "size": [
+    192.0,
+    51.0,
+    309.0
+   ],
+   "tris": 352,
+   "nanite": "False",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Carpet/SM_carpet.SM_carpet",
+   "name": "SM_carpet",
+   "size": [
+    349.0,
+    349.0,
+    1.0
+   ],
+   "tris": 1532,
+   "nanite": "False",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Carpet/SM_carpet_02.SM_carpet_02",
+   "name": "SM_carpet_02",
+   "size": [
+    294.0,
+    179.0,
+    1.0
+   ],
+   "tris": 28,
+   "nanite": "False",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Carpet/SM_carpet_ceiling.SM_carpet_ceiling",
+   "name": "SM_carpet_ceiling",
+   "size": [
+    64.0,
+    285.0,
+    33.0
+   ],
+   "tris": 52,
+   "nanite": "False",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Kit/SM_floor_wood.SM_floor_wood",
+   "name": "SM_floor_wood",
+   "size": [
+    543.0,
+    451.0,
+    32.0
+   ],
+   "tris": 652,
+   "nanite": "False",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Wood_modules/SM_floor_wood_02.SM_floor_wood_02",
+   "name": "SM_floor_wood_02",
+   "size": [
+    541.0,
+    332.0,
+    42.0
+   ],
+   "tris": 652,
+   "nanite": "False",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Kit/SM_floor_wood_03.SM_floor_wood_03",
+   "name": "SM_floor_wood_03",
+   "size": [
+    543.0,
+    450.0,
+    16.0
+   ],
+   "tris": 484,
+   "nanite": "False",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Interior_props/SM_interior_circular_beam.SM_interior_circular_beam",
+   "name": "SM_interior_circular_beam",
+   "size": [
+    638.0,
+    657.0,
+    40.0
+   ],
+   "tris": 256,
+   "nanite": "False",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Interior_props/SM_interior_circular_beam_02.SM_interior_circular_beam_02",
+   "name": "SM_interior_circular_beam_02",
+   "size": [
+    621.0,
+    628.0,
+    86.0
+   ],
+   "tris": 252,
+   "nanite": "False",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Kit/SM_wood_beam.SM_wood_beam",
+   "name": "SM_wood_beam",
+   "size": [
+    532.0,
+    23.0,
+    27.0
+   ],
+   "tris": 12,
+   "nanite": "False",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Kit/SM_beam_01.SM_beam_01",
+   "name": "SM_beam_01",
+   "size": [
+    25.0,
+    25.0,
+    310.0
+   ],
+   "tris": 44,
+   "nanite": "False",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Wood_modules/SM_beam_02.SM_beam_02",
+   "name": "SM_beam_02",
+   "size": [
+    19.0,
+    19.0,
+    362.0
+   ],
+   "tris": 41,
+   "nanite": "False",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Wood_modules/SM_beam_03.SM_beam_03",
+   "name": "SM_beam_03",
+   "size": [
+    94.0,
+    25.0,
+    309.0
+   ],
+   "tris": 470,
+   "nanite": "False",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Kit/SM_beam_04.SM_beam_04",
+   "name": "SM_beam_04",
+   "size": [
+    19.0,
+    19.0,
+    362.0
+   ],
+   "tris": 44,
+   "nanite": "False",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Kit/SM_beam_05.SM_beam_05",
+   "name": "SM_beam_05",
+   "size": [
+    19.0,
+    19.0,
+    362.0
+   ],
+   "tris": 76,
+   "nanite": "False",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Kit/SM_beam_06.SM_beam_06",
+   "name": "SM_beam_06",
+   "size": [
+    19.0,
+    19.0,
+    206.0
+   ],
+   "tris": 44,
+   "nanite": "False",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Kit/SM_beam_07.SM_beam_07",
+   "name": "SM_beam_07",
+   "size": [
+    94.0,
+    25.0,
+    309.0
+   ],
+   "tris": 472,
+   "nanite": "False",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Wood_modules/SM_beam_circular.SM_beam_circular",
+   "name": "SM_beam_circular",
+   "size": [
+    33.0,
+    34.0,
+    377.0
+   ],
+   "tris": 268,
+   "nanite": "False",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Carpet/SM_carpet_wall.SM_carpet_wall",
+   "name": "SM_carpet_wall",
+   "size": [
+    50.0,
+    1.0,
+    294.0
+   ],
+   "tris": 28,
+   "nanite": "False",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Kit/SM_plank_single.SM_plank_single",
+   "name": "SM_plank_single",
+   "size": [
+    47.0,
+    7.0,
+    412.0
+   ],
+   "tris": 44,
+   "nanite": "False",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Wood_modules/SM_wood_plank.SM_wood_plank",
+   "name": "SM_wood_plank",
+   "size": [
+    47.0,
+    7.0,
+    412.0
+   ],
+   "tris": 44,
+   "nanite": "False",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Plants/SM_Plant_03.SM_Plant_03",
+   "name": "SM_Plant_03",
+   "size": [
+    274.0,
+    249.0,
+    102.0
+   ],
+   "tris": 192,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Plants/SM_Plant_04.SM_Plant_04",
+   "name": "SM_Plant_04",
+   "size": [
+    181.0,
+    165.0,
+    68.0
+   ],
+   "tris": 192,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Interior_props/SM_bag_01.SM_bag_01",
+   "name": "SM_bag_01",
+   "size": [
+    80.0,
+    83.0,
+    88.0
+   ],
+   "tris": 5376,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Interior_props/SM_bag_02.SM_bag_02",
+   "name": "SM_bag_02",
+   "size": [
+    63.0,
+    59.0,
+    57.0
+   ],
+   "tris": 5376,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Interior_props/SM_bed.SM_bed",
+   "name": "SM_bed",
+   "size": [
+    160.0,
+    294.0,
+    123.0
+   ],
+   "tris": 11908,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Wood_modules/SM_bridge_module.SM_bridge_module",
+   "name": "SM_bridge_module",
+   "size": [
+    172.0,
+    247.0,
+    108.0
+   ],
+   "tris": 1560,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Wood_modules/SM_bridge_module_02.SM_bridge_module_02",
+   "name": "SM_bridge_module_02",
+   "size": [
+    172.0,
+    247.0,
+    116.0
+   ],
+   "tris": 1508,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Vegetation/SM_bush.SM_bush",
+   "name": "SM_bush",
+   "size": [
+    326.0,
+    298.0,
+    190.0
+   ],
+   "tris": 15766,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Door/SM_crate_01.SM_crate_01",
+   "name": "SM_crate_01",
+   "size": [
+    107.0,
+    51.0,
+    51.0
+   ],
+   "tris": 436,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Door/SM_crate_02.SM_crate_02",
+   "name": "SM_crate_02",
+   "size": [
+    51.0,
+    51.0,
+    51.0
+   ],
+   "tris": 396,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Door/SM_crate_group.SM_crate_group",
+   "name": "SM_crate_group",
+   "size": [
+    199.0,
+    202.0,
+    100.0
+   ],
+   "tris": 2060,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Kit/SM_fence_01.SM_fence_01",
+   "name": "SM_fence_01",
+   "size": [
+    174.0,
+    11.0,
+    92.0
+   ],
+   "tris": 816,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Interior_props/SM_interior_recipient_01.SM_interior_recipient_01",
+   "name": "SM_interior_recipient_01",
+   "size": [
+    21.0,
+    21.0,
+    8.0
+   ],
+   "tris": 1532,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Interior_props/SM_interior_recipient_02.SM_interior_recipient_02",
+   "name": "SM_interior_recipient_02",
+   "size": [
+    20.0,
+    20.0,
+    27.0
+   ],
+   "tris": 1532,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Interior_props/SM_interior_recipient_03.SM_interior_recipient_03",
+   "name": "SM_interior_recipient_03",
+   "size": [
+    31.0,
+    30.0,
+    21.0
+   ],
+   "tris": 1532,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Lantern/SM_lantern.SM_lantern",
+   "name": "SM_lantern",
+   "size": [
+    50.0,
+    50.0,
+    166.0
+   ],
+   "tris": 25194,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Interior_props/SM_pillow.SM_pillow",
+   "name": "SM_pillow",
+   "size": [
+    60.0,
+    47.0,
+    20.0
+   ],
+   "tris": 1664,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Vegetation/SM_pine_tree_01.SM_pine_tree_01",
+   "name": "SM_pine_tree_01",
+   "size": [
+    464.0,
+    454.0,
+    1084.0
+   ],
+   "tris": 12528,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Vegetation/SM_plant.SM_plant",
+   "name": "SM_plant",
+   "size": [
+    280.0,
+    266.0,
+    103.0
+   ],
+   "tris": 1816,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Vegetation/SM_plant1.SM_plant1",
+   "name": "SM_plant1",
+   "size": [
+    280.0,
+    266.0,
+    103.0
+   ],
+   "tris": 1816,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Kit/SM_plateform.SM_plateform",
+   "name": "SM_plateform",
+   "size": [
+    1093.0,
+    1092.0,
+    564.0
+   ],
+   "tris": 10062,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Rocks/SM_rock_01.SM_rock_01",
+   "name": "SM_rock_01",
+   "size": [
+    94.0,
+    93.0,
+    52.0
+   ],
+   "tris": 2244,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Rocks/SM_rock_02.SM_rock_02",
+   "name": "SM_rock_02",
+   "size": [
+    88.0,
+    81.0,
+    52.0
+   ],
+   "tris": 2166,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Rocks/SM_rock_03.SM_rock_03",
+   "name": "SM_rock_03",
+   "size": [
+    114.0,
+    112.0,
+    75.0
+   ],
+   "tris": 5708,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Rocks/SM_rock_04.SM_rock_04",
+   "name": "SM_rock_04",
+   "size": [
+    257.0,
+    217.0,
+    76.0
+   ],
+   "tris": 12362,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Rocks/SM_rock_05.SM_rock_05",
+   "name": "SM_rock_05",
+   "size": [
+    407.0,
+    480.0,
+    165.0
+   ],
+   "tris": 20909,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Rocks/SM_rock_06.SM_rock_06",
+   "name": "SM_rock_06",
+   "size": [
+    331.0,
+    360.0,
+    236.0
+   ],
+   "tris": 20567,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Kit/SM_roof_circular_01.SM_roof_circular_01",
+   "name": "SM_roof_circular_01",
+   "size": [
+    956.0,
+    952.0,
+    659.0
+   ],
+   "tris": 1340,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Kit/SM_roof_circular_02.SM_roof_circular_02",
+   "name": "SM_roof_circular_02",
+   "size": [
+    685.0,
+    641.0,
+    715.0
+   ],
+   "tris": 1340,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Kit/SM_roof_circular_03.SM_roof_circular_03",
+   "name": "SM_roof_circular_03",
+   "size": [
+    683.0,
+    645.0,
+    1126.0
+   ],
+   "tris": 1340,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Kit/SM_roof_square.SM_roof_square",
+   "name": "SM_roof_square",
+   "size": [
+    1063.0,
+    956.0,
+    304.0
+   ],
+   "tris": 252,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Vegetation/Update/SM_roots_01.SM_roots_01",
+   "name": "SM_roots_01",
+   "size": [
+    1906.0,
+    1740.0,
+    962.0
+   ],
+   "tris": 3330,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Vegetation/Update/SM_roots_02.SM_roots_02",
+   "name": "SM_roots_02",
+   "size": [
+    1779.0,
+    1624.0,
+    1540.0
+   ],
+   "tris": 3318,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Ropes/SM_rope_04.SM_rope_04",
+   "name": "SM_rope_04",
+   "size": [
+    651.0,
+    4.0,
+    125.0
+   ],
+   "tris": 3636,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Kit/SM_round_house.SM_round_house",
+   "name": "SM_round_house",
+   "size": [
+    1095.0,
+    1095.0,
+    1590.0
+   ],
+   "tris": 29741,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Kit/SM_round_house02.SM_round_house02",
+   "name": "SM_round_house02",
+   "size": [
+    948.0,
+    952.0,
+    1023.0
+   ],
+   "tris": 37420,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Kit/SM_round_house_interior_01.SM_round_house_interior_01",
+   "name": "SM_round_house_interior_01",
+   "size": [
+    939.0,
+    962.0,
+    1047.0
+   ],
+   "tris": 37980,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Kit/SM_round_house_interior_02.SM_round_house_interior_02",
+   "name": "SM_round_house_interior_02",
+   "size": [
+    944.0,
+    961.0,
+    1046.0
+   ],
+   "tris": 38332,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Interior_props/SM_shelf_01.SM_shelf_01",
+   "name": "SM_shelf_01",
+   "size": [
+    118.0,
+    31.0,
+    17.0
+   ],
+   "tris": 196,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Kit/SM_small_circular_building.SM_small_circular_building",
+   "name": "SM_small_circular_building",
+   "size": [
+    570.0,
+    570.0,
+    594.0
+   ],
+   "tris": 1374,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Interior_props/SM_small_crate.SM_small_crate",
+   "name": "SM_small_crate",
+   "size": [
+    111.0,
+    59.0,
+    31.0
+   ],
+   "tris": 108,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Kit/SM_small_roof_01.SM_small_roof_01",
+   "name": "SM_small_roof_01",
+   "size": [
+    444.0,
+    349.0,
+    166.0
+   ],
+   "tris": 9582,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Kit/SM_small_roof_02.SM_small_roof_02",
+   "name": "SM_small_roof_02",
+   "size": [
+    720.0,
+    460.0,
+    369.0
+   ],
+   "tris": 12719,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Kit/SM_small_roof_03.SM_small_roof_03",
+   "name": "SM_small_roof_03",
+   "size": [
+    717.0,
+    458.0,
+    368.0
+   ],
+   "tris": 12619,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Interior_props/SM_small_stool.SM_small_stool",
+   "name": "SM_small_stool",
+   "size": [
+    90.0,
+    43.0,
+    44.0
+   ],
+   "tris": 436,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Kit/SM_small_wood_building.SM_small_wood_building",
+   "name": "SM_small_wood_building",
+   "size": [
+    597.0,
+    566.0,
+    788.0
+   ],
+   "tris": 1962,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Interior_props/SM_table_01.SM_table_01",
+   "name": "SM_table_01",
+   "size": [
+    229.0,
+    95.0,
+    82.0
+   ],
+   "tris": 844,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Wood_modules/SM_window.SM_window",
+   "name": "SM_window",
+   "size": [
+    98.0,
+    25.0,
+    139.0
+   ],
+   "tris": 742,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Wood_modules/SM_window_interior.SM_window_interior",
+   "name": "SM_window_interior",
+   "size": [
+    98.0,
+    34.0,
+    137.0
+   ],
+   "tris": 742,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Kit/SM_large_module.SM_large_module",
+   "name": "SM_large_module",
+   "size": [
+    700.0,
+    30.0,
+    630.0
+   ],
+   "tris": 12,
+   "nanite": "False",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Kit/SM_large_module_window.SM_large_module_window",
+   "name": "SM_large_module_window",
+   "size": [
+    700.0,
+    35.0,
+    630.0
+   ],
+   "tris": 754,
+   "nanite": "False",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Kit/SM_module_front.SM_module_front",
+   "name": "SM_module_front",
+   "size": [
+    485.0,
+    14.0,
+    261.0
+   ],
+   "tris": 76,
+   "nanite": "False",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Kit/SM_module_wall.SM_module_wall",
+   "name": "SM_module_wall",
+   "size": [
+    350.0,
+    20.0,
+    320.0
+   ],
+   "tris": 12,
+   "nanite": "False",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Kit/SM_module_window.SM_module_window",
+   "name": "SM_module_window",
+   "size": [
+    350.0,
+    22.0,
+    320.0
+   ],
+   "tris": 898,
+   "nanite": "False",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Ropes/SM_rope_01.SM_rope_01",
+   "name": "SM_rope_01",
+   "size": [
+    787.0,
+    4.0,
+    239.0
+   ],
+   "tris": 3636,
+   "nanite": "False",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Ropes/SM_rope_02.SM_rope_02",
+   "name": "SM_rope_02",
+   "size": [
+    832.0,
+    4.0,
+    330.0
+   ],
+   "tris": 3636,
+   "nanite": "False",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Ropes/SM_rope_03.SM_rope_03",
+   "name": "SM_rope_03",
+   "size": [
+    537.0,
+    4.0,
+    193.0
+   ],
+   "tris": 3636,
+   "nanite": "False",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Ropes/SM_rope_05.SM_rope_05",
+   "name": "SM_rope_05",
+   "size": [
+    1010.0,
+    120.0,
+    330.0
+   ],
+   "tris": 14544,
+   "nanite": "False",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Ropes/SM_rope_06.SM_rope_06",
+   "name": "SM_rope_06",
+   "size": [
+    897.0,
+    46.0,
+    239.0
+   ],
+   "tris": 10908,
+   "nanite": "False",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Ropes/SM_rope_07.SM_rope_07",
+   "name": "SM_rope_07",
+   "size": [
+    665.0,
+    32.0,
+    197.0
+   ],
+   "tris": 10908,
+   "nanite": "False",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Kit/SM_small_wall_module.SM_small_wall_module",
+   "name": "SM_small_wall_module",
+   "size": [
+    150.0,
+    20.0,
+    320.0
+   ],
+   "tris": 20,
+   "nanite": "False",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Forest_village/Meshes/Kit/SM_window_module.SM_window_module",
+   "name": "SM_window_module",
+   "size": [
+    150.0,
+    24.0,
+    320.0
+   ],
+   "tris": 508,
+   "nanite": "False",
+   "role": "wall"
+  }
+ ]
+}

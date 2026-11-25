@@ -6,6 +6,7 @@
 #include "Engine/SkeletalMesh.h"
 #include "Animation/AnimSequence.h"
 #include "NiagaraSystem.h"
+#include "Skills/DCCSpellBook.h"
 #include "UObject/ConstructorHelpers.h"
 
 ADCCEnemyCharacter_DebtEater::ADCCEnemyCharacter_DebtEater()
@@ -51,8 +52,7 @@ ADCCEnemyCharacter_DebtEater::ADCCEnemyCharacter_DebtEater()
 	// suggested fallback: no ragdoll at all, just a puff of smoke as the
 	// dissolve beat. See ADCCCharacterBase::bUseRagdollOnDeath.
 	bUseRagdollOnDeath = false;
-	DeathDissolveEffect = TSoftObjectPtr<UNiagaraSystem>(
-		FSoftObjectPath(TEXT("/Game/Alien_Portal/FX/Smoke/NS_Smoke_01.NS_Smoke_01")));
+	DeathDissolveEffect = TSoftObjectPtr<UNiagaraSystem>(FSoftObjectPath(DCCSpellBook::DeathPuffPath()));
 
 	// The whole of "Repossession Nip". OnDamageDealt on the base class already
 	// steals gold on a successful hit and feeds it to whichever character in the

@@ -69,6 +69,21 @@ void ADCCArcadeArena::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 	DOREPLIFETIME(ADCCArcadeArena, VotersExpected);
 	DOREPLIFETIME(ADCCArcadeArena, BossName);
 	DOREPLIFETIME(ADCCArcadeArena, BossHealth);
+	DOREPLIFETIME(ADCCArcadeArena, NewsLines);
+}
+
+void ADCCArcadeArena::AddNews(const FString& Line)
+{
+	if (!HasAuthority() || Line.IsEmpty())
+	{
+		return;
+	}
+	NewsLines.Remove(Line);
+	NewsLines.Insert(Line, 0);
+	while (NewsLines.Num() > 10)
+	{
+		NewsLines.RemoveAt(NewsLines.Num() - 1);
+	}
 }
 
 void ADCCArcadeArena::BeginPlay()

@@ -66,6 +66,35 @@ __pycache__/
 # Marketplace/Fab code plugins: same reasoning as Content packs above -
 # licensed to Zoe's Epic account, re-download from Fab on a fresh clone.
 /Plugins/Marketplace/
+
+# Fab sample heroes copied into Characters/ on 2026-11-25. They blow past GitHub's
+# 100MB file limit, and they stay licensed to the Epic account.
+/Content/Characters/Echo/
+/Content/Characters/Paragon/
+/Content/Characters/UE4_Mannequin/
+/Content/Characters/UE5_Mannequins/
+/Content/Characters/UEFN_Mannequin/
+
+# World Partition data for those copied sample maps. The maps themselves stay
+# ignored with the rest of Content/.
+/Content/__ExternalActors__/DerelictCorridor/
+/Content/__ExternalActors__/FirstPerson/
+/Content/__ExternalActors__/Forest_village/
+/Content/__ExternalActors__/Free_Magic/
+/Content/__ExternalActors__/Free_Spells/
+/Content/__ExternalActors__/Guard/
+/Content/__ExternalActors__/Knife_FPS_Animations/
+/Content/__ExternalActors__/Polytope_Studio/
+/Content/__ExternalActors__/Sample/
+/Content/__ExternalActors__/Scene_Saloon/
+/Content/__ExternalActors__/StageProps/
+/Content/__ExternalObjects__/DerelictCorridor/
+/Content/__ExternalObjects__/Free_Magic/
+/Content/__ExternalObjects__/Free_Spells/
+/Content/__ExternalObjects__/Guard/
+/Content/__ExternalObjects__/Knife_FPS_Animations/
+/Content/__ExternalObjects__/Sample/
+/Content/__ExternalObjects__/StageProps/
 # Crawler Companion
 Companion/node_modules/
 Companion/snapshot.png

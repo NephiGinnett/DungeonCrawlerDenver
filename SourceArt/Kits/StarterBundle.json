@@ -1,0 +1,3567 @@
+{
+ "pack": "StarterBundle",
+ "maps": [
+  {
+   "path": "/Game/StarterBundle/CollectionMaps/Map1.Map1",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Maps/Overview_Hallways.Overview_Hallways",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Maps/SciFi_ColorExample.SciFi_ColorExample",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Maps/SciFi_Example_A_Ext.SciFi_Example_A_Ext",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Maps/SciFi_Example_B_Ext.SciFi_Example_B_Ext",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Maps/SciFi_Example_C_Ext.SciFi_Example_C_Ext",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Maps/SciFi_Example_D_Ext.SciFi_Example_D_Ext",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Maps/SciFi_Example_E_Ext.SciFi_Example_E_Ext",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSciFiMats/Maps/Overview_Materials.Overview_Materials",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Maps/ExampleMap.ExampleMap",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Maps/ExampleMap_2.ExampleMap_2",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Maps/ExampleMap_3.ExampleMap_3",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Maps/ExampleMap_4.ExampleMap_4",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Maps/Overview_Props.Overview_Props",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Maps/Promo.Promo",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Maps/Promo_2.Promo_2",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Maps/Overview_CommandCenter.Overview_CommandCenter",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Maps/SciFi_COMM_EX1.SciFi_COMM_EX1",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Maps/ColorExample_Interiors.ColorExample_Interiors",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Maps/Overview_Interiors.Overview_Interiors",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Maps/SciFi_INT_EX1.SciFi_INT_EX1",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Maps/SciFi_INT_EX2.SciFi_INT_EX2",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Maps/SciFi_INT_EX3.SciFi_INT_EX3",
+   "partitioned": false
+  }
+ ],
+ "meshes": [
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Door_L.SM_Door_L",
+   "name": "SM_Door_L",
+   "size": [
+    680.0,
+    23.0,
+    400.0
+   ],
+   "tris": 4178,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_DoorwayGlass.SM_DoorwayGlass",
+   "name": "SM_DoorwayGlass",
+   "size": [
+    141.0,
+    5.0,
+    312.0
+   ],
+   "tris": 138,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_DoorwayWire_A.SM_DoorwayWire_A",
+   "name": "SM_DoorwayWire_A",
+   "size": [
+    445.0,
+    8.0,
+    330.0
+   ],
+   "tris": 4464,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Doorway_L.SM_Doorway_L",
+   "name": "SM_Doorway_L",
+   "size": [
+    880.0,
+    76.0,
+    440.0
+   ],
+   "tris": 4960,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Doorway_L_B2.SM_Doorway_L_B2",
+   "name": "SM_Doorway_L_B2",
+   "size": [
+    880.0,
+    117.0,
+    440.0
+   ],
+   "tris": 4790,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Doorway_L_C.SM_Doorway_L_C",
+   "name": "SM_Doorway_L_C",
+   "size": [
+    880.0,
+    70.0,
+    440.0
+   ],
+   "tris": 4996,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Doorway_S_B.SM_Doorway_S_B",
+   "name": "SM_Doorway_S_B",
+   "size": [
+    77.0,
+    360.0,
+    410.0
+   ],
+   "tris": 1890,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Doorway_S_C.SM_Doorway_S_C",
+   "name": "SM_Doorway_S_C",
+   "size": [
+    70.0,
+    360.0,
+    440.0
+   ],
+   "tris": 4996,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_GlassDoor_A.SM_GlassDoor_A",
+   "name": "SM_GlassDoor_A",
+   "size": [
+    167.0,
+    8.0,
+    351.0
+   ],
+   "tris": 48,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_GlassDoor_B.SM_GlassDoor_B",
+   "name": "SM_GlassDoor_B",
+   "size": [
+    168.0,
+    8.0,
+    351.0
+   ],
+   "tris": 52,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_GlassDoorway.SM_GlassDoorway",
+   "name": "SM_GlassDoorway",
+   "size": [
+    360.0,
+    70.0,
+    410.0
+   ],
+   "tris": 3668,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_DoorPipes.SM_Hall_DoorPipes",
+   "name": "SM_Hall_DoorPipes",
+   "size": [
+    535.0,
+    56.0,
+    337.0
+   ],
+   "tris": 11488,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_Door_L.SM_Hall_Door_L",
+   "name": "SM_Hall_Door_L",
+   "size": [
+    680.0,
+    23.0,
+    400.0
+   ],
+   "tris": 4178,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_Doorway_L.SM_Hall_Doorway_L",
+   "name": "SM_Hall_Doorway_L",
+   "size": [
+    880.0,
+    76.0,
+    440.0
+   ],
+   "tris": 4960,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_Doorway_L_B.SM_Hall_Doorway_L_B",
+   "name": "SM_Hall_Doorway_L_B",
+   "size": [
+    880.0,
+    77.0,
+    440.0
+   ],
+   "tris": 4790,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_Doorway_Panel.SM_Hall_Doorway_Panel",
+   "name": "SM_Hall_Doorway_Panel",
+   "size": [
+    400.0,
+    70.0,
+    3.0
+   ],
+   "tris": 214,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Hall_Doorway_Panel.SM_Hall_Doorway_Panel",
+   "name": "SM_Hall_Doorway_Panel",
+   "size": [
+    400.0,
+    70.0,
+    3.0
+   ],
+   "tris": 214,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Pipe_Doorway_LC.SM_Pipe_Doorway_LC",
+   "name": "SM_Pipe_Doorway_LC",
+   "size": [
+    786.0,
+    57.0,
+    362.0
+   ],
+   "tris": 4160,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Pipe_Doorway_SC.SM_Pipe_Doorway_SC",
+   "name": "SM_Pipe_Doorway_SC",
+   "size": [
+    57.0,
+    326.0,
+    362.0
+   ],
+   "tris": 4160,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Pipes_Doorway.SM_Pipes_Doorway",
+   "name": "SM_Pipes_Doorway",
+   "size": [
+    535.0,
+    56.0,
+    337.0
+   ],
+   "tris": 11488,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Wall_Det_DoorBig_A.SM_Wall_Det_DoorBig_A",
+   "name": "SM_Wall_Det_DoorBig_A",
+   "size": [
+    10.0,
+    880.0,
+    40.0
+   ],
+   "tris": 266,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Wall_Det_DoorBig_B.SM_Wall_Det_DoorBig_B",
+   "name": "SM_Wall_Det_DoorBig_B",
+   "size": [
+    76.0,
+    520.0,
+    47.0
+   ],
+   "tris": 1112,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Wall_Det_DoorBig_C.SM_Wall_Det_DoorBig_C",
+   "name": "SM_Wall_Det_DoorBig_C",
+   "size": [
+    74.0,
+    29.0,
+    168.0
+   ],
+   "tris": 354,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Wall_Det_DoorBig_D.SM_Wall_Det_DoorBig_D",
+   "name": "SM_Wall_Det_DoorBig_D",
+   "size": [
+    110.0,
+    520.0,
+    70.0
+   ],
+   "tris": 3040,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Wall_Det_DoorBig_E.SM_Wall_Det_DoorBig_E",
+   "name": "SM_Wall_Det_DoorBig_E",
+   "size": [
+    78.0,
+    313.0,
+    179.0
+   ],
+   "tris": 1267,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Wall_Det_DoorBig_F.SM_Wall_Det_DoorBig_F",
+   "name": "SM_Wall_Det_DoorBig_F",
+   "size": [
+    38.0,
+    880.0,
+    160.0
+   ],
+   "tris": 719,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Wall_Det_DoorBig_G.SM_Wall_Det_DoorBig_G",
+   "name": "SM_Wall_Det_DoorBig_G",
+   "size": [
+    12.0,
+    43.0,
+    390.0
+   ],
+   "tris": 3016,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Wall_Det_DoorSmall_A.SM_Wall_Det_DoorSmall_A",
+   "name": "SM_Wall_Det_DoorSmall_A",
+   "size": [
+    360.0,
+    10.0,
+    40.0
+   ],
+   "tris": 266,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Wall_Det_DoorSmall_B.SM_Wall_Det_DoorSmall_B",
+   "name": "SM_Wall_Det_DoorSmall_B",
+   "size": [
+    360.0,
+    65.0,
+    170.0
+   ],
+   "tris": 1559,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Wall_Pipe_DoorBig.SM_Wall_Pipe_DoorBig",
+   "name": "SM_Wall_Pipe_DoorBig",
+   "size": [
+    70.0,
+    266.0,
+    25.0
+   ],
+   "tris": 768,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Wall_Pipe_DoorSmall.SM_Wall_Pipe_DoorSmall",
+   "name": "SM_Wall_Pipe_DoorSmall",
+   "size": [
+    267.0,
+    30.0,
+    23.0
+   ],
+   "tris": 640,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_AltFloor_A.SM_AltFloor_A",
+   "name": "SM_AltFloor_A",
+   "size": [
+    320.0,
+    440.0,
+    21.0
+   ],
+   "tris": 34,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_AltFloor_B.SM_AltFloor_B",
+   "name": "SM_AltFloor_B",
+   "size": [
+    320.0,
+    40.0,
+    21.0
+   ],
+   "tris": 34,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_CeilingBrace_A.SM_CeilingBrace_A",
+   "name": "SM_CeilingBrace_A",
+   "size": [
+    320.0,
+    57.0,
+    27.0
+   ],
+   "tris": 256,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_CeilingEdge_A.SM_CeilingEdge_A",
+   "name": "SM_CeilingEdge_A",
+   "size": [
+    320.0,
+    36.0,
+    14.0
+   ],
+   "tris": 120,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_CeilingEdge_B.SM_CeilingEdge_B",
+   "name": "SM_CeilingEdge_B",
+   "size": [
+    320.0,
+    80.0,
+    31.0
+   ],
+   "tris": 120,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_CeilingLight.SM_CeilingLight",
+   "name": "SM_CeilingLight",
+   "size": [
+    38.0,
+    230.0,
+    16.0
+   ],
+   "tris": 2400,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Ceiling_A.SM_Ceiling_A",
+   "name": "SM_Ceiling_A",
+   "size": [
+    960.0,
+    360.0,
+    74.0
+   ],
+   "tris": 4976,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Ceiling_A_2.SM_Ceiling_A_2",
+   "name": "SM_Ceiling_A_2",
+   "size": [
+    960.0,
+    360.0,
+    85.0
+   ],
+   "tris": 6296,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Ceiling_B.SM_Ceiling_B",
+   "name": "SM_Ceiling_B",
+   "size": [
+    320.0,
+    380.0,
+    50.0
+   ],
+   "tris": 2463,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Ceiling_B_2.SM_Ceiling_B_2",
+   "name": "SM_Ceiling_B_2",
+   "size": [
+    320.0,
+    380.0,
+    50.0
+   ],
+   "tris": 660,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Ceiling_B_3.SM_Ceiling_B_3",
+   "name": "SM_Ceiling_B_3",
+   "size": [
+    320.0,
+    380.0,
+    50.0
+   ],
+   "tris": 4900,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Ceiling_B_4.SM_Ceiling_B_4",
+   "name": "SM_Ceiling_B_4",
+   "size": [
+    320.0,
+    380.0,
+    50.0
+   ],
+   "tris": 302,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Ceiling_C.SM_Ceiling_C",
+   "name": "SM_Ceiling_C",
+   "size": [
+    320.0,
+    360.0,
+    50.0
+   ],
+   "tris": 5538,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Ceiling_Det_A.SM_Ceiling_Det_A",
+   "name": "SM_Ceiling_Det_A",
+   "size": [
+    84.0,
+    474.0,
+    36.0
+   ],
+   "tris": 1656,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Ceiling_Det_B.SM_Ceiling_Det_B",
+   "name": "SM_Ceiling_Det_B",
+   "size": [
+    379.0,
+    63.0,
+    13.0
+   ],
+   "tris": 1440,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_Ceiling_Div_A.SM_Ceiling_Div_A",
+   "name": "SM_Ceiling_Div_A",
+   "size": [
+    320.0,
+    80.0,
+    22.0
+   ],
+   "tris": 808,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_Ceiling_Div_B.SM_Ceiling_Div_B",
+   "name": "SM_Ceiling_Div_B",
+   "size": [
+    320.0,
+    80.0,
+    22.0
+   ],
+   "tris": 62,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Ceiling_Main_A.SM_Ceiling_Main_A",
+   "name": "SM_Ceiling_Main_A",
+   "size": [
+    1641.0,
+    1303.0,
+    40.0
+   ],
+   "tris": 8514,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Ceiling_Main_B.SM_Ceiling_Main_B",
+   "name": "SM_Ceiling_Main_B",
+   "size": [
+    1273.0,
+    1273.0,
+    2.0
+   ],
+   "tris": 2000,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Ceiling_Main_C.SM_Ceiling_Main_C",
+   "name": "SM_Ceiling_Main_C",
+   "size": [
+    1823.0,
+    1666.0,
+    30.0
+   ],
+   "tris": 7676,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Ceiling_Main_D.SM_Ceiling_Main_D",
+   "name": "SM_Ceiling_Main_D",
+   "size": [
+    1823.0,
+    1666.0,
+    0.0
+   ],
+   "tris": 575,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Ceiling_OuterRing_B.SM_Ceiling_OuterRing_B",
+   "name": "SM_Ceiling_OuterRing_B",
+   "size": [
+    836.0,
+    1659.0,
+    164.0
+   ],
+   "tris": 17916,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Ceiling_OuterRing_C.SM_Ceiling_OuterRing_C",
+   "name": "SM_Ceiling_OuterRing_C",
+   "size": [
+    1077.0,
+    2155.0,
+    168.0
+   ],
+   "tris": 3800,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Ceiling_OuterRing_D.SM_Ceiling_OuterRing_D",
+   "name": "SM_Ceiling_OuterRing_D",
+   "size": [
+    988.0,
+    2104.0,
+    7.0
+   ],
+   "tris": 4656,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Ceiling_Panel_A.SM_Ceiling_Panel_A",
+   "name": "SM_Ceiling_Panel_A",
+   "size": [
+    990.0,
+    162.0,
+    38.0
+   ],
+   "tris": 842,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Ceiling_Pipe_Large.SM_Ceiling_Pipe_Large",
+   "name": "SM_Ceiling_Pipe_Large",
+   "size": [
+    1090.0,
+    369.0,
+    33.0
+   ],
+   "tris": 1280,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Ceiling_Pipe_Small.SM_Ceiling_Pipe_Small",
+   "name": "SM_Ceiling_Pipe_Small",
+   "size": [
+    378.0,
+    1050.0,
+    13.0
+   ],
+   "tris": 2560,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Ceiling_Sides_A.SM_Ceiling_Sides_A",
+   "name": "SM_Ceiling_Sides_A",
+   "size": [
+    970.0,
+    365.0,
+    37.0
+   ],
+   "tris": 768,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Ceiling_Window_A.SM_Ceiling_Window_A",
+   "name": "SM_Ceiling_Window_A",
+   "size": [
+    776.0,
+    777.0,
+    23.0
+   ],
+   "tris": 15496,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Ceiling_Window_A_Glass.SM_Ceiling_Window_A_Glass",
+   "name": "SM_Ceiling_Window_A_Glass",
+   "size": [
+    710.0,
+    710.0,
+    2.0
+   ],
+   "tris": 654,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_FloorBuffer_A.SM_FloorBuffer_A",
+   "name": "SM_FloorBuffer_A",
+   "size": [
+    960.0,
+    80.0,
+    61.0
+   ],
+   "tris": 2202,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_FloorBuffer_B.SM_FloorBuffer_B",
+   "name": "SM_FloorBuffer_B",
+   "size": [
+    320.0,
+    40.0,
+    14.0
+   ],
+   "tris": 200,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_FloorBuffer_B_2.SM_FloorBuffer_B_2",
+   "name": "SM_FloorBuffer_B_2",
+   "size": [
+    320.0,
+    40.0,
+    20.0
+   ],
+   "tris": 2464,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_FloorDiv_A.SM_FloorDiv_A",
+   "name": "SM_FloorDiv_A",
+   "size": [
+    320.0,
+    80.0,
+    11.0
+   ],
+   "tris": 442,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_FloorPanel_A.SM_FloorPanel_A",
+   "name": "SM_FloorPanel_A",
+   "size": [
+    320.0,
+    360.0,
+    21.0
+   ],
+   "tris": 378,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_FloorPanel_A_2.SM_FloorPanel_A_2",
+   "name": "SM_FloorPanel_A_2",
+   "size": [
+    320.0,
+    360.0,
+    22.0
+   ],
+   "tris": 984,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_FloorPanel_B.SM_FloorPanel_B",
+   "name": "SM_FloorPanel_B",
+   "size": [
+    160.0,
+    180.0,
+    21.0
+   ],
+   "tris": 378,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_FloorPanel_C.SM_FloorPanel_C",
+   "name": "SM_FloorPanel_C",
+   "size": [
+    320.0,
+    180.0,
+    21.0
+   ],
+   "tris": 378,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_FloorPanel_D.SM_FloorPanel_D",
+   "name": "SM_FloorPanel_D",
+   "size": [
+    320.0,
+    360.0,
+    21.0
+   ],
+   "tris": 4652,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_FloorWire_A.SM_FloorWire_A",
+   "name": "SM_FloorWire_A",
+   "size": [
+    222.0,
+    318.0,
+    31.0
+   ],
+   "tris": 2442,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_Floor_A.SM_Floor_A",
+   "name": "SM_Floor_A",
+   "size": [
+    320.0,
+    360.0,
+    21.0
+   ],
+   "tris": 34,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_Floor_B.SM_Floor_B",
+   "name": "SM_Floor_B",
+   "size": [
+    320.0,
+    360.0,
+    21.0
+   ],
+   "tris": 606,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_Floor_C.SM_Floor_C",
+   "name": "SM_Floor_C",
+   "size": [
+    160.0,
+    180.0,
+    21.0
+   ],
+   "tris": 34,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Floor_Center_A1.SM_Floor_Center_A1",
+   "name": "SM_Floor_Center_A1",
+   "size": [
+    305.0,
+    305.0,
+    12.0
+   ],
+   "tris": 7256,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Floor_Center_A2.SM_Floor_Center_A2",
+   "name": "SM_Floor_Center_A2",
+   "size": [
+    766.0,
+    353.0,
+    4.0
+   ],
+   "tris": 4138,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Floor_Center_A3.SM_Floor_Center_A3",
+   "name": "SM_Floor_Center_A3",
+   "size": [
+    1205.0,
+    1205.0,
+    20.0
+   ],
+   "tris": 38552,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Floor_Center_B.SM_Floor_Center_B",
+   "name": "SM_Floor_Center_B",
+   "size": [
+    1311.0,
+    1311.0,
+    28.0
+   ],
+   "tris": 11312,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Floor_Center_Pipes_A.SM_Floor_Center_Pipes_A",
+   "name": "SM_Floor_Center_Pipes_A",
+   "size": [
+    1139.0,
+    356.0,
+    26.0
+   ],
+   "tris": 11200,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Floor_Filler.SM_Floor_Filler",
+   "name": "SM_Floor_Filler",
+   "size": [
+    990.0,
+    1580.0,
+    7.0
+   ],
+   "tris": 108,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Floor_Panel_A1.SM_Floor_Panel_A1",
+   "name": "SM_Floor_Panel_A1",
+   "size": [
+    547.0,
+    377.0,
+    8.0
+   ],
+   "tris": 5353,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Floor_Panel_A2.SM_Floor_Panel_A2",
+   "name": "SM_Floor_Panel_A2",
+   "size": [
+    710.0,
+    324.0,
+    8.0
+   ],
+   "tris": 5116,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Floor_Panel_A3.SM_Floor_Panel_A3",
+   "name": "SM_Floor_Panel_A3",
+   "size": [
+    915.0,
+    572.0,
+    8.0
+   ],
+   "tris": 11782,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Floor_Panel_A4.SM_Floor_Panel_A4",
+   "name": "SM_Floor_Panel_A4",
+   "size": [
+    280.0,
+    366.0,
+    8.0
+   ],
+   "tris": 3071,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Floor_Sides_A.SM_Floor_Sides_A",
+   "name": "SM_Floor_Sides_A",
+   "size": [
+    980.0,
+    560.0,
+    17.0
+   ],
+   "tris": 2583,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Floor_Window_A.SM_Floor_Window_A",
+   "name": "SM_Floor_Window_A",
+   "size": [
+    732.0,
+    2070.0,
+    167.0
+   ],
+   "tris": 142,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Floor_Window_B.SM_Floor_Window_B",
+   "name": "SM_Floor_Window_B",
+   "size": [
+    571.0,
+    1463.0,
+    9.0
+   ],
+   "tris": 6500,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Floor_Window_C.SM_Floor_Window_C",
+   "name": "SM_Floor_Window_C",
+   "size": [
+    505.0,
+    1409.0,
+    4.0
+   ],
+   "tris": 6510,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Floor_Wire_B.SM_Floor_Wire_B",
+   "name": "SM_Floor_Wire_B",
+   "size": [
+    121.0,
+    422.0,
+    31.0
+   ],
+   "tris": 2520,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_Ceiling_Main.SM_Hall_Ceiling_Main",
+   "name": "SM_Hall_Ceiling_Main",
+   "size": [
+    840.0,
+    360.0,
+    68.0
+   ],
+   "tris": 2490,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_Ceiling_Sec_A.SM_Hall_Ceiling_Sec_A",
+   "name": "SM_Hall_Ceiling_Sec_A",
+   "size": [
+    400.0,
+    240.0,
+    40.0
+   ],
+   "tris": 1202,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_Ceiling_Sec_B.SM_Hall_Ceiling_Sec_B",
+   "name": "SM_Hall_Ceiling_Sec_B",
+   "size": [
+    400.0,
+    400.0,
+    47.0
+   ],
+   "tris": 674,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_Ceiling_Sec_C.SM_Hall_Ceiling_Sec_C",
+   "name": "SM_Hall_Ceiling_Sec_C",
+   "size": [
+    240.0,
+    240.0,
+    6.0
+   ],
+   "tris": 59,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_FloorBuffer.SM_Hall_FloorBuffer",
+   "name": "SM_Hall_FloorBuffer",
+   "size": [
+    880.0,
+    118.0,
+    14.0
+   ],
+   "tris": 3350,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_FloorBuffer_B.SM_Hall_FloorBuffer_B",
+   "name": "SM_Hall_FloorBuffer_B",
+   "size": [
+    880.0,
+    100.0,
+    56.0
+   ],
+   "tris": 1668,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_FloorEdge.SM_Hall_FloorEdge",
+   "name": "SM_Hall_FloorEdge",
+   "size": [
+    70.0,
+    360.0,
+    10.0
+   ],
+   "tris": 28,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_Floor_Main.SM_Hall_Floor_Main",
+   "name": "SM_Hall_Floor_Main",
+   "size": [
+    740.0,
+    340.0,
+    3.0
+   ],
+   "tris": 2250,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_Floor_Main_B.SM_Hall_Floor_Main_B",
+   "name": "SM_Hall_Floor_Main_B",
+   "size": [
+    740.0,
+    340.0,
+    12.0
+   ],
+   "tris": 1248,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_Floor_Sec_A.SM_Hall_Floor_Sec_A",
+   "name": "SM_Hall_Floor_Sec_A",
+   "size": [
+    580.0,
+    150.0,
+    3.0
+   ],
+   "tris": 236,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_Floor_Sec_B.SM_Hall_Floor_Sec_B",
+   "name": "SM_Hall_Floor_Sec_B",
+   "size": [
+    150.0,
+    150.0,
+    13.0
+   ],
+   "tris": 1305,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_Floor_Sec_C.SM_Hall_Floor_Sec_C",
+   "name": "SM_Hall_Floor_Sec_C",
+   "size": [
+    580.0,
+    580.0,
+    11.0
+   ],
+   "tris": 4920,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_Floor_Sec_C_2.SM_Hall_Floor_Sec_C_2",
+   "name": "SM_Hall_Floor_Sec_C_2",
+   "size": [
+    580.0,
+    580.0,
+    12.0
+   ],
+   "tris": 1248,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_Floor_Sec_D.SM_Hall_Floor_Sec_D",
+   "name": "SM_Hall_Floor_Sec_D",
+   "size": [
+    40.0,
+    340.0,
+    47.0
+   ],
+   "tris": 2246,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_Win_Ceiling.SM_Hall_Win_Ceiling",
+   "name": "SM_Hall_Win_Ceiling",
+   "size": [
+    184.0,
+    360.0,
+    6.0
+   ],
+   "tris": 482,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_Win_Floor_A.SM_Hall_Win_Floor_A",
+   "name": "SM_Hall_Win_Floor_A",
+   "size": [
+    164.0,
+    360.0,
+    10.0
+   ],
+   "tris": 1752,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_Win_PipeEdge.SM_Hall_Win_PipeEdge",
+   "name": "SM_Hall_Win_PipeEdge",
+   "size": [
+    119.0,
+    206.0,
+    16.0
+   ],
+   "tris": 1760,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_Wires_B.SM_Hall_Wires_B",
+   "name": "SM_Hall_Wires_B",
+   "size": [
+    347.0,
+    653.0,
+    61.0
+   ],
+   "tris": 4182,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/NatureMaterials_Ice/Meshes/SM_IcePlane.SM_IcePlane",
+   "name": "SM_IcePlane",
+   "size": [
+    2293.0,
+    2293.0,
+    0.0
+   ],
+   "tris": 8192,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Pipe_Ceiling_A.SM_Pipe_Ceiling_A",
+   "name": "SM_Pipe_Ceiling_A",
+   "size": [
+    18.0,
+    320.0,
+    18.0
+   ],
+   "tris": 1216,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Pipe_FloorB_1.SM_Pipe_FloorB_1",
+   "name": "SM_Pipe_FloorB_1",
+   "size": [
+    307.0,
+    25.0,
+    25.0
+   ],
+   "tris": 680,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Pipe_FloorB_2.SM_Pipe_FloorB_2",
+   "name": "SM_Pipe_FloorB_2",
+   "size": [
+    307.0,
+    24.0,
+    24.0
+   ],
+   "tris": 520,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Pipe_Vent.SM_Pipe_Vent",
+   "name": "SM_Pipe_Vent",
+   "size": [
+    210.0,
+    43.0,
+    15.0
+   ],
+   "tris": 6080,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Pipe_Vent_2.SM_Pipe_Vent_2",
+   "name": "SM_Pipe_Vent_2",
+   "size": [
+    300.0,
+    43.0,
+    15.0
+   ],
+   "tris": 6080,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Pipe_WinCeiling.SM_Pipe_WinCeiling",
+   "name": "SM_Pipe_WinCeiling",
+   "size": [
+    230.0,
+    14.0,
+    31.0
+   ],
+   "tris": 2432,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Pipe_WinCeiling_2.SM_Pipe_WinCeiling_2",
+   "name": "SM_Pipe_WinCeiling_2",
+   "size": [
+    216.0,
+    14.0,
+    31.0
+   ],
+   "tris": 2432,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Pipes_GRP_C.SM_Pipes_GRP_C",
+   "name": "SM_Pipes_GRP_C",
+   "size": [
+    760.0,
+    68.0,
+    45.0
+   ],
+   "tris": 2000,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Railing_Center.SM_Railing_Center",
+   "name": "SM_Railing_Center",
+   "size": [
+    195.0,
+    927.0,
+    66.0
+   ],
+   "tris": 4308,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Railing_Window.SM_Railing_Window",
+   "name": "SM_Railing_Window",
+   "size": [
+    1042.0,
+    2148.0,
+    13.0
+   ],
+   "tris": 5150,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Terminal_A_UI.SM_Terminal_A_UI",
+   "name": "SM_Terminal_A_UI",
+   "size": [
+    113.0,
+    289.0,
+    35.0
+   ],
+   "tris": 3624,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_WallEdge_A_2.SM_WallEdge_A_2",
+   "name": "SM_WallEdge_A_2",
+   "size": [
+    320.0,
+    30.0,
+    12.0
+   ],
+   "tris": 34,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Wall_Border_A.SM_Wall_Border_A",
+   "name": "SM_Wall_Border_A",
+   "size": [
+    1055.0,
+    2740.0,
+    21.0
+   ],
+   "tris": 1106,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Wall_Border_B.SM_Wall_Border_B",
+   "name": "SM_Wall_Border_B",
+   "size": [
+    1076.0,
+    2152.0,
+    25.0
+   ],
+   "tris": 4020,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Wall_Pipe_A.SM_Wall_Pipe_A",
+   "name": "SM_Wall_Pipe_A",
+   "size": [
+    358.0,
+    16.0,
+    8.0
+   ],
+   "tris": 704,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Wall_Pipe_H.SM_Wall_Pipe_H",
+   "name": "SM_Wall_Pipe_H",
+   "size": [
+    38.0,
+    339.0,
+    49.0
+   ],
+   "tris": 2784,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Wall_Window_B.SM_Wall_Window_B",
+   "name": "SM_Wall_Window_B",
+   "size": [
+    327.0,
+    1496.0,
+    167.0
+   ],
+   "tris": 7566,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Wall_Window_Pipe.SM_Wall_Window_Pipe",
+   "name": "SM_Wall_Window_Pipe",
+   "size": [
+    309.0,
+    1475.0,
+    4.0
+   ],
+   "tris": 2000,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Win_CeilingBrace.SM_Win_CeilingBrace",
+   "name": "SM_Win_CeilingBrace",
+   "size": [
+    740.0,
+    57.0,
+    27.0
+   ],
+   "tris": 384,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Win_CeilingPipes_A.SM_Win_CeilingPipes_A",
+   "name": "SM_Win_CeilingPipes_A",
+   "size": [
+    788.0,
+    32.0,
+    25.0
+   ],
+   "tris": 1472,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Win_Ceiling_A.SM_Win_Ceiling_A",
+   "name": "SM_Win_Ceiling_A",
+   "size": [
+    840.0,
+    140.0,
+    19.0
+   ],
+   "tris": 1312,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Win_Ceiling_B.SM_Win_Ceiling_B",
+   "name": "SM_Win_Ceiling_B",
+   "size": [
+    1340.0,
+    380.0,
+    77.0
+   ],
+   "tris": 4976,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Win_Ceiling_B_2.SM_Win_Ceiling_B_2",
+   "name": "SM_Win_Ceiling_B_2",
+   "size": [
+    1340.0,
+    380.0,
+    93.0
+   ],
+   "tris": 6296,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Win_Ceiling_C.SM_Win_Ceiling_C",
+   "name": "SM_Win_Ceiling_C",
+   "size": [
+    330.0,
+    40.0,
+    29.0
+   ],
+   "tris": 222,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Win_Ceiling_E.SM_Win_Ceiling_E",
+   "name": "SM_Win_Ceiling_E",
+   "size": [
+    1360.0,
+    40.0,
+    10.0
+   ],
+   "tris": 8,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Win_Ceiling_F.SM_Win_Ceiling_F",
+   "name": "SM_Win_Ceiling_F",
+   "size": [
+    1360.0,
+    120.0,
+    10.0
+   ],
+   "tris": 8,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Win_FloorBuffer_A.SM_Win_FloorBuffer_A",
+   "name": "SM_Win_FloorBuffer_A",
+   "size": [
+    880.0,
+    40.0,
+    20.0
+   ],
+   "tris": 2716,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Win_FloorEdge_A.SM_Win_FloorEdge_A",
+   "name": "SM_Win_FloorEdge_A",
+   "size": [
+    880.0,
+    140.0,
+    12.0
+   ],
+   "tris": 354,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Win_FloorEdge_B.SM_Win_FloorEdge_B",
+   "name": "SM_Win_FloorEdge_B",
+   "size": [
+    70.0,
+    380.0,
+    11.0
+   ],
+   "tris": 470,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Win_FloorEdge_C.SM_Win_FloorEdge_C",
+   "name": "SM_Win_FloorEdge_C",
+   "size": [
+    70.0,
+    380.0,
+    8.0
+   ],
+   "tris": 230,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Win_Floor_A.SM_Win_Floor_A",
+   "name": "SM_Win_Floor_A",
+   "size": [
+    740.0,
+    380.0,
+    20.0
+   ],
+   "tris": 1660,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Win_Floor_B.SM_Win_Floor_B",
+   "name": "SM_Win_Floor_B",
+   "size": [
+    760.0,
+    380.0,
+    12.0
+   ],
+   "tris": 1184,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Win_FramePipe_A.SM_Win_FramePipe_A",
+   "name": "SM_Win_FramePipe_A",
+   "size": [
+    25.0,
+    380.0,
+    25.0
+   ],
+   "tris": 1216,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Win_FramePipe_B.SM_Win_FramePipe_B",
+   "name": "SM_Win_FramePipe_B",
+   "size": [
+    25.0,
+    390.0,
+    25.0
+   ],
+   "tris": 1216,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Win_FramePipe_C.SM_Win_FramePipe_C",
+   "name": "SM_Win_FramePipe_C",
+   "size": [
+    25.0,
+    399.0,
+    25.0
+   ],
+   "tris": 1216,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Windows_B.SM_Windows_B",
+   "name": "SM_Windows_B",
+   "size": [
+    1120.0,
+    2241.0,
+    25.0
+   ],
+   "tris": 2314,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_Sec_Corner.SM_Hall_Sec_Corner",
+   "name": "SM_Hall_Sec_Corner",
+   "size": [
+    93.0,
+    94.0,
+    440.0
+   ],
+   "tris": 308,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_WDetails_A.SM_Hall_WDetails_A",
+   "name": "SM_Hall_WDetails_A",
+   "size": [
+    9.0,
+    70.0,
+    263.0
+   ],
+   "tris": 2652,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Hall_WDetails_A.SM_Hall_WDetails_A",
+   "name": "SM_Hall_WDetails_A",
+   "size": [
+    9.0,
+    70.0,
+    263.0
+   ],
+   "tris": 2652,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_WallBuffer.SM_Hall_WallBuffer",
+   "name": "SM_Hall_WallBuffer",
+   "size": [
+    60.0,
+    82.0,
+    440.0
+   ],
+   "tris": 546,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_Win_Det_A.SM_Hall_Win_Det_A",
+   "name": "SM_Hall_Win_Det_A",
+   "size": [
+    15.0,
+    50.0,
+    380.0
+   ],
+   "tris": 1438,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Pipe_Wall_A.SM_Pipe_Wall_A",
+   "name": "SM_Pipe_Wall_A",
+   "size": [
+    11.0,
+    11.0,
+    375.0
+   ],
+   "tris": 1216,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_WallBuffer_A.SM_WallBuffer_A",
+   "name": "SM_WallBuffer_A",
+   "size": [
+    60.0,
+    82.0,
+    450.0
+   ],
+   "tris": 546,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_WallBuffer_B.SM_WallBuffer_B",
+   "name": "SM_WallBuffer_B",
+   "size": [
+    63.0,
+    83.0,
+    450.0
+   ],
+   "tris": 5116,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_WallDiv_A.SM_WallDiv_A",
+   "name": "SM_WallDiv_A",
+   "size": [
+    55.0,
+    80.0,
+    450.0
+   ],
+   "tris": 992,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Wall_A.SM_Wall_A",
+   "name": "SM_Wall_A",
+   "size": [
+    140.0,
+    72.0,
+    611.0
+   ],
+   "tris": 3896,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_Wall_B_Glass.SM_Wall_B_Glass",
+   "name": "SM_Wall_B_Glass",
+   "size": [
+    123.0,
+    10.0,
+    336.0
+   ],
+   "tris": 548,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Wall_C.SM_Wall_C",
+   "name": "SM_Wall_C",
+   "size": [
+    108.0,
+    161.0,
+    440.0
+   ],
+   "tris": 3350,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Wall_C.SM_Wall_C",
+   "name": "SM_Wall_C",
+   "size": [
+    70.0,
+    9.0,
+    410.0
+   ],
+   "tris": 82,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Wall_Corner_A.SM_Wall_Corner_A",
+   "name": "SM_Wall_Corner_A",
+   "size": [
+    116.0,
+    111.0,
+    614.0
+   ],
+   "tris": 3086,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Wall_Div_Slim.SM_Wall_Div_Slim",
+   "name": "SM_Wall_Div_Slim",
+   "size": [
+    21.0,
+    20.0,
+    620.0
+   ],
+   "tris": 12,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Wall_Div_Slim2.SM_Wall_Div_Slim2",
+   "name": "SM_Wall_Div_Slim2",
+   "size": [
+    30.0,
+    11.0,
+    610.0
+   ],
+   "tris": 12,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Wall_Pipe_C.SM_Wall_Pipe_C",
+   "name": "SM_Wall_Pipe_C",
+   "size": [
+    8.0,
+    15.0,
+    429.0
+   ],
+   "tris": 384,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_AccessCard.SM_AccessCard",
+   "name": "SM_AccessCard",
+   "size": [
+    9.0,
+    6.0,
+    0.0
+   ],
+   "tris": 188,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_Cabinet_A.SM_Cabinet_A",
+   "name": "SM_Cabinet_A",
+   "size": [
+    200.0,
+    90.0,
+    80.0
+   ],
+   "tris": 2626,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_Cabinet_B.SM_Cabinet_B",
+   "name": "SM_Cabinet_B",
+   "size": [
+    107.0,
+    90.0,
+    80.0
+   ],
+   "tris": 2176,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Camera_A.SM_Camera_A",
+   "name": "SM_Camera_A",
+   "size": [
+    34.0,
+    34.0,
+    21.0
+   ],
+   "tris": 2172,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_CardReader.SM_CardReader",
+   "name": "SM_CardReader",
+   "size": [
+    13.0,
+    5.0,
+    4.0
+   ],
+   "tris": 1758,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/UE4_Assets/Environment_A/Meshes/SM_Cave_Rock_Large_01a.SM_Cave_Rock_Large_01a",
+   "name": "SM_Cave_Rock_Large_01a",
+   "size": [
+    722.0,
+    814.0,
+    1472.0
+   ],
+   "tris": 7944,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/UE4_Assets/Environment_A/Meshes/SM_Cave_Rock_Med_01a.SM_Cave_Rock_Med_01a",
+   "name": "SM_Cave_Rock_Med_01a",
+   "size": [
+    214.0,
+    200.0,
+    333.0
+   ],
+   "tris": 1774,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_Ceiling_A.SM_Ceiling_A",
+   "name": "SM_Ceiling_A",
+   "size": [
+    320.0,
+    360.0,
+    61.0
+   ],
+   "tris": 1224,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Ceiling_A_Buffer.SM_Ceiling_A_Buffer",
+   "name": "SM_Ceiling_A_Buffer",
+   "size": [
+    410.0,
+    80.0,
+    120.0
+   ],
+   "tris": 906,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_Ceiling_B.SM_Ceiling_B",
+   "name": "SM_Ceiling_B",
+   "size": [
+    320.0,
+    360.0,
+    61.0
+   ],
+   "tris": 342,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Ceiling_OuterRing_A.SM_Ceiling_OuterRing_A",
+   "name": "SM_Ceiling_OuterRing_A",
+   "size": [
+    1059.0,
+    1059.0,
+    167.0
+   ],
+   "tris": 18856,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Ceiling_Ring_A1.SM_Ceiling_Ring_A1",
+   "name": "SM_Ceiling_Ring_A1",
+   "size": [
+    826.0,
+    827.0,
+    145.0
+   ],
+   "tris": 16048,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Ceiling_Ring_A2.SM_Ceiling_Ring_A2",
+   "name": "SM_Ceiling_Ring_A2",
+   "size": [
+    250.0,
+    250.0,
+    115.0
+   ],
+   "tris": 1998,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/UE4_Assets/Environment_B/Meshes/SM_Cliff_01.SM_Cliff_01",
+   "name": "SM_Cliff_01",
+   "size": [
+    1265.0,
+    961.0,
+    587.0
+   ],
+   "tris": 4140,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_Coaster.SM_Coaster",
+   "name": "SM_Coaster",
+   "size": [
+    11.0,
+    11.0,
+    1.0
+   ],
+   "tris": 860,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_CoasterStack.SM_CoasterStack",
+   "name": "SM_CoasterStack",
+   "size": [
+    12.0,
+    11.0,
+    4.0
+   ],
+   "tris": 3056,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_CommDevice.SM_CommDevice",
+   "name": "SM_CommDevice",
+   "size": [
+    10.0,
+    17.0,
+    1.0
+   ],
+   "tris": 2854,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Crate_A.SM_Crate_A",
+   "name": "SM_Crate_A",
+   "size": [
+    80.0,
+    110.0,
+    82.0
+   ],
+   "tris": 1476,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Crate_A2.SM_Crate_A2",
+   "name": "SM_Crate_A2",
+   "size": [
+    100.0,
+    133.0,
+    89.0
+   ],
+   "tris": 1504,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Crate_A3.SM_Crate_A3",
+   "name": "SM_Crate_A3",
+   "size": [
+    121.0,
+    110.0,
+    88.0
+   ],
+   "tris": 1504,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_CustomerMessage.SM_CustomerMessage",
+   "name": "SM_CustomerMessage",
+   "size": [
+    53.0,
+    80.0,
+    143.0
+   ],
+   "tris": 92,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Datapad.SM_Datapad",
+   "name": "SM_Datapad",
+   "size": [
+    20.0,
+    33.0,
+    2.0
+   ],
+   "tris": 1242,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_Desk_A_v1.SM_Desk_A_v1",
+   "name": "SM_Desk_A_v1",
+   "size": [
+    300.0,
+    90.0,
+    91.0
+   ],
+   "tris": 4154,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_Desk_A_v2.SM_Desk_A_v2",
+   "name": "SM_Desk_A_v2",
+   "size": [
+    200.0,
+    90.0,
+    91.0
+   ],
+   "tris": 3000,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_Desk_A_v3.SM_Desk_A_v3",
+   "name": "SM_Desk_A_v3",
+   "size": [
+    300.0,
+    90.0,
+    91.0
+   ],
+   "tris": 5116,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_Desk_B_v1.SM_Desk_B_v1",
+   "name": "SM_Desk_B_v1",
+   "size": [
+    300.0,
+    90.0,
+    91.0
+   ],
+   "tris": 3470,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_Desk_B_v3.SM_Desk_B_v3",
+   "name": "SM_Desk_B_v3",
+   "size": [
+    300.0,
+    90.0,
+    91.0
+   ],
+   "tris": 3748,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_EnergyCore_A.SM_EnergyCore_A",
+   "name": "SM_EnergyCore_A",
+   "size": [
+    29.0,
+    27.0,
+    57.0
+   ],
+   "tris": 4236,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_FireSprinkler.SM_FireSprinkler",
+   "name": "SM_FireSprinkler",
+   "size": [
+    9.0,
+    9.0,
+    10.0
+   ],
+   "tris": 2642,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_FirstAidKit.SM_FirstAidKit",
+   "name": "SM_FirstAidKit",
+   "size": [
+    13.0,
+    13.0,
+    4.0
+   ],
+   "tris": 1812,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_FloorBuffer_A_2.SM_FloorBuffer_A_2",
+   "name": "SM_FloorBuffer_A_2",
+   "size": [
+    320.0,
+    80.0,
+    61.0
+   ],
+   "tris": 1134,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_FloorBuffer_C.SM_FloorBuffer_C",
+   "name": "SM_FloorBuffer_C",
+   "size": [
+    320.0,
+    80.0,
+    61.0
+   ],
+   "tris": 272,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_FloorBuffer_C_2.SM_FloorBuffer_C_2",
+   "name": "SM_FloorBuffer_C_2",
+   "size": [
+    320.0,
+    80.0,
+    61.0
+   ],
+   "tris": 258,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Floor_Window_D.SM_Floor_Window_D",
+   "name": "SM_Floor_Window_D",
+   "size": [
+    15.0,
+    48.0,
+    4.0
+   ],
+   "tris": 1230,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/UE4_Assets/Environment_A/Meshes/SM_GDC_Landscape_Peakmesh_01.SM_GDC_Landscape_Peakmesh_01",
+   "name": "SM_GDC_Landscape_Peakmesh_01",
+   "size": [
+    4.0,
+    4.0,
+    1.0
+   ],
+   "tris": 5642,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_GlassCup.SM_GlassCup",
+   "name": "SM_GlassCup",
+   "size": [
+    9.0,
+    9.0,
+    14.0
+   ],
+   "tris": 1136,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_HScanner_Closed.SM_HScanner_Closed",
+   "name": "SM_HScanner_Closed",
+   "size": [
+    34.0,
+    3.0,
+    36.0
+   ],
+   "tris": 3614,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_HScanner_Open.SM_HScanner_Open",
+   "name": "SM_HScanner_Open",
+   "size": [
+    34.0,
+    19.0,
+    36.0
+   ],
+   "tris": 3614,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_Light_Square.SM_Hall_Light_Square",
+   "name": "SM_Hall_Light_Square",
+   "size": [
+    27.0,
+    20.0,
+    2.0
+   ],
+   "tris": 1006,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_Pipe_Handle.SM_Hall_Pipe_Handle",
+   "name": "SM_Hall_Pipe_Handle",
+   "size": [
+    6.0,
+    106.0,
+    12.0
+   ],
+   "tris": 1484,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_Pipes_Ceiling.SM_Hall_Pipes_Ceiling",
+   "name": "SM_Hall_Pipes_Ceiling",
+   "size": [
+    57.0,
+    14.0,
+    33.0
+   ],
+   "tris": 1276,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_Pipes_Long.SM_Hall_Pipes_Long",
+   "name": "SM_Hall_Pipes_Long",
+   "size": [
+    6.0,
+    116.0,
+    20.0
+   ],
+   "tris": 2104,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_Pipes_Thick.SM_Hall_Pipes_Thick",
+   "name": "SM_Hall_Pipes_Thick",
+   "size": [
+    20.0,
+    14.0,
+    57.0
+   ],
+   "tris": 1308,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_Vent_A.SM_Hall_Vent_A",
+   "name": "SM_Hall_Vent_A",
+   "size": [
+    7.0,
+    60.0,
+    52.0
+   ],
+   "tris": 602,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_Wall_B.SM_Hall_Wall_B",
+   "name": "SM_Hall_Wall_B",
+   "size": [
+    22.0,
+    360.0,
+    121.0
+   ],
+   "tris": 2004,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_Wall_C.SM_Hall_Wall_C",
+   "name": "SM_Hall_Wall_C",
+   "size": [
+    21.0,
+    140.0,
+    175.0
+   ],
+   "tris": 1602,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_Wall_C_2.SM_Hall_Wall_C_2",
+   "name": "SM_Hall_Wall_C_2",
+   "size": [
+    21.0,
+    89.0,
+    175.0
+   ],
+   "tris": 1674,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Hall_Wall_C_3.SM_Hall_Wall_C_3",
+   "name": "SM_Hall_Wall_C_3",
+   "size": [
+    17.0,
+    111.0,
+    195.0
+   ],
+   "tris": 1602,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_Win_Rails_A.SM_Hall_Win_Rails_A",
+   "name": "SM_Hall_Win_Rails_A",
+   "size": [
+    119.0,
+    206.0,
+    102.0
+   ],
+   "tris": 3040,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_Win_Rails_B.SM_Hall_Win_Rails_B",
+   "name": "SM_Hall_Win_Rails_B",
+   "size": [
+    7.0,
+    174.0,
+    75.0
+   ],
+   "tris": 640,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_Window_A.SM_Hall_Window_A",
+   "name": "SM_Hall_Window_A",
+   "size": [
+    181.0,
+    360.0,
+    410.0
+   ],
+   "tris": 3124,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_Wires_A.SM_Hall_Wires_A",
+   "name": "SM_Hall_Wires_A",
+   "size": [
+    108.0,
+    270.0,
+    46.0
+   ],
+   "tris": 2768,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/UE4_Assets/Environment_B/Meshes/SM_IceChunks_01.SM_IceChunks_01",
+   "name": "SM_IceChunks_01",
+   "size": [
+    63.0,
+    44.0,
+    3.0
+   ],
+   "tris": 2805,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/UE4_Assets/Environment_B/Meshes/SM_IceChunks_02.SM_IceChunks_02",
+   "name": "SM_IceChunks_02",
+   "size": [
+    57.0,
+    41.0,
+    3.0
+   ],
+   "tris": 2675,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_Keypad.SM_Keypad",
+   "name": "SM_Keypad",
+   "size": [
+    11.0,
+    4.0,
+    15.0
+   ],
+   "tris": 1414,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_Laptop.SM_Laptop",
+   "name": "SM_Laptop",
+   "size": [
+    51.0,
+    56.0,
+    38.0
+   ],
+   "tris": 6516,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_Laptop_Closed.SM_Laptop_Closed",
+   "name": "SM_Laptop_Closed",
+   "size": [
+    51.0,
+    40.0,
+    4.0
+   ],
+   "tris": 6516,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Light_A.SM_Light_A",
+   "name": "SM_Light_A",
+   "size": [
+    10.0,
+    37.0,
+    4.0
+   ],
+   "tris": 1236,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Light_A.SM_Light_A",
+   "name": "SM_Light_A",
+   "size": [
+    51.0,
+    13.0,
+    2.0
+   ],
+   "tris": 4110,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Light_B.SM_Light_B",
+   "name": "SM_Light_B",
+   "size": [
+    10.0,
+    15.0,
+    4.0
+   ],
+   "tris": 1236,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Light_B.SM_Light_B",
+   "name": "SM_Light_B",
+   "size": [
+    13.0,
+    96.0,
+    13.0
+   ],
+   "tris": 1624,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Light_Square.SM_Light_Square",
+   "name": "SM_Light_Square",
+   "size": [
+    27.0,
+    20.0,
+    2.0
+   ],
+   "tris": 1006,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_MedBottle.SM_MedBottle",
+   "name": "SM_MedBottle",
+   "size": [
+    4.0,
+    4.0,
+    7.0
+   ],
+   "tris": 1756,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_MedBottle_b.SM_MedBottle_b",
+   "name": "SM_MedBottle_b",
+   "size": [
+    3.0,
+    3.0,
+    8.0
+   ],
+   "tris": 1580,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_MobileStorage.SM_MobileStorage",
+   "name": "SM_MobileStorage",
+   "size": [
+    12.0,
+    12.0,
+    2.0
+   ],
+   "tris": 2528,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Pipe_Ceiling_B.SM_Pipe_Ceiling_B",
+   "name": "SM_Pipe_Ceiling_B",
+   "size": [
+    160.0,
+    86.0,
+    30.0
+   ],
+   "tris": 6080,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Pipe_Ceiling_C.SM_Pipe_Ceiling_C",
+   "name": "SM_Pipe_Ceiling_C",
+   "size": [
+    160.0,
+    18.0,
+    40.0
+   ],
+   "tris": 2432,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Pipe_Div_B.SM_Pipe_Div_B",
+   "name": "SM_Pipe_Div_B",
+   "size": [
+    9.0,
+    9.0,
+    69.0
+   ],
+   "tris": 1216,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Pipes_GRP_A.SM_Pipes_GRP_A",
+   "name": "SM_Pipes_GRP_A",
+   "size": [
+    28.0,
+    160.0,
+    28.0
+   ],
+   "tris": 520,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Pipes_GRP_B.SM_Pipes_GRP_B",
+   "name": "SM_Pipes_GRP_B",
+   "size": [
+    28.0,
+    160.0,
+    28.0
+   ],
+   "tris": 760,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_Shelf_A_v1.SM_Shelf_A_v1",
+   "name": "SM_Shelf_A_v1",
+   "size": [
+    183.0,
+    64.0,
+    141.0
+   ],
+   "tris": 1912,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_Shelf_A_v2.SM_Shelf_A_v2",
+   "name": "SM_Shelf_A_v2",
+   "size": [
+    183.0,
+    64.0,
+    141.0
+   ],
+   "tris": 1884,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_Shelf_A_v3.SM_Shelf_A_v3",
+   "name": "SM_Shelf_A_v3",
+   "size": [
+    83.0,
+    64.0,
+    141.0
+   ],
+   "tris": 1912,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_Shelf_A_v4.SM_Shelf_A_v4",
+   "name": "SM_Shelf_A_v4",
+   "size": [
+    83.0,
+    64.0,
+    141.0
+   ],
+   "tris": 1884,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_SingleDrawer.SM_SingleDrawer",
+   "name": "SM_SingleDrawer",
+   "size": [
+    87.0,
+    78.0,
+    22.0
+   ],
+   "tris": 228,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_SmkDetector.SM_SmkDetector",
+   "name": "SM_SmkDetector",
+   "size": [
+    18.0,
+    18.0,
+    5.0
+   ],
+   "tris": 3088,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Stairs_A1.SM_Stairs_A1",
+   "name": "SM_Stairs_A1",
+   "size": [
+    392.0,
+    391.0,
+    176.0
+   ],
+   "tris": 7440,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Stairs_A_Straight.SM_Stairs_A_Straight",
+   "name": "SM_Stairs_A_Straight",
+   "size": [
+    178.0,
+    376.0,
+    176.0
+   ],
+   "tris": 7440,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_Stool.SM_Stool",
+   "name": "SM_Stool",
+   "size": [
+    50.0,
+    46.0,
+    50.0
+   ],
+   "tris": 5924,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_TableLamp.SM_TableLamp",
+   "name": "SM_TableLamp",
+   "size": [
+    61.0,
+    15.0,
+    49.0
+   ],
+   "tris": 2768,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_TempControl.SM_TempControl",
+   "name": "SM_TempControl",
+   "size": [
+    5.0,
+    16.0,
+    19.0
+   ],
+   "tris": 2852,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Terminal_A.SM_Terminal_A",
+   "name": "SM_Terminal_A",
+   "size": [
+    142.0,
+    297.0,
+    135.0
+   ],
+   "tris": 36156,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_Vent_A.SM_Vent_A",
+   "name": "SM_Vent_A",
+   "size": [
+    41.0,
+    41.0,
+    1.0
+   ],
+   "tris": 930,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_Vent_A2.SM_Vent_A2",
+   "name": "SM_Vent_A2",
+   "size": [
+    23.0,
+    41.0,
+    1.0
+   ],
+   "tris": 590,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_Vent_B.SM_Vent_B",
+   "name": "SM_Vent_B",
+   "size": [
+    52.0,
+    39.0,
+    3.0
+   ],
+   "tris": 520,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_WallCab_1D.SM_WallCab_1D",
+   "name": "SM_WallCab_1D",
+   "size": [
+    66.0,
+    36.0,
+    82.0
+   ],
+   "tris": 2496,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_WallCab_1D_Op.SM_WallCab_1D_Op",
+   "name": "SM_WallCab_1D_Op",
+   "size": [
+    112.0,
+    67.0,
+    82.0
+   ],
+   "tris": 2496,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_WallCab_2D.SM_WallCab_2D",
+   "name": "SM_WallCab_2D",
+   "size": [
+    66.0,
+    36.0,
+    82.0
+   ],
+   "tris": 4604,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_WallCab_2D_Op.SM_WallCab_2D_Op",
+   "name": "SM_WallCab_2D_Op",
+   "size": [
+    110.0,
+    50.0,
+    82.0
+   ],
+   "tris": 4604,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_Wall_A_Glass.SM_Wall_A_Glass",
+   "name": "SM_Wall_A_Glass",
+   "size": [
+    10.0,
+    143.0,
+    357.0
+   ],
+   "tris": 548,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Wall_Center_B.SM_Wall_Center_B",
+   "name": "SM_Wall_Center_B",
+   "size": [
+    206.0,
+    928.0,
+    167.0
+   ],
+   "tris": 8934,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Wall_Corner_B.SM_Wall_Corner_B",
+   "name": "SM_Wall_Corner_B",
+   "size": [
+    370.0,
+    380.0,
+    610.0
+   ],
+   "tris": 6815,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Wall_D.SM_Wall_D",
+   "name": "SM_Wall_D",
+   "size": [
+    72.0,
+    360.0,
+    440.0
+   ],
+   "tris": 3744,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Wall_Detail_A.SM_Wall_Detail_A",
+   "name": "SM_Wall_Detail_A",
+   "size": [
+    12.0,
+    92.0,
+    141.0
+   ],
+   "tris": 694,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Wall_Pipe_E.SM_Wall_Pipe_E",
+   "name": "SM_Wall_Pipe_E",
+   "size": [
+    70.0,
+    22.0,
+    164.0
+   ],
+   "tris": 960,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Wall_Pipe_F.SM_Wall_Pipe_F",
+   "name": "SM_Wall_Pipe_F",
+   "size": [
+    21.0,
+    213.0,
+    38.0
+   ],
+   "tris": 480,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Wall_Pipe_G.SM_Wall_Pipe_G",
+   "name": "SM_Wall_Pipe_G",
+   "size": [
+    17.0,
+    8.0,
+    59.0
+   ],
+   "tris": 352,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Wall_Window_A.SM_Wall_Window_A",
+   "name": "SM_Wall_Window_A",
+   "size": [
+    601.0,
+    212.0,
+    418.0
+   ],
+   "tris": 5732,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_WasteBin.SM_WasteBin",
+   "name": "SM_WasteBin",
+   "size": [
+    47.0,
+    46.0,
+    70.0
+   ],
+   "tris": 3068,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Win_Ceiling_D.SM_Win_Ceiling_D",
+   "name": "SM_Win_Ceiling_D",
+   "size": [
+    110.0,
+    40.0,
+    29.0
+   ],
+   "tris": 144,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Win_Frame_A.SM_Win_Frame_A",
+   "name": "SM_Win_Frame_A",
+   "size": [
+    262.0,
+    380.0,
+    283.0
+   ],
+   "tris": 2538,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Win_PanelHigh_A.SM_Win_PanelHigh_A",
+   "name": "SM_Win_PanelHigh_A",
+   "size": [
+    10.0,
+    380.0,
+    70.0
+   ],
+   "tris": 12,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Win_PanelLow_A.SM_Win_PanelLow_A",
+   "name": "SM_Win_PanelLow_A",
+   "size": [
+    31.0,
+    380.0,
+    82.0
+   ],
+   "tris": 2252,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Win_Post_A.SM_Win_Post_A",
+   "name": "SM_Win_Post_A",
+   "size": [
+    272.0,
+    157.0,
+    440.0
+   ],
+   "tris": 4126,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Win_Post_A_2.SM_Win_Post_A_2",
+   "name": "SM_Win_Post_A_2",
+   "size": [
+    272.0,
+    148.0,
+    440.0
+   ],
+   "tris": 4126,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Windows_A.SM_Windows_A",
+   "name": "SM_Windows_A",
+   "size": [
+    1121.0,
+    2241.0,
+    418.0
+   ],
+   "tris": 20524,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Windows_A_Glass.SM_Windows_A_Glass",
+   "name": "SM_Windows_A_Glass",
+   "size": [
+    435.0,
+    1752.0,
+    350.0
+   ],
+   "tris": 196,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_WirelessB_Off.SM_WirelessB_Off",
+   "name": "SM_WirelessB_Off",
+   "size": [
+    5.0,
+    9.0,
+    15.0
+   ],
+   "tris": 2796,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_WirelessB_On.SM_WirelessB_On",
+   "name": "SM_WirelessB_On",
+   "size": [
+    5.0,
+    9.0,
+    24.0
+   ],
+   "tris": 2796,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_GlassDivider.SM_GlassDivider",
+   "name": "SM_GlassDivider",
+   "size": [
+    300.0,
+    22.0,
+    210.0
+   ],
+   "tris": 2884,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiHallways/Meshes/SM_Hall_Wall_A.SM_Hall_Wall_A",
+   "name": "SM_Hall_Wall_A",
+   "size": [
+    30.0,
+    360.0,
+    280.0
+   ],
+   "tris": 370,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_WallEdge_A.SM_WallEdge_A",
+   "name": "SM_WallEdge_A",
+   "size": [
+    320.0,
+    33.0,
+    400.0
+   ],
+   "tris": 582,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_WallEdge_A_3.SM_WallEdge_A_3",
+   "name": "SM_WallEdge_A_3",
+   "size": [
+    320.0,
+    33.0,
+    400.0
+   ],
+   "tris": 82,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_WallEdge_A_4.SM_WallEdge_A_4",
+   "name": "SM_WallEdge_A_4",
+   "size": [
+    320.0,
+    33.0,
+    400.0
+   ],
+   "tris": 630,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_Wall_A.SM_Wall_A",
+   "name": "SM_Wall_A",
+   "size": [
+    13.0,
+    360.0,
+    450.0
+   ],
+   "tris": 156,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Wall_A.SM_Wall_A",
+   "name": "SM_Wall_A",
+   "size": [
+    51.0,
+    360.0,
+    410.0
+   ],
+   "tris": 2888,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Wall_A_2.SM_Wall_A_2",
+   "name": "SM_Wall_A_2",
+   "size": [
+    51.0,
+    360.0,
+    410.0
+   ],
+   "tris": 3116,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularScifiProps/Meshes/SM_Wall_B.SM_Wall_B",
+   "name": "SM_Wall_B",
+   "size": [
+    320.0,
+    13.0,
+    450.0
+   ],
+   "tris": 156,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Wall_B.SM_Wall_B",
+   "name": "SM_Wall_B",
+   "size": [
+    60.0,
+    384.0,
+    653.0
+   ],
+   "tris": 6524,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Wall_B.SM_Wall_B",
+   "name": "SM_Wall_B",
+   "size": [
+    330.0,
+    60.0,
+    420.0
+   ],
+   "tris": 250,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Wall_B_2.SM_Wall_B_2",
+   "name": "SM_Wall_B_2",
+   "size": [
+    320.0,
+    60.0,
+    420.0
+   ],
+   "tris": 242,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Wall_B_3.SM_Wall_B_3",
+   "name": "SM_Wall_B_3",
+   "size": [
+    340.0,
+    60.0,
+    420.0
+   ],
+   "tris": 258,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Wall_Center_A.SM_Wall_Center_A",
+   "name": "SM_Wall_Center_A",
+   "size": [
+    60.0,
+    534.0,
+    630.0
+   ],
+   "tris": 6142,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Wall_D.SM_Wall_D",
+   "name": "SM_Wall_D",
+   "size": [
+    29.0,
+    360.0,
+    410.0
+   ],
+   "tris": 5002,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Wall_Pipe_B.SM_Wall_Pipe_B",
+   "name": "SM_Wall_Pipe_B",
+   "size": [
+    354.0,
+    7.0,
+    389.0
+   ],
+   "tris": 480,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Comm/Meshes/SM_Wall_Pipe_D.SM_Wall_Pipe_D",
+   "name": "SM_Wall_Pipe_D",
+   "size": [
+    7.0,
+    805.0,
+    382.0
+   ],
+   "tris": 480,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Win_Divider_A.SM_Win_Divider_A",
+   "name": "SM_Win_Divider_A",
+   "size": [
+    269.0,
+    49.0,
+    440.0
+   ],
+   "tris": 1850,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/StarterBundle/ModularSci_Int/Meshes/SM_Win_Divider_B.SM_Win_Divider_B",
+   "name": "SM_Win_Divider_B",
+   "size": [
+    269.0,
+    49.0,
+    440.0
+   ],
+   "tris": 3296,
+   "nanite": "",
+   "role": "wall"
+  }
+ ]
+}

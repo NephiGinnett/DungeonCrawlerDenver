@@ -1264,3 +1264,23 @@ when the controller is a PlayerController (an AIController is also "locally cont
   `returnValue` (parse twice).
 - Equipment: clothing and trinkets use `GroundMesh` (what lies on the floor), never `Mesh` (what is worn).
 - Characters in arcade arenas get `M_CharacterShade` as an overlay (`ApplyCharacterShade`), graded from the arena's sky.
+
+### The uniform bone maker: `Tools/unify_rig.py` + `Tools/import_unified.py` (2026-11-25)
+For a model that already has a rig (3ds Max Biped `Bip001-*`, Mixamo, UE Mannequin, Meshy): `unify_rig.py` (Blender, headless) maps its bones onto our 24-bone crawler skeleton, keeps its own skin weights (extra bones like fingers, FX and weapons fold into their nearest kept parent), scales it to `--height` metres, faces it -Y, and can render `--preview` frames of a crawler walk. The torso bones keep our rest orientation, so a hunched monster stays hunched; limbs point at their next joint, so clips swing them. Then `import_unified.py` (commandlet, editor closed, project-relative `--src`) imports it bound to `SK_DCCCrawler_Skeleton`, and a small `ADCCEnemyCharacter_Unified` subclass (mesh + height) gets the whole crawler animation set. `DCC.SpawnEnemy <Class> [count] [delay]` drops any enemy class in front of you. Unrigged meshes still go through `Tools/rig_to_shared_skeleton.py` (automatic weights).
+
+### Building places: sets and kits (2026-11-25)
+Zoe wants Claude to do the world-making. Start at `Docs/kits.md`. Most place packs ship a finished sample map, and an ordinary
+(non World Partition) one streams into any game whole: `DCCSets::Load(World, "Studio", At, Rot, InstanceName, Options, OnReady)`
+(`Arcade/DCCSets.h`); it strips the map's sun, sky, player starts and demo pawns and hands back its bounds. Call it on every
+machine with the same instance name; keep gameplay actors in our code. Preview with `DCC.Set <alias>` on the bench
+(`DCC_TEST_WAITFOR="[DCC Sets] tour start"` for `run_test.py`), never in the Den (too heavy). Several "scene" packs (Old Mine,
+Saloon, Clinic) ship prop showrooms, not rooms: build those from pieces, sized from `SourceArt/Kits/<Pack>.json`
+(`Tools/kit_catalogue.py`). Add a set's map to the cook before shipping a game that loads it. A timer callback must copy its captures before it clears its own timer: clearing destroys the lambda mid-call (this
+emptied a set's options, then crashed). Tower defense runs in the Power Plant set (see ROADMAP 2026-11-25).
+
+### Online: Epic Online Services (2026-11-25)
+`Session/DCCOnline` signs each PC in with an EOS device id and runs the party list (EOS lobbies) and the relay (the
+EOS net driver, with an IP fallback whenever EOS is not signed in, so invite codes keep working). IDs live in
+`DefaultEngine.ini` `[OnlineServices.EOS]` (the repo is private; these ship in every build anyway). Two game copies on
+one PC share a device id, so test a real join across two PCs.
+

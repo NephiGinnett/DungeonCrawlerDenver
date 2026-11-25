@@ -1,0 +1,1175 @@
+{
+ "pack": "Scene_OldMine",
+ "maps": [
+  {
+   "path": "/Game/Scene_OldMine/Maps/Industrial_OldMine.Industrial_OldMine",
+   "partitioned": false
+  }
+ ],
+ "meshes": [
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/Floor_Edge.Floor_Edge",
+   "name": "Floor_Edge",
+   "size": [
+    1000.0,
+    200.0,
+    50.0
+   ],
+   "tris": 104,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/Pipe.Pipe",
+   "name": "Pipe",
+   "size": [
+    1000.0,
+    15.0,
+    15.0
+   ],
+   "tris": 124,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/Coa_Har_Patch_Ground_Coarse_01/SM_Coa_Har_Patch_Ground_Coarse_01.SM_Coa_Har_Patch_Ground_Coarse_01",
+   "name": "SM_Coa_Har_Patch_Ground_Coarse_01",
+   "size": [
+    277.0,
+    235.0,
+    7.0
+   ],
+   "tris": 34159,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/Des_Pak_Patch_Ground_Rocky_06/SM_Des_Pak_Patch_Ground_Rocky_06.SM_Des_Pak_Patch_Ground_Rocky_06",
+   "name": "SM_Des_Pak_Patch_Ground_Rocky_06",
+   "size": [
+    197.0,
+    182.0,
+    15.0
+   ],
+   "tris": 26568,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/Des_Wes_Rock_Sand_Weathered_25/SM_Des_Wes_Rock_Sand_Weathered_25.SM_Des_Wes_Rock_Sand_Weathered_25",
+   "name": "SM_Des_Wes_Rock_Sand_Weathered_25",
+   "size": [
+    322.0,
+    188.0,
+    39.0
+   ],
+   "tris": 17556,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/SM_DisplayFrame_Side.SM_DisplayFrame_Side",
+   "name": "SM_DisplayFrame_Side",
+   "size": [
+    30.0,
+    201.0,
+    23.0
+   ],
+   "tris": 16,
+   "nanite": "False",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/SM_DisplayFrame_Side_Bottom.SM_DisplayFrame_Side_Bottom",
+   "name": "SM_DisplayFrame_Side_Bottom",
+   "size": [
+    30.0,
+    200.0,
+    17.0
+   ],
+   "tris": 16,
+   "nanite": "False",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/SM_DisplayFrame_Side_Top.SM_DisplayFrame_Side_Top",
+   "name": "SM_DisplayFrame_Side_Top",
+   "size": [
+    1.0,
+    200.0,
+    23.0
+   ],
+   "tris": 36,
+   "nanite": "False",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/Ind_Min_Beam_Round_Wood_Worn_01/SM_Ind_Min_Beam_Round_Wood_Worn_01.SM_Ind_Min_Beam_Round_Wood_Worn_01",
+   "name": "SM_Ind_Min_Beam_Round_Wood_Worn_01",
+   "size": [
+    155.0,
+    23.0,
+    14.0
+   ],
+   "tris": 1170,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/Ind_Min_Beam_Square_Wood_Worn_04/SM_Ind_Min_Beam_Square_Wood_Worn_04.SM_Ind_Min_Beam_Square_Wood_Worn_04",
+   "name": "SM_Ind_Min_Beam_Square_Wood_Worn_04",
+   "size": [
+    169.0,
+    16.0,
+    11.0
+   ],
+   "tris": 1694,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/Ind_Min_Rail_Metal_Pack_01/SM_Ind_Min_Rail_Metal_Pack_01_B.SM_Ind_Min_Rail_Metal_Pack_01_B",
+   "name": "SM_Ind_Min_Rail_Metal_Pack_01_B",
+   "size": [
+    500.0,
+    321.0,
+    27.0
+   ],
+   "tris": 6248,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/Ind_Min_Rail_Metal_Pack_01/SM_Ind_Min_Rail_Metal_Pack_01_C.SM_Ind_Min_Rail_Metal_Pack_01_C",
+   "name": "SM_Ind_Min_Rail_Metal_Pack_01_C",
+   "size": [
+    250.0,
+    250.0,
+    22.0
+   ],
+   "tris": 5546,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/Ind_Min_Rail_Metal_Pack_01/SM_Ind_Min_Rail_Metal_Pack_01_D.SM_Ind_Min_Rail_Metal_Pack_01_D",
+   "name": "SM_Ind_Min_Rail_Metal_Pack_01_D",
+   "size": [
+    250.0,
+    244.0,
+    22.0
+   ],
+   "tris": 3894,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/Ind_Min_Rail_Tracks_Wood_Modular_01/SM_Ind_Min_Rail_Tracks_Wood_Modular_01_A.SM_Ind_Min_Rail_Tracks_Wood_Modular_01_A",
+   "name": "SM_Ind_Min_Rail_Tracks_Wood_Modular_01_A",
+   "size": [
+    250.0,
+    150.0,
+    32.0
+   ],
+   "tris": 8898,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/Ind_Min_Rail_Tracks_Wood_Modular_01/SM_Ind_Min_Rail_Tracks_Wood_Modular_01_B.SM_Ind_Min_Rail_Tracks_Wood_Modular_01_B",
+   "name": "SM_Ind_Min_Rail_Tracks_Wood_Modular_01_B",
+   "size": [
+    250.0,
+    150.0,
+    25.0
+   ],
+   "tris": 9814,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/Ind_Min_Rail_Tracks_Wood_Modular_01/SM_Ind_Min_Rail_Tracks_Wood_Modular_01_C.SM_Ind_Min_Rail_Tracks_Wood_Modular_01_C",
+   "name": "SM_Ind_Min_Rail_Tracks_Wood_Modular_01_C",
+   "size": [
+    250.0,
+    150.0,
+    25.0
+   ],
+   "tris": 13035,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/His_Med_Beam_Wood_Worn_01/SM_His_Med_Beam_Wood_Worn_01.SM_His_Med_Beam_Wood_Worn_01",
+   "name": "SM_His_Med_Beam_Wood_Worn_01",
+   "size": [
+    20.0,
+    19.0,
+    256.0
+   ],
+   "tris": 1106,
+   "nanite": "True",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/His_Med_Beam_Wood_Worn_02/SM_His_Med_Beam_Wood_Worn_02.SM_His_Med_Beam_Wood_Worn_02",
+   "name": "SM_His_Med_Beam_Wood_Worn_02",
+   "size": [
+    26.0,
+    26.0,
+    232.0
+   ],
+   "tris": 490,
+   "nanite": "True",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/His_Med_Beam_Wood_Worn_03/SM_His_Med_Beam_Wood_Worn_03.SM_His_Med_Beam_Wood_Worn_03",
+   "name": "SM_His_Med_Beam_Wood_Worn_03",
+   "size": [
+    24.0,
+    23.0,
+    250.0
+   ],
+   "tris": 1386,
+   "nanite": "True",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/His_Med_Beam_Wood_Worn_04/SM_His_Med_Beam_Wood_Worn_04.SM_His_Med_Beam_Wood_Worn_04",
+   "name": "SM_His_Med_Beam_Wood_Worn_04",
+   "size": [
+    23.0,
+    23.0,
+    243.0
+   ],
+   "tris": 9766,
+   "nanite": "False",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/Ind_Min_Equipment_Hydraulic_Metal_Old_02/SM_Ind_Min_Equipment_Hydraulic_Metal_Old_02.SM_Ind_Min_Equipment_Hydraulic_Metal_Old_02",
+   "name": "SM_Ind_Min_Equipment_Hydraulic_Metal_Old_02",
+   "size": [
+    31.0,
+    26.0,
+    255.0
+   ],
+   "tris": 2008,
+   "nanite": "True",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/ShadowBox_1MPanel.ShadowBox_1MPanel",
+   "name": "ShadowBox_1MPanel",
+   "size": [
+    100.0,
+    18.0,
+    500.0
+   ],
+   "tris": 674,
+   "nanite": "True",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/ShadowBox_1MPanel2.ShadowBox_1MPanel2",
+   "name": "ShadowBox_1MPanel2",
+   "size": [
+    100.0,
+    16.0,
+    500.0
+   ],
+   "tris": 48,
+   "nanite": "True",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/Tile_10MPillar_B.Tile_10MPillar_B",
+   "name": "Tile_10MPillar_B",
+   "size": [
+    50.0,
+    100.0,
+    1000.0
+   ],
+   "tris": 52,
+   "nanite": "True",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/Tile_10MPillar_B_2.Tile_10MPillar_B_2",
+   "name": "Tile_10MPillar_B_2",
+   "size": [
+    50.0,
+    94.0,
+    1000.0
+   ],
+   "tris": 52,
+   "nanite": "False",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/Tile_Edge.Tile_Edge",
+   "name": "Tile_Edge",
+   "size": [
+    100.0,
+    50.0,
+    1000.0
+   ],
+   "tris": 52,
+   "nanite": "True",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/Tile_Edge_2.Tile_Edge_2",
+   "name": "Tile_Edge_2",
+   "size": [
+    100.0,
+    50.0,
+    1000.0
+   ],
+   "tris": 52,
+   "nanite": "False",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/TrimFeature_MetalTrim_Straight.TrimFeature_MetalTrim_Straight",
+   "name": "TrimFeature_MetalTrim_Straight",
+   "size": [
+    57.0,
+    2.0,
+    200.0
+   ],
+   "tris": 252,
+   "nanite": "True",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/TrimFeature_MetalTrim_Straight_B.TrimFeature_MetalTrim_Straight_B",
+   "name": "TrimFeature_MetalTrim_Straight_B",
+   "size": [
+    57.0,
+    2.0,
+    200.0
+   ],
+   "tris": 76,
+   "nanite": "False",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/Display_Corner_B.Display_Corner_B",
+   "name": "Display_Corner_B",
+   "size": [
+    9.0,
+    100.0,
+    100.0
+   ],
+   "tris": 320,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/Display_Corner_C.Display_Corner_C",
+   "name": "Display_Corner_C",
+   "size": [
+    5.0,
+    100.0,
+    100.0
+   ],
+   "tris": 288,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/Display_Curve_B.Display_Curve_B",
+   "name": "Display_Curve_B",
+   "size": [
+    100.0,
+    200.0,
+    100.0
+   ],
+   "tris": 252,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/Display_Curve_C.Display_Curve_C",
+   "name": "Display_Curve_C",
+   "size": [
+    95.0,
+    200.0,
+    95.0
+   ],
+   "tris": 164,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/Display_EdgeCurve_B.Display_EdgeCurve_B",
+   "name": "Display_EdgeCurve_B",
+   "size": [
+    100.0,
+    100.0,
+    100.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/Display_EdgeCurve_C.Display_EdgeCurve_C",
+   "name": "Display_EdgeCurve_C",
+   "size": [
+    95.0,
+    100.0,
+    95.0
+   ],
+   "tris": 332,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/Display_Side_B.Display_Side_B",
+   "name": "Display_Side_B",
+   "size": [
+    10.0,
+    200.0,
+    100.0
+   ],
+   "tris": 200,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/Display_Side_C.Display_Side_C",
+   "name": "Display_Side_C",
+   "size": [
+    5.0,
+    200.0,
+    100.0
+   ],
+   "tris": 12,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/Floor_Corner.Floor_Corner",
+   "name": "Floor_Corner",
+   "size": [
+    200.0,
+    200.0,
+    50.0
+   ],
+   "tris": 284,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/Podium_01.Podium_01",
+   "name": "Podium_01",
+   "size": [
+    266.0,
+    266.0,
+    58.0
+   ],
+   "tris": 1600,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/Podium_02.Podium_02",
+   "name": "Podium_02",
+   "size": [
+    200.0,
+    200.0,
+    58.0
+   ],
+   "tris": 300,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/SM_DisplayFrame_Corner.SM_DisplayFrame_Corner",
+   "name": "SM_DisplayFrame_Corner",
+   "size": [
+    30.0,
+    61.0,
+    61.0
+   ],
+   "tris": 128,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/SM_DisplayFrame_Corner_Bottom.SM_DisplayFrame_Corner_Bottom",
+   "name": "SM_DisplayFrame_Corner_Bottom",
+   "size": [
+    30.0,
+    58.0,
+    58.0
+   ],
+   "tris": 128,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/SM_DisplayFrame_Corner_Top.SM_DisplayFrame_Corner_Top",
+   "name": "SM_DisplayFrame_Corner_Top",
+   "size": [
+    1.0,
+    61.0,
+    61.0
+   ],
+   "tris": 103,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/For_Tro_Rock_S_03/SM_For_Tro_Rock_S_03.SM_For_Tro_Rock_S_03",
+   "name": "SM_For_Tro_Rock_S_03",
+   "size": [
+    9.0,
+    9.0,
+    7.0
+   ],
+   "tris": 1738,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/His_Med_Beam_Wood_Worn_05/SM_His_Med_Beam_Wood_Worn_05.SM_His_Med_Beam_Wood_Worn_05",
+   "name": "SM_His_Med_Beam_Wood_Worn_05",
+   "size": [
+    25.0,
+    25.0,
+    161.0
+   ],
+   "tris": 9362,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/His_Med_Tools_Hammer_Metal_Old_01/SM_His_Med_Tools_Hammer_Metal_Old_01.SM_His_Med_Tools_Hammer_Metal_Old_01",
+   "name": "SM_His_Med_Tools_Hammer_Metal_Old_01",
+   "size": [
+    49.0,
+    13.0,
+    4.0
+   ],
+   "tris": 520,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/His_Med_Tools_Pickaxe_Metal_Old_03/SM_His_Med_Tools_Pickaxe_Metal_Old_03.SM_His_Med_Tools_Pickaxe_Metal_Old_03",
+   "name": "SM_His_Med_Tools_Pickaxe_Metal_Old_03",
+   "size": [
+    50.0,
+    7.0,
+    87.0
+   ],
+   "tris": 584,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/Ind_Aba_Supplies_Plank_Wood_Worn_01/SM_Ind_Aba_Supplies_Plank_Wood_Worn_01.SM_Ind_Aba_Supplies_Plank_Wood_Worn_01",
+   "name": "SM_Ind_Aba_Supplies_Plank_Wood_Worn_01",
+   "size": [
+    32.0,
+    8.0,
+    3.0
+   ],
+   "tris": 6572,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/Ind_Con_Gear_HardHat_Plastic_Yellow_01/SM_Ind_Con_Gear_HardHat_Plastic_Yellow_01.SM_Ind_Con_Gear_HardHat_Plastic_Yellow_01",
+   "name": "SM_Ind_Con_Gear_HardHat_Plastic_Yellow_01",
+   "size": [
+    18.0,
+    15.0,
+    9.0
+   ],
+   "tris": 2204,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/Ind_Min_Beam_Square_Wood_Worn_03/SM_Ind_Min_Beam_Square_Wood_Worn_03.SM_Ind_Min_Beam_Square_Wood_Worn_03",
+   "name": "SM_Ind_Min_Beam_Square_Wood_Worn_03",
+   "size": [
+    123.0,
+    18.0,
+    11.0
+   ],
+   "tris": 776,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/Ind_Min_Cart_Log_Wood_Old_01/SM_Ind_Min_Cart_Log_Wood_Old_01.SM_Ind_Min_Cart_Log_Wood_Old_01",
+   "name": "SM_Ind_Min_Cart_Log_Wood_Old_01",
+   "size": [
+    83.0,
+    230.0,
+    106.0
+   ],
+   "tris": 15103,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/Ind_Min_Cart_Metal_Old_01/SM_Ind_Min_Cart_Metal_Old_01.SM_Ind_Min_Cart_Metal_Old_01",
+   "name": "SM_Ind_Min_Cart_Metal_Old_01",
+   "size": [
+    77.0,
+    110.0,
+    106.0
+   ],
+   "tris": 9676,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/Ind_Min_Cart_Metal_Old_02/SM_Ind_Min_Cart_Metal_Old_02.SM_Ind_Min_Cart_Metal_Old_02",
+   "name": "SM_Ind_Min_Cart_Metal_Old_02",
+   "size": [
+    206.0,
+    95.0,
+    156.0
+   ],
+   "tris": 17962,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/Ind_Min_Cart_Wheel_Metal_Old_01/SM_Ind_Min_Cart_Wheel_Metal_Old_01.SM_Ind_Min_Cart_Wheel_Metal_Old_01",
+   "name": "SM_Ind_Min_Cart_Wheel_Metal_Old_01",
+   "size": [
+    73.0,
+    33.0,
+    33.0
+   ],
+   "tris": 5568,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Custom/Ind_Min_Cave/SM_Ind_Min_Cave.SM_Ind_Min_Cave",
+   "name": "SM_Ind_Min_Cave",
+   "size": [
+    287.0,
+    618.0,
+    279.0
+   ],
+   "tris": 26561,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/Ind_Min_Equipment_Stakes_Metal_Pack_01/SM_Ind_Min_Equipment_Stakes_Metal_Pack_01_A.SM_Ind_Min_Equipment_Stakes_Metal_Pack_01_A",
+   "name": "SM_Ind_Min_Equipment_Stakes_Metal_Pack_01_A",
+   "size": [
+    18.0,
+    3.0,
+    3.0
+   ],
+   "tris": 8414,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/Ind_Min_Equipment_Stakes_Metal_Pack_01/SM_Ind_Min_Equipment_Stakes_Metal_Pack_01_B.SM_Ind_Min_Equipment_Stakes_Metal_Pack_01_B",
+   "name": "SM_Ind_Min_Equipment_Stakes_Metal_Pack_01_B",
+   "size": [
+    17.0,
+    6.0,
+    6.0
+   ],
+   "tris": 8458,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/Ind_Min_Equipment_Stakes_Metal_Pack_01/SM_Ind_Min_Equipment_Stakes_Metal_Pack_01_C.SM_Ind_Min_Equipment_Stakes_Metal_Pack_01_C",
+   "name": "SM_Ind_Min_Equipment_Stakes_Metal_Pack_01_C",
+   "size": [
+    17.0,
+    3.0,
+    3.0
+   ],
+   "tris": 8228,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/Ind_Min_Equipment_Stakes_Metal_Pack_01/SM_Ind_Min_Equipment_Stakes_Metal_Pack_01_D.SM_Ind_Min_Equipment_Stakes_Metal_Pack_01_D",
+   "name": "SM_Ind_Min_Equipment_Stakes_Metal_Pack_01_D",
+   "size": [
+    13.0,
+    2.0,
+    3.0
+   ],
+   "tris": 9348,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/Ind_Min_Equipment_Stakes_Metal_Pack_01/SM_Ind_Min_Equipment_Stakes_Metal_Pack_01_E.SM_Ind_Min_Equipment_Stakes_Metal_Pack_01_E",
+   "name": "SM_Ind_Min_Equipment_Stakes_Metal_Pack_01_E",
+   "size": [
+    12.0,
+    2.0,
+    3.0
+   ],
+   "tris": 2900,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Custom/Ind_Min_Ground/SM_Ind_Min_Ground.SM_Ind_Min_Ground",
+   "name": "SM_Ind_Min_Ground",
+   "size": [
+    100.0,
+    100.0,
+    0.0
+   ],
+   "tris": 252,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/Ind_Min_Rail_Metal_Pack_01/SM_Ind_Min_Rail_Metal_Pack_01_A.SM_Ind_Min_Rail_Metal_Pack_01_A",
+   "name": "SM_Ind_Min_Rail_Metal_Pack_01_A",
+   "size": [
+    161.0,
+    260.0,
+    134.0
+   ],
+   "tris": 3388,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/Ind_Min_Tool_Shovel_Old_01/SM_Ind_Min_Tool_Shovel_Old_01.SM_Ind_Min_Tool_Shovel_Old_01",
+   "name": "SM_Ind_Min_Tool_Shovel_Old_01",
+   "size": [
+    98.0,
+    22.0,
+    14.0
+   ],
+   "tris": 1206,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/Ind_Min_Tunnel_Wall_Log_Modular_01/SM_Ind_Min_Tunnel_Wall_Log_Modular_01.SM_Ind_Min_Tunnel_Wall_Log_Modular_01",
+   "name": "SM_Ind_Min_Tunnel_Wall_Log_Modular_01",
+   "size": [
+    305.0,
+    321.0,
+    237.0
+   ],
+   "tris": 16908,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/Ind_Min_Tunnel_Wall_Log_Modular_02/SM_Ind_Min_Tunnel_Wall_Log_Modular_02.SM_Ind_Min_Tunnel_Wall_Log_Modular_02",
+   "name": "SM_Ind_Min_Tunnel_Wall_Log_Modular_02",
+   "size": [
+    447.0,
+    596.0,
+    365.0
+   ],
+   "tris": 10818,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/Ind_Min_Tunnel_Wall_Log_Modular_03/SM_Ind_Min_Tunnel_Wall_Log_Modular_03.SM_Ind_Min_Tunnel_Wall_Log_Modular_03",
+   "name": "SM_Ind_Min_Tunnel_Wall_Log_Modular_03",
+   "size": [
+    281.0,
+    380.0,
+    236.0
+   ],
+   "tris": 13446,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/Ind_Min_Tunnel_Wall_Log_Modular_04/SM_Ind_Min_Tunnel_Wall_Log_Modular_04.SM_Ind_Min_Tunnel_Wall_Log_Modular_04",
+   "name": "SM_Ind_Min_Tunnel_Wall_Log_Modular_04",
+   "size": [
+    281.0,
+    380.0,
+    236.0
+   ],
+   "tris": 13639,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/Ind_Min_Vehicle_Cart_Metal_Old_02/SM_Ind_Min_Vehicle_Cart_Metal_Old_02.SM_Ind_Min_Vehicle_Cart_Metal_Old_02",
+   "name": "SM_Ind_Min_Vehicle_Cart_Metal_Old_02",
+   "size": [
+    83.0,
+    108.0,
+    106.0
+   ],
+   "tris": 7436,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Blueprints/Ind_Min_Cables/SM_Ind_Min_Wire.SM_Ind_Min_Wire",
+   "name": "SM_Ind_Min_Wire",
+   "size": [
+    2.0,
+    2.0,
+    60.0
+   ],
+   "tris": 320,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/Ind_Rub_Debris_Board_Wood_Old_02/SM_Ind_Rub_Debris_Board_Wood_Old_02.SM_Ind_Rub_Debris_Board_Wood_Old_02",
+   "name": "SM_Ind_Rub_Debris_Board_Wood_Old_02",
+   "size": [
+    6.0,
+    66.0,
+    5.0
+   ],
+   "tris": 10804,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Assets/Ind_War_Light_Bulkhead_Metal_Caged_01/SM_Ind_War_Light_Bulkhead_Metal_Caged_01.SM_Ind_War_Light_Bulkhead_Metal_Caged_01",
+   "name": "SM_Ind_War_Light_Bulkhead_Metal_Caged_01",
+   "size": [
+    14.0,
+    13.0,
+    21.0
+   ],
+   "tris": 3982,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Plants/Qua_Lim_Grass_Thatching_Common_Set_01/SM_Qua_Lim_Grass_Thatching_Common_Set_01_A.SM_Qua_Lim_Grass_Thatching_Common_Set_01_A",
+   "name": "SM_Qua_Lim_Grass_Thatching_Common_Set_01_A",
+   "size": [
+    16.0,
+    12.0,
+    18.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Plants/Qua_Lim_Grass_Thatching_Common_Set_01/SM_Qua_Lim_Grass_Thatching_Common_Set_01_B.SM_Qua_Lim_Grass_Thatching_Common_Set_01_B",
+   "name": "SM_Qua_Lim_Grass_Thatching_Common_Set_01_B",
+   "size": [
+    19.0,
+    18.0,
+    10.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Plants/Qua_Lim_Grass_Thatching_Common_Set_01/SM_Qua_Lim_Grass_Thatching_Common_Set_01_C.SM_Qua_Lim_Grass_Thatching_Common_Set_01_C",
+   "name": "SM_Qua_Lim_Grass_Thatching_Common_Set_01_C",
+   "size": [
+    16.0,
+    15.0,
+    14.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Plants/Qua_Lim_Grass_Thatching_Common_Set_01/SM_Qua_Lim_Grass_Thatching_Common_Set_01_D.SM_Qua_Lim_Grass_Thatching_Common_Set_01_D",
+   "name": "SM_Qua_Lim_Grass_Thatching_Common_Set_01_D",
+   "size": [
+    13.0,
+    10.0,
+    15.0
+   ],
+   "tris": 311,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Plants/Qua_Lim_Grass_Thatching_Common_Set_01/SM_Qua_Lim_Grass_Thatching_Common_Set_01_E.SM_Qua_Lim_Grass_Thatching_Common_Set_01_E",
+   "name": "SM_Qua_Lim_Grass_Thatching_Common_Set_01_E",
+   "size": [
+    25.0,
+    27.0,
+    32.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Plants/Qua_Lim_Grass_Thatching_Common_Set_01/SM_Qua_Lim_Grass_Thatching_Common_Set_01_F.SM_Qua_Lim_Grass_Thatching_Common_Set_01_F",
+   "name": "SM_Qua_Lim_Grass_Thatching_Common_Set_01_F",
+   "size": [
+    19.0,
+    24.0,
+    31.0
+   ],
+   "tris": 384,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Plants/Qua_Lim_Grass_Thatching_Common_Set_01/SM_Qua_Lim_Grass_Thatching_Common_Set_01_G.SM_Qua_Lim_Grass_Thatching_Common_Set_01_G",
+   "name": "SM_Qua_Lim_Grass_Thatching_Common_Set_01_G",
+   "size": [
+    26.0,
+    22.0,
+    20.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/Assets/Megascans/3D_Plants/Qua_Lim_Grass_Thatching_Common_Set_01/SM_Qua_Lim_Grass_Thatching_Common_Set_01_H.SM_Qua_Lim_Grass_Thatching_Common_Set_01_H",
+   "name": "SM_Qua_Lim_Grass_Thatching_Common_Set_01_H",
+   "size": [
+    26.0,
+    27.0,
+    22.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/ShadowBox_RoundEdge.ShadowBox_RoundEdge",
+   "name": "ShadowBox_RoundEdge",
+   "size": [
+    100.0,
+    116.0,
+    116.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/Splitter_Curve.Splitter_Curve",
+   "name": "Splitter_Curve",
+   "size": [
+    1000.0,
+    200.0,
+    200.0
+   ],
+   "tris": 602,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/TagBar_Middle.TagBar_Middle",
+   "name": "TagBar_Middle",
+   "size": [
+    25.0,
+    100.0,
+    32.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/TagBar_TitleCap.TagBar_TitleCap",
+   "name": "TagBar_TitleCap",
+   "size": [
+    25.0,
+    50.0,
+    32.0
+   ],
+   "tris": 696,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/TagBar_TitleCap1.TagBar_TitleCap1",
+   "name": "TagBar_TitleCap1",
+   "size": [
+    25.0,
+    50.0,
+    32.0
+   ],
+   "tris": 672,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/Tile_InnerCurveEdge.Tile_InnerCurveEdge",
+   "name": "Tile_InnerCurveEdge",
+   "size": [
+    50.0,
+    200.0,
+    200.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/Tile_InnerCurveEdge2.Tile_InnerCurveEdge2",
+   "name": "Tile_InnerCurveEdge2",
+   "size": [
+    50.0,
+    200.0,
+    200.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/Tile_InnerCurveEdge_2.Tile_InnerCurveEdge_2",
+   "name": "Tile_InnerCurveEdge_2",
+   "size": [
+    50.0,
+    200.0,
+    200.0
+   ],
+   "tris": 316,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/Tile_InnerCurve_B.Tile_InnerCurve_B",
+   "name": "Tile_InnerCurve_B",
+   "size": [
+    1000.0,
+    400.0,
+    250.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/TrimFeature_MetalTrim_Bend.TrimFeature_MetalTrim_Bend",
+   "name": "TrimFeature_MetalTrim_Bend",
+   "size": [
+    57.0,
+    151.0,
+    151.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/TrimFeature_MetalTrim_Bend_B.TrimFeature_MetalTrim_Bend_B",
+   "name": "TrimFeature_MetalTrim_Bend_B",
+   "size": [
+    57.0,
+    151.0,
+    151.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/Display_Main_B.Display_Main_B",
+   "name": "Display_Main_B",
+   "size": [
+    10.0,
+    200.0,
+    200.0
+   ],
+   "tris": 12,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/Display_Main_C.Display_Main_C",
+   "name": "Display_Main_C",
+   "size": [
+    5.0,
+    200.0,
+    200.0
+   ],
+   "tris": 12,
+   "nanite": "False",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/QuixelLogo.QuixelLogo",
+   "name": "QuixelLogo",
+   "size": [
+    18.0,
+    372.0,
+    435.0
+   ],
+   "tris": 262,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/Splitter_Wall.Splitter_Wall",
+   "name": "Splitter_Wall",
+   "size": [
+    1000.0,
+    100.0,
+    500.0
+   ],
+   "tris": 842,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/Splitter_Wall2.Splitter_Wall2",
+   "name": "Splitter_Wall2",
+   "size": [
+    1000.0,
+    100.0,
+    500.0
+   ],
+   "tris": 1364,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/Tile_10MWall.Tile_10MWall",
+   "name": "Tile_10MWall",
+   "size": [
+    1000.0,
+    100.0,
+    1000.0
+   ],
+   "tris": 12,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Scene_OldMine/VisualFramework/DemoRoom/Meshes/UELogo.UELogo",
+   "name": "UELogo",
+   "size": [
+    18.0,
+    393.0,
+    396.0
+   ],
+   "tris": 112686,
+   "nanite": "False",
+   "role": "wall"
+  }
+ ]
+}

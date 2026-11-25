@@ -628,6 +628,8 @@ protected:
 	bool bHealthBarUp = false;
 	/** SETTINGS: show the quick-reaction key rows that have no key yet. */
 	bool bShowAllQuickKeys = false;
+	/** SETTINGS: the MORE row's credits list. */
+	bool bShowCredits = false;
 	/** The podium prompt, the summon panel and the reveal banner. */
 	void DrawSummon(const class ADCCArcadeLobby* Lobby);
 	int32 SummonTube = -1;

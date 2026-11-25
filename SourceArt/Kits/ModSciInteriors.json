@@ -1,0 +1,1123 @@
+{
+ "pack": "ModSciInteriors",
+ "maps": [
+  {
+   "path": "/Game/ModSciInteriors/Maps/Example_2_Dynamic.Example_2_Dynamic",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/ModSciInteriors/Maps/Example_Dynamic.Example_Dynamic",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/ModSciInteriors/Maps/Example_Stationary.Example_Stationary",
+   "partitioned": false
+  }
+ ],
+ "meshes": [
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Door_Small_A.SM_Door_Small_A",
+   "name": "SM_Door_Small_A",
+   "size": [
+    23.0,
+    166.0,
+    275.0
+   ],
+   "tris": 9544,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Door_Small_A_Glass.SM_Door_Small_A_Glass",
+   "name": "SM_Door_Small_A_Glass",
+   "size": [
+    0.0,
+    36.0,
+    106.0
+   ],
+   "tris": 2,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Door_Small_UI.SM_Door_Small_UI",
+   "name": "SM_Door_Small_UI",
+   "size": [
+    21.0,
+    7.0,
+    7.0
+   ],
+   "tris": 4,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Doorway_Small_A.SM_Doorway_Small_A",
+   "name": "SM_Doorway_Small_A",
+   "size": [
+    80.0,
+    360.0,
+    390.0
+   ],
+   "tris": 5220,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Doorway_Small_A2.SM_Doorway_Small_A2",
+   "name": "SM_Doorway_Small_A2",
+   "size": [
+    219.0,
+    440.0,
+    622.0
+   ],
+   "tris": 4788,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Doorway_Small_A3.SM_Doorway_Small_A3",
+   "name": "SM_Doorway_Small_A3",
+   "size": [
+    16.0,
+    215.0,
+    314.0
+   ],
+   "tris": 3692,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Doorway_Small_A4.SM_Doorway_Small_A4",
+   "name": "SM_Doorway_Small_A4",
+   "size": [
+    192.0,
+    421.0,
+    401.0
+   ],
+   "tris": 3552,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVD_Gate.SM_WVD_Gate",
+   "name": "SM_WVD_Gate",
+   "size": [
+    141.0,
+    21.0,
+    390.0
+   ],
+   "tris": 4302,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVD_GateEdge.SM_WVD_GateEdge",
+   "name": "SM_WVD_GateEdge",
+   "size": [
+    20.0,
+    40.0,
+    390.0
+   ],
+   "tris": 2308,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Wall_Doorway_A.SM_Wall_Doorway_A",
+   "name": "SM_Wall_Doorway_A",
+   "size": [
+    36.0,
+    310.0,
+    861.0
+   ],
+   "tris": 2568,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Wall_Doorway_B.SM_Wall_Doorway_B",
+   "name": "SM_Wall_Doorway_B",
+   "size": [
+    61.0,
+    90.0,
+    860.0
+   ],
+   "tris": 5432,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Wall_Doorway_C.SM_Wall_Doorway_C",
+   "name": "SM_Wall_Doorway_C",
+   "size": [
+    40.0,
+    130.0,
+    730.0
+   ],
+   "tris": 31,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Ceiling_Main.SM_Ceiling_Main",
+   "name": "SM_Ceiling_Main",
+   "size": [
+    580.0,
+    440.0,
+    60.0
+   ],
+   "tris": 2212,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Ceiling_Main_B.SM_Ceiling_Main_B",
+   "name": "SM_Ceiling_Main_B",
+   "size": [
+    335.0,
+    310.0,
+    44.0
+   ],
+   "tris": 19080,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Ceiling_Main_B2_Pipe.SM_Ceiling_Main_B2_Pipe",
+   "name": "SM_Ceiling_Main_B2_Pipe",
+   "size": [
+    332.0,
+    247.0,
+    30.0
+   ],
+   "tris": 3200,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Ceiling_Main_D.SM_Ceiling_Main_D",
+   "name": "SM_Ceiling_Main_D",
+   "size": [
+    670.0,
+    90.0,
+    56.0
+   ],
+   "tris": 1146,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Ceiling_Main_E2.SM_Ceiling_Main_E2",
+   "name": "SM_Ceiling_Main_E2",
+   "size": [
+    670.0,
+    10.0,
+    86.0
+   ],
+   "tris": 2622,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Ceiling_Main_F.SM_Ceiling_Main_F",
+   "name": "SM_Ceiling_Main_F",
+   "size": [
+    670.0,
+    62.0,
+    40.0
+   ],
+   "tris": 3478,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Ceiling_Wire_Mid.SM_Ceiling_Wire_Mid",
+   "name": "SM_Ceiling_Wire_Mid",
+   "size": [
+    580.0,
+    88.0,
+    85.0
+   ],
+   "tris": 1792,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Floor_B.SM_Floor_B",
+   "name": "SM_Floor_B",
+   "size": [
+    610.0,
+    860.0,
+    17.0
+   ],
+   "tris": 17678,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Floor_B2.SM_Floor_B2",
+   "name": "SM_Floor_B2",
+   "size": [
+    608.0,
+    858.0,
+    79.0
+   ],
+   "tris": 4804,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Floor_B3.SM_Floor_B3",
+   "name": "SM_Floor_B3",
+   "size": [
+    577.0,
+    828.0,
+    79.0
+   ],
+   "tris": 6184,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Floor_Below.SM_Floor_Below",
+   "name": "SM_Floor_Below",
+   "size": [
+    670.0,
+    1000.0,
+    10.0
+   ],
+   "tris": 12,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Floor_C.SM_Floor_C",
+   "name": "SM_Floor_C",
+   "size": [
+    670.0,
+    900.0,
+    60.0
+   ],
+   "tris": 196,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Floor_Main.SM_Floor_Main",
+   "name": "SM_Floor_Main",
+   "size": [
+    335.0,
+    436.0,
+    33.0
+   ],
+   "tris": 4370,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Floor_Main_Side.SM_Floor_Main_Side",
+   "name": "SM_Floor_Main_Side",
+   "size": [
+    670.0,
+    80.0,
+    60.0
+   ],
+   "tris": 2676,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Floor_Main_Side_B.SM_Floor_Main_Side_B",
+   "name": "SM_Floor_Main_Side_B",
+   "size": [
+    670.0,
+    80.0,
+    60.0
+   ],
+   "tris": 2734,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Floor_Main_Side_C.SM_Floor_Main_Side_C",
+   "name": "SM_Floor_Main_Side_C",
+   "size": [
+    670.0,
+    11.0,
+    6.0
+   ],
+   "tris": 1684,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Floor_Main_Side_D.SM_Floor_Main_Side_D",
+   "name": "SM_Floor_Main_Side_D",
+   "size": [
+    670.0,
+    50.0,
+    61.0
+   ],
+   "tris": 24,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_PowerCells_Floor.SM_PowerCells_Floor",
+   "name": "SM_PowerCells_Floor",
+   "size": [
+    670.0,
+    150.0,
+    23.0
+   ],
+   "tris": 9298,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Rail_Pad.SM_Rail_Pad",
+   "name": "SM_Rail_Pad",
+   "size": [
+    602.0,
+    260.0,
+    80.0
+   ],
+   "tris": 23478,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVA_Ceiling_A.SM_WVA_Ceiling_A",
+   "name": "SM_WVA_Ceiling_A",
+   "size": [
+    690.0,
+    20.0,
+    30.0
+   ],
+   "tris": 10,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVA_Ceiling_B.SM_WVA_Ceiling_B",
+   "name": "SM_WVA_Ceiling_B",
+   "size": [
+    690.0,
+    170.0,
+    25.0
+   ],
+   "tris": 362,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVA_Floor.SM_WVA_Floor",
+   "name": "SM_WVA_Floor",
+   "size": [
+    690.0,
+    170.0,
+    3.0
+   ],
+   "tris": 926,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVA_LowerWall.SM_WVA_LowerWall",
+   "name": "SM_WVA_LowerWall",
+   "size": [
+    610.0,
+    10.0,
+    87.0
+   ],
+   "tris": 7970,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVA_LowerWall_B.SM_WVA_LowerWall_B",
+   "name": "SM_WVA_LowerWall_B",
+   "size": [
+    670.0,
+    24.0,
+    88.0
+   ],
+   "tris": 120,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVA_LowerWall_C.SM_WVA_LowerWall_C",
+   "name": "SM_WVA_LowerWall_C",
+   "size": [
+    670.0,
+    24.0,
+    90.0
+   ],
+   "tris": 972,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVB_EdgeBuffer.SM_WVB_EdgeBuffer",
+   "name": "SM_WVB_EdgeBuffer",
+   "size": [
+    610.0,
+    41.0,
+    25.0
+   ],
+   "tris": 1494,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVB_Pipe_Hor_A.SM_WVB_Pipe_Hor_A",
+   "name": "SM_WVB_Pipe_Hor_A",
+   "size": [
+    610.0,
+    56.0,
+    56.0
+   ],
+   "tris": 3260,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVB_Wire.SM_WVB_Wire",
+   "name": "SM_WVB_Wire",
+   "size": [
+    476.0,
+    133.0,
+    65.0
+   ],
+   "tris": 3040,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVC_Ceiling_A.SM_WVC_Ceiling_A",
+   "name": "SM_WVC_Ceiling_A",
+   "size": [
+    770.0,
+    60.0,
+    56.0
+   ],
+   "tris": 1914,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVC_Ceiling_B.SM_WVC_Ceiling_B",
+   "name": "SM_WVC_Ceiling_B",
+   "size": [
+    770.0,
+    250.0,
+    26.0
+   ],
+   "tris": 1186,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVC_Floor.SM_WVC_Floor",
+   "name": "SM_WVC_Floor",
+   "size": [
+    770.0,
+    410.0,
+    20.0
+   ],
+   "tris": 42,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVC_WallPanel.SM_WVC_WallPanel",
+   "name": "SM_WVC_WallPanel",
+   "size": [
+    670.0,
+    33.0,
+    30.0
+   ],
+   "tris": 44,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVD_Server.SM_WVD_Server",
+   "name": "SM_WVD_Server",
+   "size": [
+    285.0,
+    23.0,
+    35.0
+   ],
+   "tris": 7542,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVA_Wall_End_A.SM_WVA_Wall_End_A",
+   "name": "SM_WVA_Wall_End_A",
+   "size": [
+    10.0,
+    24.0,
+    430.0
+   ],
+   "tris": 12,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVB_SideBrace.SM_WVB_SideBrace",
+   "name": "SM_WVB_SideBrace",
+   "size": [
+    45.0,
+    24.0,
+    365.0
+   ],
+   "tris": 4074,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVC_WallEnd.SM_WVC_WallEnd",
+   "name": "SM_WVC_WallEnd",
+   "size": [
+    50.0,
+    40.0,
+    440.0
+   ],
+   "tris": 3000,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVD_Wall_A.SM_WVD_Wall_A",
+   "name": "SM_WVD_Wall_A",
+   "size": [
+    30.0,
+    43.0,
+    390.0
+   ],
+   "tris": 180,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVD_Wall_B.SM_WVD_Wall_B",
+   "name": "SM_WVD_Wall_B",
+   "size": [
+    110.0,
+    60.0,
+    390.0
+   ],
+   "tris": 2438,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Wall_Divider_A.SM_Wall_Divider_A",
+   "name": "SM_Wall_Divider_A",
+   "size": [
+    60.0,
+    60.0,
+    390.0
+   ],
+   "tris": 5072,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Wall_Divider_A_End.SM_Wall_Divider_A_End",
+   "name": "SM_Wall_Divider_A_End",
+   "size": [
+    30.0,
+    48.0,
+    390.0
+   ],
+   "tris": 192,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Ceiling_Main_B2.SM_Ceiling_Main_B2",
+   "name": "SM_Ceiling_Main_B2",
+   "size": [
+    335.0,
+    310.0,
+    65.0
+   ],
+   "tris": 1574,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Ceiling_Main_C.SM_Ceiling_Main_C",
+   "name": "SM_Ceiling_Main_C",
+   "size": [
+    335.0,
+    310.0,
+    61.0
+   ],
+   "tris": 4284,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Ceiling_Main_E.SM_Ceiling_Main_E",
+   "name": "SM_Ceiling_Main_E",
+   "size": [
+    670.0,
+    170.0,
+    280.0
+   ],
+   "tris": 4452,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Ceiling_Wire_Brace.SM_Ceiling_Wire_Brace",
+   "name": "SM_Ceiling_Wire_Brace",
+   "size": [
+    25.0,
+    124.0,
+    42.0
+   ],
+   "tris": 2528,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Ceiling_Wire_End.SM_Ceiling_Wire_End",
+   "name": "SM_Ceiling_Wire_End",
+   "size": [
+    580.0,
+    117.0,
+    101.0
+   ],
+   "tris": 3964,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_ElectricBox_A.SM_ElectricBox_A",
+   "name": "SM_ElectricBox_A",
+   "size": [
+    8.0,
+    53.0,
+    140.0
+   ],
+   "tris": 3746,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_ElectricDistribBox.SM_ElectricDistribBox",
+   "name": "SM_ElectricDistribBox",
+   "size": [
+    20.0,
+    49.0,
+    43.0
+   ],
+   "tris": 2174,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_EnergyNode_A.SM_EnergyNode_A",
+   "name": "SM_EnergyNode_A",
+   "size": [
+    48.0,
+    48.0,
+    29.0
+   ],
+   "tris": 2636,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_EnergyNode_B.SM_EnergyNode_B",
+   "name": "SM_EnergyNode_B",
+   "size": [
+    54.0,
+    65.0,
+    72.0
+   ],
+   "tris": 2688,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Light_A.SM_Light_A",
+   "name": "SM_Light_A",
+   "size": [
+    12.0,
+    82.0,
+    15.0
+   ],
+   "tris": 1128,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Light_B.SM_Light_B",
+   "name": "SM_Light_B",
+   "size": [
+    10.0,
+    166.0,
+    28.0
+   ],
+   "tris": 5152,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_PowerCells_Wall.SM_PowerCells_Wall",
+   "name": "SM_PowerCells_Wall",
+   "size": [
+    670.0,
+    34.0,
+    115.0
+   ],
+   "tris": 14668,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Rail_A.SM_Rail_A",
+   "name": "SM_Rail_A",
+   "size": [
+    12.0,
+    164.0,
+    80.0
+   ],
+   "tris": 5060,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Rail_B.SM_Rail_B",
+   "name": "SM_Rail_B",
+   "size": [
+    7.0,
+    164.0,
+    78.0
+   ],
+   "tris": 2320,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Stairs_A.SM_Stairs_A",
+   "name": "SM_Stairs_A",
+   "size": [
+    98.0,
+    287.0,
+    90.0
+   ],
+   "tris": 12284,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVA_Fan.SM_WVA_Fan",
+   "name": "SM_WVA_Fan",
+   "size": [
+    223.0,
+    186.0,
+    210.0
+   ],
+   "tris": 10532,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVA_Wall_B.SM_WVA_Wall_B",
+   "name": "SM_WVA_Wall_B",
+   "size": [
+    670.0,
+    19.0,
+    130.0
+   ],
+   "tris": 1116,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVB_MainWall.SM_WVB_MainWall",
+   "name": "SM_WVB_MainWall",
+   "size": [
+    610.0,
+    206.0,
+    490.0
+   ],
+   "tris": 2890,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVB_Pipe_A.SM_WVB_Pipe_A",
+   "name": "SM_WVB_Pipe_A",
+   "size": [
+    22.0,
+    205.0,
+    132.0
+   ],
+   "tris": 1280,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVB_Pipe_B.SM_WVB_Pipe_B",
+   "name": "SM_WVB_Pipe_B",
+   "size": [
+    31.0,
+    58.0,
+    93.0
+   ],
+   "tris": 1020,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVB_Pipe_C.SM_WVB_Pipe_C",
+   "name": "SM_WVB_Pipe_C",
+   "size": [
+    264.0,
+    177.0,
+    165.0
+   ],
+   "tris": 4096,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVB_Pipe_D.SM_WVB_Pipe_D",
+   "name": "SM_WVB_Pipe_D",
+   "size": [
+    177.0,
+    56.0,
+    90.0
+   ],
+   "tris": 6360,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVB_WallWires.SM_WVB_WallWires",
+   "name": "SM_WVB_WallWires",
+   "size": [
+    141.0,
+    59.0,
+    191.0
+   ],
+   "tris": 5574,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVC_Tank_A.SM_WVC_Tank_A",
+   "name": "SM_WVC_Tank_A",
+   "size": [
+    287.0,
+    287.0,
+    213.0
+   ],
+   "tris": 14590,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVC_Tank_B.SM_WVC_Tank_B",
+   "name": "SM_WVC_Tank_B",
+   "size": [
+    287.0,
+    287.0,
+    213.0
+   ],
+   "tris": 14590,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVD_Panel_A.SM_WVD_Panel_A",
+   "name": "SM_WVD_Panel_A",
+   "size": [
+    120.0,
+    22.0,
+    78.0
+   ],
+   "tris": 2818,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVD_Pipes_A.SM_WVD_Pipes_A",
+   "name": "SM_WVD_Pipes_A",
+   "size": [
+    117.0,
+    8.0,
+    87.0
+   ],
+   "tris": 1344,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVD_Pipes_B.SM_WVD_Pipes_B",
+   "name": "SM_WVD_Pipes_B",
+   "size": [
+    45.0,
+    25.0,
+    153.0
+   ],
+   "tris": 740,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVD_Wires_A.SM_WVD_Wires_A",
+   "name": "SM_WVD_Wires_A",
+   "size": [
+    122.0,
+    15.0,
+    95.0
+   ],
+   "tris": 5416,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVD_Wires_B.SM_WVD_Wires_B",
+   "name": "SM_WVD_Wires_B",
+   "size": [
+    141.0,
+    7.0,
+    259.0
+   ],
+   "tris": 8256,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WallBrace.SM_WallBrace",
+   "name": "SM_WallBrace",
+   "size": [
+    5.0,
+    33.0,
+    25.0
+   ],
+   "tris": 376,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WallBrace_A.SM_WallBrace_A",
+   "name": "SM_WallBrace_A",
+   "size": [
+    18.0,
+    117.0,
+    7.0
+   ],
+   "tris": 628,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WallBrace_B.SM_WallBrace_B",
+   "name": "SM_WallBrace_B",
+   "size": [
+    5.0,
+    33.0,
+    6.0
+   ],
+   "tris": 188,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVA_MainWall.SM_WVA_MainWall",
+   "name": "SM_WVA_MainWall",
+   "size": [
+    610.0,
+    54.0,
+    390.0
+   ],
+   "tris": 5272,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVA_Wall_A.SM_WVA_Wall_A",
+   "name": "SM_WVA_Wall_A",
+   "size": [
+    20.0,
+    170.0,
+    430.0
+   ],
+   "tris": 1584,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVB_MainWall_B.SM_WVB_MainWall_B",
+   "name": "SM_WVB_MainWall_B",
+   "size": [
+    544.0,
+    92.0,
+    421.0
+   ],
+   "tris": 11992,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVB_Pipe_Hor_B.SM_WVB_Pipe_Hor_B",
+   "name": "SM_WVB_Pipe_Hor_B",
+   "size": [
+    610.0,
+    56.0,
+    177.0
+   ],
+   "tris": 5628,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVC_Wall_A.SM_WVC_Wall_A",
+   "name": "SM_WVC_Wall_A",
+   "size": [
+    56.0,
+    370.0,
+    440.0
+   ],
+   "tris": 72,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_WVD_Wall_C.SM_WVD_Wall_C",
+   "name": "SM_WVD_Wall_C",
+   "size": [
+    610.0,
+    10.0,
+    390.0
+   ],
+   "tris": 12,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/ModSciInteriors/Meshes/SM_Wall_Puffy_A.SM_Wall_Puffy_A",
+   "name": "SM_Wall_Puffy_A",
+   "size": [
+    286.0,
+    40.0,
+    266.0
+   ],
+   "tris": 17686,
+   "nanite": "",
+   "role": "wall"
+  }
+ ]
+}

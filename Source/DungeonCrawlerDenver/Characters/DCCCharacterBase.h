@@ -11,6 +11,7 @@
 #include "Dialogue/DCCDialogueTypes.h"
 #include "UI/DCCChatTypes.h"
 #include "Skills/DCCSkillTypes.h"
+#include "Stats/DCCDamageTypes.h"
 #include "Classes/DCCClassTypes.h"
 #include "DCCCharacterBase.generated.h"
 
@@ -2323,7 +2324,7 @@ protected:
 	 * a dropped reaction costs a frame of feedback, not correctness.
 	 */
 	UFUNCTION(NetMulticast, Unreliable)
-	void Multicast_PlayHitReaction();
+	void Multicast_PlayHitReaction(EDCCDamageType DamageType);
 
 	/**
 	 * Server. Staggers this character away from a point and fires the reaction.
@@ -2332,7 +2333,7 @@ protected:
 	 * server-authoritative - launching on every machine independently would have
 	 * five clients disagreeing about where the target ended up.
 	 */
-	void ReactToHitFrom(const FVector& ImpactSource);
+	void ReactToHitFrom(const FVector& ImpactSource, EDCCDamageType DamageType = EDCCDamageType::Physical);
 
 	/**
 	 * Server-side resolution of a chosen conversation option.
@@ -2474,6 +2475,11 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_CasinoAction(uint8 Action, int32 Arg);
 	void Server_CasinoAction_Implementation(uint8 Action, int32 Arg);
+
+	/** E on an arcade mark (a tower, a podium, a pad). The arena checks distance again. */
+	UFUNCTION(Server, Reliable)
+	void Server_ArenaUse();
+	void Server_ArenaUse_Implementation();
 
 	/** Translates one consumable's Effects into calls on this character's own Stats. Server only. */
 	void ApplyConsumableEffects(const TArray<FDCCConsumableEffect>& Effects);

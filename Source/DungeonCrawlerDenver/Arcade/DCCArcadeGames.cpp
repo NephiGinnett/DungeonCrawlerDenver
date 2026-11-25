@@ -12,6 +12,7 @@
 #include "Kismet/GameplayStatics.h"
 
 #include "Arcade/DCCArcade.h"
+#include "Arcade/DCCWallTV.h"
 #include "Components/CapsuleComponent.h"
 #include "Rooms/DCCClimbPoint.h"
 #include "Arcade/DCCClimbItems.h"
@@ -230,6 +231,17 @@ void ADCCArcadeLobby::BuildLocal()
 	Sign(Chop + FVector(0, -465, 56), 90.0f, TEXT("scrap from the driving games buys truck upgrades"), FColor(220, 225, 235), 16.0f);
 	Light(Chop + FVector(0, -200, 520), Aqua, 9000.0f, 1300.0f);
 	Light(Chop + FVector(-300, -360, 320), FLinearColor(1.0f, 0.5f, 0.2f), 2500.0f, 500.0f);
+
+	if (UWorld* World = GetWorld())
+	{
+		FActorSpawnParameters Params;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		for (int32 i = 0; i < 3; ++i)
+		{
+			const FVector At = O + FVector(-800.0f + i * 800.0f, -W + 80.0f, 420.0f);
+			World->SpawnActor<ADCCWallTV>(At, FRotator(0.0f, 90.0f, 0.0f), Params);
+		}
+	}
 
 	BuildTubes();
 	BuildTalkShow();

@@ -46,6 +46,12 @@ public class DungeonCrawlerDenver : ModuleRules
 		//
 		// Json/JsonUtilities are for building the request and parsing the reply.
 		PrivateDependencyModuleNames.AddRange(new string[] {
+			// Epic Online Services (Session/DCCOnline): sign-in, the party list, and the relay that gets through routers.
+			"CoreOnline",
+			"OnlineServicesInterface",
+			"OnlineServicesEpicCommon",
+			"EOSSDK",
+			"EOSShared",
 			// DCCWhoAmI reads the machine's own address so the host can read it
 			// out to the party. Private: nothing in the public headers needs it.
 			"Sockets",

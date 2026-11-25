@@ -1,0 +1,927 @@
+{
+ "pack": "Inferno_World_Free",
+ "maps": [
+  {
+   "path": "/Game/Inferno_World_Free/Maps/Demonstration.Demonstration",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Maps/Overview.Overview",
+   "partitioned": false
+  }
+ ],
+ "meshes": [
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Mountains/SM_Cliff_003.SM_Cliff_003",
+   "name": "SM_Cliff_003",
+   "size": [
+    26992.0,
+    22346.0,
+    11989.0
+   ],
+   "tris": 937,
+   "nanite": "",
+   "role": "big"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Mountains/SM_Cliff_004.SM_Cliff_004",
+   "name": "SM_Cliff_004",
+   "size": [
+    23274.0,
+    21013.0,
+    14099.0
+   ],
+   "tris": 719,
+   "nanite": "",
+   "role": "big"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Mountains/SM_Cliff_005.SM_Cliff_005",
+   "name": "SM_Cliff_005",
+   "size": [
+    25926.0,
+    23509.0,
+    11385.0
+   ],
+   "tris": 721,
+   "nanite": "",
+   "role": "big"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Platforms/SM_PlatformSmall_001.SM_PlatformSmall_001",
+   "name": "SM_PlatformSmall_001",
+   "size": [
+    3546.0,
+    2499.0,
+    466.0
+   ],
+   "tris": 182,
+   "nanite": "",
+   "role": "big"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Platforms/SM_PlatformSmall_002.SM_PlatformSmall_002",
+   "name": "SM_PlatformSmall_002",
+   "size": [
+    4797.0,
+    2777.0,
+    839.0
+   ],
+   "tris": 150,
+   "nanite": "",
+   "role": "big"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Platforms/SM_PlatformSmall_003.SM_PlatformSmall_003",
+   "name": "SM_PlatformSmall_003",
+   "size": [
+    3185.0,
+    3024.0,
+    1314.0
+   ],
+   "tris": 182,
+   "nanite": "",
+   "role": "big"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Platforms/SM_PlatformSmall_004.SM_PlatformSmall_004",
+   "name": "SM_PlatformSmall_004",
+   "size": [
+    6768.0,
+    3931.0,
+    825.0
+   ],
+   "tris": 198,
+   "nanite": "",
+   "role": "big"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Buildings/SM_PlatformStar_001.SM_PlatformStar_001",
+   "name": "SM_PlatformStar_001",
+   "size": [
+    6134.0,
+    5847.0,
+    1920.0
+   ],
+   "tris": 9478,
+   "nanite": "",
+   "role": "big"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Platforms/SM_Platform_003.SM_Platform_003",
+   "name": "SM_Platform_003",
+   "size": [
+    6704.0,
+    10031.0,
+    1596.0
+   ],
+   "tris": 1414,
+   "nanite": "",
+   "role": "big"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Rocks/SM_RockBig_001.SM_RockBig_001",
+   "name": "SM_RockBig_001",
+   "size": [
+    2277.0,
+    2071.0,
+    3503.0
+   ],
+   "tris": 795,
+   "nanite": "",
+   "role": "big"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Rocks/SM_RockBig_003.SM_RockBig_003",
+   "name": "SM_RockBig_003",
+   "size": [
+    3084.0,
+    2909.0,
+    2546.0
+   ],
+   "tris": 1476,
+   "nanite": "",
+   "role": "big"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Rocks/SM_RockBig_004.SM_RockBig_004",
+   "name": "SM_RockBig_004",
+   "size": [
+    2993.0,
+    2619.0,
+    3816.0
+   ],
+   "tris": 1114,
+   "nanite": "",
+   "role": "big"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Statues/SM_StatueKnight_002.SM_StatueKnight_002",
+   "name": "SM_StatueKnight_002",
+   "size": [
+    2151.0,
+    1761.0,
+    3766.0
+   ],
+   "tris": 10720,
+   "nanite": "",
+   "role": "big"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Buildings/SM_TowerBig_001.SM_TowerBig_001",
+   "name": "SM_TowerBig_001",
+   "size": [
+    1501.0,
+    1462.0,
+    4698.0
+   ],
+   "tris": 10768,
+   "nanite": "",
+   "role": "big"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Rocks/SM_Stone_006.SM_Stone_006",
+   "name": "SM_Stone_006",
+   "size": [
+    763.0,
+    679.0,
+    91.0
+   ],
+   "tris": 78,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Decorations/SM_Bone_003.SM_Bone_003",
+   "name": "SM_Bone_003",
+   "size": [
+    258.0,
+    208.0,
+    934.0
+   ],
+   "tris": 268,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Decorations/SM_Bone_006.SM_Bone_006",
+   "name": "SM_Bone_006",
+   "size": [
+    257.0,
+    208.0,
+    925.0
+   ],
+   "tris": 394,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Statues/SM_Axe_001.SM_Axe_001",
+   "name": "SM_Axe_001",
+   "size": [
+    1096.0,
+    320.0,
+    2157.0
+   ],
+   "tris": 1592,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Decorations/SM_BaseSmall_001.SM_BaseSmall_001",
+   "name": "SM_BaseSmall_001",
+   "size": [
+    688.0,
+    688.0,
+    402.0
+   ],
+   "tris": 468,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Decorations/SM_Bone_004.SM_Bone_004",
+   "name": "SM_Bone_004",
+   "size": [
+    293.0,
+    174.0,
+    692.0
+   ],
+   "tris": 260,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Props/SM_Box_001.SM_Box_001",
+   "name": "SM_Box_001",
+   "size": [
+    158.0,
+    158.0,
+    137.0
+   ],
+   "tris": 1460,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Props/SM_Brazier_002.SM_Brazier_002",
+   "name": "SM_Brazier_002",
+   "size": [
+    176.0,
+    176.0,
+    170.0
+   ],
+   "tris": 784,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Props/SM_Brazier_004.SM_Brazier_004",
+   "name": "SM_Brazier_004",
+   "size": [
+    258.0,
+    200.0,
+    91.0
+   ],
+   "tris": 1128,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Props/SM_ChestBig_001.SM_ChestBig_001",
+   "name": "SM_ChestBig_001",
+   "size": [
+    237.0,
+    179.0,
+    80.0
+   ],
+   "tris": 436,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Decorations/SM_CirclePlatformSmall_001.SM_CirclePlatformSmall_001",
+   "name": "SM_CirclePlatformSmall_001",
+   "size": [
+    1916.0,
+    1916.0,
+    387.0
+   ],
+   "tris": 2317,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Props/SM_Coal_002_007.SM_Coal_002_007",
+   "name": "SM_Coal_002_007",
+   "size": [
+    118.0,
+    120.0,
+    42.0
+   ],
+   "tris": 172,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Props/SM_Coin_001.SM_Coin_001",
+   "name": "SM_Coin_001",
+   "size": [
+    32.0,
+    10.0,
+    31.0
+   ],
+   "tris": 36,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Decorations/SM_ColumnBigBroken_001.SM_ColumnBigBroken_001",
+   "name": "SM_ColumnBigBroken_001",
+   "size": [
+    452.0,
+    364.0,
+    464.0
+   ],
+   "tris": 495,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Decorations/SM_ColumnBigBroken_002.SM_ColumnBigBroken_002",
+   "name": "SM_ColumnBigBroken_002",
+   "size": [
+    240.0,
+    240.0,
+    369.0
+   ],
+   "tris": 369,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Decorations/SM_ColumnBig_001.SM_ColumnBig_001",
+   "name": "SM_ColumnBig_001",
+   "size": [
+    452.0,
+    452.0,
+    820.0
+   ],
+   "tris": 828,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Rocks/SM_Crag_001.SM_Crag_001",
+   "name": "SM_Crag_001",
+   "size": [
+    1018.0,
+    919.0,
+    961.0
+   ],
+   "tris": 2390,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Rocks/SM_Crag_003.SM_Crag_003",
+   "name": "SM_Crag_003",
+   "size": [
+    1765.0,
+    1418.0,
+    2646.0
+   ],
+   "tris": 4781,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Props/SM_Cup_001.SM_Cup_001",
+   "name": "SM_Cup_001",
+   "size": [
+    53.0,
+    51.0,
+    64.0
+   ],
+   "tris": 542,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Props/SM_Cup_002.SM_Cup_002",
+   "name": "SM_Cup_002",
+   "size": [
+    42.0,
+    40.0,
+    51.0
+   ],
+   "tris": 414,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Decorations/SM_Gear_001.SM_Gear_001",
+   "name": "SM_Gear_001",
+   "size": [
+    1020.0,
+    292.0,
+    1020.0
+   ],
+   "tris": 2306,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Decorations/SM_Gear_002.SM_Gear_002",
+   "name": "SM_Gear_002",
+   "size": [
+    632.0,
+    253.0,
+    632.0
+   ],
+   "tris": 1696,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Props/SM_Gem_001.SM_Gem_001",
+   "name": "SM_Gem_001",
+   "size": [
+    33.0,
+    14.0,
+    29.0
+   ],
+   "tris": 116,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Props/SM_Gem_002.SM_Gem_002",
+   "name": "SM_Gem_002",
+   "size": [
+    23.0,
+    14.0,
+    47.0
+   ],
+   "tris": 116,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Props/SM_Gem_003.SM_Gem_003",
+   "name": "SM_Gem_003",
+   "size": [
+    21.0,
+    22.0,
+    44.0
+   ],
+   "tris": 96,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Props/SM_Gem_004.SM_Gem_004",
+   "name": "SM_Gem_004",
+   "size": [
+    33.0,
+    30.0,
+    24.0
+   ],
+   "tris": 92,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Props/SM_Gem_005.SM_Gem_005",
+   "name": "SM_Gem_005",
+   "size": [
+    33.0,
+    15.0,
+    33.0
+   ],
+   "tris": 76,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Props/SM_GoldPileBig_001.SM_GoldPileBig_001",
+   "name": "SM_GoldPileBig_001",
+   "size": [
+    287.0,
+    267.0,
+    119.0
+   ],
+   "tris": 5366,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Props/SM_GoldPileSmall_001.SM_GoldPileSmall_001",
+   "name": "SM_GoldPileSmall_001",
+   "size": [
+    143.0,
+    128.0,
+    46.0
+   ],
+   "tris": 1004,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Props/SM_GoldPile_002.SM_GoldPile_002",
+   "name": "SM_GoldPile_002",
+   "size": [
+    140.0,
+    84.0,
+    62.0
+   ],
+   "tris": 1502,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Props/SM_Grass_001.SM_Grass_001",
+   "name": "SM_Grass_001",
+   "size": [
+    94.0,
+    79.0,
+    73.0
+   ],
+   "tris": 186,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Props/SM_Grass_002.SM_Grass_002",
+   "name": "SM_Grass_002",
+   "size": [
+    105.0,
+    127.0,
+    73.0
+   ],
+   "tris": 324,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Props/SM_Grass_003.SM_Grass_003",
+   "name": "SM_Grass_003",
+   "size": [
+    140.0,
+    156.0,
+    86.0
+   ],
+   "tris": 528,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Props/SM_Grass_004.SM_Grass_004",
+   "name": "SM_Grass_004",
+   "size": [
+    148.0,
+    158.0,
+    141.0
+   ],
+   "tris": 828,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Props/SM_Lid_002.SM_Lid_002",
+   "name": "SM_Lid_002",
+   "size": [
+    332.0,
+    165.0,
+    209.0
+   ],
+   "tris": 1318,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Decorations/SM_Mound_005.SM_Mound_005",
+   "name": "SM_Mound_005",
+   "size": [
+    370.0,
+    390.0,
+    110.0
+   ],
+   "tris": 432,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Decorations/SM_Mound_008.SM_Mound_008",
+   "name": "SM_Mound_008",
+   "size": [
+    390.0,
+    383.0,
+    119.0
+   ],
+   "tris": 488,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Decorations/SM_PedestalBig_001.SM_PedestalBig_001",
+   "name": "SM_PedestalBig_001",
+   "size": [
+    2144.0,
+    1768.0,
+    610.0
+   ],
+   "tris": 1458,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Decorations/SM_Pedestal_001.SM_Pedestal_001",
+   "name": "SM_Pedestal_001",
+   "size": [
+    375.0,
+    399.0,
+    107.0
+   ],
+   "tris": 406,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Decorations/SM_PlatformStar_001_002.SM_PlatformStar_001_002",
+   "name": "SM_PlatformStar_001_002",
+   "size": [
+    1523.0,
+    1107.0,
+    494.0
+   ],
+   "tris": 274,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Rocks/SM_RockMid_001.SM_RockMid_001",
+   "name": "SM_RockMid_001",
+   "size": [
+    1258.0,
+    1268.0,
+    640.0
+   ],
+   "tris": 766,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Rocks/SM_RockMid_002.SM_RockMid_002",
+   "name": "SM_RockMid_002",
+   "size": [
+    950.0,
+    1005.0,
+    1194.0
+   ],
+   "tris": 754,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Rocks/SM_RockMid_003.SM_RockMid_003",
+   "name": "SM_RockMid_003",
+   "size": [
+    906.0,
+    972.0,
+    848.0
+   ],
+   "tris": 667,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Rocks/SM_RockMid_004.SM_RockMid_004",
+   "name": "SM_RockMid_004",
+   "size": [
+    933.0,
+    1104.0,
+    273.0
+   ],
+   "tris": 466,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Rocks/SM_RockSmall_001.SM_RockSmall_001",
+   "name": "SM_RockSmall_001",
+   "size": [
+    338.0,
+    367.0,
+    460.0
+   ],
+   "tris": 384,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Rocks/SM_RockSmall_002.SM_RockSmall_002",
+   "name": "SM_RockSmall_002",
+   "size": [
+    500.0,
+    425.0,
+    210.0
+   ],
+   "tris": 279,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Rocks/SM_RockSmall_003.SM_RockSmall_003",
+   "name": "SM_RockSmall_003",
+   "size": [
+    366.0,
+    376.0,
+    150.0
+   ],
+   "tris": 286,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Rocks/SM_RockSmall_004.SM_RockSmall_004",
+   "name": "SM_RockSmall_004",
+   "size": [
+    389.0,
+    398.0,
+    79.0
+   ],
+   "tris": 280,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Props/SM_Spike_001_008.SM_Spike_001_008",
+   "name": "SM_Spike_001_008",
+   "size": [
+    200.0,
+    200.0,
+    138.0
+   ],
+   "tris": 744,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Decorations/SM_StairsMiddle_001.SM_StairsMiddle_001",
+   "name": "SM_StairsMiddle_001",
+   "size": [
+    1014.0,
+    1242.0,
+    550.0
+   ],
+   "tris": 1035,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Rocks/SM_StoneSmall_001.SM_StoneSmall_001",
+   "name": "SM_StoneSmall_001",
+   "size": [
+    244.0,
+    175.0,
+    138.0
+   ],
+   "tris": 128,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Rocks/SM_StoneSmall_002.SM_StoneSmall_002",
+   "name": "SM_StoneSmall_002",
+   "size": [
+    228.0,
+    178.0,
+    80.0
+   ],
+   "tris": 160,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Rocks/SM_StoneSmall_004.SM_StoneSmall_004",
+   "name": "SM_StoneSmall_004",
+   "size": [
+    182.0,
+    145.0,
+    140.0
+   ],
+   "tris": 104,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Rocks/SM_StoneSmall_005.SM_StoneSmall_005",
+   "name": "SM_StoneSmall_005",
+   "size": [
+    106.0,
+    107.0,
+    82.0
+   ],
+   "tris": 104,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Rocks/SM_Stone_001.SM_Stone_001",
+   "name": "SM_Stone_001",
+   "size": [
+    441.0,
+    534.0,
+    81.0
+   ],
+   "tris": 78,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Rocks/SM_Stone_002.SM_Stone_002",
+   "name": "SM_Stone_002",
+   "size": [
+    240.0,
+    266.0,
+    74.0
+   ],
+   "tris": 62,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Rocks/SM_Stone_003.SM_Stone_003",
+   "name": "SM_Stone_003",
+   "size": [
+    301.0,
+    357.0,
+    80.0
+   ],
+   "tris": 62,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Rocks/SM_Stone_004.SM_Stone_004",
+   "name": "SM_Stone_004",
+   "size": [
+    195.0,
+    255.0,
+    67.0
+   ],
+   "tris": 62,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Rocks/SM_Stone_005.SM_Stone_005",
+   "name": "SM_Stone_005",
+   "size": [
+    435.0,
+    376.0,
+    84.0
+   ],
+   "tris": 94,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Props/SM_Vase_001.SM_Vase_001",
+   "name": "SM_Vase_001",
+   "size": [
+    134.0,
+    134.0,
+    123.0
+   ],
+   "tris": 1012,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Props/SM_Vase_002.SM_Vase_002",
+   "name": "SM_Vase_002",
+   "size": [
+    113.0,
+    112.0,
+    143.0
+   ],
+   "tris": 764,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Inferno_World_Free/Meshes/Decorations/SM_WellSmall_001.SM_WellSmall_001",
+   "name": "SM_WellSmall_001",
+   "size": [
+    500.0,
+    500.0,
+    336.0
+   ],
+   "tris": 2411,
+   "nanite": "",
+   "role": "prop"
+  }
+ ]
+}

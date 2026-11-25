@@ -357,6 +357,10 @@ void UDCCWalletComponent::PushToClients(const FString& Key)
 	{
 		NameTitle = TEXT("OPEN MIC");
 	}
+	else if (DCCProfile::GetForKey(Key, TEXT("Titles"), TEXT("CHAMPION OF THE RING"), 0.0f) > 0.5f)
+	{
+		NameTitle = TEXT("CHAMPION OF THE RING");
+	}
 	Fame = FMath::RoundToInt(DCCProfile::GetForKey(Key, TEXT("Audience"), TEXT("Fame"), 0.0f));
 	FameLevel = FMath::RoundToInt(DCCProfile::GetForKey(Key, TEXT("Audience"), TEXT("FameLevel"), 0.0f));
 	Owned = DCCProfile::GetCosmetics(Key);

@@ -1,0 +1,979 @@
+{
+ "pack": "SciFi_Space_Station",
+ "maps": [
+  {
+   "path": "/Game/SciFi_Space_Station/Level/L_Materials.L_Materials",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Level/L_Models.L_Models",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Level/L_SciFi_Space_Station.L_SciFi_Space_Station",
+   "partitioned": false
+  }
+ ],
+ "meshes": [
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_door1_2x2.SM_Space_Station_door1_2x2",
+   "name": "SM_Space_Station_door1_2x2",
+   "size": [
+    35.0,
+    204.0,
+    252.0
+   ],
+   "tris": 2699,
+   "nanite": "True",
+   "role": "door"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_floor_01.SM_Space_Station_floor_01",
+   "name": "SM_Space_Station_floor_01",
+   "size": [
+    300.0,
+    475.0,
+    32.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_floor_01_add.SM_Space_Station_floor_01_add",
+   "name": "SM_Space_Station_floor_01_add",
+   "size": [
+    400.0,
+    200.0,
+    0.0
+   ],
+   "tris": 13,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_floor_01_add_mr.SM_Space_Station_floor_01_add_mr",
+   "name": "SM_Space_Station_floor_01_add_mr",
+   "size": [
+    400.0,
+    200.0,
+    0.0
+   ],
+   "tris": 13,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_floor_01_mr.SM_Space_Station_floor_01_mr",
+   "name": "SM_Space_Station_floor_01_mr",
+   "size": [
+    300.0,
+    475.0,
+    32.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_floor_02.SM_Space_Station_floor_02",
+   "name": "SM_Space_Station_floor_02",
+   "size": [
+    400.0,
+    125.0,
+    0.0
+   ],
+   "tris": 24,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_floor_03.SM_Space_Station_floor_03",
+   "name": "SM_Space_Station_floor_03",
+   "size": [
+    300.0,
+    477.0,
+    31.0
+   ],
+   "tris": 106,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_floor_03_mr.SM_Space_Station_floor_03_mr",
+   "name": "SM_Space_Station_floor_03_mr",
+   "size": [
+    300.0,
+    477.0,
+    31.0
+   ],
+   "tris": 106,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_floor_04.SM_Space_Station_floor_04",
+   "name": "SM_Space_Station_floor_04",
+   "size": [
+    100.0,
+    475.0,
+    3.0
+   ],
+   "tris": 268,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_floor_06.SM_Space_Station_floor_06",
+   "name": "SM_Space_Station_floor_06",
+   "size": [
+    200.0,
+    250.0,
+    0.0
+   ],
+   "tris": 6,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_floor_07.SM_Space_Station_floor_07",
+   "name": "SM_Space_Station_floor_07",
+   "size": [
+    400.0,
+    401.0,
+    18.0
+   ],
+   "tris": 508,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_floor_08.SM_Space_Station_floor_08",
+   "name": "SM_Space_Station_floor_08",
+   "size": [
+    200.0,
+    129.0,
+    5.0
+   ],
+   "tris": 213,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_floor_09.SM_Space_Station_floor_09",
+   "name": "SM_Space_Station_floor_09",
+   "size": [
+    400.0,
+    450.0,
+    0.0
+   ],
+   "tris": 200,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_floor_09_mr.SM_Space_Station_floor_09_mr",
+   "name": "SM_Space_Station_floor_09_mr",
+   "size": [
+    400.0,
+    450.0,
+    0.0
+   ],
+   "tris": 200,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_floor_10.SM_Space_Station_floor_10",
+   "name": "SM_Space_Station_floor_10",
+   "size": [
+    200.0,
+    400.0,
+    0.0
+   ],
+   "tris": 134,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_floor_10_mr.SM_Space_Station_floor_10_mr",
+   "name": "SM_Space_Station_floor_10_mr",
+   "size": [
+    200.0,
+    400.0,
+    0.0
+   ],
+   "tris": 135,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_floor_11.SM_Space_Station_floor_11",
+   "name": "SM_Space_Station_floor_11",
+   "size": [
+    200.0,
+    250.0,
+    0.0
+   ],
+   "tris": 5,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_floor_12.SM_Space_Station_floor_12",
+   "name": "SM_Space_Station_floor_12",
+   "size": [
+    1200.0,
+    1200.0,
+    124.0
+   ],
+   "tris": 760,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_floor_13.SM_Space_Station_floor_13",
+   "name": "SM_Space_Station_floor_13",
+   "size": [
+    400.0,
+    1200.0,
+    0.0
+   ],
+   "tris": 24,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_top_10_mr_top.SM_Space_Station_top_10_mr_top",
+   "name": "SM_Space_Station_top_10_mr_top",
+   "size": [
+    400.0,
+    450.0,
+    2.0
+   ],
+   "tris": 63,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_top_10_top.SM_Space_Station_top_10_top",
+   "name": "SM_Space_Station_top_10_top",
+   "size": [
+    400.0,
+    450.0,
+    2.0
+   ],
+   "tris": 63,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_top_12.SM_Space_Station_top_12",
+   "name": "SM_Space_Station_top_12",
+   "size": [
+    200.0,
+    400.0,
+    0.0
+   ],
+   "tris": 91,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_top_12_mr.SM_Space_Station_top_12_mr",
+   "name": "SM_Space_Station_top_12_mr",
+   "size": [
+    200.0,
+    400.0,
+    0.0
+   ],
+   "tris": 91,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_top_16.SM_Space_Station_top_16",
+   "name": "SM_Space_Station_top_16",
+   "size": [
+    200.0,
+    250.0,
+    0.0
+   ],
+   "tris": 24,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_top_light.SM_Space_Station_top_light",
+   "name": "SM_Space_Station_top_light",
+   "size": [
+    600.0,
+    1200.0,
+    14.0
+   ],
+   "tris": 568,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_wall_12_add.SM_Space_Station_wall_12_add",
+   "name": "SM_Space_Station_wall_12_add",
+   "size": [
+    200.0,
+    900.0,
+    0.0
+   ],
+   "tris": 62,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_column.SM_Space_Station_column",
+   "name": "SM_Space_Station_column",
+   "size": [
+    25.0,
+    25.0,
+    200.0
+   ],
+   "tris": 44,
+   "nanite": "True",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_column_02.SM_Space_Station_column_02",
+   "name": "SM_Space_Station_column_02",
+   "size": [
+    154.0,
+    153.0,
+    650.0
+   ],
+   "tris": 1472,
+   "nanite": "True",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_wall_14_add.SM_Space_Station_wall_14_add",
+   "name": "SM_Space_Station_wall_14_add",
+   "size": [
+    50.0,
+    71.0,
+    450.0
+   ],
+   "tris": 72,
+   "nanite": "True",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Reference_Models/SM_Reference_Plane.SM_Reference_Plane",
+   "name": "SM_Reference_Plane",
+   "size": [
+    400.0,
+    200.0,
+    400.0
+   ],
+   "tris": 252,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Reference_Models/SM_Reference_Sphere.SM_Reference_Sphere",
+   "name": "SM_Reference_Sphere",
+   "size": [
+    116.0,
+    117.0,
+    119.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_Grate_Wall.SM_Space_Station_Grate_Wall",
+   "name": "SM_Space_Station_Grate_Wall",
+   "size": [
+    803.0,
+    187.0,
+    408.0
+   ],
+   "tris": 2312,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_electric.SM_Space_Station_electric",
+   "name": "SM_Space_Station_electric",
+   "size": [
+    284.0,
+    43.0,
+    139.0
+   ],
+   "tris": 872,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_electric_mr.SM_Space_Station_electric_mr",
+   "name": "SM_Space_Station_electric_mr",
+   "size": [
+    285.0,
+    43.0,
+    139.0
+   ],
+   "tris": 866,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_floor_05.SM_Space_Station_floor_05",
+   "name": "SM_Space_Station_floor_05",
+   "size": [
+    300.0,
+    250.0,
+    150.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_floor_05_mr.SM_Space_Station_floor_05_mr",
+   "name": "SM_Space_Station_floor_05_mr",
+   "size": [
+    300.0,
+    250.0,
+    150.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_hot_tube.SM_Space_Station_hot_tube",
+   "name": "SM_Space_Station_hot_tube",
+   "size": [
+    559.0,
+    496.0,
+    710.0
+   ],
+   "tris": 2374,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_prop_01.SM_Space_Station_prop_01",
+   "name": "SM_Space_Station_prop_01",
+   "size": [
+    117.0,
+    129.0,
+    121.0
+   ],
+   "tris": 2092,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_prop_02.SM_Space_Station_prop_02",
+   "name": "SM_Space_Station_prop_02",
+   "size": [
+    264.0,
+    269.0,
+    240.0
+   ],
+   "tris": 743,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_top_01.SM_Space_Station_top_01",
+   "name": "SM_Space_Station_top_01",
+   "size": [
+    1005.0,
+    1200.0,
+    377.0
+   ],
+   "tris": 2122,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_top_02.SM_Space_Station_top_02",
+   "name": "SM_Space_Station_top_02",
+   "size": [
+    602.0,
+    1200.0,
+    401.0
+   ],
+   "tris": 425,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_top_03.SM_Space_Station_top_03",
+   "name": "SM_Space_Station_top_03",
+   "size": [
+    1004.0,
+    1200.0,
+    377.0
+   ],
+   "tris": 1874,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_top_05.SM_Space_Station_top_05",
+   "name": "SM_Space_Station_top_05",
+   "size": [
+    201.0,
+    251.0,
+    145.0
+   ],
+   "tris": 230,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_top_06.SM_Space_Station_top_06",
+   "name": "SM_Space_Station_top_06",
+   "size": [
+    101.0,
+    251.0,
+    158.0
+   ],
+   "tris": 448,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_top_07.SM_Space_Station_top_07",
+   "name": "SM_Space_Station_top_07",
+   "size": [
+    100.0,
+    255.0,
+    152.0
+   ],
+   "tris": 1290,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_top_10.SM_Space_Station_top_10",
+   "name": "SM_Space_Station_top_10",
+   "size": [
+    200.0,
+    200.0,
+    200.0
+   ],
+   "tris": 64,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_top_10_mr.SM_Space_Station_top_10_mr",
+   "name": "SM_Space_Station_top_10_mr",
+   "size": [
+    200.0,
+    200.0,
+    200.0
+   ],
+   "tris": 64,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_top_15.SM_Space_Station_top_15",
+   "name": "SM_Space_Station_top_15",
+   "size": [
+    400.0,
+    400.0,
+    76.0
+   ],
+   "tris": 44,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_wall_01.SM_Space_Station_wall_01",
+   "name": "SM_Space_Station_wall_01",
+   "size": [
+    206.0,
+    500.0,
+    250.0
+   ],
+   "tris": 255,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_wall_01_mr.SM_Space_Station_wall_01_mr",
+   "name": "SM_Space_Station_wall_01_mr",
+   "size": [
+    206.0,
+    500.0,
+    250.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_wall_03.SM_Space_Station_wall_03",
+   "name": "SM_Space_Station_wall_03",
+   "size": [
+    200.0,
+    255.0,
+    251.0
+   ],
+   "tris": 663,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_wall_04.SM_Space_Station_wall_04",
+   "name": "SM_Space_Station_wall_04",
+   "size": [
+    300.0,
+    80.0,
+    250.0
+   ],
+   "tris": 1872,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_wall_05.SM_Space_Station_wall_05",
+   "name": "SM_Space_Station_wall_05",
+   "size": [
+    202.0,
+    128.0,
+    285.0
+   ],
+   "tris": 1682,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_wall_06.SM_Space_Station_wall_06",
+   "name": "SM_Space_Station_wall_06",
+   "size": [
+    200.0,
+    200.0,
+    250.0
+   ],
+   "tris": 216,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_wall_06_mr.SM_Space_Station_wall_06_mr",
+   "name": "SM_Space_Station_wall_06_mr",
+   "size": [
+    200.0,
+    200.0,
+    250.0
+   ],
+   "tris": 216,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_wall_09.SM_Space_Station_wall_09",
+   "name": "SM_Space_Station_wall_09",
+   "size": [
+    1.0,
+    125.0,
+    250.0
+   ],
+   "tris": 36,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_wall_14.SM_Space_Station_wall_14",
+   "name": "SM_Space_Station_wall_14",
+   "size": [
+    201.0,
+    72.0,
+    451.0
+   ],
+   "tris": 723,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_wall_16.SM_Space_Station_wall_16",
+   "name": "SM_Space_Station_wall_16",
+   "size": [
+    420.0,
+    226.0,
+    663.0
+   ],
+   "tris": 916,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_wall_17.SM_Space_Station_wall_17",
+   "name": "SM_Space_Station_wall_17",
+   "size": [
+    150.0,
+    400.0,
+    711.0
+   ],
+   "tris": 364,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_wall_attachment.SM_Space_Station_wall_attachment",
+   "name": "SM_Space_Station_wall_attachment",
+   "size": [
+    345.0,
+    122.0,
+    109.0
+   ],
+   "tris": 602,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_wall_attachment_mr.SM_Space_Station_wall_attachment_mr",
+   "name": "SM_Space_Station_wall_attachment_mr",
+   "size": [
+    345.0,
+    122.0,
+    109.0
+   ],
+   "tris": 602,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_stair_01.SM_Space_Station_stair_01",
+   "name": "SM_Space_Station_stair_01",
+   "size": [
+    207.0,
+    1200.0,
+    451.0
+   ],
+   "tris": 1109,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_top_04.SM_Space_Station_top_04",
+   "name": "SM_Space_Station_top_04",
+   "size": [
+    100.0,
+    1200.0,
+    479.0
+   ],
+   "tris": 465,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_top_08.SM_Space_Station_top_08",
+   "name": "SM_Space_Station_top_08",
+   "size": [
+    15.0,
+    251.0,
+    200.0
+   ],
+   "tris": 797,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_top_08_mr.SM_Space_Station_top_08_mr",
+   "name": "SM_Space_Station_top_08_mr",
+   "size": [
+    13.0,
+    250.0,
+    200.0
+   ],
+   "tris": 815,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_top_09.SM_Space_Station_top_09",
+   "name": "SM_Space_Station_top_09",
+   "size": [
+    200.0,
+    0.0,
+    200.0
+   ],
+   "tris": 6,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_top_11.SM_Space_Station_top_11",
+   "name": "SM_Space_Station_top_11",
+   "size": [
+    400.0,
+    78.0,
+    453.0
+   ],
+   "tris": 2406,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_top_13.SM_Space_Station_top_13",
+   "name": "SM_Space_Station_top_13",
+   "size": [
+    200.0,
+    0.0,
+    200.0
+   ],
+   "tris": 26,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_top_14.SM_Space_Station_top_14",
+   "name": "SM_Space_Station_top_14",
+   "size": [
+    0.0,
+    400.0,
+    200.0
+   ],
+   "tris": 14,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_wall_02.SM_Space_Station_wall_02",
+   "name": "SM_Space_Station_wall_02",
+   "size": [
+    400.0,
+    34.0,
+    250.0
+   ],
+   "tris": 839,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_wall_07.SM_Space_Station_wall_07",
+   "name": "SM_Space_Station_wall_07",
+   "size": [
+    50.0,
+    400.0,
+    250.0
+   ],
+   "tris": 157,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_wall_07_mr.SM_Space_Station_wall_07_mr",
+   "name": "SM_Space_Station_wall_07_mr",
+   "size": [
+    50.0,
+    400.0,
+    250.0
+   ],
+   "tris": 157,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_wall_08.SM_Space_Station_wall_08",
+   "name": "SM_Space_Station_wall_08",
+   "size": [
+    200.0,
+    0.0,
+    250.0
+   ],
+   "tris": 36,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_wall_10.SM_Space_Station_wall_10",
+   "name": "SM_Space_Station_wall_10",
+   "size": [
+    400.0,
+    0.0,
+    250.0
+   ],
+   "tris": 36,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_wall_11.SM_Space_Station_wall_11",
+   "name": "SM_Space_Station_wall_11",
+   "size": [
+    200.0,
+    0.0,
+    250.0
+   ],
+   "tris": 6,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_wall_12.SM_Space_Station_wall_12",
+   "name": "SM_Space_Station_wall_12",
+   "size": [
+    61.0,
+    900.0,
+    450.0
+   ],
+   "tris": 72,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_wall_13.SM_Space_Station_wall_13",
+   "name": "SM_Space_Station_wall_13",
+   "size": [
+    0.0,
+    400.0,
+    250.0
+   ],
+   "tris": 36,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_wall_15.SM_Space_Station_wall_15",
+   "name": "SM_Space_Station_wall_15",
+   "size": [
+    16.0,
+    800.0,
+    600.0
+   ],
+   "tris": 309,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_wall_18.SM_Space_Station_wall_18",
+   "name": "SM_Space_Station_wall_18",
+   "size": [
+    31.0,
+    500.0,
+    200.0
+   ],
+   "tris": 426,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/SciFi_Space_Station/Models/SM_Space_Station_wall_19.SM_Space_Station_wall_19",
+   "name": "SM_Space_Station_wall_19",
+   "size": [
+    23.0,
+    400.0,
+    650.0
+   ],
+   "tris": 118,
+   "nanite": "True",
+   "role": "wall"
+  }
+ ]
+}

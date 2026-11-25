@@ -1886,3 +1886,74 @@ Zoe's notes after the Vaughn night, round two. All built (Development Editor, no
 - Same night: the whole HUD now paints through Slate (`UI/DCCHudPaint`): `ADCCHUD` hides AHUD's DrawRect/DrawText/GetTextSize/DrawLine/DrawTexture and records them; a click-through Slate layer replays them in the look's fonts with rounded panels. Canvas-only parts (gauge, minimap, mine reel, loot box screen) use `FCanvasOnly`. One look for everything (`UI/DCCLook`, the SETTINGS style: Glass, Neon, Broadcast; Tabletop retired). Subtitles are styled by speaker (`DCCLook::VoiceFor`: Hiss gets a lower third, the System cyan, Cillinan green). Item icons are rendered from each item's mesh by `DCC.MakeItemIcons` into `Content/DCC/UI/ItemIcons/<Id>.png` (106 of them); a hand-made `T_Icon_<Id>` still wins.
 - Later the same night: **loot box rarities look different** (`ADCCHUD::DrawTierAura`: halo for all, turning rays from Gold, sparkles from Platinum, colour-cycling Celestial; procedural textures in `UI/DCCFxTextures`). **OPEN MIC WEEK page** (`UI/DCCEventPanelWidget`, Tab menu button OPEN MIC WEEK, `DCC.EventPanel [delay] [lines]`), in the purple-and-gold gacha style Zoe sent; weekly counts come from `credits.json` "week", written by `voice_inbox.py`; the RECORD A LINE button needs `[DCCVoiceDrop] Url` in DefaultGame.ini. **Pose bench FIT** buttons (Smaller/Bigger/Slimmer/Wider/Taller/Shorter/Thinner/Deeper, Auto-fit sizes head and body pieces to the body's shoulders). **Dead Air rebuild plan**: `Docs/dead-air-primetime-plan.md` (Hiss's show, segments, interview, send-offs), waiting on Zoe's answers.
 - **PRIMETIME first playable** (Dead Air rebuilt as Hiss's show, `Docs/dead-air-primetime-plan.md`): `Arcade/DCCHauntPrimetime.cpp` adds the show to `ADCCArcadeHaunt` (on unless `dcc.DeadAirClassic 1` / `-DeadAirClassic`). Opening in a studio built 300 m above the mine; 4 levels down the Lucky Tuesday (Gauntlet, Lights Out, Hold Out, then the finale in the deepest stope); after each, survivors go up to the couch and answer Charm / Banter / Defy (`Server_PrimetimeAnswer`); Hiss's per-guest mood gives Producer's Pet or Marked, the team's average gives a Blessing (Overtime, Lighting Department, Extra Takes) or a Twist (Special Guest, Tight Schedule, Budget Cuts). The out sit in the studio audience among NPC Forge extras and watch a surviving crewmate. 86 new Hiss lines (P_ tags in `talkshow_lines.json`, Kokoro). HUD in `UI/DCCHUD_Primetime.cpp`; Hiss's voice is a broadcast (`ADCCHUD::ShowBroadcast`). Dev: `DCC.Primetime <0-3>`, `DCC.Answer <0-2>`. Fixed on the way: a teleport counted as a fall (`ADCCCharacterBase::ForgetFall`). Not yet tried with a second player, nor the audience view after dying.
+- 2026-11-25 (night): **the uniform bone maker.** `Tools/unify_rig.py` rebuilds an already-rigged model on the crawler skeleton (Biped, Mixamo, Mannequin, Meshy rigs), `Tools/import_unified.py` imports it headless, and `ADCCEnemyCharacter_Unified` subclasses give it the crawler animation set. First two: **Mushroom Demon** and **Demon Bull** (`/Game/DCC/Characters/Unified/`), seen walking and fighting in the Safe Room via `DCC.SpawnEnemy`. The Mushroom Demon's textures did not come through (its material references a texture folder the blend does not link); the bull's did. New Fab packs added tonight are listed in `Docs/fab-library-audit-2026-11-24.md`; `Polytope_Studio/.../T_Quinn_01_CCRCCPlastic_MSK.uasset` was unreadable at import time (likely mid-download).
+
+### 2026-11-25 (Grok): two new Den games, compile-checked only
+
+Dungeon Crawler Tower Defense (`Siege`) and The Champions' Ring (`Ring`) are in the arcade list and always open. E talks to the arena (towers, posts, the ring's three pads). No new keys. Spell and melee damage pick up the tower-defense buffs. The Safe Room and Casino Cascade grew caption TVs. SETTINGS has a Credits button. Pack copy record: `Docs/fab-copies-2026-11-25.md`.
+
+The balance script (`Tools/gen_siege_waves.py`) says a solo crawler loses the wall on wave 13, two players on wave 21, five on wave 33. Those DPS numbers were not measured with `DCC.Fight`. Ring ladder is 50 stages in `Content/DCC/Ring/ladder.json`.
+
+Compile-checked with the standalone DebugGame target, then the Development Editor DLL was linked at 8:36 (`UnrealEditor-DungeonCrawlerDenver.dll`, no numbered hot-reload DLL). The old DLL was left beside it as `UnrealEditor-DungeonCrawlerDenver.dll.stuck-old` because the leftover mushroom-demon `-game` still had it open. That process is gone. No playtest, so nothing was written to Profile_Zoe.sav. PRIMETIME and the Fab spell catalogue (plan A1-A2) are still waiting. The crystal cannon and the announcer are the only new-pack effects wired in.
+
+**Update 2026-11-25 morning (Claude):** the Development Editor build is done (06:38, clean link, no numbered hot-reload DLLs). The stuck pid 30704 was Claude's own Mushroom Demon test run. It had exited but Windows kept its handles, so it still held the Live Coding lock and the DLL file. The build used `-NoHotReloadFromIDE`, and the old DLL was renamed to `UnrealEditor-DungeonCrawlerDenver.dll.stuck-old` so the link could write a new one. Delete the `.stuck-old` files after the next reboot. Siege and Ring are now in the editor's code.
+
+**Playtested 2026-11-25 (Claude, one crawler, as Zoe: +2 and +3 tickets, +250 XP from the Ring's series quest).** Siege: waves 1-3 marched (Mushroom Demons among them), the wall held, the crawler fought at the wall. Ring: E on the center podium started stage 1, cleared in ~8 s, paid. Fixed: the gold QUEST box sat under the title strip whenever the health bar showed (every arcade game, `DrawSeriesQuestBanner`); the Ring's planet hologram was full size 4 m from the podium and swallowed the camera (now 3 m, by the banner); the Ring title read "Stage 1  Stage 1". Still open for Grok: all 50 ladder stages are named "Stage N" (`Content/DCC/Ring/ladder.json` wants real names); towers, ally posts, the crystal, camps and the tournament were not exercised.
+
+### 2026-11-25 (Claude): groundwork for world-making
+- `Tools/kit_catalogue.py` lists every mesh (size, triangles, role) and map in 23 place and prop packs: `SourceArt/Kits/*.json`.
+- `Arcade/DCCSets`: stream a pack's finished sample map into a game as a ready-made room, stripped of its sun and sky, with
+  its bounds. Dev preview `DCC.Set`, `DCC.SetView`, `DCC.SetWalk`; `run_test.py` gained `DCC_TEST_WAITFOR`.
+- Toured 15 sets in game. Ready to use whole: the Broadcast Studio (PRIMETIME), the Metro, the Command Center, the sci-fi
+  interiors and hallways, the engineering bays, the Power Plant hall (tower defense), Elderboom village, the Inferno lava
+  crater (Ring champion stage). Showrooms, pieces only: Old Mine, Saloon, Clinic. Verdicts and grids: `Docs/kits.md`.
+- Also this session: the QUEST box no longer sits under the arcade title when the health bar shows; the Ring's hologram
+  is shrunk and moved; the Ring title no longer says "Stage N  Stage N".
+
+### 2026-11-25 (Claude): tower defense moves into the Power Plant
+- `ADCCArcadeSiege::BuildLocal` now streams the Abandoned Power Plant level in as the map (`DCCSets::Load`, turned 90
+  degrees). Enemies form up in the yard, file in through the annex's side doorway, cross the annex and snake through the
+  32 x 22 m hall to the Wall at the far end. Two towers in the annex, two in the hall; camp 1 is the annex's dead end,
+  camp 2 the yard nook through the annex's other doorway. Players start beside the Wall, off the road (on it, marchers
+  stop to fight and never reach the Wall). Work lights down the hall; fog 0.02 -> 0.006 (it was soup indoors).
+- **For Grok:** the layout is in set coordinates (`HallPoint(U, V)` in `DCCArcadeSiege.cpp`); `GetStartTransforms`,
+  `BuildLocal`'s first half and `GetSky`'s fog changed. Gameplay code is untouched. Move a tower or camp by editing
+  its `H(U, V, Z)`; the comment above `HallPoint` says where the walls, doorways and pillars are.
+- `DCCSets` fixes found on the way: the ready callback was reading its own captures after clearing its timer
+  (options came through empty, then a crash); actors are destroyed after the scan, not during it; the floor is the most
+  common lowest surface, not the one under the middle (basement holes); probes trace the Pawn channel.
+  New option `RemoveMeshes` (the Power Plant's closed doors block walking, so they are removed).
+- Seen in test runs: waves walk in, cross the hall and hit the Wall; the camps sit where planned. Not yet checked:
+  allies on posts and the crystal from the new tower spots, a full multiplayer round, and the first-load shader wait.
+- Evening: **working doors in every set** (`UDCCSetDoorComponent`, on by default). They open as anyone walks up and
+  shut 2 s after; narrow ones swing, wide ones slide along the wall. The Power Plant's 6 doors work, and a wave opens
+  the side door on its own. Grok's plan has Part I for the rest of the simple things (door sounds, lockdowns, loose
+  props, seats, lamps that flicker).
+
+### 2026-11-25 (Claude): Epic Online Services, for joining from anywhere
+- `Session/DCCOnline`: each PC signs in to EOS by itself (an anonymous device id, no Epic account, no login screen).
+  HOST A PARTY lists the party; JOIN A PARTY shows open parties as buttons (REFRESH, USE A COPIED INVITE as backup);
+  the game runs over EOS's relay, so nobody forwards ports or installs Tailscale. The main menu shows whether EOS is
+  signed in. Built on the engine's `OnlineServicesEOSGS` + `SocketSubsystemEOS` (plugins enabled in the .uproject;
+  config in `DefaultEngine.ini`: `[OnlineServices.EOS]`, `[OnlineServices.Lobbies]`, the GameNetDriver definition).
+- **Owed:** the Client Secret in `DefaultEngine.ini` (`ClientSecret=PASTE_CLIENT_SECRET_HERE`). Until then the menu
+  says "Online is not set up yet" and everything runs as before over IP (tested: hosting falls back to IpNetDriver).
+- **Not tested yet:** sign-in, the party list and a real join. Two copies of the game on one PC share one device id,
+  so the first real test needs a friend on another PC. Dev: `DCC.Host [delay]` hosts from wherever you are.
+- The first editor build of that file failed with C3861 on `EOS_Platform_GetConnectInterface(*Platform)`. MSVC drops the
+  extern "C" getter instead of using the handle's conversion. `DCCOnline::Start` now copies the handle out first.
+  Sign-in itself is still untested.
+
+### 2026-11-25 (Grok): spell pass
+
+The morning note that the Fab spell catalogue was still waiting is out of date. Part A of `Docs/grok-plan-2026-11-25-fab-packs.md` is in.
+
+- **Catalogue** (`Docs/vfx-catalogue.md`): 137 Niagara systems in the six effect folders. Spline systems and projectiles are listed and not used as a point cast. There is no point-spawn ice system, so ice spells wear the air aura and a shockwave.
+- **One table** (`Skills/DCCSpellBook.cpp`). `ApplyPresentation` fills cast, impact and height after the skill table or the book is resolved, and before class perks. A DataTable row still wins on numbers. No new scale property on the skill row. Scales are plain floats, applied when the system is spawned. Looping auras are switched off after 1.4 s, impacts after 1.8 s. The 2026-11-22 mesh spell show still plays on top.
+- **Starters in the book:** Static Burst, Ball Lightning, Lien Enforcement, and Mark and Collect were not in `DT_DCCSkills`. They are in the book now, so a class that teaches them has a cast. A later table row of the same name still wins.
+- **Hits and deaths (A3).** Weapon hits spawn a puff and skip it past about 25 m: fire uses `NS_Explosion_Small`, piercing uses the magic slash, blunt and fists use the concrete impact. Debt Eaters and the unified bone-maker monsters (ragdoll off) pop the small explosion instead of portal smoke. World explosions use the Free Spells explosion when they are fire, and the small dirt blast otherwise.
+- **Sheet.** `DCC.ShowFx` spawns one system on the local pawn and cuts it off after 2.2 s. Thirty systems on the pose bench: `Saved/TestShots/spell_fx2/sheet.png`. The first pass (`spell_fx`) put them behind her while shaders were still compiling, so that sheet is not the one to read. At scale 1, a fire aura, a lightning buff and Level Up fill the room. A shockwave and the slash are about two body-heights. The small explosion is a loose sparkle. Ordinary casts were pulled down near 0.3 after that. The level-20 shows (Total Repossession, Whiteout, Station Identification, Halftime Speech, Victory Lap, Lockdown, Grand Reopening) stay large. The Free Spells explosion itself was still compiling on the sheet, so its size is still a guess.
+- Linked into `UnrealEditor-DungeonCrawlerDenver.dll` at 16:05 (9,796,096 bytes). No numbered hot-reload DLL. `DCC.ShowFx` pays nothing. `Profile_Zoe.sav` is still the 08:35 file, 15,137 bytes. This was not a combat playtest.
+
+Claude's later notes were read and not started. Ring stages are still named "Stage N" (Part H5). Part I after the doors Claude already built (door sounds, lockdowns, loose props, seats, flickering lamps) is still open.
+

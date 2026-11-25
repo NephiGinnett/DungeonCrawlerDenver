@@ -1,0 +1,573 @@
+{
+  "wall": 2000,
+  "waves": [
+    {
+      "wave": 1,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "debtor",
+          "hp": 29,
+          "count": 6,
+          "name": "Debtor"
+        }
+      ]
+    },
+    {
+      "wave": 2,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "clerk",
+          "hp": 28,
+          "count": 7,
+          "name": "Clerk"
+        }
+      ]
+    },
+    {
+      "wave": 3,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "hound",
+          "hp": 26,
+          "count": 8,
+          "name": "Hound"
+        }
+      ]
+    },
+    {
+      "wave": 4,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "stalker",
+          "hp": 25,
+          "count": 9,
+          "name": "Stalker"
+        }
+      ]
+    },
+    {
+      "wave": 5,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "brute",
+          "hp": 50,
+          "count": 1,
+          "name": "The Brute"
+        },
+        {
+          "kind": "brute",
+          "hp": 22,
+          "count": 9,
+          "name": "Brute"
+        }
+      ]
+    },
+    {
+      "wave": 6,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "debtor",
+          "hp": 24,
+          "count": 11,
+          "name": "Debtor"
+        }
+      ]
+    },
+    {
+      "wave": 7,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "clerk",
+          "hp": 23,
+          "count": 12,
+          "name": "Clerk"
+        }
+      ]
+    },
+    {
+      "wave": 8,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "hound",
+          "hp": 23,
+          "count": 13,
+          "name": "Hound"
+        }
+      ]
+    },
+    {
+      "wave": 9,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "stalker",
+          "hp": 23,
+          "count": 14,
+          "name": "Stalker"
+        }
+      ]
+    },
+    {
+      "wave": 10,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "boss",
+          "hp": 136,
+          "count": 1,
+          "name": "The Collector"
+        },
+        {
+          "kind": "hound",
+          "hp": 14,
+          "count": 14,
+          "name": "Debtor"
+        }
+      ]
+    },
+    {
+      "wave": 11,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "debtor",
+          "hp": 22,
+          "count": 16,
+          "name": "Debtor"
+        }
+      ]
+    },
+    {
+      "wave": 12,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "clerk",
+          "hp": 22,
+          "count": 17,
+          "name": "Clerk"
+        }
+      ]
+    },
+    {
+      "wave": 13,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "hound",
+          "hp": 144,
+          "count": 18,
+          "name": "Hound"
+        }
+      ]
+    },
+    {
+      "wave": 14,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "stalker",
+          "hp": 37,
+          "count": 19,
+          "name": "Stalker"
+        }
+      ]
+    },
+    {
+      "wave": 15,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "brute",
+          "hp": 76,
+          "count": 1,
+          "name": "The Brute"
+        },
+        {
+          "kind": "brute",
+          "hp": 36,
+          "count": 19,
+          "name": "Brute"
+        }
+      ]
+    },
+    {
+      "wave": 16,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "debtor",
+          "hp": 38,
+          "count": 21,
+          "name": "Debtor"
+        }
+      ]
+    },
+    {
+      "wave": 17,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "clerk",
+          "hp": 38,
+          "count": 22,
+          "name": "Clerk"
+        }
+      ]
+    },
+    {
+      "wave": 18,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "hound",
+          "hp": 38,
+          "count": 23,
+          "name": "Hound"
+        }
+      ]
+    },
+    {
+      "wave": 19,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "stalker",
+          "hp": 38,
+          "count": 24,
+          "name": "Stalker"
+        }
+      ]
+    },
+    {
+      "wave": 20,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "boss",
+          "hp": 440,
+          "count": 1,
+          "name": "The Bull"
+        },
+        {
+          "kind": "brute",
+          "hp": 27,
+          "count": 24,
+          "name": "Debtor"
+        }
+      ]
+    },
+    {
+      "wave": 21,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "debtor",
+          "hp": 46,
+          "count": 26,
+          "name": "Debtor"
+        }
+      ]
+    },
+    {
+      "wave": 22,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "clerk",
+          "hp": 49,
+          "count": 27,
+          "name": "Clerk"
+        }
+      ]
+    },
+    {
+      "wave": 23,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "hound",
+          "hp": 52,
+          "count": 28,
+          "name": "Hound"
+        }
+      ]
+    },
+    {
+      "wave": 24,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "stalker",
+          "hp": 54,
+          "count": 29,
+          "name": "Stalker"
+        }
+      ]
+    },
+    {
+      "wave": 25,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "brute",
+          "hp": 112,
+          "count": 1,
+          "name": "The Brute"
+        },
+        {
+          "kind": "brute",
+          "hp": 54,
+          "count": 29,
+          "name": "Brute"
+        }
+      ]
+    },
+    {
+      "wave": 26,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "debtor",
+          "hp": 58,
+          "count": 31,
+          "name": "Debtor"
+        }
+      ]
+    },
+    {
+      "wave": 27,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "clerk",
+          "hp": 60,
+          "count": 32,
+          "name": "Clerk"
+        }
+      ]
+    },
+    {
+      "wave": 28,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "hound",
+          "hp": 62,
+          "count": 33,
+          "name": "Hound"
+        }
+      ]
+    },
+    {
+      "wave": 29,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "stalker",
+          "hp": 64,
+          "count": 34,
+          "name": "Stalker"
+        }
+      ]
+    },
+    {
+      "wave": 30,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "boss",
+          "hp": 960,
+          "count": 1,
+          "name": "The Auditor"
+        },
+        {
+          "kind": "clerk",
+          "hp": 42,
+          "count": 34,
+          "name": "Debtor"
+        }
+      ]
+    },
+    {
+      "wave": 31,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "debtor",
+          "hp": 71,
+          "count": 36,
+          "name": "Debtor"
+        }
+      ]
+    },
+    {
+      "wave": 32,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "clerk",
+          "hp": 73,
+          "count": 37,
+          "name": "Clerk"
+        }
+      ]
+    },
+    {
+      "wave": 33,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "hound",
+          "hp": 75,
+          "count": 38,
+          "name": "Hound"
+        }
+      ]
+    },
+    {
+      "wave": 34,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "stalker",
+          "hp": 77,
+          "count": 39,
+          "name": "Stalker"
+        }
+      ]
+    },
+    {
+      "wave": 35,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "brute",
+          "hp": 160,
+          "count": 1,
+          "name": "The Brute"
+        },
+        {
+          "kind": "brute",
+          "hp": 77,
+          "count": 39,
+          "name": "Brute"
+        }
+      ]
+    },
+    {
+      "wave": 36,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "debtor",
+          "hp": 81,
+          "count": 41,
+          "name": "Debtor"
+        }
+      ]
+    },
+    {
+      "wave": 37,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "clerk",
+          "hp": 83,
+          "count": 42,
+          "name": "Clerk"
+        }
+      ]
+    },
+    {
+      "wave": 38,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "hound",
+          "hp": 85,
+          "count": 43,
+          "name": "Hound"
+        }
+      ]
+    },
+    {
+      "wave": 39,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "stalker",
+          "hp": 87,
+          "count": 44,
+          "name": "Stalker"
+        }
+      ]
+    },
+    {
+      "wave": 40,
+      "speed": 320,
+      "gap": 0.65,
+      "bodies": [
+        {
+          "kind": "boss",
+          "hp": 1600,
+          "count": 1,
+          "name": "The House"
+        },
+        {
+          "kind": "stalker",
+          "hp": 54,
+          "count": 44,
+          "name": "Debtor"
+        }
+      ]
+    }
+  ]
+}

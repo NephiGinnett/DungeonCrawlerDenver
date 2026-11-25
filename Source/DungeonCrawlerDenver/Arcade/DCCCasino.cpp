@@ -4,6 +4,7 @@
 #include "Session/DCCIntegrity.h"
 #include "Arcade/DCCArcade.h"
 #include "Arcade/DCCArcadeGames.h"
+#include "Arcade/DCCWallTV.h"
 #include "Arcade/DCCWalletComponent.h"
 #include "Progression/DCCAchievementComponent.h"
 #include "Characters/DCCCharacterBase.h"
@@ -795,6 +796,16 @@ void ADCCCasinoCascade::Dress(ADCCArcadeLobby* Lobby)
 	for (int32 i = 0; i < 4; ++i)
 	{
 		Lobby->Light(C + FVector((i - 1.5f) * 900.0f, 0.0f, 760.0f), FLinearColor(1.0f, 0.72f, 0.35f), 6000.0f, 1400.0f);
+	}
+	if (UWorld* World = Lobby->GetWorld())
+	{
+		FActorSpawnParameters Params;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		for (int32 i = 0; i < 2; ++i)
+		{
+			const FVector At = C + FVector(-400.0f + i * 800.0f, R.HalfY - 80.0f, 420.0f);
+			World->SpawnActor<ADCCWallTV>(At, FRotator(0.0f, -90.0f, 0.0f), Params);
+		}
 	}
 
 	// The games themselves are built on the casino actor, so the wheel, the ball and the puck can move.

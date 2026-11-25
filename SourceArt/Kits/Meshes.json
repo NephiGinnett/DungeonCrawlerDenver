@@ -1,0 +1,9426 @@
+{
+ "pack": "Meshes",
+ "maps": [],
+ "meshes": [
+  {
+   "path": "/Game/Meshes/SM_Background1_AntennaTower.SM_Background1_AntennaTower",
+   "name": "SM_Background1_AntennaTower",
+   "size": [
+    922.0,
+    921.0,
+    6343.0
+   ],
+   "tris": 1864,
+   "nanite": "",
+   "role": "big"
+  },
+  {
+   "path": "/Game/Meshes/SM_Background1_PipeBig.SM_Background1_PipeBig",
+   "name": "SM_Background1_PipeBig",
+   "size": [
+    1172.0,
+    1172.0,
+    11341.0
+   ],
+   "tris": 240,
+   "nanite": "",
+   "role": "big"
+  },
+  {
+   "path": "/Game/Meshes/SM_Background1_Tower01.SM_Background1_Tower01",
+   "name": "SM_Background1_Tower01",
+   "size": [
+    974.0,
+    974.0,
+    4616.0
+   ],
+   "tris": 5784,
+   "nanite": "",
+   "role": "big"
+  },
+  {
+   "path": "/Game/Meshes/SM_Background1_Tower02.SM_Background1_Tower02",
+   "name": "SM_Background1_Tower02",
+   "size": [
+    3718.0,
+    3725.0,
+    2686.0
+   ],
+   "tris": 3546,
+   "nanite": "",
+   "role": "big"
+  },
+  {
+   "path": "/Game/Meshes/SM_Background1_Tower03.SM_Background1_Tower03",
+   "name": "SM_Background1_Tower03",
+   "size": [
+    2926.0,
+    2760.0,
+    8728.0
+   ],
+   "tris": 4050,
+   "nanite": "",
+   "role": "big"
+  },
+  {
+   "path": "/Game/Meshes/SM_Background1_Tower04.SM_Background1_Tower04",
+   "name": "SM_Background1_Tower04",
+   "size": [
+    1291.0,
+    1496.0,
+    7745.0
+   ],
+   "tris": 1512,
+   "nanite": "",
+   "role": "big"
+  },
+  {
+   "path": "/Game/Meshes/SM_Background2_Hangar.SM_Background2_Hangar",
+   "name": "SM_Background2_Hangar",
+   "size": [
+    6277.0,
+    14540.0,
+    3385.0
+   ],
+   "tris": 708,
+   "nanite": "",
+   "role": "big"
+  },
+  {
+   "path": "/Game/Meshes/SM_Background2_Tower.SM_Background2_Tower",
+   "name": "SM_Background2_Tower",
+   "size": [
+    1700.0,
+    1700.0,
+    4437.0
+   ],
+   "tris": 5728,
+   "nanite": "",
+   "role": "big"
+  },
+  {
+   "path": "/Game/Meshes/SM_FrontWall01.SM_FrontWall01",
+   "name": "SM_FrontWall01",
+   "size": [
+    454.0,
+    2357.0,
+    3032.0
+   ],
+   "tris": 5996,
+   "nanite": "",
+   "role": "big"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalBeam17.SM_MetalBeam17",
+   "name": "SM_MetalBeam17",
+   "size": [
+    111.0,
+    111.0,
+    6400.0
+   ],
+   "tris": 1280,
+   "nanite": "",
+   "role": "big"
+  },
+  {
+   "path": "/Game/Meshes/SM_AssemblyLineDoor01.SM_AssemblyLineDoor01",
+   "name": "SM_AssemblyLineDoor01",
+   "size": [
+    159.0,
+    58.0,
+    98.0
+   ],
+   "tris": 28,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Meshes/SM_AssemblyLineDoor02.SM_AssemblyLineDoor02",
+   "name": "SM_AssemblyLineDoor02",
+   "size": [
+    172.0,
+    26.0,
+    126.0
+   ],
+   "tris": 120,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Meshes/SM_Door_A_01.SM_Door_A_01",
+   "name": "SM_Door_A_01",
+   "size": [
+    120.0,
+    39.0,
+    230.0
+   ],
+   "tris": 1434,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Meshes/SM_Door_A_02.SM_Door_A_02",
+   "name": "SM_Door_A_02",
+   "size": [
+    120.0,
+    20.0,
+    230.0
+   ],
+   "tris": 1230,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Meshes/SM_Door_A_03.SM_Door_A_03",
+   "name": "SM_Door_A_03",
+   "size": [
+    220.0,
+    20.0,
+    230.0
+   ],
+   "tris": 1980,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Meshes/SM_Door_A_04.SM_Door_A_04",
+   "name": "SM_Door_A_04",
+   "size": [
+    120.0,
+    11.0,
+    230.0
+   ],
+   "tris": 1242,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Meshes/SM_Door_A_05.SM_Door_A_05",
+   "name": "SM_Door_A_05",
+   "size": [
+    220.0,
+    39.0,
+    230.0
+   ],
+   "tris": 2340,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Meshes/SM_Door_A_06.SM_Door_A_06",
+   "name": "SM_Door_A_06",
+   "size": [
+    120.0,
+    39.0,
+    230.0
+   ],
+   "tris": 1422,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Meshes/SM_Door_A_07.SM_Door_A_07",
+   "name": "SM_Door_A_07",
+   "size": [
+    46.0,
+    175.0,
+    265.0
+   ],
+   "tris": 1702,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Meshes/SM_Door_A_08.SM_Door_A_08",
+   "name": "SM_Door_A_08",
+   "size": [
+    11.0,
+    175.0,
+    265.0
+   ],
+   "tris": 656,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Meshes/SM_GateBorder01.SM_GateBorder01",
+   "name": "SM_GateBorder01",
+   "size": [
+    55.0,
+    70.0,
+    2100.0
+   ],
+   "tris": 1284,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Meshes/SM_GateBorder02.SM_GateBorder02",
+   "name": "SM_GateBorder02",
+   "size": [
+    97.0,
+    135.0,
+    2108.0
+   ],
+   "tris": 1084,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Meshes/SM_GateBottomLeft01.SM_GateBottomLeft01",
+   "name": "SM_GateBottomLeft01",
+   "size": [
+    607.0,
+    72.0,
+    1338.0
+   ],
+   "tris": 3670,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Meshes/SM_GateBottomRight01.SM_GateBottomRight01",
+   "name": "SM_GateBottomRight01",
+   "size": [
+    607.0,
+    72.0,
+    1338.0
+   ],
+   "tris": 3728,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Meshes/SM_GateDoor01.SM_GateDoor01",
+   "name": "SM_GateDoor01",
+   "size": [
+    125.0,
+    25.0,
+    248.0
+   ],
+   "tris": 2234,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Meshes/SM_GateLeft02.SM_GateLeft02",
+   "name": "SM_GateLeft02",
+   "size": [
+    606.0,
+    106.0,
+    2092.0
+   ],
+   "tris": 4364,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Meshes/SM_GateRight02.SM_GateRight02",
+   "name": "SM_GateRight02",
+   "size": [
+    606.0,
+    79.0,
+    2092.0
+   ],
+   "tris": 2332,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Meshes/SM_GateTopLeft01.SM_GateTopLeft01",
+   "name": "SM_GateTopLeft01",
+   "size": [
+    607.0,
+    72.0,
+    759.0
+   ],
+   "tris": 2462,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Meshes/SM_GateTopRight01.SM_GateTopRight01",
+   "name": "SM_GateTopRight01",
+   "size": [
+    607.0,
+    72.0,
+    759.0
+   ],
+   "tris": 1656,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Meshes/SM_GlassDoorPart_01.SM_GlassDoorPart_01",
+   "name": "SM_GlassDoorPart_01",
+   "size": [
+    23.0,
+    250.0,
+    304.0
+   ],
+   "tris": 156,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Meshes/SM_GlassDoorPart_02.SM_GlassDoorPart_02",
+   "name": "SM_GlassDoorPart_02",
+   "size": [
+    32.0,
+    117.0,
+    277.0
+   ],
+   "tris": 2100,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Meshes/SM_GlassDoorThreshold_01.SM_GlassDoorThreshold_01",
+   "name": "SM_GlassDoorThreshold_01",
+   "size": [
+    23.0,
+    250.0,
+    3.0
+   ],
+   "tris": 28,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Meshes/SM_LockerDoorL_01.SM_LockerDoorL_01",
+   "name": "SM_LockerDoorL_01",
+   "size": [
+    5.0,
+    37.0,
+    164.0
+   ],
+   "tris": 1560,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Meshes/SM_LockerDoorR_01.SM_LockerDoorR_01",
+   "name": "SM_LockerDoorR_01",
+   "size": [
+    7.0,
+    37.0,
+    164.0
+   ],
+   "tris": 3032,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Meshes/SM_AirConditioningPipe_01.SM_AirConditioningPipe_01",
+   "name": "SM_AirConditioningPipe_01",
+   "size": [
+    200.0,
+    19.0,
+    19.0
+   ],
+   "tris": 1372,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_AirConditioningPipe_02.SM_AirConditioningPipe_02",
+   "name": "SM_AirConditioningPipe_02",
+   "size": [
+    50.0,
+    189.0,
+    19.0
+   ],
+   "tris": 1944,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_AirConditioningPlatform_01.SM_AirConditioningPlatform_01",
+   "name": "SM_AirConditioningPlatform_01",
+   "size": [
+    301.0,
+    184.0,
+    32.0
+   ],
+   "tris": 5208,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_AirConditioningPlatform_2.SM_AirConditioningPlatform_2",
+   "name": "SM_AirConditioningPlatform_2",
+   "size": [
+    301.0,
+    184.0,
+    32.0
+   ],
+   "tris": 5208,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_AssemblyLineFloor01.SM_AssemblyLineFloor01",
+   "name": "SM_AssemblyLineFloor01",
+   "size": [
+    400.0,
+    400.0,
+    10.0
+   ],
+   "tris": 12,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_AssemblyLineFloor02.SM_AssemblyLineFloor02",
+   "name": "SM_AssemblyLineFloor02",
+   "size": [
+    557.0,
+    400.0,
+    10.0
+   ],
+   "tris": 20,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_AssemblyLineFloor03.SM_AssemblyLineFloor03",
+   "name": "SM_AssemblyLineFloor03",
+   "size": [
+    557.0,
+    800.0,
+    10.0
+   ],
+   "tris": 34,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_Background2_BoxBuildingBase.SM_Background2_BoxBuildingBase",
+   "name": "SM_Background2_BoxBuildingBase",
+   "size": [
+    1910.0,
+    1910.0,
+    200.0
+   ],
+   "tris": 80,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_Cables01.SM_Cables01",
+   "name": "SM_Cables01",
+   "size": [
+    30.0,
+    402.0,
+    34.0
+   ],
+   "tris": 3418,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_Cables02.SM_Cables02",
+   "name": "SM_Cables02",
+   "size": [
+    19.0,
+    401.0,
+    28.0
+   ],
+   "tris": 4260,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_Cables03.SM_Cables03",
+   "name": "SM_Cables03",
+   "size": [
+    29.0,
+    404.0,
+    24.0
+   ],
+   "tris": 4992,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_Cables04_06.SM_Cables04_06",
+   "name": "SM_Cables04_06",
+   "size": [
+    47.0,
+    402.0,
+    14.0
+   ],
+   "tris": 1736,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_Cables06.SM_Cables06",
+   "name": "SM_Cables06",
+   "size": [
+    16.0,
+    200.0,
+    8.0
+   ],
+   "tris": 1416,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_Cables09.SM_Cables09",
+   "name": "SM_Cables09",
+   "size": [
+    1000.0,
+    31.0,
+    109.0
+   ],
+   "tris": 2644,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_Cables10.SM_Cables10",
+   "name": "SM_Cables10",
+   "size": [
+    1000.0,
+    25.0,
+    121.0
+   ],
+   "tris": 2464,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_Cables11.SM_Cables11",
+   "name": "SM_Cables11",
+   "size": [
+    258.0,
+    159.0,
+    3.0
+   ],
+   "tris": 600,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_Cables12.SM_Cables12",
+   "name": "SM_Cables12",
+   "size": [
+    255.0,
+    150.0,
+    7.0
+   ],
+   "tris": 1212,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_Cables13.SM_Cables13",
+   "name": "SM_Cables13",
+   "size": [
+    546.0,
+    182.0,
+    8.0
+   ],
+   "tris": 948,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_ConcreteFloor_01.SM_ConcreteFloor_01",
+   "name": "SM_ConcreteFloor_01",
+   "size": [
+    600.0,
+    600.0,
+    10.0
+   ],
+   "tris": 12,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_ControlRoomMats.SM_ControlRoomMats",
+   "name": "SM_ControlRoomMats",
+   "size": [
+    1082.0,
+    1102.0,
+    4.0
+   ],
+   "tris": 5706,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_ControlRoomMats02.SM_ControlRoomMats02",
+   "name": "SM_ControlRoomMats02",
+   "size": [
+    1100.0,
+    1114.0,
+    2.0
+   ],
+   "tris": 26234,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_CrashAreaLane_01.SM_CrashAreaLane_01",
+   "name": "SM_CrashAreaLane_01",
+   "size": [
+    806.0,
+    557.0,
+    5.0
+   ],
+   "tris": 32,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_CrashAreaLane_02.SM_CrashAreaLane_02",
+   "name": "SM_CrashAreaLane_02",
+   "size": [
+    806.0,
+    89.0,
+    5.0
+   ],
+   "tris": 56,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_CrashAreaLane_03.SM_CrashAreaLane_03",
+   "name": "SM_CrashAreaLane_03",
+   "size": [
+    806.0,
+    89.0,
+    5.0
+   ],
+   "tris": 40,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/Truck/SM_Debris01.SM_Debris01",
+   "name": "SM_Debris01",
+   "size": [
+    461.0,
+    905.0,
+    48.0
+   ],
+   "tris": 24,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/Truck/SM_Debris02.SM_Debris02",
+   "name": "SM_Debris02",
+   "size": [
+    717.0,
+    475.0,
+    35.0
+   ],
+   "tris": 24,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/Truck/SM_Debris03.SM_Debris03",
+   "name": "SM_Debris03",
+   "size": [
+    805.0,
+    619.0,
+    113.0
+   ],
+   "tris": 28,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/Truck/SM_Debris04.SM_Debris04",
+   "name": "SM_Debris04",
+   "size": [
+    614.0,
+    200.0,
+    63.0
+   ],
+   "tris": 8,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_FactoryFloorLarge01.SM_FactoryFloorLarge01",
+   "name": "SM_FactoryFloorLarge01",
+   "size": [
+    1600.0,
+    1600.0,
+    10.0
+   ],
+   "tris": 96,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_Floor2m.SM_Floor2m",
+   "name": "SM_Floor2m",
+   "size": [
+    200.0,
+    200.0,
+    10.0
+   ],
+   "tris": 12,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_FloorMat01.SM_FloorMat01",
+   "name": "SM_FloorMat01",
+   "size": [
+    400.0,
+    200.0,
+    4.0
+   ],
+   "tris": 58,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_FloorMat02.SM_FloorMat02",
+   "name": "SM_FloorMat02",
+   "size": [
+    200.0,
+    200.0,
+    4.0
+   ],
+   "tris": 34,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_FloorMat03.SM_FloorMat03",
+   "name": "SM_FloorMat03",
+   "size": [
+    200.0,
+    200.0,
+    4.0
+   ],
+   "tris": 110,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_FloorMat04.SM_FloorMat04",
+   "name": "SM_FloorMat04",
+   "size": [
+    400.0,
+    400.0,
+    4.0
+   ],
+   "tris": 116,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_FloorMat05.SM_FloorMat05",
+   "name": "SM_FloorMat05",
+   "size": [
+    801.0,
+    800.0,
+    4.0
+   ],
+   "tris": 464,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_FloorMat06.SM_FloorMat06",
+   "name": "SM_FloorMat06",
+   "size": [
+    1600.0,
+    801.0,
+    4.0
+   ],
+   "tris": 928,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_FloorMat07.SM_FloorMat07",
+   "name": "SM_FloorMat07",
+   "size": [
+    1599.0,
+    401.0,
+    4.0
+   ],
+   "tris": 464,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_FloorMat08.SM_FloorMat08",
+   "name": "SM_FloorMat08",
+   "size": [
+    1600.0,
+    205.0,
+    4.0
+   ],
+   "tris": 232,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_FloorMatsMerged01.SM_FloorMatsMerged01",
+   "name": "SM_FloorMatsMerged01",
+   "size": [
+    801.0,
+    201.0,
+    4.0
+   ],
+   "tris": 440,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_FloorMatsMerged02.SM_FloorMatsMerged02",
+   "name": "SM_FloorMatsMerged02",
+   "size": [
+    200.0,
+    201.0,
+    2.0
+   ],
+   "tris": 440,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_FloorMatsMerged03.SM_FloorMatsMerged03",
+   "name": "SM_FloorMatsMerged03",
+   "size": [
+    400.0,
+    401.0,
+    2.0
+   ],
+   "tris": 1760,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_FloorMatsMerged04.SM_FloorMatsMerged04",
+   "name": "SM_FloorMatsMerged04",
+   "size": [
+    1599.0,
+    1091.0,
+    6.0
+   ],
+   "tris": 11440,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_IndustrialPlatform01.SM_IndustrialPlatform01",
+   "name": "SM_IndustrialPlatform01",
+   "size": [
+    700.0,
+    300.0,
+    72.0
+   ],
+   "tris": 484,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_LayoutTable01.SM_LayoutTable01",
+   "name": "SM_LayoutTable01",
+   "size": [
+    700.0,
+    359.0,
+    94.0
+   ],
+   "tris": 728,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalBeam01.SM_MetalBeam01",
+   "name": "SM_MetalBeam01",
+   "size": [
+    600.0,
+    91.0,
+    55.0
+   ],
+   "tris": 160,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalBeam15.SM_MetalBeam15",
+   "name": "SM_MetalBeam15",
+   "size": [
+    1200.0,
+    91.0,
+    55.0
+   ],
+   "tris": 320,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalFarm_01.SM_MetalFarm_01",
+   "name": "SM_MetalFarm_01",
+   "size": [
+    17.0,
+    550.0,
+    25.0
+   ],
+   "tris": 52,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalFarm_05.SM_MetalFarm_05",
+   "name": "SM_MetalFarm_05",
+   "size": [
+    9.0,
+    200.0,
+    15.0
+   ],
+   "tris": 24,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalFrame_02.SM_MetalFrame_02",
+   "name": "SM_MetalFrame_02",
+   "size": [
+    99.0,
+    396.0,
+    51.0
+   ],
+   "tris": 572,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_OfficeCarpet.SM_OfficeCarpet",
+   "name": "SM_OfficeCarpet",
+   "size": [
+    322.0,
+    233.0,
+    10.0
+   ],
+   "tris": 154,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_OfficeCeiling01.SM_OfficeCeiling01",
+   "name": "SM_OfficeCeiling01",
+   "size": [
+    200.0,
+    200.0,
+    7.0
+   ],
+   "tris": 62,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_PaintBoxCeiling_01.SM_PaintBoxCeiling_01",
+   "name": "SM_PaintBoxCeiling_01",
+   "size": [
+    200.0,
+    300.0,
+    16.0
+   ],
+   "tris": 172,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_PaintBoxFloor_01.SM_PaintBoxFloor_01",
+   "name": "SM_PaintBoxFloor_01",
+   "size": [
+    150.0,
+    150.0,
+    11.0
+   ],
+   "tris": 380,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pallet01.SM_Pallet01",
+   "name": "SM_Pallet01",
+   "size": [
+    120.0,
+    160.0,
+    15.0
+   ],
+   "tris": 1626,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pallet02.SM_Pallet02",
+   "name": "SM_Pallet02",
+   "size": [
+    240.0,
+    160.0,
+    15.0
+   ],
+   "tris": 996,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_PalletCart_PalletBox_cap.SM_PalletCart_PalletBox_cap",
+   "name": "SM_PalletCart_PalletBox_cap",
+   "size": [
+    176.0,
+    155.0,
+    12.0
+   ],
+   "tris": 3276,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_PaperBox_02_06.SM_PaperBox_02_06",
+   "name": "SM_PaperBox_02_06",
+   "size": [
+    186.0,
+    141.0,
+    10.0
+   ],
+   "tris": 140,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_PedestrianPath01.SM_PedestrianPath01",
+   "name": "SM_PedestrianPath01",
+   "size": [
+    98.0,
+    300.0,
+    1.0
+   ],
+   "tris": 22,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_PedestrianPath02.SM_PedestrianPath02",
+   "name": "SM_PedestrianPath02",
+   "size": [
+    200.0,
+    200.0,
+    1.0
+   ],
+   "tris": 122,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipe_square_long.SM_Pipe_square_long",
+   "name": "SM_Pipe_square_long",
+   "size": [
+    44.0,
+    200.0,
+    24.0
+   ],
+   "tris": 244,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipes_round_section2.SM_Pipes_round_section2",
+   "name": "SM_Pipes_round_section2",
+   "size": [
+    511.0,
+    1162.0,
+    117.0
+   ],
+   "tris": 8256,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipes_round_section3.SM_Pipes_round_section3",
+   "name": "SM_Pipes_round_section3",
+   "size": [
+    80.0,
+    1200.0,
+    87.0
+   ],
+   "tris": 5616,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipes_round_section4.SM_Pipes_round_section4",
+   "name": "SM_Pipes_round_section4",
+   "size": [
+    42.0,
+    800.0,
+    42.0
+   ],
+   "tris": 1440,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipes_square_section2.SM_Pipes_square_section2",
+   "name": "SM_Pipes_square_section2",
+   "size": [
+    1484.0,
+    800.0,
+    62.0
+   ],
+   "tris": 7792,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_PlasticPallet01.SM_PlasticPallet01",
+   "name": "SM_PlasticPallet01",
+   "size": [
+    150.0,
+    150.0,
+    20.0
+   ],
+   "tris": 1260,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_Platform_01.SM_Platform_01",
+   "name": "SM_Platform_01",
+   "size": [
+    600.0,
+    300.0,
+    67.0
+   ],
+   "tris": 270,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_Railway01.SM_Railway01",
+   "name": "SM_Railway01",
+   "size": [
+    800.0,
+    400.0,
+    15.0
+   ],
+   "tris": 84,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_Railway02.SM_Railway02",
+   "name": "SM_Railway02",
+   "size": [
+    88.0,
+    400.0,
+    15.0
+   ],
+   "tris": 52,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_RubberFloor_01.SM_RubberFloor_01",
+   "name": "SM_RubberFloor_01",
+   "size": [
+    600.0,
+    550.0,
+    31.0
+   ],
+   "tris": 1700,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_Sewer_01.SM_Sewer_01",
+   "name": "SM_Sewer_01",
+   "size": [
+    150.0,
+    20.0,
+    2.0
+   ],
+   "tris": 12,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_Showroom01.SM_Showroom01",
+   "name": "SM_Showroom01",
+   "size": [
+    1000.0,
+    1000.0,
+    0.0
+   ],
+   "tris": 2,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_TrainCar01.SM_TrainCar01",
+   "name": "SM_TrainCar01",
+   "size": [
+    2008.0,
+    405.0,
+    250.0
+   ],
+   "tris": 20882,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_TrainCar02.SM_TrainCar02",
+   "name": "SM_TrainCar02",
+   "size": [
+    2276.0,
+    405.0,
+    250.0
+   ],
+   "tris": 27099,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/Truck/SM_Truck_Axis01.SM_Truck_Axis01",
+   "name": "SM_Truck_Axis01",
+   "size": [
+    455.0,
+    180.0,
+    50.0
+   ],
+   "tris": 14776,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/Truck/SM_Truck_frame_01.SM_Truck_frame_01",
+   "name": "SM_Truck_frame_01",
+   "size": [
+    554.0,
+    184.0,
+    78.0
+   ],
+   "tris": 11758,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_pipe_conditioning01_01.SM_pipe_conditioning01_01",
+   "name": "SM_pipe_conditioning01_01",
+   "size": [
+    80.0,
+    600.0,
+    80.0
+   ],
+   "tris": 72,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Meshes/SM_CableBox_01.SM_CableBox_01",
+   "name": "SM_CableBox_01",
+   "size": [
+    140.0,
+    60.0,
+    500.0
+   ],
+   "tris": 108,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_CableSet_05.SM_CableSet_05",
+   "name": "SM_CableSet_05",
+   "size": [
+    29.0,
+    12.0,
+    200.0
+   ],
+   "tris": 232,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_Cables05.SM_Cables05",
+   "name": "SM_Cables05",
+   "size": [
+    6.0,
+    12.0,
+    200.0
+   ],
+   "tris": 380,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_Clutch01.SM_Clutch01",
+   "name": "SM_Clutch01",
+   "size": [
+    242.0,
+    216.0,
+    847.0
+   ],
+   "tris": 17960,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_Column_02.SM_Column_02",
+   "name": "SM_Column_02",
+   "size": [
+    99.0,
+    162.0,
+    500.0
+   ],
+   "tris": 5104,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_Column_03.SM_Column_03",
+   "name": "SM_Column_03",
+   "size": [
+    99.0,
+    150.0,
+    500.0
+   ],
+   "tris": 36,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_Column_04.SM_Column_04",
+   "name": "SM_Column_04",
+   "size": [
+    99.0,
+    162.0,
+    500.0
+   ],
+   "tris": 2572,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_ConcretePillar01.SM_ConcretePillar01",
+   "name": "SM_ConcretePillar01",
+   "size": [
+    150.0,
+    150.0,
+    700.0
+   ],
+   "tris": 252,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_ConcretePillar02.SM_ConcretePillar02",
+   "name": "SM_ConcretePillar02",
+   "size": [
+    150.0,
+    258.0,
+    2800.0
+   ],
+   "tris": 1468,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/Crane/SM_Controller.SM_Controller",
+   "name": "SM_Controller",
+   "size": [
+    11.0,
+    14.0,
+    591.0
+   ],
+   "tris": 1182,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalCable_01.SM_ElectricalCable_01",
+   "name": "SM_ElectricalCable_01",
+   "size": [
+    16.0,
+    16.0,
+    499.0
+   ],
+   "tris": 92,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalCable_02.SM_ElectricalCable_02",
+   "name": "SM_ElectricalCable_02",
+   "size": [
+    16.0,
+    16.0,
+    500.0
+   ],
+   "tris": 92,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalCable_03.SM_ElectricalCable_03",
+   "name": "SM_ElectricalCable_03",
+   "size": [
+    10.0,
+    10.0,
+    500.0
+   ],
+   "tris": 92,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalCable_04.SM_ElectricalCable_04",
+   "name": "SM_ElectricalCable_04",
+   "size": [
+    10.0,
+    10.0,
+    500.0
+   ],
+   "tris": 92,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_Group01.SM_ElectricalSupply_Group01",
+   "name": "SM_ElectricalSupply_Group01",
+   "size": [
+    6.0,
+    3.0,
+    400.0
+   ],
+   "tris": 228,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_Group02.SM_ElectricalSupply_Group02",
+   "name": "SM_ElectricalSupply_Group02",
+   "size": [
+    13.0,
+    3.0,
+    425.0
+   ],
+   "tris": 624,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_HeavyArch04.SM_HeavyArch04",
+   "name": "SM_HeavyArch04",
+   "size": [
+    21.0,
+    77.0,
+    579.0
+   ],
+   "tris": 84,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/Crane/SM_Hook.SM_Hook",
+   "name": "SM_Hook",
+   "size": [
+    59.0,
+    31.0,
+    462.0
+   ],
+   "tris": 510,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/Crane/SM_Hook01.SM_Hook01",
+   "name": "SM_Hook01",
+   "size": [
+    199.0,
+    207.0,
+    705.0
+   ],
+   "tris": 8088,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_Ladder01.SM_Ladder01",
+   "name": "SM_Ladder01",
+   "size": [
+    77.0,
+    46.0,
+    304.0
+   ],
+   "tris": 2092,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_Lamp_with_Rope01.SM_Lamp_with_Rope01",
+   "name": "SM_Lamp_with_Rope01",
+   "size": [
+    17.0,
+    17.0,
+    964.0
+   ],
+   "tris": 4908,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_Locker_01.SM_Locker_01",
+   "name": "SM_Locker_01",
+   "size": [
+    97.0,
+    90.0,
+    268.0
+   ],
+   "tris": 3824,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalBeam03.SM_MetalBeam03",
+   "name": "SM_MetalBeam03",
+   "size": [
+    193.0,
+    222.0,
+    896.0
+   ],
+   "tris": 2702,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalBeam04.SM_MetalBeam04",
+   "name": "SM_MetalBeam04",
+   "size": [
+    41.0,
+    28.0,
+    800.0
+   ],
+   "tris": 116,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalBeam06.SM_MetalBeam06",
+   "name": "SM_MetalBeam06",
+   "size": [
+    193.0,
+    251.0,
+    1675.0
+   ],
+   "tris": 3282,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalBeam07.SM_MetalBeam07",
+   "name": "SM_MetalBeam07",
+   "size": [
+    113.0,
+    111.0,
+    800.0
+   ],
+   "tris": 412,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalBeam09.SM_MetalBeam09",
+   "name": "SM_MetalBeam09",
+   "size": [
+    162.0,
+    162.0,
+    2344.0
+   ],
+   "tris": 3358,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalBeam10.SM_MetalBeam10",
+   "name": "SM_MetalBeam10",
+   "size": [
+    111.0,
+    111.0,
+    800.0
+   ],
+   "tris": 160,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalBeam11.SM_MetalBeam11",
+   "name": "SM_MetalBeam11",
+   "size": [
+    111.0,
+    183.0,
+    1600.0
+   ],
+   "tris": 640,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalBeam12.SM_MetalBeam12",
+   "name": "SM_MetalBeam12",
+   "size": [
+    141.0,
+    183.0,
+    1600.0
+   ],
+   "tris": 640,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalBeam16.SM_MetalBeam16",
+   "name": "SM_MetalBeam16",
+   "size": [
+    113.0,
+    111.0,
+    1600.0
+   ],
+   "tris": 320,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalBeam18.SM_MetalBeam18",
+   "name": "SM_MetalBeam18",
+   "size": [
+    162.0,
+    162.0,
+    785.0
+   ],
+   "tris": 2294,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalBeam19.SM_MetalBeam19",
+   "name": "SM_MetalBeam19",
+   "size": [
+    193.0,
+    193.0,
+    1675.0
+   ],
+   "tris": 2618,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_OfficeWindow_01.SM_OfficeWindow_01",
+   "name": "SM_OfficeWindow_01",
+   "size": [
+    120.0,
+    13.0,
+    400.0
+   ],
+   "tris": 212,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_PaintBoxWall_03.SM_PaintBoxWall_03",
+   "name": "SM_PaintBoxWall_03",
+   "size": [
+    40.0,
+    15.0,
+    280.0
+   ],
+   "tris": 296,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_PillarWithBreckets.SM_PillarWithBreckets",
+   "name": "SM_PillarWithBreckets",
+   "size": [
+    52.0,
+    52.0,
+    400.0
+   ],
+   "tris": 286,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_PlasticToilet03.SM_PlasticToilet03",
+   "name": "SM_PlasticToilet03",
+   "size": [
+    78.0,
+    7.0,
+    208.0
+   ],
+   "tris": 54,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_PlatformPillar_01.SM_PlatformPillar_01",
+   "name": "SM_PlatformPillar_01",
+   "size": [
+    33.0,
+    50.0,
+    282.0
+   ],
+   "tris": 416,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_Rope01.SM_Rope01",
+   "name": "SM_Rope01",
+   "size": [
+    1.0,
+    3.0,
+    946.0
+   ],
+   "tris": 624,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/ScissorsLift/SM_ScissorsLift_Collision.SM_ScissorsLift_Collision",
+   "name": "SM_ScissorsLift_Collision",
+   "size": [
+    324.0,
+    159.0,
+    838.0
+   ],
+   "tris": 38262,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_ShowerDecal02.SM_ShowerDecal02",
+   "name": "SM_ShowerDecal02",
+   "size": [
+    83.0,
+    0.0,
+    250.0
+   ],
+   "tris": 4,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_ShowerRoomWall_05.SM_ShowerRoomWall_05",
+   "name": "SM_ShowerRoomWall_05",
+   "size": [
+    20.0,
+    20.0,
+    500.0
+   ],
+   "tris": 12,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_WallPart_02.SM_WallPart_02",
+   "name": "SM_WallPart_02",
+   "size": [
+    42.0,
+    42.0,
+    400.0
+   ],
+   "tris": 128,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Meshes/SM_AirConditioner01.SM_AirConditioner01",
+   "name": "SM_AirConditioner01",
+   "size": [
+    111.0,
+    73.0,
+    167.0
+   ],
+   "tris": 3010,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_AirConditioner02.SM_AirConditioner02",
+   "name": "SM_AirConditioner02",
+   "size": [
+    37.0,
+    40.0,
+    87.0
+   ],
+   "tris": 1817,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_AirConditioningPipe_03.SM_AirConditioningPipe_03",
+   "name": "SM_AirConditioningPipe_03",
+   "size": [
+    50.0,
+    89.0,
+    19.0
+   ],
+   "tris": 1548,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_AirConditioningPropeller_01.SM_AirConditioningPropeller_01",
+   "name": "SM_AirConditioningPropeller_01",
+   "size": [
+    103.0,
+    106.0,
+    7.0
+   ],
+   "tris": 1140,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_AirConditioning_01.SM_AirConditioning_01",
+   "name": "SM_AirConditioning_01",
+   "size": [
+    128.0,
+    170.0,
+    298.0
+   ],
+   "tris": 4232,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_AirVentilation01.SM_AirVentilation01",
+   "name": "SM_AirVentilation01",
+   "size": [
+    70.0,
+    14.0,
+    73.0
+   ],
+   "tris": 562,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ArmCover01.SM_ArmCover01",
+   "name": "SM_ArmCover01",
+   "size": [
+    103.0,
+    272.0,
+    189.0
+   ],
+   "tris": 10924,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ArmCover02.SM_ArmCover02",
+   "name": "SM_ArmCover02",
+   "size": [
+    46.0,
+    125.0,
+    46.0
+   ],
+   "tris": 4217,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ArmCover03.SM_ArmCover03",
+   "name": "SM_ArmCover03",
+   "size": [
+    67.0,
+    121.0,
+    162.0
+   ],
+   "tris": 4946,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_AssemblyLine01.SM_AssemblyLine01",
+   "name": "SM_AssemblyLine01",
+   "size": [
+    240.0,
+    90.0,
+    123.0
+   ],
+   "tris": 3944,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_AssemblyLine02.SM_AssemblyLine02",
+   "name": "SM_AssemblyLine02",
+   "size": [
+    240.0,
+    90.0,
+    123.0
+   ],
+   "tris": 3944,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_AssemblyLineBox01.SM_AssemblyLineBox01",
+   "name": "SM_AssemblyLineBox01",
+   "size": [
+    267.0,
+    266.0,
+    277.0
+   ],
+   "tris": 17564,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_AssemblyLineBox02.SM_AssemblyLineBox02",
+   "name": "SM_AssemblyLineBox02",
+   "size": [
+    200.0,
+    264.0,
+    275.0
+   ],
+   "tris": 12878,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_AssemblyLineBox03.SM_AssemblyLineBox03",
+   "name": "SM_AssemblyLineBox03",
+   "size": [
+    162.0,
+    173.0,
+    223.0
+   ],
+   "tris": 15966,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_AssemblyLineControl01.SM_AssemblyLineControl01",
+   "name": "SM_AssemblyLineControl01",
+   "size": [
+    50.0,
+    61.0,
+    165.0
+   ],
+   "tris": 4702,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_AssemblyLineCorner.SM_AssemblyLineCorner",
+   "name": "SM_AssemblyLineCorner",
+   "size": [
+    350.0,
+    350.0,
+    123.0
+   ],
+   "tris": 6878,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_AssemblyLineCrate01.SM_AssemblyLineCrate01",
+   "name": "SM_AssemblyLineCrate01",
+   "size": [
+    55.0,
+    71.0,
+    21.0
+   ],
+   "tris": 924,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_AssemblyLineDesk01.SM_AssemblyLineDesk01",
+   "name": "SM_AssemblyLineDesk01",
+   "size": [
+    108.0,
+    108.0,
+    110.0
+   ],
+   "tris": 1080,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_AssemblyLineFloor04.SM_AssemblyLineFloor04",
+   "name": "SM_AssemblyLineFloor04",
+   "size": [
+    557.0,
+    800.0,
+    187.0
+   ],
+   "tris": 82,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_AssemblyLineFloor05.SM_AssemblyLineFloor05",
+   "name": "SM_AssemblyLineFloor05",
+   "size": [
+    800.0,
+    557.0,
+    192.0
+   ],
+   "tris": 386,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_AssemblyLineFloor06.SM_AssemblyLineFloor06",
+   "name": "SM_AssemblyLineFloor06",
+   "size": [
+    800.0,
+    557.0,
+    192.0
+   ],
+   "tris": 386,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_AssemblyLinePlate01.SM_AssemblyLinePlate01",
+   "name": "SM_AssemblyLinePlate01",
+   "size": [
+    96.0,
+    56.0,
+    5.0
+   ],
+   "tris": 28,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_AssemblyLineTable01.SM_AssemblyLineTable01",
+   "name": "SM_AssemblyLineTable01",
+   "size": [
+    117.0,
+    87.0,
+    106.0
+   ],
+   "tris": 1636,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_AssemblyLineTable02.SM_AssemblyLineTable02",
+   "name": "SM_AssemblyLineTable02",
+   "size": [
+    115.0,
+    87.0,
+    121.0
+   ],
+   "tris": 1736,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_AssemblyLineTable03.SM_AssemblyLineTable03",
+   "name": "SM_AssemblyLineTable03",
+   "size": [
+    106.0,
+    57.0,
+    101.0
+   ],
+   "tris": 1152,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Background1_Frame.SM_Background1_Frame",
+   "name": "SM_Background1_Frame",
+   "size": [
+    1696.0,
+    1696.0,
+    908.0
+   ],
+   "tris": 288,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Background2_BoxBuilding.SM_Background2_BoxBuilding",
+   "name": "SM_Background2_BoxBuilding",
+   "size": [
+    1700.0,
+    1700.0,
+    1000.0
+   ],
+   "tris": 924,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Background2_BoxBuildingFrame.SM_Background2_BoxBuildingFrame",
+   "name": "SM_Background2_BoxBuildingFrame",
+   "size": [
+    1700.0,
+    1700.0,
+    1000.0
+   ],
+   "tris": 1232,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Background2_BoxBuildingTower.SM_Background2_BoxBuildingTower",
+   "name": "SM_Background2_BoxBuildingTower",
+   "size": [
+    1705.0,
+    1705.0,
+    2000.0
+   ],
+   "tris": 2840,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Background2_Pipe01.SM_Background2_Pipe01",
+   "name": "SM_Background2_Pipe01",
+   "size": [
+    1420.0,
+    2114.0,
+    2745.0
+   ],
+   "tris": 384,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Banner01.SM_Banner01",
+   "name": "SM_Banner01",
+   "size": [
+    284.0,
+    32.0,
+    77.0
+   ],
+   "tris": 344,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Banner02.SM_Banner02",
+   "name": "SM_Banner02",
+   "size": [
+    222.0,
+    35.0,
+    110.0
+   ],
+   "tris": 272,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Banner03.SM_Banner03",
+   "name": "SM_Banner03",
+   "size": [
+    395.0,
+    33.0,
+    98.0
+   ],
+   "tris": 284,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Banner04.SM_Banner04",
+   "name": "SM_Banner04",
+   "size": [
+    270.0,
+    32.0,
+    65.0
+   ],
+   "tris": 196,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Banner05.SM_Banner05",
+   "name": "SM_Banner05",
+   "size": [
+    222.0,
+    31.0,
+    93.0
+   ],
+   "tris": 715,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Banner06.SM_Banner06",
+   "name": "SM_Banner06",
+   "size": [
+    63.0,
+    59.0,
+    97.0
+   ],
+   "tris": 1292,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Banner07.SM_Banner07",
+   "name": "SM_Banner07",
+   "size": [
+    63.0,
+    59.0,
+    97.0
+   ],
+   "tris": 1292,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Banner08.SM_Banner08",
+   "name": "SM_Banner08",
+   "size": [
+    63.0,
+    59.0,
+    97.0
+   ],
+   "tris": 1292,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Banner09.SM_Banner09",
+   "name": "SM_Banner09",
+   "size": [
+    435.0,
+    9.0,
+    124.0
+   ],
+   "tris": 3650,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Banner10.SM_Banner10",
+   "name": "SM_Banner10",
+   "size": [
+    435.0,
+    9.0,
+    124.0
+   ],
+   "tris": 3650,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Banner11.SM_Banner11",
+   "name": "SM_Banner11",
+   "size": [
+    435.0,
+    10.0,
+    124.0
+   ],
+   "tris": 3650,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Banner12.SM_Banner12",
+   "name": "SM_Banner12",
+   "size": [
+    194.0,
+    19.0,
+    57.0
+   ],
+   "tris": 42,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Banner13.SM_Banner13",
+   "name": "SM_Banner13",
+   "size": [
+    194.0,
+    19.0,
+    57.0
+   ],
+   "tris": 42,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Banner14.SM_Banner14",
+   "name": "SM_Banner14",
+   "size": [
+    194.0,
+    19.0,
+    57.0
+   ],
+   "tris": 42,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Banner15.SM_Banner15",
+   "name": "SM_Banner15",
+   "size": [
+    194.0,
+    19.0,
+    57.0
+   ],
+   "tris": 42,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Banner16.SM_Banner16",
+   "name": "SM_Banner16",
+   "size": [
+    194.0,
+    19.0,
+    57.0
+   ],
+   "tris": 42,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Banner17.SM_Banner17",
+   "name": "SM_Banner17",
+   "size": [
+    194.0,
+    19.0,
+    57.0
+   ],
+   "tris": 42,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Barrel01.SM_Barrel01",
+   "name": "SM_Barrel01",
+   "size": [
+    52.0,
+    52.0,
+    80.0
+   ],
+   "tris": 852,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Barrel02.SM_Barrel02",
+   "name": "SM_Barrel02",
+   "size": [
+    52.0,
+    52.0,
+    80.0
+   ],
+   "tris": 468,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Barrel03.SM_Barrel03",
+   "name": "SM_Barrel03",
+   "size": [
+    48.0,
+    47.0,
+    72.0
+   ],
+   "tris": 922,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Barrel04.SM_Barrel04",
+   "name": "SM_Barrel04",
+   "size": [
+    51.0,
+    51.0,
+    80.0
+   ],
+   "tris": 2128,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Barrel05.SM_Barrel05",
+   "name": "SM_Barrel05",
+   "size": [
+    43.0,
+    43.0,
+    78.0
+   ],
+   "tris": 480,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Barrel06.SM_Barrel06",
+   "name": "SM_Barrel06",
+   "size": [
+    41.0,
+    41.0,
+    74.0
+   ],
+   "tris": 872,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Barrel07.SM_Barrel07",
+   "name": "SM_Barrel07",
+   "size": [
+    42.0,
+    42.0,
+    70.0
+   ],
+   "tris": 1200,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Barrels01_Merged.SM_Barrels01_Merged",
+   "name": "SM_Barrels01_Merged",
+   "size": [
+    388.0,
+    470.0,
+    160.0
+   ],
+   "tris": 32160,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Barrels02_Merged.SM_Barrels02_Merged",
+   "name": "SM_Barrels02_Merged",
+   "size": [
+    733.0,
+    1017.0,
+    264.0
+   ],
+   "tris": 74068,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Barrels03_Merged.SM_Barrels03_Merged",
+   "name": "SM_Barrels03_Merged",
+   "size": [
+    701.0,
+    1096.0,
+    263.0
+   ],
+   "tris": 143854,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Barrels04_Merged.SM_Barrels04_Merged",
+   "name": "SM_Barrels04_Merged",
+   "size": [
+    893.0,
+    350.0,
+    396.0
+   ],
+   "tris": 83356,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Barrels05_Merged.SM_Barrels05_Merged",
+   "name": "SM_Barrels05_Merged",
+   "size": [
+    646.0,
+    211.0,
+    212.0
+   ],
+   "tris": 30630,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Bench_01.SM_Bench_01",
+   "name": "SM_Bench_01",
+   "size": [
+    200.0,
+    44.0,
+    51.0
+   ],
+   "tris": 210,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_BlueButton.SM_BlueButton",
+   "name": "SM_BlueButton",
+   "size": [
+    2.0,
+    2.0,
+    1.0
+   ],
+   "tris": 288,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Boiler_01.SM_Boiler_01",
+   "name": "SM_Boiler_01",
+   "size": [
+    464.0,
+    635.0,
+    534.0
+   ],
+   "tris": 12542,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Boxes_group_01.SM_Boxes_group_01",
+   "name": "SM_Boxes_group_01",
+   "size": [
+    247.0,
+    164.0,
+    149.0
+   ],
+   "tris": 2728,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Boxes_group_02.SM_Boxes_group_02",
+   "name": "SM_Boxes_group_02",
+   "size": [
+    249.0,
+    121.0,
+    64.0
+   ],
+   "tris": 478,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Boxes_group_03.SM_Boxes_group_03",
+   "name": "SM_Boxes_group_03",
+   "size": [
+    123.0,
+    161.0,
+    165.0
+   ],
+   "tris": 3020,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Boxes_group_04.SM_Boxes_group_04",
+   "name": "SM_Boxes_group_04",
+   "size": [
+    126.0,
+    162.0,
+    144.0
+   ],
+   "tris": 3212,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Boxes_group_05.SM_Boxes_group_05",
+   "name": "SM_Boxes_group_05",
+   "size": [
+    245.0,
+    160.0,
+    140.0
+   ],
+   "tris": 1760,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Boxes_group_06.SM_Boxes_group_06",
+   "name": "SM_Boxes_group_06",
+   "size": [
+    121.0,
+    162.0,
+    78.0
+   ],
+   "tris": 4926,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Boxes_group_07.SM_Boxes_group_07",
+   "name": "SM_Boxes_group_07",
+   "size": [
+    267.0,
+    141.0,
+    74.0
+   ],
+   "tris": 5402,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Boxes_group_08.SM_Boxes_group_08",
+   "name": "SM_Boxes_group_08",
+   "size": [
+    269.0,
+    181.0,
+    155.0
+   ],
+   "tris": 3530,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Boxes_group_09.SM_Boxes_group_09",
+   "name": "SM_Boxes_group_09",
+   "size": [
+    288.0,
+    152.0,
+    138.0
+   ],
+   "tris": 1658,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Boxes_group_10.SM_Boxes_group_10",
+   "name": "SM_Boxes_group_10",
+   "size": [
+    254.0,
+    135.0,
+    50.0
+   ],
+   "tris": 5776,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Boxes_group_11.SM_Boxes_group_11",
+   "name": "SM_Boxes_group_11",
+   "size": [
+    246.0,
+    151.0,
+    75.0
+   ],
+   "tris": 1318,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Boxes_group_12.SM_Boxes_group_12",
+   "name": "SM_Boxes_group_12",
+   "size": [
+    268.0,
+    169.0,
+    144.0
+   ],
+   "tris": 6064,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Boxes_group_13.SM_Boxes_group_13",
+   "name": "SM_Boxes_group_13",
+   "size": [
+    270.0,
+    147.0,
+    134.0
+   ],
+   "tris": 2094,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Boxes_group_14.SM_Boxes_group_14",
+   "name": "SM_Boxes_group_14",
+   "size": [
+    249.0,
+    162.0,
+    142.0
+   ],
+   "tris": 6740,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Boxes_group_15.SM_Boxes_group_15",
+   "name": "SM_Boxes_group_15",
+   "size": [
+    121.0,
+    162.0,
+    143.0
+   ],
+   "tris": 4606,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Boxes_group_16.SM_Boxes_group_16",
+   "name": "SM_Boxes_group_16",
+   "size": [
+    123.0,
+    165.0,
+    138.0
+   ],
+   "tris": 2562,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Boxes_group_17.SM_Boxes_group_17",
+   "name": "SM_Boxes_group_17",
+   "size": [
+    123.0,
+    160.0,
+    141.0
+   ],
+   "tris": 1786,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Boxes_group_18.SM_Boxes_group_18",
+   "name": "SM_Boxes_group_18",
+   "size": [
+    269.0,
+    147.0,
+    50.0
+   ],
+   "tris": 5964,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Boxes_group_19.SM_Boxes_group_19",
+   "name": "SM_Boxes_group_19",
+   "size": [
+    243.0,
+    166.0,
+    139.0
+   ],
+   "tris": 2326,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Boxes_group_20.SM_Boxes_group_20",
+   "name": "SM_Boxes_group_20",
+   "size": [
+    266.0,
+    141.0,
+    119.0
+   ],
+   "tris": 1946,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Bumper_01.SM_Bumper_01",
+   "name": "SM_Bumper_01",
+   "size": [
+    842.0,
+    603.0,
+    554.0
+   ],
+   "tris": 4516,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_CableBox_02.SM_CableBox_02",
+   "name": "SM_CableBox_02",
+   "size": [
+    134.0,
+    45.0,
+    9.0
+   ],
+   "tris": 32,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_CableSet_01.SM_CableSet_01",
+   "name": "SM_CableSet_01",
+   "size": [
+    82.0,
+    17.0,
+    78.0
+   ],
+   "tris": 944,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_CableSet_02.SM_CableSet_02",
+   "name": "SM_CableSet_02",
+   "size": [
+    86.0,
+    17.0,
+    200.0
+   ],
+   "tris": 512,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_CableSet_04.SM_CableSet_04",
+   "name": "SM_CableSet_04",
+   "size": [
+    86.0,
+    146.0,
+    89.0
+   ],
+   "tris": 2240,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Cables04_02.SM_Cables04_02",
+   "name": "SM_Cables04_02",
+   "size": [
+    143.0,
+    144.0,
+    184.0
+   ],
+   "tris": 2104,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Cables04_03.SM_Cables04_03",
+   "name": "SM_Cables04_03",
+   "size": [
+    45.0,
+    45.0,
+    10.0
+   ],
+   "tris": 223,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Cables04_04.SM_Cables04_04",
+   "name": "SM_Cables04_04",
+   "size": [
+    30.0,
+    31.0,
+    31.0
+   ],
+   "tris": 408,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Cables04_05.SM_Cables04_05",
+   "name": "SM_Cables04_05",
+   "size": [
+    30.0,
+    31.0,
+    30.0
+   ],
+   "tris": 408,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Cables04_07.SM_Cables04_07",
+   "name": "SM_Cables04_07",
+   "size": [
+    143.0,
+    144.0,
+    14.0
+   ],
+   "tris": 2088,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Cables07_01.SM_Cables07_01",
+   "name": "SM_Cables07_01",
+   "size": [
+    5.0,
+    203.0,
+    47.0
+   ],
+   "tris": 2400,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Cables07_02.SM_Cables07_02",
+   "name": "SM_Cables07_02",
+   "size": [
+    5.0,
+    47.0,
+    50.0
+   ],
+   "tris": 776,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Cables07_03.SM_Cables07_03",
+   "name": "SM_Cables07_03",
+   "size": [
+    5.0,
+    41.0,
+    41.0
+   ],
+   "tris": 992,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Canister01.SM_Canister01",
+   "name": "SM_Canister01",
+   "size": [
+    21.0,
+    28.0,
+    35.0
+   ],
+   "tris": 720,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_CarPaintLight01.SM_CarPaintLight01",
+   "name": "SM_CarPaintLight01",
+   "size": [
+    217.0,
+    35.0,
+    81.0
+   ],
+   "tris": 21632,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/CargoCar/SM_CargoCart01.SM_CargoCart01",
+   "name": "SM_CargoCart01",
+   "size": [
+    223.0,
+    723.0,
+    181.0
+   ],
+   "tris": 18649,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/CargoCar/SM_CargoCart_back.SM_CargoCart_back",
+   "name": "SM_CargoCart_back",
+   "size": [
+    480.0,
+    223.0,
+    104.0
+   ],
+   "tris": 9236,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/CargoCar/SM_CargoCart_connector.SM_CargoCart_connector",
+   "name": "SM_CargoCart_connector",
+   "size": [
+    141.0,
+    8.0,
+    4.0
+   ],
+   "tris": 64,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/CargoCar/SM_CargoCart_front.SM_CargoCart_front",
+   "name": "SM_CargoCart_front",
+   "size": [
+    171.0,
+    66.0,
+    181.0
+   ],
+   "tris": 9349,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_CeilingVentilation01.SM_CeilingVentilation01",
+   "name": "SM_CeilingVentilation01",
+   "size": [
+    30.0,
+    30.0,
+    2.0
+   ],
+   "tris": 12,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_CeilingVentilation02.SM_CeilingVentilation02",
+   "name": "SM_CeilingVentilation02",
+   "size": [
+    15.0,
+    15.0,
+    2.0
+   ],
+   "tris": 10,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Chair01.SM_Chair01",
+   "name": "SM_Chair01",
+   "size": [
+    67.0,
+    69.0,
+    112.0
+   ],
+   "tris": 1092,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Chair02.SM_Chair02",
+   "name": "SM_Chair02",
+   "size": [
+    70.0,
+    70.0,
+    84.0
+   ],
+   "tris": 1024,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Cigaret.SM_Cigaret",
+   "name": "SM_Cigaret",
+   "size": [
+    1.0,
+    1.0,
+    8.0
+   ],
+   "tris": 40,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Clockround.SM_Clockround",
+   "name": "SM_Clockround",
+   "size": [
+    5.0,
+    45.0,
+    45.0
+   ],
+   "tris": 678,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ClothesHolder01.SM_ClothesHolder01",
+   "name": "SM_ClothesHolder01",
+   "size": [
+    80.0,
+    16.0,
+    14.0
+   ],
+   "tris": 618,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Clutch02.SM_Clutch02",
+   "name": "SM_Clutch02",
+   "size": [
+    242.0,
+    427.0,
+    847.0
+   ],
+   "tris": 13384,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Container01_01.SM_Container01_01",
+   "name": "SM_Container01_01",
+   "size": [
+    280.0,
+    600.0,
+    301.0
+   ],
+   "tris": 2666,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Container01_02.SM_Container01_02",
+   "name": "SM_Container01_02",
+   "size": [
+    280.0,
+    600.0,
+    301.0
+   ],
+   "tris": 1186,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ContainerEngine.SM_ContainerEngine",
+   "name": "SM_ContainerEngine",
+   "size": [
+    120.0,
+    160.0,
+    80.0
+   ],
+   "tris": 1420,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ContainerP4_01.SM_ContainerP4_01",
+   "name": "SM_ContainerP4_01",
+   "size": [
+    334.0,
+    550.0,
+    472.0
+   ],
+   "tris": 11350,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ControlRoom.SM_ControlRoom",
+   "name": "SM_ControlRoom",
+   "size": [
+    786.0,
+    778.0,
+    588.0
+   ],
+   "tris": 1922,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ControlRoomElevator.SM_ControlRoomElevator",
+   "name": "SM_ControlRoomElevator",
+   "size": [
+    580.0,
+    746.0,
+    810.0
+   ],
+   "tris": 1608,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ControlRoomInterior.SM_ControlRoomInterior",
+   "name": "SM_ControlRoomInterior",
+   "size": [
+    593.0,
+    593.0,
+    522.0
+   ],
+   "tris": 164,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ControlRoomPillar.SM_ControlRoomPillar",
+   "name": "SM_ControlRoomPillar",
+   "size": [
+    533.0,
+    532.0,
+    964.0
+   ],
+   "tris": 1332,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ControlTowerStairs.SM_ControlTowerStairs",
+   "name": "SM_ControlTowerStairs",
+   "size": [
+    1263.0,
+    1453.0,
+    1089.0
+   ],
+   "tris": 958,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/Crane/SM_Crane01.SM_Crane01",
+   "name": "SM_Crane01",
+   "size": [
+    568.0,
+    2689.0,
+    474.0
+   ],
+   "tris": 8106,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/Crane/SM_CraneCabin01.SM_CraneCabin01",
+   "name": "SM_CraneCabin01",
+   "size": [
+    210.0,
+    228.0,
+    266.0
+   ],
+   "tris": 3190,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/Crane/SM_CraneCable01.SM_CraneCable01",
+   "name": "SM_CraneCable01",
+   "size": [
+    355.0,
+    1562.0,
+    426.0
+   ],
+   "tris": 3360,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_CrashAreaBlock_01.SM_CrashAreaBlock_01",
+   "name": "SM_CrashAreaBlock_01",
+   "size": [
+    297.0,
+    109.0,
+    105.0
+   ],
+   "tris": 1344,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_CrashAreaLane_04.SM_CrashAreaLane_04",
+   "name": "SM_CrashAreaLane_04",
+   "size": [
+    31.0,
+    11.0,
+    19.0
+   ],
+   "tris": 716,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_CrashAreaSpotlight_01.SM_CrashAreaSpotlight_01",
+   "name": "SM_CrashAreaSpotlight_01",
+   "size": [
+    282.0,
+    209.0,
+    274.0
+   ],
+   "tris": 17908,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Curtain03.SM_Curtain03",
+   "name": "SM_Curtain03",
+   "size": [
+    356.0,
+    76.0,
+    206.0
+   ],
+   "tris": 161,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/Crane/SM_DecalCrane.SM_DecalCrane",
+   "name": "SM_DecalCrane",
+   "size": [
+    486.0,
+    2292.0,
+    370.0
+   ],
+   "tris": 24,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_DeskControl_01.SM_DeskControl_01",
+   "name": "SM_DeskControl_01",
+   "size": [
+    111.0,
+    300.0,
+    215.0
+   ],
+   "tris": 3508,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_DeskControl_03.SM_DeskControl_03",
+   "name": "SM_DeskControl_03",
+   "size": [
+    170.0,
+    170.0,
+    142.0
+   ],
+   "tris": 468,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_DeskControl_04.SM_DeskControl_04",
+   "name": "SM_DeskControl_04",
+   "size": [
+    33.0,
+    157.0,
+    121.0
+   ],
+   "tris": 128,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_DeskControls_02.SM_DeskControls_02",
+   "name": "SM_DeskControls_02",
+   "size": [
+    111.0,
+    300.0,
+    143.0
+   ],
+   "tris": 1998,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_DisplayBoard01.SM_DisplayBoard01",
+   "name": "SM_DisplayBoard01",
+   "size": [
+    78.0,
+    200.0,
+    232.0
+   ],
+   "tris": 1302,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_DisplayBoard02.SM_DisplayBoard02",
+   "name": "SM_DisplayBoard02",
+   "size": [
+    78.0,
+    200.0,
+    232.0
+   ],
+   "tris": 1304,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_DisplayBoard03.SM_DisplayBoard03",
+   "name": "SM_DisplayBoard03",
+   "size": [
+    78.0,
+    200.0,
+    232.0
+   ],
+   "tris": 1304,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Drawer.SM_Drawer",
+   "name": "SM_Drawer",
+   "size": [
+    60.0,
+    47.0,
+    29.0
+   ],
+   "tris": 1867,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_DroneRemoteControl01.SM_DroneRemoteControl01",
+   "name": "SM_DroneRemoteControl01",
+   "size": [
+    46.0,
+    46.0,
+    139.0
+   ],
+   "tris": 2206,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Dummy01.SM_Dummy01",
+   "name": "SM_Dummy01",
+   "size": [
+    58.0,
+    34.0,
+    174.0
+   ],
+   "tris": 21044,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Dummy02.SM_Dummy02",
+   "name": "SM_Dummy02",
+   "size": [
+    58.0,
+    82.0,
+    133.0
+   ],
+   "tris": 21092,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/Crane/SM_ElectricMotor01.SM_ElectricMotor01",
+   "name": "SM_ElectricMotor01",
+   "size": [
+    98.0,
+    61.0,
+    72.0
+   ],
+   "tris": 2540,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/Crane/SM_ElectricMotor02.SM_ElectricMotor02",
+   "name": "SM_ElectricMotor02",
+   "size": [
+    92.0,
+    58.0,
+    58.0
+   ],
+   "tris": 1366,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalCablePart_01.SM_ElectricalCablePart_01",
+   "name": "SM_ElectricalCablePart_01",
+   "size": [
+    24.0,
+    24.0,
+    22.0
+   ],
+   "tris": 288,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalCablePart_02.SM_ElectricalCablePart_02",
+   "name": "SM_ElectricalCablePart_02",
+   "size": [
+    22.0,
+    22.0,
+    29.0
+   ],
+   "tris": 592,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalPanel_01.SM_ElectricalPanel_01",
+   "name": "SM_ElectricalPanel_01",
+   "size": [
+    106.0,
+    55.0,
+    159.0
+   ],
+   "tris": 216,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalPanel_02.SM_ElectricalPanel_02",
+   "name": "SM_ElectricalPanel_02",
+   "size": [
+    74.0,
+    50.0,
+    121.0
+   ],
+   "tris": 1354,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalPanel_03.SM_ElectricalPanel_03",
+   "name": "SM_ElectricalPanel_03",
+   "size": [
+    106.0,
+    75.0,
+    109.0
+   ],
+   "tris": 216,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_Group03.SM_ElectricalSupply_Group03",
+   "name": "SM_ElectricalSupply_Group03",
+   "size": [
+    437.0,
+    3.0,
+    136.0
+   ],
+   "tris": 804,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_JunctionBox01.SM_ElectricalSupply_JunctionBox01",
+   "name": "SM_ElectricalSupply_JunctionBox01",
+   "size": [
+    36.0,
+    19.0,
+    39.0
+   ],
+   "tris": 490,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_JunctionBox02.SM_ElectricalSupply_JunctionBox02",
+   "name": "SM_ElectricalSupply_JunctionBox02",
+   "size": [
+    30.0,
+    15.0,
+    37.0
+   ],
+   "tris": 298,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_JunctionBox03.SM_ElectricalSupply_JunctionBox03",
+   "name": "SM_ElectricalSupply_JunctionBox03",
+   "size": [
+    24.0,
+    7.0,
+    24.0
+   ],
+   "tris": 514,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_JunctionBox04.SM_ElectricalSupply_JunctionBox04",
+   "name": "SM_ElectricalSupply_JunctionBox04",
+   "size": [
+    14.0,
+    7.0,
+    14.0
+   ],
+   "tris": 440,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_JunctionBox05.SM_ElectricalSupply_JunctionBox05",
+   "name": "SM_ElectricalSupply_JunctionBox05",
+   "size": [
+    10.0,
+    7.0,
+    14.0
+   ],
+   "tris": 190,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_RemoteControl.SM_ElectricalSupply_RemoteControl",
+   "name": "SM_ElectricalSupply_RemoteControl",
+   "size": [
+    11.0,
+    10.0,
+    24.0
+   ],
+   "tris": 638,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_Socket01.SM_ElectricalSupply_Socket01",
+   "name": "SM_ElectricalSupply_Socket01",
+   "size": [
+    9.0,
+    6.0,
+    14.0
+   ],
+   "tris": 400,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_Socket02.SM_ElectricalSupply_Socket02",
+   "name": "SM_ElectricalSupply_Socket02",
+   "size": [
+    9.0,
+    4.0,
+    9.0
+   ],
+   "tris": 238,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_Switchboard01.SM_ElectricalSupply_Switchboard01",
+   "name": "SM_ElectricalSupply_Switchboard01",
+   "size": [
+    140.0,
+    45.0,
+    200.0
+   ],
+   "tris": 1161,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_Switchboard02.SM_ElectricalSupply_Switchboard02",
+   "name": "SM_ElectricalSupply_Switchboard02",
+   "size": [
+    80.0,
+    47.0,
+    200.0
+   ],
+   "tris": 585,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_Switchboard03.SM_ElectricalSupply_Switchboard03",
+   "name": "SM_ElectricalSupply_Switchboard03",
+   "size": [
+    60.0,
+    47.0,
+    102.0
+   ],
+   "tris": 631,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_Switchboard04.SM_ElectricalSupply_Switchboard04",
+   "name": "SM_ElectricalSupply_Switchboard04",
+   "size": [
+    69.0,
+    21.0,
+    84.0
+   ],
+   "tris": 242,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_Switchboard05.SM_ElectricalSupply_Switchboard05",
+   "name": "SM_ElectricalSupply_Switchboard05",
+   "size": [
+    69.0,
+    21.0,
+    64.0
+   ],
+   "tris": 320,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_Switchboard06_01.SM_ElectricalSupply_Switchboard06_01",
+   "name": "SM_ElectricalSupply_Switchboard06_01",
+   "size": [
+    69.0,
+    20.0,
+    64.0
+   ],
+   "tris": 1814,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_Switchboard06_02.SM_ElectricalSupply_Switchboard06_02",
+   "name": "SM_ElectricalSupply_Switchboard06_02",
+   "size": [
+    60.0,
+    4.0,
+    49.0
+   ],
+   "tris": 82,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_Wire01_Branching.SM_ElectricalSupply_Wire01_Branching",
+   "name": "SM_ElectricalSupply_Wire01_Branching",
+   "size": [
+    13.0,
+    3.0,
+    25.0
+   ],
+   "tris": 168,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_Wire01_Corner.SM_ElectricalSupply_Wire01_Corner",
+   "name": "SM_ElectricalSupply_Wire01_Corner",
+   "size": [
+    27.0,
+    3.0,
+    27.0
+   ],
+   "tris": 120,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_Wire01_Curved.SM_ElectricalSupply_Wire01_Curved",
+   "name": "SM_ElectricalSupply_Wire01_Curved",
+   "size": [
+    4.0,
+    3.0,
+    50.0
+   ],
+   "tris": 72,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_Wire01_Rounded01.SM_ElectricalSupply_Wire01_Rounded01",
+   "name": "SM_ElectricalSupply_Wire01_Rounded01",
+   "size": [
+    28.0,
+    3.0,
+    14.0
+   ],
+   "tris": 180,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_Wire01_Rounded02.SM_ElectricalSupply_Wire01_Rounded02",
+   "name": "SM_ElectricalSupply_Wire01_Rounded02",
+   "size": [
+    43.0,
+    3.0,
+    17.0
+   ],
+   "tris": 180,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_Wire01_Straight.SM_ElectricalSupply_Wire01_Straight",
+   "name": "SM_ElectricalSupply_Wire01_Straight",
+   "size": [
+    3.0,
+    3.0,
+    50.0
+   ],
+   "tris": 12,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_Wire02_Branching.SM_ElectricalSupply_Wire02_Branching",
+   "name": "SM_ElectricalSupply_Wire02_Branching",
+   "size": [
+    13.0,
+    3.0,
+    25.0
+   ],
+   "tris": 144,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_Wire02_Corner.SM_ElectricalSupply_Wire02_Corner",
+   "name": "SM_ElectricalSupply_Wire02_Corner",
+   "size": [
+    27.0,
+    3.0,
+    27.0
+   ],
+   "tris": 240,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_Wire02_Curved.SM_ElectricalSupply_Wire02_Curved",
+   "name": "SM_ElectricalSupply_Wire02_Curved",
+   "size": [
+    4.0,
+    3.0,
+    50.0
+   ],
+   "tris": 144,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_Wire02_Straight.SM_ElectricalSupply_Wire02_Straight",
+   "name": "SM_ElectricalSupply_Wire02_Straight",
+   "size": [
+    3.0,
+    3.0,
+    50.0
+   ],
+   "tris": 24,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_Wire03_Branching.SM_ElectricalSupply_Wire03_Branching",
+   "name": "SM_ElectricalSupply_Wire03_Branching",
+   "size": [
+    11.0,
+    2.0,
+    25.0
+   ],
+   "tris": 112,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_Wire03_Corner.SM_ElectricalSupply_Wire03_Corner",
+   "name": "SM_ElectricalSupply_Wire03_Corner",
+   "size": [
+    26.0,
+    2.0,
+    27.0
+   ],
+   "tris": 160,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_Wire03_Curved.SM_ElectricalSupply_Wire03_Curved",
+   "name": "SM_ElectricalSupply_Wire03_Curved",
+   "size": [
+    4.0,
+    2.0,
+    50.0
+   ],
+   "tris": 96,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_Wire03_Straight.SM_ElectricalSupply_Wire03_Straight",
+   "name": "SM_ElectricalSupply_Wire03_Straight",
+   "size": [
+    3.0,
+    2.0,
+    50.0
+   ],
+   "tris": 16,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_WireFixator01.SM_ElectricalSupply_WireFixator01",
+   "name": "SM_ElectricalSupply_WireFixator01",
+   "size": [
+    6.0,
+    5.0,
+    2.0
+   ],
+   "tris": 54,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_WireFixator02.SM_ElectricalSupply_WireFixator02",
+   "name": "SM_ElectricalSupply_WireFixator02",
+   "size": [
+    6.0,
+    4.0,
+    2.0
+   ],
+   "tris": 46,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_WireFixator03.SM_ElectricalSupply_WireFixator03",
+   "name": "SM_ElectricalSupply_WireFixator03",
+   "size": [
+    4.0,
+    4.0,
+    4.0
+   ],
+   "tris": 72,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Engine.SM_Engine",
+   "name": "SM_Engine",
+   "size": [
+    90.0,
+    99.0,
+    64.0
+   ],
+   "tris": 12968,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_EngineModifyPivot.SM_EngineModifyPivot",
+   "name": "SM_EngineModifyPivot",
+   "size": [
+    90.0,
+    99.0,
+    64.0
+   ],
+   "tris": 12968,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_EngineWithContainer.SM_EngineWithContainer",
+   "name": "SM_EngineWithContainer",
+   "size": [
+    120.0,
+    160.0,
+    92.0
+   ],
+   "tris": 14388,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Fence04.SM_Fence04",
+   "name": "SM_Fence04",
+   "size": [
+    150.0,
+    150.0,
+    113.0
+   ],
+   "tris": 812,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Fence05.SM_Fence05",
+   "name": "SM_Fence05",
+   "size": [
+    128.0,
+    4.0,
+    175.0
+   ],
+   "tris": 58,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Fence06.SM_Fence06",
+   "name": "SM_Fence06",
+   "size": [
+    143.0,
+    17.0,
+    185.0
+   ],
+   "tris": 334,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Fence07.SM_Fence07",
+   "name": "SM_Fence07",
+   "size": [
+    143.0,
+    17.0,
+    175.0
+   ],
+   "tris": 334,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Fence08.SM_Fence08",
+   "name": "SM_Fence08",
+   "size": [
+    71.0,
+    4.0,
+    142.0
+   ],
+   "tris": 78,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Fence09.SM_Fence09",
+   "name": "SM_Fence09",
+   "size": [
+    67.0,
+    155.0,
+    113.0
+   ],
+   "tris": 680,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_FencePart_01.SM_FencePart_01",
+   "name": "SM_FencePart_01",
+   "size": [
+    15.0,
+    17.0,
+    113.0
+   ],
+   "tris": 276,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_FencePart_02.SM_FencePart_02",
+   "name": "SM_FencePart_02",
+   "size": [
+    17.0,
+    10.0,
+    113.0
+   ],
+   "tris": 240,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Fence_01.SM_Fence_01",
+   "name": "SM_Fence_01",
+   "size": [
+    128.0,
+    4.0,
+    101.0
+   ],
+   "tris": 52,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Fence_02.SM_Fence_02",
+   "name": "SM_Fence_02",
+   "size": [
+    143.0,
+    17.0,
+    113.0
+   ],
+   "tris": 328,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Fence_03.SM_Fence_03",
+   "name": "SM_Fence_03",
+   "size": [
+    150.0,
+    150.0,
+    113.0
+   ],
+   "tris": 426,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_FireSensor01.SM_FireSensor01",
+   "name": "SM_FireSensor01",
+   "size": [
+    18.0,
+    18.0,
+    5.0
+   ],
+   "tris": 222,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_FloorDrainage01.SM_FloorDrainage01",
+   "name": "SM_FloorDrainage01",
+   "size": [
+    11.0,
+    100.0,
+    1.0
+   ],
+   "tris": 10,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_FloorDrainage02.SM_FloorDrainage02",
+   "name": "SM_FloorDrainage02",
+   "size": [
+    11.0,
+    100.0,
+    1.0
+   ],
+   "tris": 10,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_FloorStairs01.SM_FloorStairs01",
+   "name": "SM_FloorStairs01",
+   "size": [
+    285.0,
+    144.0,
+    177.0
+   ],
+   "tris": 1012,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/ForkLift/SM_Fork.SM_Fork",
+   "name": "SM_Fork",
+   "size": [
+    119.0,
+    136.0,
+    131.0
+   ],
+   "tris": 624,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ForkLift.SM_ForkLift",
+   "name": "SM_ForkLift",
+   "size": [
+    133.0,
+    376.0,
+    346.0
+   ],
+   "tris": 14481,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/ForkLift/SM_ForkLiftCollision.SM_ForkLiftCollision",
+   "name": "SM_ForkLiftCollision",
+   "size": [
+    2.0,
+    1.0,
+    3.0
+   ],
+   "tris": 10954,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Forklift_prop_grate.SM_Forklift_prop_grate",
+   "name": "SM_Forklift_prop_grate",
+   "size": [
+    119.0,
+    115.0,
+    12.0
+   ],
+   "tris": 300,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Forklift_prop_light.SM_Forklift_prop_light",
+   "name": "SM_Forklift_prop_light",
+   "size": [
+    22.0,
+    5.0,
+    6.0
+   ],
+   "tris": 92,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Forklift_prop_seat.SM_Forklift_prop_seat",
+   "name": "SM_Forklift_prop_seat",
+   "size": [
+    58.0,
+    64.0,
+    58.0
+   ],
+   "tris": 1382,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Forklift_prop_wheel.SM_Forklift_prop_wheel",
+   "name": "SM_Forklift_prop_wheel",
+   "size": [
+    61.0,
+    61.0,
+    22.0
+   ],
+   "tris": 828,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_GreenButton.SM_GreenButton",
+   "name": "SM_GreenButton",
+   "size": [
+    2.0,
+    2.0,
+    1.0
+   ],
+   "tris": 288,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_HVSockets01.SM_HVSockets01",
+   "name": "SM_HVSockets01",
+   "size": [
+    30.0,
+    23.0,
+    59.0
+   ],
+   "tris": 644,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_HVSockets02.SM_HVSockets02",
+   "name": "SM_HVSockets02",
+   "size": [
+    30.0,
+    22.0,
+    30.0
+   ],
+   "tris": 476,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_HVSockets03.SM_HVSockets03",
+   "name": "SM_HVSockets03",
+   "size": [
+    30.0,
+    39.0,
+    49.0
+   ],
+   "tris": 534,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_HeavyArch01.SM_HeavyArch01",
+   "name": "SM_HeavyArch01",
+   "size": [
+    400.0,
+    120.0,
+    600.0
+   ],
+   "tris": 1606,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_HeavyArch02.SM_HeavyArch02",
+   "name": "SM_HeavyArch02",
+   "size": [
+    400.0,
+    153.0,
+    600.0
+   ],
+   "tris": 3100,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_HeavyPlatform01.SM_HeavyPlatform01",
+   "name": "SM_HeavyPlatform01",
+   "size": [
+    182.0,
+    183.0,
+    49.0
+   ],
+   "tris": 458,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_IndustrialPlatform02.SM_IndustrialPlatform02",
+   "name": "SM_IndustrialPlatform02",
+   "size": [
+    400.0,
+    300.0,
+    72.0
+   ],
+   "tris": 540,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_IndustrialPlatform03.SM_IndustrialPlatform03",
+   "name": "SM_IndustrialPlatform03",
+   "size": [
+    300.0,
+    300.0,
+    68.0
+   ],
+   "tris": 254,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_IndustrialPlatform04.SM_IndustrialPlatform04",
+   "name": "SM_IndustrialPlatform04",
+   "size": [
+    300.0,
+    300.0,
+    68.0
+   ],
+   "tris": 748,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_IndustrialPlatform05.SM_IndustrialPlatform05",
+   "name": "SM_IndustrialPlatform05",
+   "size": [
+    708.0,
+    320.0,
+    196.0
+   ],
+   "tris": 1608,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_IndustrialRobot01_01.SM_IndustrialRobot01_01",
+   "name": "SM_IndustrialRobot01_01",
+   "size": [
+    343.0,
+    210.0,
+    412.0
+   ],
+   "tris": 17274,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Jeans01.SM_Jeans01",
+   "name": "SM_Jeans01",
+   "size": [
+    27.0,
+    23.0,
+    126.0
+   ],
+   "tris": 986,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Jeans02.SM_Jeans02",
+   "name": "SM_Jeans02",
+   "size": [
+    62.0,
+    73.0,
+    9.0
+   ],
+   "tris": 1422,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Jeans03.SM_Jeans03",
+   "name": "SM_Jeans03",
+   "size": [
+    49.0,
+    73.0,
+    74.0
+   ],
+   "tris": 974,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Keyboard_01.SM_Keyboard_01",
+   "name": "SM_Keyboard_01",
+   "size": [
+    70.0,
+    25.0,
+    2.0
+   ],
+   "tris": 17155,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Label01.SM_Label01",
+   "name": "SM_Label01",
+   "size": [
+    0.0,
+    13.0,
+    8.0
+   ],
+   "tris": 4,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Label010.SM_Label010",
+   "name": "SM_Label010",
+   "size": [
+    1.0,
+    13.0,
+    8.0
+   ],
+   "tris": 16,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Label011.SM_Label011",
+   "name": "SM_Label011",
+   "size": [
+    1.0,
+    13.0,
+    8.0
+   ],
+   "tris": 100,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Label013.SM_Label013",
+   "name": "SM_Label013",
+   "size": [
+    1.0,
+    9.0,
+    7.0
+   ],
+   "tris": 144,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Label014.SM_Label014",
+   "name": "SM_Label014",
+   "size": [
+    2.0,
+    9.0,
+    8.0
+   ],
+   "tris": 144,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Label015.SM_Label015",
+   "name": "SM_Label015",
+   "size": [
+    1.0,
+    9.0,
+    8.0
+   ],
+   "tris": 16,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Label016.SM_Label016",
+   "name": "SM_Label016",
+   "size": [
+    1.0,
+    9.0,
+    8.0
+   ],
+   "tris": 48,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Label02.SM_Label02",
+   "name": "SM_Label02",
+   "size": [
+    0.0,
+    13.0,
+    8.0
+   ],
+   "tris": 4,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Label05.SM_Label05",
+   "name": "SM_Label05",
+   "size": [
+    0.0,
+    9.0,
+    8.0
+   ],
+   "tris": 4,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Label06.SM_Label06",
+   "name": "SM_Label06",
+   "size": [
+    0.0,
+    9.0,
+    8.0
+   ],
+   "tris": 4,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Label08.SM_Label08",
+   "name": "SM_Label08",
+   "size": [
+    0.0,
+    9.0,
+    7.0
+   ],
+   "tris": 4,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Label09.SM_Label09",
+   "name": "SM_Label09",
+   "size": [
+    1.0,
+    13.0,
+    8.0
+   ],
+   "tris": 20,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_LabelsMess01.SM_LabelsMess01",
+   "name": "SM_LabelsMess01",
+   "size": [
+    3.0,
+    84.0,
+    38.0
+   ],
+   "tris": 4280,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_LabelsMess010.SM_LabelsMess010",
+   "name": "SM_LabelsMess010",
+   "size": [
+    36.0,
+    3.0,
+    21.0
+   ],
+   "tris": 136,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_LabelsMess011.SM_LabelsMess011",
+   "name": "SM_LabelsMess011",
+   "size": [
+    30.0,
+    2.0,
+    25.0
+   ],
+   "tris": 220,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_LabelsMess012.SM_LabelsMess012",
+   "name": "SM_LabelsMess012",
+   "size": [
+    31.0,
+    2.0,
+    25.0
+   ],
+   "tris": 284,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_LabelsMess013.SM_LabelsMess013",
+   "name": "SM_LabelsMess013",
+   "size": [
+    25.0,
+    1.0,
+    17.0
+   ],
+   "tris": 248,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_LabelsMess02.SM_LabelsMess02",
+   "name": "SM_LabelsMess02",
+   "size": [
+    4.0,
+    101.0,
+    58.0
+   ],
+   "tris": 2888,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_LabelsMess03.SM_LabelsMess03",
+   "name": "SM_LabelsMess03",
+   "size": [
+    3.0,
+    100.0,
+    52.0
+   ],
+   "tris": 4712,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_LabelsMess04.SM_LabelsMess04",
+   "name": "SM_LabelsMess04",
+   "size": [
+    184.0,
+    4.0,
+    92.0
+   ],
+   "tris": 6670,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_LabelsMess07.SM_LabelsMess07",
+   "name": "SM_LabelsMess07",
+   "size": [
+    56.0,
+    3.0,
+    33.0
+   ],
+   "tris": 152,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_LabelsMess08.SM_LabelsMess08",
+   "name": "SM_LabelsMess08",
+   "size": [
+    26.0,
+    2.0,
+    18.0
+   ],
+   "tris": 64,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_LabelsMess09.SM_LabelsMess09",
+   "name": "SM_LabelsMess09",
+   "size": [
+    46.0,
+    2.0,
+    36.0
+   ],
+   "tris": 652,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Ladder02.SM_Ladder02",
+   "name": "SM_Ladder02",
+   "size": [
+    77.0,
+    190.0,
+    295.0
+   ],
+   "tris": 2092,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Lamp01.SM_Lamp01",
+   "name": "SM_Lamp01",
+   "size": [
+    17.0,
+    17.0,
+    19.0
+   ],
+   "tris": 4284,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Lamp02.SM_Lamp02",
+   "name": "SM_Lamp02",
+   "size": [
+    12.0,
+    8.0,
+    27.0
+   ],
+   "tris": 3798,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Lamp03.SM_Lamp03",
+   "name": "SM_Lamp03",
+   "size": [
+    9.0,
+    6.0,
+    7.0
+   ],
+   "tris": 1880,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_LampSet_01.SM_LampSet_01",
+   "name": "SM_LampSet_01",
+   "size": [
+    28.0,
+    144.0,
+    13.0
+   ],
+   "tris": 2704,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_LampSet_part_01.SM_LampSet_part_01",
+   "name": "SM_LampSet_part_01",
+   "size": [
+    28.0,
+    144.0,
+    12.0
+   ],
+   "tris": 2310,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_LampSet_part_02.SM_LampSet_part_02",
+   "name": "SM_LampSet_part_02",
+   "size": [
+    27.0,
+    143.0,
+    11.0
+   ],
+   "tris": 394,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_LargeRoofEnd01.SM_LargeRoofEnd01",
+   "name": "SM_LargeRoofEnd01",
+   "size": [
+    1307.0,
+    2407.0,
+    554.0
+   ],
+   "tris": 7753,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_LargeRoofEnd02.SM_LargeRoofEnd02",
+   "name": "SM_LargeRoofEnd02",
+   "size": [
+    1307.0,
+    2407.0,
+    554.0
+   ],
+   "tris": 7669,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_LargeRoofMerged01.SM_LargeRoofMerged01",
+   "name": "SM_LargeRoofMerged01",
+   "size": [
+    1307.0,
+    2400.0,
+    538.0
+   ],
+   "tris": 13030,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_LargeRoofMerged02.SM_LargeRoofMerged02",
+   "name": "SM_LargeRoofMerged02",
+   "size": [
+    1307.0,
+    2408.0,
+    554.0
+   ],
+   "tris": 8710,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Layout01.SM_Layout01",
+   "name": "SM_Layout01",
+   "size": [
+    602.0,
+    330.0,
+    194.0
+   ],
+   "tris": 19638,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Locker.SM_Locker",
+   "name": "SM_Locker",
+   "size": [
+    63.0,
+    50.0,
+    124.0
+   ],
+   "tris": 62,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_LockerBox_01.SM_LockerBox_01",
+   "name": "SM_LockerBox_01",
+   "size": [
+    87.0,
+    80.0,
+    51.0
+   ],
+   "tris": 2708,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_LockerClosed.SM_LockerClosed",
+   "name": "SM_LockerClosed",
+   "size": [
+    50.0,
+    63.0,
+    124.0
+   ],
+   "tris": 252,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_MagazineBlue.SM_MagazineBlue",
+   "name": "SM_MagazineBlue",
+   "size": [
+    1.0,
+    21.0,
+    30.0
+   ],
+   "tris": 12,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_MagazineClosed.SM_MagazineClosed",
+   "name": "SM_MagazineClosed",
+   "size": [
+    1.0,
+    21.0,
+    30.0
+   ],
+   "tris": 12,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_MagazineGreen.SM_MagazineGreen",
+   "name": "SM_MagazineGreen",
+   "size": [
+    1.0,
+    21.0,
+    30.0
+   ],
+   "tris": 44,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_MagazineOpened.SM_MagazineOpened",
+   "name": "SM_MagazineOpened",
+   "size": [
+    4.0,
+    42.0,
+    30.0
+   ],
+   "tris": 302,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_MagazineOrange.SM_MagazineOrange",
+   "name": "SM_MagazineOrange",
+   "size": [
+    2.0,
+    21.0,
+    30.0
+   ],
+   "tris": 12,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Marker011.SM_Marker011",
+   "name": "SM_Marker011",
+   "size": [
+    53.0,
+    10.0,
+    54.0
+   ],
+   "tris": 172,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Marker012.SM_Marker012",
+   "name": "SM_Marker012",
+   "size": [
+    53.0,
+    10.0,
+    54.0
+   ],
+   "tris": 172,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Marker013.SM_Marker013",
+   "name": "SM_Marker013",
+   "size": [
+    53.0,
+    10.0,
+    54.0
+   ],
+   "tris": 172,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Marker014.SM_Marker014",
+   "name": "SM_Marker014",
+   "size": [
+    53.0,
+    10.0,
+    54.0
+   ],
+   "tris": 172,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Marker015.SM_Marker015",
+   "name": "SM_Marker015",
+   "size": [
+    53.0,
+    10.0,
+    54.0
+   ],
+   "tris": 172,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Marker021.SM_Marker021",
+   "name": "SM_Marker021",
+   "size": [
+    2.0,
+    136.0,
+    25.0
+   ],
+   "tris": 72,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Marker022.SM_Marker022",
+   "name": "SM_Marker022",
+   "size": [
+    2.0,
+    136.0,
+    25.0
+   ],
+   "tris": 72,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Marker023.SM_Marker023",
+   "name": "SM_Marker023",
+   "size": [
+    2.0,
+    136.0,
+    25.0
+   ],
+   "tris": 72,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Marker024.SM_Marker024",
+   "name": "SM_Marker024",
+   "size": [
+    2.0,
+    136.0,
+    25.0
+   ],
+   "tris": 72,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Marker025.SM_Marker025",
+   "name": "SM_Marker025",
+   "size": [
+    2.0,
+    136.0,
+    25.0
+   ],
+   "tris": 72,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Marker03.SM_Marker03",
+   "name": "SM_Marker03",
+   "size": [
+    40.0,
+    12.0,
+    40.0
+   ],
+   "tris": 208,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalBeam05.SM_MetalBeam05",
+   "name": "SM_MetalBeam05",
+   "size": [
+    181.0,
+    10.0,
+    142.0
+   ],
+   "tris": 92,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalBeam13.SM_MetalBeam13",
+   "name": "SM_MetalBeam13",
+   "size": [
+    104.0,
+    71.0,
+    106.0
+   ],
+   "tris": 168,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalBumper01.SM_MetalBumper01",
+   "name": "SM_MetalBumper01",
+   "size": [
+    13.0,
+    200.0,
+    66.0
+   ],
+   "tris": 700,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalBumper02.SM_MetalBumper02",
+   "name": "SM_MetalBumper02",
+   "size": [
+    110.0,
+    110.0,
+    66.0
+   ],
+   "tris": 1002,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalBumper03.SM_MetalBumper03",
+   "name": "SM_MetalBumper03",
+   "size": [
+    110.0,
+    110.0,
+    66.0
+   ],
+   "tris": 1204,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalFarm_02.SM_MetalFarm_02",
+   "name": "SM_MetalFarm_02",
+   "size": [
+    28.0,
+    28.0,
+    100.0
+   ],
+   "tris": 88,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalFarm_03.SM_MetalFarm_03",
+   "name": "SM_MetalFarm_03",
+   "size": [
+    6.0,
+    15.0,
+    14.0
+   ],
+   "tris": 32,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalFarm_04.SM_MetalFarm_04",
+   "name": "SM_MetalFarm_04",
+   "size": [
+    27.0,
+    250.0,
+    100.0
+   ],
+   "tris": 2352,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalFarm_06.SM_MetalFarm_06",
+   "name": "SM_MetalFarm_06",
+   "size": [
+    28.0,
+    28.0,
+    48.0
+   ],
+   "tris": 84,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalWallPart_01.SM_MetalWallPart_01",
+   "name": "SM_MetalWallPart_01",
+   "size": [
+    21.0,
+    400.0,
+    125.0
+   ],
+   "tris": 152,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalWallPart_06.SM_MetalWallPart_06",
+   "name": "SM_MetalWallPart_06",
+   "size": [
+    21.0,
+    400.0,
+    125.0
+   ],
+   "tris": 152,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/Crane/SM_Motor.SM_Motor",
+   "name": "SM_Motor",
+   "size": [
+    199.0,
+    207.0,
+    140.0
+   ],
+   "tris": 6396,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Mousepad_01.SM_Mousepad_01",
+   "name": "SM_Mousepad_01",
+   "size": [
+    57.0,
+    46.0,
+    0.0
+   ],
+   "tris": 300,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_OfficeAircon01.SM_OfficeAircon01",
+   "name": "SM_OfficeAircon01",
+   "size": [
+    100.0,
+    100.0,
+    11.0
+   ],
+   "tris": 220,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_OfficeCabinet_01.SM_OfficeCabinet_01",
+   "name": "SM_OfficeCabinet_01",
+   "size": [
+    62.0,
+    68.0,
+    72.0
+   ],
+   "tris": 3432,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_OfficeCables01.SM_OfficeCables01",
+   "name": "SM_OfficeCables01",
+   "size": [
+    405.0,
+    547.0,
+    412.0
+   ],
+   "tris": 838,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_OfficeChair01.SM_OfficeChair01",
+   "name": "SM_OfficeChair01",
+   "size": [
+    63.0,
+    67.0,
+    136.0
+   ],
+   "tris": 3652,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_OfficeChair02.SM_OfficeChair02",
+   "name": "SM_OfficeChair02",
+   "size": [
+    57.0,
+    60.0,
+    86.0
+   ],
+   "tris": 1600,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_OfficeChair03.SM_OfficeChair03",
+   "name": "SM_OfficeChair03",
+   "size": [
+    72.0,
+    77.0,
+    100.0
+   ],
+   "tris": 4988,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_OfficeFolder01.SM_OfficeFolder01",
+   "name": "SM_OfficeFolder01",
+   "size": [
+    7.0,
+    29.0,
+    32.0
+   ],
+   "tris": 36,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_OfficeFolder02.SM_OfficeFolder02",
+   "name": "SM_OfficeFolder02",
+   "size": [
+    7.0,
+    29.0,
+    32.0
+   ],
+   "tris": 36,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_OfficeLockers01.SM_OfficeLockers01",
+   "name": "SM_OfficeLockers01",
+   "size": [
+    40.0,
+    39.0,
+    154.0
+   ],
+   "tris": 76,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_OfficeMonitor_01.SM_OfficeMonitor_01",
+   "name": "SM_OfficeMonitor_01",
+   "size": [
+    90.0,
+    39.0,
+    69.0
+   ],
+   "tris": 1238,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_OfficeMonitor_02.SM_OfficeMonitor_02",
+   "name": "SM_OfficeMonitor_02",
+   "size": [
+    90.0,
+    13.0,
+    52.0
+   ],
+   "tris": 918,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_OfficePillow.SM_OfficePillow",
+   "name": "SM_OfficePillow",
+   "size": [
+    70.0,
+    60.0,
+    24.0
+   ],
+   "tris": 1358,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_OfficeSofa01.SM_OfficeSofa01",
+   "name": "SM_OfficeSofa01",
+   "size": [
+    298.0,
+    128.0,
+    93.0
+   ],
+   "tris": 1246,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_OfficeSofaTable.SM_OfficeSofaTable",
+   "name": "SM_OfficeSofaTable",
+   "size": [
+    117.0,
+    117.0,
+    39.0
+   ],
+   "tris": 52,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_OfficeStuff01_Merged.SM_OfficeStuff01_Merged",
+   "name": "SM_OfficeStuff01_Merged",
+   "size": [
+    353.0,
+    633.0,
+    152.0
+   ],
+   "tris": 126887,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_OfficeStuff02_Merged.SM_OfficeStuff02_Merged",
+   "name": "SM_OfficeStuff02_Merged",
+   "size": [
+    392.0,
+    491.0,
+    152.0
+   ],
+   "tris": 141722,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_OfficeTable_01.SM_OfficeTable_01",
+   "name": "SM_OfficeTable_01",
+   "size": [
+    231.0,
+    121.0,
+    89.0
+   ],
+   "tris": 60,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_OfficeWoodenWall02.SM_OfficeWoodenWall02",
+   "name": "SM_OfficeWoodenWall02",
+   "size": [
+    435.0,
+    547.0,
+    136.0
+   ],
+   "tris": 112,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PackOfCigarettes01.SM_PackOfCigarettes01",
+   "name": "SM_PackOfCigarettes01",
+   "size": [
+    4.0,
+    5.0,
+    11.0
+   ],
+   "tris": 692,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PackOfCigarettes02.SM_PackOfCigarettes02",
+   "name": "SM_PackOfCigarettes02",
+   "size": [
+    4.0,
+    5.0,
+    13.0
+   ],
+   "tris": 722,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PaintBoxLamp_01.SM_PaintBoxLamp_01",
+   "name": "SM_PaintBoxLamp_01",
+   "size": [
+    200.0,
+    40.0,
+    40.0
+   ],
+   "tris": 1584,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PaintBoxWall_02.SM_PaintBoxWall_02",
+   "name": "SM_PaintBoxWall_02",
+   "size": [
+    200.0,
+    12.0,
+    109.0
+   ],
+   "tris": 92,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pallet03.SM_Pallet03",
+   "name": "SM_Pallet03",
+   "size": [
+    120.0,
+    160.0,
+    30.0
+   ],
+   "tris": 1332,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PalletCart.SM_PalletCart",
+   "name": "SM_PalletCart",
+   "size": [
+    180.0,
+    181.0,
+    127.0
+   ],
+   "tris": 10328,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PalletCart_PalletBox_closed.SM_PalletCart_PalletBox_closed",
+   "name": "SM_PalletCart_PalletBox_closed",
+   "size": [
+    176.0,
+    155.0,
+    123.0
+   ],
+   "tris": 4835,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PalletCart_PalletBox_compact.SM_PalletCart_PalletBox_compact",
+   "name": "SM_PalletCart_PalletBox_compact",
+   "size": [
+    176.0,
+    155.0,
+    32.0
+   ],
+   "tris": 4339,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PalletCart_PalletBox_open.SM_PalletCart_PalletBox_open",
+   "name": "SM_PalletCart_PalletBox_open",
+   "size": [
+    176.0,
+    155.0,
+    118.0
+   ],
+   "tris": 3358,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PalletCart_box.SM_PalletCart_box",
+   "name": "SM_PalletCart_box",
+   "size": [
+    88.0,
+    154.0,
+    35.0
+   ],
+   "tris": 4482,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Paper01.SM_Paper01",
+   "name": "SM_Paper01",
+   "size": [
+    0.0,
+    21.0,
+    30.0
+   ],
+   "tris": 4,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Paper02.SM_Paper02",
+   "name": "SM_Paper02",
+   "size": [
+    0.0,
+    21.0,
+    30.0
+   ],
+   "tris": 4,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Paper03.SM_Paper03",
+   "name": "SM_Paper03",
+   "size": [
+    0.0,
+    21.0,
+    30.0
+   ],
+   "tris": 4,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Paper04.SM_Paper04",
+   "name": "SM_Paper04",
+   "size": [
+    0.0,
+    21.0,
+    30.0
+   ],
+   "tris": 4,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PaperBox_01_01.SM_PaperBox_01_01",
+   "name": "SM_PaperBox_01_01",
+   "size": [
+    60.0,
+    80.0,
+    50.0
+   ],
+   "tris": 80,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PaperBox_01_02.SM_PaperBox_01_02",
+   "name": "SM_PaperBox_01_02",
+   "size": [
+    120.0,
+    80.0,
+    50.0
+   ],
+   "tris": 156,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PaperBox_01_03.SM_PaperBox_01_03",
+   "name": "SM_PaperBox_01_03",
+   "size": [
+    120.0,
+    160.0,
+    100.0
+   ],
+   "tris": 124,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PaperBox_01_04.SM_PaperBox_01_04",
+   "name": "SM_PaperBox_01_04",
+   "size": [
+    62.0,
+    80.0,
+    56.0
+   ],
+   "tris": 106,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PaperBox_01_05.SM_PaperBox_01_05",
+   "name": "SM_PaperBox_01_05",
+   "size": [
+    123.0,
+    160.0,
+    153.0
+   ],
+   "tris": 1392,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PaperBox_02_01.SM_PaperBox_02_01",
+   "name": "SM_PaperBox_02_01",
+   "size": [
+    61.0,
+    80.0,
+    50.0
+   ],
+   "tris": 48,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PaperBox_02_02.SM_PaperBox_02_02",
+   "name": "SM_PaperBox_02_02",
+   "size": [
+    61.0,
+    81.0,
+    100.0
+   ],
+   "tris": 64,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PaperBox_02_03.SM_PaperBox_02_03",
+   "name": "SM_PaperBox_02_03",
+   "size": [
+    60.0,
+    80.0,
+    25.0
+   ],
+   "tris": 32,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PaperBox_02_04.SM_PaperBox_02_04",
+   "name": "SM_PaperBox_02_04",
+   "size": [
+    120.0,
+    80.0,
+    60.0
+   ],
+   "tris": 210,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PaperBox_02_05.SM_PaperBox_02_05",
+   "name": "SM_PaperBox_02_05",
+   "size": [
+    60.0,
+    80.0,
+    75.0
+   ],
+   "tris": 180,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PaperBox_03_01.SM_PaperBox_03_01",
+   "name": "SM_PaperBox_03_01",
+   "size": [
+    59.0,
+    80.0,
+    61.0
+   ],
+   "tris": 48,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PaperBox_03_02.SM_PaperBox_03_02",
+   "name": "SM_PaperBox_03_02",
+   "size": [
+    76.0,
+    103.0,
+    66.0
+   ],
+   "tris": 188,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PaperBox_03_03.SM_PaperBox_03_03",
+   "name": "SM_PaperBox_03_03",
+   "size": [
+    80.0,
+    106.0,
+    89.0
+   ],
+   "tris": 188,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PaperBox_03_04.SM_PaperBox_03_04",
+   "name": "SM_PaperBox_03_04",
+   "size": [
+    130.0,
+    132.0,
+    86.0
+   ],
+   "tris": 196,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PaperBox_03_05.SM_PaperBox_03_05",
+   "name": "SM_PaperBox_03_05",
+   "size": [
+    62.0,
+    116.0,
+    74.0
+   ],
+   "tris": 184,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PaperBox_03_06.SM_PaperBox_03_06",
+   "name": "SM_PaperBox_03_06",
+   "size": [
+    62.0,
+    87.0,
+    74.0
+   ],
+   "tris": 290,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PaperBox_03_07.SM_PaperBox_03_07",
+   "name": "SM_PaperBox_03_07",
+   "size": [
+    62.0,
+    83.0,
+    64.0
+   ],
+   "tris": 458,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PapersStack01.SM_PapersStack01",
+   "name": "SM_PapersStack01",
+   "size": [
+    30.0,
+    21.0,
+    5.0
+   ],
+   "tris": 12,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PapersStack02.SM_PapersStack02",
+   "name": "SM_PapersStack02",
+   "size": [
+    30.0,
+    22.0,
+    2.0
+   ],
+   "tris": 12,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PapersStack03.SM_PapersStack03",
+   "name": "SM_PapersStack03",
+   "size": [
+    30.0,
+    22.0,
+    1.0
+   ],
+   "tris": 12,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PapersStack04.SM_PapersStack04",
+   "name": "SM_PapersStack04",
+   "size": [
+    82.0,
+    107.0,
+    2.0
+   ],
+   "tris": 76,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PapersStack05.SM_PapersStack05",
+   "name": "SM_PapersStack05",
+   "size": [
+    54.0,
+    51.0,
+    0.0
+   ],
+   "tris": 24,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PapersStack06.SM_PapersStack06",
+   "name": "SM_PapersStack06",
+   "size": [
+    37.0,
+    35.0,
+    8.0
+   ],
+   "tris": 512,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PapersStack07.SM_PapersStack07",
+   "name": "SM_PapersStack07",
+   "size": [
+    36.0,
+    33.0,
+    2.0
+   ],
+   "tris": 36,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PapersStack08.SM_PapersStack08",
+   "name": "SM_PapersStack08",
+   "size": [
+    33.0,
+    26.0,
+    5.0
+   ],
+   "tris": 20,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PcMouse_01.SM_PcMouse_01",
+   "name": "SM_PcMouse_01",
+   "size": [
+    10.0,
+    18.0,
+    6.0
+   ],
+   "tris": 848,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PedestrianPath03.SM_PedestrianPath03",
+   "name": "SM_PedestrianPath03",
+   "size": [
+    130.0,
+    130.0,
+    1.0
+   ],
+   "tris": 106,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pen.SM_Pen",
+   "name": "SM_Pen",
+   "size": [
+    1.0,
+    11.0,
+    1.0
+   ],
+   "tris": 290,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PieceOfPaper008.SM_PieceOfPaper008",
+   "name": "SM_PieceOfPaper008",
+   "size": [
+    0.0,
+    10.0,
+    20.0
+   ],
+   "tris": 4,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PieceOfPaper01.SM_PieceOfPaper01",
+   "name": "SM_PieceOfPaper01",
+   "size": [
+    0.0,
+    21.0,
+    7.0
+   ],
+   "tris": 4,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PieceOfPaper02.SM_PieceOfPaper02",
+   "name": "SM_PieceOfPaper02",
+   "size": [
+    0.0,
+    21.0,
+    9.0
+   ],
+   "tris": 4,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PieceOfPaper03.SM_PieceOfPaper03",
+   "name": "SM_PieceOfPaper03",
+   "size": [
+    0.0,
+    21.0,
+    8.0
+   ],
+   "tris": 4,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PieceOfPaper04.SM_PieceOfPaper04",
+   "name": "SM_PieceOfPaper04",
+   "size": [
+    0.0,
+    21.0,
+    10.0
+   ],
+   "tris": 4,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PieceOfPaper05.SM_PieceOfPaper05",
+   "name": "SM_PieceOfPaper05",
+   "size": [
+    0.0,
+    29.0,
+    24.0
+   ],
+   "tris": 32,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PieceOfPaper06.SM_PieceOfPaper06",
+   "name": "SM_PieceOfPaper06",
+   "size": [
+    30.0,
+    0.0,
+    29.0
+   ],
+   "tris": 56,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PieceOfPaper07.SM_PieceOfPaper07",
+   "name": "SM_PieceOfPaper07",
+   "size": [
+    47.0,
+    0.0,
+    30.0
+   ],
+   "tris": 4,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PillarSmall01.SM_PillarSmall01",
+   "name": "SM_PillarSmall01",
+   "size": [
+    28.0,
+    28.0,
+    154.0
+   ],
+   "tris": 442,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipe_round_bend_sector.SM_Pipe_round_bend_sector",
+   "name": "SM_Pipe_round_bend_sector",
+   "size": [
+    42.0,
+    240.0,
+    92.0
+   ],
+   "tris": 4224,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipe_round_corner1.SM_Pipe_round_corner1",
+   "name": "SM_Pipe_round_corner1",
+   "size": [
+    42.0,
+    100.0,
+    100.0
+   ],
+   "tris": 864,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipe_round_corner2.SM_Pipe_round_corner2",
+   "name": "SM_Pipe_round_corner2",
+   "size": [
+    42.0,
+    100.0,
+    100.0
+   ],
+   "tris": 1968,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipe_round_corner3.SM_Pipe_round_corner3",
+   "name": "SM_Pipe_round_corner3",
+   "size": [
+    43.0,
+    49.0,
+    50.0
+   ],
+   "tris": 480,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipe_round_corner4.SM_Pipe_round_corner4",
+   "name": "SM_Pipe_round_corner4",
+   "size": [
+    42.0,
+    79.0,
+    50.0
+   ],
+   "tris": 1056,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipe_round_cross_transition1.SM_Pipe_round_cross_transition1",
+   "name": "SM_Pipe_round_cross_transition1",
+   "size": [
+    42.0,
+    80.0,
+    80.0
+   ],
+   "tris": 720,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipe_round_cross_transition2.SM_Pipe_round_cross_transition2",
+   "name": "SM_Pipe_round_cross_transition2",
+   "size": [
+    63.0,
+    80.0,
+    80.0
+   ],
+   "tris": 720,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipe_round_fixator.SM_Pipe_round_fixator",
+   "name": "SM_Pipe_round_fixator",
+   "size": [
+    42.0,
+    7.0,
+    51.0
+   ],
+   "tris": 240,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipe_round_fixator2.SM_Pipe_round_fixator2",
+   "name": "SM_Pipe_round_fixator2",
+   "size": [
+    32.0,
+    1.0,
+    38.0
+   ],
+   "tris": 40,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipe_round_grate.SM_Pipe_round_grate",
+   "name": "SM_Pipe_round_grate",
+   "size": [
+    40.0,
+    40.0,
+    4.0
+   ],
+   "tris": 168,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipe_round_long.SM_Pipe_round_long",
+   "name": "SM_Pipe_round_long",
+   "size": [
+    42.0,
+    200.0,
+    42.0
+   ],
+   "tris": 288,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipe_round_moderate.SM_Pipe_round_moderate",
+   "name": "SM_Pipe_round_moderate",
+   "size": [
+    42.0,
+    100.0,
+    42.0
+   ],
+   "tris": 288,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipe_round_radius_transition1.SM_Pipe_round_radius_transition1",
+   "name": "SM_Pipe_round_radius_transition1",
+   "size": [
+    63.0,
+    50.0,
+    63.0
+   ],
+   "tris": 288,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipe_round_radius_transition2.SM_Pipe_round_radius_transition2",
+   "name": "SM_Pipe_round_radius_transition2",
+   "size": [
+    63.0,
+    20.0,
+    63.0
+   ],
+   "tris": 240,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipe_round_short.SM_Pipe_round_short",
+   "name": "SM_Pipe_round_short",
+   "size": [
+    42.0,
+    25.0,
+    42.0
+   ],
+   "tris": 288,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipe_round_tee_transition1.SM_Pipe_round_tee_transition1",
+   "name": "SM_Pipe_round_tee_transition1",
+   "size": [
+    42.0,
+    80.0,
+    61.0
+   ],
+   "tris": 504,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipe_round_tee_transition2.SM_Pipe_round_tee_transition2",
+   "name": "SM_Pipe_round_tee_transition2",
+   "size": [
+    63.0,
+    80.0,
+    72.0
+   ],
+   "tris": 504,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipe_round_vent.SM_Pipe_round_vent",
+   "name": "SM_Pipe_round_vent",
+   "size": [
+    40.0,
+    40.0,
+    4.0
+   ],
+   "tris": 264,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipe_square_corner_horisontal.SM_Pipe_square_corner_horisontal",
+   "name": "SM_Pipe_square_corner_horisontal",
+   "size": [
+    100.0,
+    100.0,
+    24.0
+   ],
+   "tris": 516,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipe_square_corner_small.SM_Pipe_square_corner_small",
+   "name": "SM_Pipe_square_corner_small",
+   "size": [
+    44.0,
+    40.0,
+    40.0
+   ],
+   "tris": 452,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipe_square_corner_vertical.SM_Pipe_square_corner_vertical",
+   "name": "SM_Pipe_square_corner_vertical",
+   "size": [
+    44.0,
+    91.0,
+    90.0
+   ],
+   "tris": 516,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipe_square_cross_transition.SM_Pipe_square_cross_transition",
+   "name": "SM_Pipe_square_cross_transition",
+   "size": [
+    56.0,
+    56.0,
+    24.0
+   ],
+   "tris": 556,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipe_square_fixator.SM_Pipe_square_fixator",
+   "name": "SM_Pipe_square_fixator",
+   "size": [
+    51.0,
+    7.0,
+    5.0
+   ],
+   "tris": 100,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipe_square_fixator2.SM_Pipe_square_fixator2",
+   "name": "SM_Pipe_square_fixator2",
+   "size": [
+    47.0,
+    1.0,
+    72.0
+   ],
+   "tris": 40,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipe_square_grate1.SM_Pipe_square_grate1",
+   "name": "SM_Pipe_square_grate1",
+   "size": [
+    36.0,
+    39.0,
+    21.0
+   ],
+   "tris": 162,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipe_square_grate2.SM_Pipe_square_grate2",
+   "name": "SM_Pipe_square_grate2",
+   "size": [
+    36.0,
+    36.0,
+    1.0
+   ],
+   "tris": 34,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipe_square_grate3.SM_Pipe_square_grate3",
+   "name": "SM_Pipe_square_grate3",
+   "size": [
+    1.0,
+    44.0,
+    24.0
+   ],
+   "tris": 34,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipe_square_grate4.SM_Pipe_square_grate4",
+   "name": "SM_Pipe_square_grate4",
+   "size": [
+    1.0,
+    90.0,
+    24.0
+   ],
+   "tris": 34,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipe_square_moderate.SM_Pipe_square_moderate",
+   "name": "SM_Pipe_square_moderate",
+   "size": [
+    44.0,
+    100.0,
+    24.0
+   ],
+   "tris": 244,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipe_square_radius_transition.SM_Pipe_square_radius_transition",
+   "name": "SM_Pipe_square_radius_transition",
+   "size": [
+    66.0,
+    50.0,
+    36.0
+   ],
+   "tris": 244,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipe_square_short.SM_Pipe_square_short",
+   "name": "SM_Pipe_square_short",
+   "size": [
+    44.0,
+    25.0,
+    24.0
+   ],
+   "tris": 244,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipe_square_tee_transition.SM_Pipe_square_tee_transition",
+   "name": "SM_Pipe_square_tee_transition",
+   "size": [
+    50.0,
+    56.0,
+    24.0
+   ],
+   "tris": 400,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipes_square_section1.SM_Pipes_square_section1",
+   "name": "SM_Pipes_square_section1",
+   "size": [
+    1185.0,
+    907.0,
+    249.0
+   ],
+   "tris": 12388,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PlasticBin01.SM_PlasticBin01",
+   "name": "SM_PlasticBin01",
+   "size": [
+    73.0,
+    76.0,
+    111.0
+   ],
+   "tris": 954,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PlasticBox_01.SM_PlasticBox_01",
+   "name": "SM_PlasticBox_01",
+   "size": [
+    60.0,
+    80.0,
+    20.0
+   ],
+   "tris": 796,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PlasticBox_02.SM_PlasticBox_02",
+   "name": "SM_PlasticBox_02",
+   "size": [
+    121.0,
+    80.0,
+    20.0
+   ],
+   "tris": 852,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PlasticBox_03.SM_PlasticBox_03",
+   "name": "SM_PlasticBox_03",
+   "size": [
+    60.0,
+    80.0,
+    50.0
+   ],
+   "tris": 188,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PlasticBox_04.SM_PlasticBox_04",
+   "name": "SM_PlasticBox_04",
+   "size": [
+    60.0,
+    80.0,
+    50.0
+   ],
+   "tris": 1516,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PlasticBox_05.SM_PlasticBox_05",
+   "name": "SM_PlasticBox_05",
+   "size": [
+    60.0,
+    80.0,
+    50.0
+   ],
+   "tris": 1008,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PlasticBox_06.SM_PlasticBox_06",
+   "name": "SM_PlasticBox_06",
+   "size": [
+    120.0,
+    80.0,
+    50.0
+   ],
+   "tris": 2424,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PlasticToilet01.SM_PlasticToilet01",
+   "name": "SM_PlasticToilet01",
+   "size": [
+    123.0,
+    123.0,
+    252.0
+   ],
+   "tris": 3774,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PlasticToilet02.SM_PlasticToilet02",
+   "name": "SM_PlasticToilet02",
+   "size": [
+    123.0,
+    123.0,
+    252.0
+   ],
+   "tris": 5118,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PlastickBox.SM_PlastickBox",
+   "name": "SM_PlastickBox",
+   "size": [
+    34.0,
+    23.0,
+    6.0
+   ],
+   "tris": 68,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PlatformGrill_01.SM_PlatformGrill_01",
+   "name": "SM_PlatformGrill_01",
+   "size": [
+    117.0,
+    100.0,
+    19.0
+   ],
+   "tris": 296,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PlatformRailingSign_01.SM_PlatformRailingSign_01",
+   "name": "SM_PlatformRailingSign_01",
+   "size": [
+    10.0,
+    89.0,
+    76.0
+   ],
+   "tris": 860,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PlatformRailing_01.SM_PlatformRailing_01",
+   "name": "SM_PlatformRailing_01",
+   "size": [
+    8.0,
+    352.0,
+    127.0
+   ],
+   "tris": 804,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PlatformRailing_02.SM_PlatformRailing_02",
+   "name": "SM_PlatformRailing_02",
+   "size": [
+    9.0,
+    206.0,
+    127.0
+   ],
+   "tris": 408,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PlatformRailing_03.SM_PlatformRailing_03",
+   "name": "SM_PlatformRailing_03",
+   "size": [
+    9.0,
+    49.0,
+    127.0
+   ],
+   "tris": 736,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PlatformRailing_04.SM_PlatformRailing_04",
+   "name": "SM_PlatformRailing_04",
+   "size": [
+    104.0,
+    104.0,
+    127.0
+   ],
+   "tris": 1416,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PlatformRailing_05.SM_PlatformRailing_05",
+   "name": "SM_PlatformRailing_05",
+   "size": [
+    9.0,
+    11.0,
+    127.0
+   ],
+   "tris": 188,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PlatformRailing_06.SM_PlatformRailing_06",
+   "name": "SM_PlatformRailing_06",
+   "size": [
+    10.0,
+    117.0,
+    127.0
+   ],
+   "tris": 840,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Platform_02.SM_Platform_02",
+   "name": "SM_Platform_02",
+   "size": [
+    306.0,
+    300.0,
+    67.0
+   ],
+   "tris": 154,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_PowderStorage_01.SM_PowderStorage_01",
+   "name": "SM_PowderStorage_01",
+   "size": [
+    374.0,
+    656.0,
+    551.0
+   ],
+   "tris": 12583,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_RecyclingMachine01.SM_RecyclingMachine01",
+   "name": "SM_RecyclingMachine01",
+   "size": [
+    108.0,
+    92.0,
+    220.0
+   ],
+   "tris": 1475,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_RedButton.SM_RedButton",
+   "name": "SM_RedButton",
+   "size": [
+    2.0,
+    2.0,
+    1.0
+   ],
+   "tris": 288,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/Robot/SM_RoboArm01.SM_RoboArm01",
+   "name": "SM_RoboArm01",
+   "size": [
+    127.0,
+    297.0,
+    201.0
+   ],
+   "tris": 13559,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/Robot/SM_RoboArm02.SM_RoboArm02",
+   "name": "SM_RoboArm02",
+   "size": [
+    118.0,
+    125.0,
+    181.0
+   ],
+   "tris": 5265,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/Robot/SM_RoboArm03.SM_RoboArm03",
+   "name": "SM_RoboArm03",
+   "size": [
+    74.0,
+    297.0,
+    63.0
+   ],
+   "tris": 8294,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/Robot/SM_RoboArm04.SM_RoboArm04",
+   "name": "SM_RoboArm04",
+   "size": [
+    127.0,
+    256.0,
+    201.0
+   ],
+   "tris": 13361,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/Robot/SM_RoboArm04_Separate_Parts_SM_Roboarm04_004.SM_RoboArm04_Separate_Parts_SM_Roboarm04_004",
+   "name": "SM_RoboArm04_Separate_Parts_SM_Roboarm04_004",
+   "size": [
+    74.0,
+    74.0,
+    63.0
+   ],
+   "tris": 605,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_RoofFrame01.SM_RoofFrame01",
+   "name": "SM_RoofFrame01",
+   "size": [
+    1307.0,
+    2104.0,
+    516.0
+   ],
+   "tris": 790,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_RoofFrame02.SM_RoofFrame02",
+   "name": "SM_RoofFrame02",
+   "size": [
+    1307.0,
+    2104.0,
+    516.0
+   ],
+   "tris": 790,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_RubbishBin01.SM_RubbishBin01",
+   "name": "SM_RubbishBin01",
+   "size": [
+    51.0,
+    37.0,
+    40.0
+   ],
+   "tris": 668,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_RubbishBin02.SM_RubbishBin02",
+   "name": "SM_RubbishBin02",
+   "size": [
+    53.0,
+    42.0,
+    41.0
+   ],
+   "tris": 1434,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/ScissorsLift/SM_ScissorsLift01.SM_ScissorsLift01",
+   "name": "SM_ScissorsLift01",
+   "size": [
+    324.0,
+    159.0,
+    309.0
+   ],
+   "tris": 19964,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/ScissorsLift/SM_ScissorsLift02.SM_ScissorsLift02",
+   "name": "SM_ScissorsLift02",
+   "size": [
+    314.0,
+    159.0,
+    296.0
+   ],
+   "tris": 18610,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Shelf01.SM_Shelf01",
+   "name": "SM_Shelf01",
+   "size": [
+    156.0,
+    100.0,
+    127.0
+   ],
+   "tris": 3972,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ShowerBottles01.SM_ShowerBottles01",
+   "name": "SM_ShowerBottles01",
+   "size": [
+    57.0,
+    40.0,
+    38.0
+   ],
+   "tris": 396,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ShowerBottles02.SM_ShowerBottles02",
+   "name": "SM_ShowerBottles02",
+   "size": [
+    42.0,
+    31.0,
+    35.0
+   ],
+   "tris": 380,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ShowerBottles03.SM_ShowerBottles03",
+   "name": "SM_ShowerBottles03",
+   "size": [
+    33.0,
+    40.0,
+    38.0
+   ],
+   "tris": 332,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ShowerBottles04.SM_ShowerBottles04",
+   "name": "SM_ShowerBottles04",
+   "size": [
+    40.0,
+    30.0,
+    24.0
+   ],
+   "tris": 556,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ShowerBottles05.SM_ShowerBottles05",
+   "name": "SM_ShowerBottles05",
+   "size": [
+    68.0,
+    53.0,
+    38.0
+   ],
+   "tris": 328,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ShowerBottles06.SM_ShowerBottles06",
+   "name": "SM_ShowerBottles06",
+   "size": [
+    108.0,
+    95.0,
+    35.0
+   ],
+   "tris": 456,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ShowerCarpet01.SM_ShowerCarpet01",
+   "name": "SM_ShowerCarpet01",
+   "size": [
+    104.0,
+    104.0,
+    0.0
+   ],
+   "tris": 2,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ShowerDecal01.SM_ShowerDecal01",
+   "name": "SM_ShowerDecal01",
+   "size": [
+    104.0,
+    63.0,
+    0.0
+   ],
+   "tris": 2,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ShowerMixer_01.SM_ShowerMixer_01",
+   "name": "SM_ShowerMixer_01",
+   "size": [
+    29.0,
+    52.0,
+    32.0
+   ],
+   "tris": 1100,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ShowerRoomWall_09.SM_ShowerRoomWall_09",
+   "name": "SM_ShowerRoomWall_09",
+   "size": [
+    330.0,
+    20.0,
+    100.0
+   ],
+   "tris": 20,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Showroom02.SM_Showroom02",
+   "name": "SM_Showroom02",
+   "size": [
+    1000.0,
+    1000.0,
+    1117.0
+   ],
+   "tris": 48,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Sign01.SM_Sign01",
+   "name": "SM_Sign01",
+   "size": [
+    207.0,
+    14.0,
+    68.0
+   ],
+   "tris": 296,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Sign02.SM_Sign02",
+   "name": "SM_Sign02",
+   "size": [
+    207.0,
+    14.0,
+    68.0
+   ],
+   "tris": 296,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Sign03.SM_Sign03",
+   "name": "SM_Sign03",
+   "size": [
+    207.0,
+    14.0,
+    68.0
+   ],
+   "tris": 296,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Sign04.SM_Sign04",
+   "name": "SM_Sign04",
+   "size": [
+    207.0,
+    14.0,
+    68.0
+   ],
+   "tris": 296,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Sign05.SM_Sign05",
+   "name": "SM_Sign05",
+   "size": [
+    68.0,
+    14.0,
+    95.0
+   ],
+   "tris": 296,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Sign06.SM_Sign06",
+   "name": "SM_Sign06",
+   "size": [
+    68.0,
+    14.0,
+    94.0
+   ],
+   "tris": 296,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Sign07.SM_Sign07",
+   "name": "SM_Sign07",
+   "size": [
+    68.0,
+    14.0,
+    92.0
+   ],
+   "tris": 296,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Sign08.SM_Sign08",
+   "name": "SM_Sign08",
+   "size": [
+    68.0,
+    14.0,
+    92.0
+   ],
+   "tris": 296,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Sign09.SM_Sign09",
+   "name": "SM_Sign09",
+   "size": [
+    100.0,
+    20.0,
+    90.0
+   ],
+   "tris": 292,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Sign10.SM_Sign10",
+   "name": "SM_Sign10",
+   "size": [
+    100.0,
+    20.0,
+    90.0
+   ],
+   "tris": 292,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Sign11.SM_Sign11",
+   "name": "SM_Sign11",
+   "size": [
+    100.0,
+    20.0,
+    90.0
+   ],
+   "tris": 292,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Sign12.SM_Sign12",
+   "name": "SM_Sign12",
+   "size": [
+    135.0,
+    20.0,
+    40.0
+   ],
+   "tris": 292,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Sign13.SM_Sign13",
+   "name": "SM_Sign13",
+   "size": [
+    135.0,
+    20.0,
+    40.0
+   ],
+   "tris": 292,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Sign14.SM_Sign14",
+   "name": "SM_Sign14",
+   "size": [
+    135.0,
+    20.0,
+    40.0
+   ],
+   "tris": 292,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Sign15.SM_Sign15",
+   "name": "SM_Sign15",
+   "size": [
+    168.0,
+    15.0,
+    112.0
+   ],
+   "tris": 424,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Sign16.SM_Sign16",
+   "name": "SM_Sign16",
+   "size": [
+    168.0,
+    15.0,
+    112.0
+   ],
+   "tris": 424,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Sign17.SM_Sign17",
+   "name": "SM_Sign17",
+   "size": [
+    168.0,
+    15.0,
+    112.0
+   ],
+   "tris": 424,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Sign18.SM_Sign18",
+   "name": "SM_Sign18",
+   "size": [
+    168.0,
+    15.0,
+    112.0
+   ],
+   "tris": 424,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Sign19.SM_Sign19",
+   "name": "SM_Sign19",
+   "size": [
+    168.0,
+    15.0,
+    112.0
+   ],
+   "tris": 424,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Sign20.SM_Sign20",
+   "name": "SM_Sign20",
+   "size": [
+    168.0,
+    15.0,
+    112.0
+   ],
+   "tris": 424,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Sign21.SM_Sign21",
+   "name": "SM_Sign21",
+   "size": [
+    168.0,
+    15.0,
+    112.0
+   ],
+   "tris": 424,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Sign22.SM_Sign22",
+   "name": "SM_Sign22",
+   "size": [
+    168.0,
+    15.0,
+    112.0
+   ],
+   "tris": 424,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Sign23.SM_Sign23",
+   "name": "SM_Sign23",
+   "size": [
+    168.0,
+    15.0,
+    112.0
+   ],
+   "tris": 424,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Sign24.SM_Sign24",
+   "name": "SM_Sign24",
+   "size": [
+    168.0,
+    15.0,
+    112.0
+   ],
+   "tris": 424,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Sign25.SM_Sign25",
+   "name": "SM_Sign25",
+   "size": [
+    168.0,
+    15.0,
+    112.0
+   ],
+   "tris": 424,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Sign26.SM_Sign26",
+   "name": "SM_Sign26",
+   "size": [
+    168.0,
+    15.0,
+    112.0
+   ],
+   "tris": 424,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Sign27.SM_Sign27",
+   "name": "SM_Sign27",
+   "size": [
+    67.0,
+    15.0,
+    112.0
+   ],
+   "tris": 416,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Sign28.SM_Sign28",
+   "name": "SM_Sign28",
+   "size": [
+    67.0,
+    15.0,
+    112.0
+   ],
+   "tris": 416,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Sign29.SM_Sign29",
+   "name": "SM_Sign29",
+   "size": [
+    67.0,
+    15.0,
+    112.0
+   ],
+   "tris": 416,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Sign30.SM_Sign30",
+   "name": "SM_Sign30",
+   "size": [
+    67.0,
+    15.0,
+    112.0
+   ],
+   "tris": 416,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Sign31.SM_Sign31",
+   "name": "SM_Sign31",
+   "size": [
+    67.0,
+    15.0,
+    112.0
+   ],
+   "tris": 416,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Sign32.SM_Sign32",
+   "name": "SM_Sign32",
+   "size": [
+    67.0,
+    15.0,
+    112.0
+   ],
+   "tris": 416,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_SignWetFloor01.SM_SignWetFloor01",
+   "name": "SM_SignWetFloor01",
+   "size": [
+    60.0,
+    8.0,
+    107.0
+   ],
+   "tris": 472,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_SignWetFloor02.SM_SignWetFloor02",
+   "name": "SM_SignWetFloor02",
+   "size": [
+    60.0,
+    60.0,
+    104.0
+   ],
+   "tris": 472,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Sink_01.SM_Sink_01",
+   "name": "SM_Sink_01",
+   "size": [
+    150.0,
+    100.0,
+    106.0
+   ],
+   "tris": 2566,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_SoapDish_01.SM_SoapDish_01",
+   "name": "SM_SoapDish_01",
+   "size": [
+    44.0,
+    21.0,
+    5.0
+   ],
+   "tris": 172,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Stair_01.SM_Stair_01",
+   "name": "SM_Stair_01",
+   "size": [
+    526.0,
+    212.0,
+    455.0
+   ],
+   "tris": 6244,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Stair_02.SM_Stair_02",
+   "name": "SM_Stair_02",
+   "size": [
+    212.0,
+    424.0,
+    150.0
+   ],
+   "tris": 8821,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Stair_03.SM_Stair_03",
+   "name": "SM_Stair_03",
+   "size": [
+    212.0,
+    213.0,
+    150.0
+   ],
+   "tris": 4637,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Stair_04.SM_Stair_04",
+   "name": "SM_Stair_04",
+   "size": [
+    325.0,
+    212.0,
+    333.0
+   ],
+   "tris": 4468,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Stair_05.SM_Stair_05",
+   "name": "SM_Stair_05",
+   "size": [
+    748.0,
+    425.0,
+    676.0
+   ],
+   "tris": 24170,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Stair_Painted_03.SM_Stair_Painted_03",
+   "name": "SM_Stair_Painted_03",
+   "size": [
+    526.0,
+    212.0,
+    455.0
+   ],
+   "tris": 6244,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Stair_Painted_04.SM_Stair_Painted_04",
+   "name": "SM_Stair_Painted_04",
+   "size": [
+    212.0,
+    424.0,
+    150.0
+   ],
+   "tris": 8821,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Storage01.SM_Storage01",
+   "name": "SM_Storage01",
+   "size": [
+    1125.0,
+    414.0,
+    765.0
+   ],
+   "tris": 70577,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Storage02.SM_Storage02",
+   "name": "SM_Storage02",
+   "size": [
+    1266.0,
+    749.0,
+    450.0
+   ],
+   "tris": 80558,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_StorageShelvesBottom01.SM_StorageShelvesBottom01",
+   "name": "SM_StorageShelvesBottom01",
+   "size": [
+    300.0,
+    160.0,
+    200.0
+   ],
+   "tris": 2124,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_StorageShelvesBottom02.SM_StorageShelvesBottom02",
+   "name": "SM_StorageShelvesBottom02",
+   "size": [
+    300.0,
+    160.0,
+    200.0
+   ],
+   "tris": 2048,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_StorageShelvesBottom03.SM_StorageShelvesBottom03",
+   "name": "SM_StorageShelvesBottom03",
+   "size": [
+    300.0,
+    160.0,
+    200.0
+   ],
+   "tris": 1808,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_StorageShelvesBottom04.SM_StorageShelvesBottom04",
+   "name": "SM_StorageShelvesBottom04",
+   "size": [
+    300.0,
+    160.0,
+    200.0
+   ],
+   "tris": 3064,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_StorageShelvesMiddle01.SM_StorageShelvesMiddle01",
+   "name": "SM_StorageShelvesMiddle01",
+   "size": [
+    300.0,
+    152.0,
+    210.0
+   ],
+   "tris": 1828,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_StorageShelvesMiddle02.SM_StorageShelvesMiddle02",
+   "name": "SM_StorageShelvesMiddle02",
+   "size": [
+    300.0,
+    152.0,
+    210.0
+   ],
+   "tris": 1736,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_StorageShelvesMiddle03.SM_StorageShelvesMiddle03",
+   "name": "SM_StorageShelvesMiddle03",
+   "size": [
+    300.0,
+    152.0,
+    210.0
+   ],
+   "tris": 1496,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_StorageShelvesMiddle04.SM_StorageShelvesMiddle04",
+   "name": "SM_StorageShelvesMiddle04",
+   "size": [
+    300.0,
+    152.0,
+    210.0
+   ],
+   "tris": 2768,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_StorageShelvesTop01.SM_StorageShelvesTop01",
+   "name": "SM_StorageShelvesTop01",
+   "size": [
+    300.0,
+    152.0,
+    230.0
+   ],
+   "tris": 1828,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_StorageShelvesTop02.SM_StorageShelvesTop02",
+   "name": "SM_StorageShelvesTop02",
+   "size": [
+    300.0,
+    152.0,
+    230.0
+   ],
+   "tris": 1736,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_StorageShelvesTop03.SM_StorageShelvesTop03",
+   "name": "SM_StorageShelvesTop03",
+   "size": [
+    300.0,
+    152.0,
+    230.0
+   ],
+   "tris": 1496,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_StorageShelvesTop04.SM_StorageShelvesTop04",
+   "name": "SM_StorageShelvesTop04",
+   "size": [
+    300.0,
+    152.0,
+    230.0
+   ],
+   "tris": 2768,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_StorageShelves_group01.SM_StorageShelves_group01",
+   "name": "SM_StorageShelves_group01",
+   "size": [
+    300.0,
+    172.0,
+    620.0
+   ],
+   "tris": 6180,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_StorageShelves_group02.SM_StorageShelves_group02",
+   "name": "SM_StorageShelves_group02",
+   "size": [
+    301.0,
+    172.0,
+    620.0
+   ],
+   "tris": 8708,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_StorageShelves_group03.SM_StorageShelves_group03",
+   "name": "SM_StorageShelves_group03",
+   "size": [
+    300.0,
+    172.0,
+    620.0
+   ],
+   "tris": 9260,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_StorageShelves_group04.SM_StorageShelves_group04",
+   "name": "SM_StorageShelves_group04",
+   "size": [
+    300.0,
+    172.0,
+    620.0
+   ],
+   "tris": 6296,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_StorageShelves_group05.SM_StorageShelves_group05",
+   "name": "SM_StorageShelves_group05",
+   "size": [
+    300.0,
+    172.0,
+    620.0
+   ],
+   "tris": 8852,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_StorageShelves_group06.SM_StorageShelves_group06",
+   "name": "SM_StorageShelves_group06",
+   "size": [
+    300.0,
+    172.0,
+    420.0
+   ],
+   "tris": 5624,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_StorageShelves_group07.SM_StorageShelves_group07",
+   "name": "SM_StorageShelves_group07",
+   "size": [
+    300.0,
+    172.0,
+    420.0
+   ],
+   "tris": 5624,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_StyleDecal01.SM_StyleDecal01",
+   "name": "SM_StyleDecal01",
+   "size": [
+    2149.0,
+    1646.0,
+    500.0
+   ],
+   "tris": 19,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_StyleDecal03.SM_StyleDecal03",
+   "name": "SM_StyleDecal03",
+   "size": [
+    1079.0,
+    659.0,
+    497.0
+   ],
+   "tris": 20,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_TarpaulinCover01.SM_TarpaulinCover01",
+   "name": "SM_TarpaulinCover01",
+   "size": [
+    608.0,
+    505.0,
+    269.0
+   ],
+   "tris": 2197,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_TarpaulinCover02.SM_TarpaulinCover02",
+   "name": "SM_TarpaulinCover02",
+   "size": [
+    540.0,
+    422.0,
+    453.0
+   ],
+   "tris": 3291,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Tire_01.SM_Tire_01",
+   "name": "SM_Tire_01",
+   "size": [
+    17.0,
+    53.0,
+    53.0
+   ],
+   "tris": 10710,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_TrainEngine01.SM_TrainEngine01",
+   "name": "SM_TrainEngine01",
+   "size": [
+    338.0,
+    218.0,
+    254.0
+   ],
+   "tris": 23366,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_TrainEngineFan01.SM_TrainEngineFan01",
+   "name": "SM_TrainEngineFan01",
+   "size": [
+    19.0,
+    28.0,
+    28.0
+   ],
+   "tris": 192,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_TrainFan01.SM_TrainFan01",
+   "name": "SM_TrainFan01",
+   "size": [
+    121.0,
+    121.0,
+    9.0
+   ],
+   "tris": 448,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_TrainStopper01.SM_TrainStopper01",
+   "name": "SM_TrainStopper01",
+   "size": [
+    179.0,
+    253.0,
+    118.0
+   ],
+   "tris": 3797,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/Truck/SM_TruckDetails.SM_TruckDetails",
+   "name": "SM_TruckDetails",
+   "size": [
+    26.0,
+    76.0,
+    28.0
+   ],
+   "tris": 1540,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/Truck/SM_TruckTubes.SM_TruckTubes",
+   "name": "SM_TruckTubes",
+   "size": [
+    121.0,
+    131.0,
+    95.0
+   ],
+   "tris": 14493,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/Truck/SM_Truck_Axis02.SM_Truck_Axis02",
+   "name": "SM_Truck_Axis02",
+   "size": [
+    88.0,
+    180.0,
+    50.0
+   ],
+   "tris": 4942,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/Truck/SM_Truck_Axis03.SM_Truck_Axis03",
+   "name": "SM_Truck_Axis03",
+   "size": [
+    55.0,
+    180.0,
+    50.0
+   ],
+   "tris": 4696,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/Truck/SM_Truck_cabin_01.SM_Truck_cabin_01",
+   "name": "SM_Truck_cabin_01",
+   "size": [
+    246.0,
+    200.0,
+    209.0
+   ],
+   "tris": 9932,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/Truck/SM_Truck_tank_01.SM_Truck_tank_01",
+   "name": "SM_Truck_tank_01",
+   "size": [
+    415.0,
+    208.0,
+    77.0
+   ],
+   "tris": 6104,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Tube01.SM_Tube01",
+   "name": "SM_Tube01",
+   "size": [
+    21.0,
+    135.0,
+    85.0
+   ],
+   "tris": 768,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_VendingMachine01.SM_VendingMachine01",
+   "name": "SM_VendingMachine01",
+   "size": [
+    130.0,
+    101.0,
+    220.0
+   ],
+   "tris": 18865,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_VendingMachine02.SM_VendingMachine02",
+   "name": "SM_VendingMachine02",
+   "size": [
+    130.0,
+    101.0,
+    220.0
+   ],
+   "tris": 19720,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_VideoCamera_01.SM_VideoCamera_01",
+   "name": "SM_VideoCamera_01",
+   "size": [
+    76.0,
+    69.0,
+    162.0
+   ],
+   "tris": 10872,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_VideoCamera_02.SM_VideoCamera_02",
+   "name": "SM_VideoCamera_02",
+   "size": [
+    15.0,
+    45.0,
+    22.0
+   ],
+   "tris": 7852,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_WallPart_03.SM_WallPart_03",
+   "name": "SM_WallPart_03",
+   "size": [
+    57.0,
+    57.0,
+    7.0
+   ],
+   "tris": 72,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_WaterBottle01.SM_WaterBottle01",
+   "name": "SM_WaterBottle01",
+   "size": [
+    26.0,
+    26.0,
+    48.0
+   ],
+   "tris": 1908,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_WaterContainer01.SM_WaterContainer01",
+   "name": "SM_WaterContainer01",
+   "size": [
+    120.0,
+    160.0,
+    120.0
+   ],
+   "tris": 216,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_WaterContainer02.SM_WaterContainer02",
+   "name": "SM_WaterContainer02",
+   "size": [
+    120.0,
+    160.0,
+    132.0
+   ],
+   "tris": 5576,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_WaterCooler01.SM_WaterCooler01",
+   "name": "SM_WaterCooler01",
+   "size": [
+    31.0,
+    33.0,
+    99.0
+   ],
+   "tris": 2433,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_WaterCooler_Bottle01.SM_WaterCooler_Bottle01",
+   "name": "SM_WaterCooler_Bottle01",
+   "size": [
+    31.0,
+    33.0,
+    136.0
+   ],
+   "tris": 3765,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_WaterTap_01.SM_WaterTap_01",
+   "name": "SM_WaterTap_01",
+   "size": [
+    16.0,
+    7.0,
+    20.0
+   ],
+   "tris": 391,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Wheel.SM_Wheel",
+   "name": "SM_Wheel",
+   "size": [
+    118.0,
+    37.0,
+    118.0
+   ],
+   "tris": 1440,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_WheelDisk_01.SM_WheelDisk_01",
+   "name": "SM_WheelDisk_01",
+   "size": [
+    18.0,
+    31.0,
+    31.0
+   ],
+   "tris": 5240,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Wheel_01.SM_Wheel_01",
+   "name": "SM_Wheel_01",
+   "size": [
+    18.0,
+    53.0,
+    53.0
+   ],
+   "tris": 15950,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_Wheel_full.SM_Wheel_full",
+   "name": "SM_Wheel_full",
+   "size": [
+    118.0,
+    37.0,
+    118.0
+   ],
+   "tris": 4180,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_WhiteBoard.SM_WhiteBoard",
+   "name": "SM_WhiteBoard",
+   "size": [
+    10.0,
+    160.0,
+    121.0
+   ],
+   "tris": 440,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_WireSetWall01.SM_WireSetWall01",
+   "name": "SM_WireSetWall01",
+   "size": [
+    1553.0,
+    1021.0,
+    941.0
+   ],
+   "tris": 3552,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_WorkingClothes01.SM_WorkingClothes01",
+   "name": "SM_WorkingClothes01",
+   "size": [
+    28.0,
+    36.0,
+    152.0
+   ],
+   "tris": 1344,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_WorkingClothes02.SM_WorkingClothes02",
+   "name": "SM_WorkingClothes02",
+   "size": [
+    28.0,
+    31.0,
+    142.0
+   ],
+   "tris": 1361,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_YellowButton.SM_YellowButton",
+   "name": "SM_YellowButton",
+   "size": [
+    2.0,
+    2.0,
+    1.0
+   ],
+   "tris": 288,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_ax_01.SM_ax_01",
+   "name": "SM_ax_01",
+   "size": [
+    6.0,
+    33.0,
+    82.0
+   ],
+   "tris": 290,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_bin_A_01.SM_bin_A_01",
+   "name": "SM_bin_A_01",
+   "size": [
+    67.0,
+    67.0,
+    119.0
+   ],
+   "tris": 2312,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_bin_A_02.SM_bin_A_02",
+   "name": "SM_bin_A_02",
+   "size": [
+    67.0,
+    67.0,
+    115.0
+   ],
+   "tris": 1752,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_bin_A_03.SM_bin_A_03",
+   "name": "SM_bin_A_03",
+   "size": [
+    67.0,
+    67.0,
+    10.0
+   ],
+   "tris": 560,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_bin_B_01.SM_bin_B_01",
+   "name": "SM_bin_B_01",
+   "size": [
+    46.0,
+    49.0,
+    67.0
+   ],
+   "tris": 864,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_bin_B_02.SM_bin_B_02",
+   "name": "SM_bin_B_02",
+   "size": [
+    45.0,
+    46.0,
+    64.0
+   ],
+   "tris": 452,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_bin_B_03.SM_bin_B_03",
+   "name": "SM_bin_B_03",
+   "size": [
+    46.0,
+    49.0,
+    6.0
+   ],
+   "tris": 412,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_bin_C_01.SM_bin_C_01",
+   "name": "SM_bin_C_01",
+   "size": [
+    40.0,
+    32.0,
+    64.0
+   ],
+   "tris": 776,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_bin_C_02.SM_bin_C_02",
+   "name": "SM_bin_C_02",
+   "size": [
+    40.0,
+    32.0,
+    64.0
+   ],
+   "tris": 636,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_bin_C_03.SM_bin_C_03",
+   "name": "SM_bin_C_03",
+   "size": [
+    35.0,
+    29.0,
+    5.0
+   ],
+   "tris": 140,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_bin_C_04.SM_bin_C_04",
+   "name": "SM_bin_C_04",
+   "size": [
+    40.0,
+    32.0,
+    70.0
+   ],
+   "tris": 816,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_box_01.SM_box_01",
+   "name": "SM_box_01",
+   "size": [
+    48.0,
+    160.0,
+    184.0
+   ],
+   "tris": 1228,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_box_02.SM_box_02",
+   "name": "SM_box_02",
+   "size": [
+    32.0,
+    50.0,
+    184.0
+   ],
+   "tris": 686,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_box_03.SM_box_03",
+   "name": "SM_box_03",
+   "size": [
+    32.0,
+    80.0,
+    80.0
+   ],
+   "tris": 288,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_box_04.SM_box_04",
+   "name": "SM_box_04",
+   "size": [
+    48.0,
+    160.0,
+    184.0
+   ],
+   "tris": 740,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_box_05.SM_box_05",
+   "name": "SM_box_05",
+   "size": [
+    4.0,
+    74.0,
+    74.0
+   ],
+   "tris": 244,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_box_06.SM_box_06",
+   "name": "SM_box_06",
+   "size": [
+    4.0,
+    74.0,
+    74.0
+   ],
+   "tris": 244,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_conditioning01_01.SM_conditioning01_01",
+   "name": "SM_conditioning01_01",
+   "size": [
+    396.0,
+    398.0,
+    690.0
+   ],
+   "tris": 6552,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_conditioning01_02.SM_conditioning01_02",
+   "name": "SM_conditioning01_02",
+   "size": [
+    747.0,
+    303.0,
+    1223.0
+   ],
+   "tris": 1964,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_conditioning01_03.SM_conditioning01_03",
+   "name": "SM_conditioning01_03",
+   "size": [
+    826.0,
+    768.0,
+    685.0
+   ],
+   "tris": 8556,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_conditioning01_04.SM_conditioning01_04",
+   "name": "SM_conditioning01_04",
+   "size": [
+    828.0,
+    666.0,
+    536.0
+   ],
+   "tris": 5684,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_conditioning01_05.SM_conditioning01_05",
+   "name": "SM_conditioning01_05",
+   "size": [
+    889.0,
+    729.0,
+    366.0
+   ],
+   "tris": 8334,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_firebucket_01.SM_firebucket_01",
+   "name": "SM_firebucket_01",
+   "size": [
+    31.0,
+    31.0,
+    61.0
+   ],
+   "tris": 1068,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_fireextinguisher_01.SM_fireextinguisher_01",
+   "name": "SM_fireextinguisher_01",
+   "size": [
+    17.0,
+    26.0,
+    51.0
+   ],
+   "tris": 2072,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_fireextinguisher_02.SM_fireextinguisher_02",
+   "name": "SM_fireextinguisher_02",
+   "size": [
+    17.0,
+    26.0,
+    51.0
+   ],
+   "tris": 1836,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_firehock_01.SM_firehock_01",
+   "name": "SM_firehock_01",
+   "size": [
+    22.0,
+    2.0,
+    162.0
+   ],
+   "tris": 360,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_firehose_01.SM_firehose_01",
+   "name": "SM_firehose_01",
+   "size": [
+    12.0,
+    75.0,
+    60.0
+   ],
+   "tris": 2104,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_firepipe_01.SM_firepipe_01",
+   "name": "SM_firepipe_01",
+   "size": [
+    20.0,
+    37.0,
+    53.0
+   ],
+   "tris": 1238,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_firepipe_02.SM_firepipe_02",
+   "name": "SM_firepipe_02",
+   "size": [
+    20.0,
+    28.0,
+    38.0
+   ],
+   "tris": 1632,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_firesignal_01.SM_firesignal_01",
+   "name": "SM_firesignal_01",
+   "size": [
+    18.0,
+    16.0,
+    4.0
+   ],
+   "tris": 56,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_firesignal_02.SM_firesignal_02",
+   "name": "SM_firesignal_02",
+   "size": [
+    15.0,
+    15.0,
+    7.0
+   ],
+   "tris": 156,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/Truck/SM_hood_01.SM_hood_01",
+   "name": "SM_hood_01",
+   "size": [
+    151.0,
+    205.0,
+    133.0
+   ],
+   "tris": 9620,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/Truck/SM_hood_02.SM_hood_02",
+   "name": "SM_hood_02",
+   "size": [
+    62.0,
+    202.0,
+    109.0
+   ],
+   "tris": 4958,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_industrialrobot01_02.SM_industrialrobot01_02",
+   "name": "SM_industrialrobot01_02",
+   "size": [
+    401.0,
+    210.0,
+    422.0
+   ],
+   "tris": 17430,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_industrialrobot01_03.SM_industrialrobot01_03",
+   "name": "SM_industrialrobot01_03",
+   "size": [
+    343.0,
+    210.0,
+    381.0
+   ],
+   "tris": 14870,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_loader_01.SM_loader_01",
+   "name": "SM_loader_01",
+   "size": [
+    107.0,
+    401.0,
+    347.0
+   ],
+   "tris": 32848,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_pipe_conditioning01_02.SM_pipe_conditioning01_02",
+   "name": "SM_pipe_conditioning01_02",
+   "size": [
+    93.0,
+    25.0,
+    93.0
+   ],
+   "tris": 496,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_pipe_conditioning01_03.SM_pipe_conditioning01_03",
+   "name": "SM_pipe_conditioning01_03",
+   "size": [
+    90.0,
+    14.0,
+    90.0
+   ],
+   "tris": 284,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_pipe_conditioning01_04.SM_pipe_conditioning01_04",
+   "name": "SM_pipe_conditioning01_04",
+   "size": [
+    91.0,
+    59.0,
+    91.0
+   ],
+   "tris": 432,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_pipe_conditioning01_05.SM_pipe_conditioning01_05",
+   "name": "SM_pipe_conditioning01_05",
+   "size": [
+    107.0,
+    5.0,
+    107.0
+   ],
+   "tris": 12,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_pipe_conditioning01_06.SM_pipe_conditioning01_06",
+   "name": "SM_pipe_conditioning01_06",
+   "size": [
+    240.0,
+    240.0,
+    80.0
+   ],
+   "tris": 1368,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_standForPens.SM_standForPens",
+   "name": "SM_standForPens",
+   "size": [
+    7.0,
+    7.0,
+    9.0
+   ],
+   "tris": 292,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Meshes/SM_AssemblyLineLampRamp.SM_AssemblyLineLampRamp",
+   "name": "SM_AssemblyLineLampRamp",
+   "size": [
+    121.0,
+    788.0,
+    588.0
+   ],
+   "tris": 42012,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_Background2_Bridge.SM_Background2_Bridge",
+   "name": "SM_Background2_Bridge",
+   "size": [
+    2839.0,
+    319.0,
+    496.0
+   ],
+   "tris": 388,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_Background2_Pipe02.SM_Background2_Pipe02",
+   "name": "SM_Background2_Pipe02",
+   "size": [
+    1471.0,
+    280.0,
+    2966.0
+   ],
+   "tris": 216,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_Background2_Pipe03.SM_Background2_Pipe03",
+   "name": "SM_Background2_Pipe03",
+   "size": [
+    1528.0,
+    280.0,
+    2325.0
+   ],
+   "tris": 408,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_BumperCover01.SM_BumperCover01",
+   "name": "SM_BumperCover01",
+   "size": [
+    43.0,
+    418.0,
+    461.0
+   ],
+   "tris": 240,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_CableBox_03.SM_CableBox_03",
+   "name": "SM_CableBox_03",
+   "size": [
+    81.0,
+    520.0,
+    181.0
+   ],
+   "tris": 541,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_CableSet_03.SM_CableSet_03",
+   "name": "SM_CableSet_03",
+   "size": [
+    174.0,
+    17.0,
+    164.0
+   ],
+   "tris": 4304,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_Cables04_01.SM_Cables04_01",
+   "name": "SM_Cables04_01",
+   "size": [
+    47.0,
+    402.0,
+    184.0
+   ],
+   "tris": 1768,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_Cables08.SM_Cables08",
+   "name": "SM_Cables08",
+   "size": [
+    1000.0,
+    32.0,
+    200.0
+   ],
+   "tris": 2720,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_ConcreteWall.SM_ConcreteWall",
+   "name": "SM_ConcreteWall",
+   "size": [
+    403.0,
+    44.0,
+    200.0
+   ],
+   "tris": 630,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_Curtain01.SM_Curtain01",
+   "name": "SM_Curtain01",
+   "size": [
+    367.0,
+    61.0,
+    209.0
+   ],
+   "tris": 1044,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_Curtain02.SM_Curtain02",
+   "name": "SM_Curtain02",
+   "size": [
+    367.0,
+    61.0,
+    209.0
+   ],
+   "tris": 1412,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_Group04.SM_ElectricalSupply_Group04",
+   "name": "SM_ElectricalSupply_Group04",
+   "size": [
+    874.0,
+    7.0,
+    449.0
+   ],
+   "tris": 2386,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_Group05.SM_ElectricalSupply_Group05",
+   "name": "SM_ElectricalSupply_Group05",
+   "size": [
+    824.0,
+    7.0,
+    424.0
+   ],
+   "tris": 1702,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_Group06.SM_ElectricalSupply_Group06",
+   "name": "SM_ElectricalSupply_Group06",
+   "size": [
+    226.0,
+    24.0,
+    243.0
+   ],
+   "tris": 3578,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_ElectricalSupply_Group07.SM_ElectricalSupply_Group07",
+   "name": "SM_ElectricalSupply_Group07",
+   "size": [
+    169.0,
+    21.0,
+    284.0
+   ],
+   "tris": 3658,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_FireEquipment_01.SM_FireEquipment_01",
+   "name": "SM_FireEquipment_01",
+   "size": [
+    31.0,
+    181.0,
+    165.0
+   ],
+   "tris": 7550,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_HeavyArch03.SM_HeavyArch03",
+   "name": "SM_HeavyArch03",
+   "size": [
+    382.0,
+    76.0,
+    580.0
+   ],
+   "tris": 1494,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_LabelsMess05.SM_LabelsMess05",
+   "name": "SM_LabelsMess05",
+   "size": [
+    265.0,
+    8.0,
+    177.0
+   ],
+   "tris": 2088,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_LabelsMess06.SM_LabelsMess06",
+   "name": "SM_LabelsMess06",
+   "size": [
+    347.0,
+    6.0,
+    238.0
+   ],
+   "tris": 3972,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_LampArch01.SM_LampArch01",
+   "name": "SM_LampArch01",
+   "size": [
+    121.0,
+    788.0,
+    588.0
+   ],
+   "tris": 42012,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_LargeInnerWall.SM_LargeInnerWall",
+   "name": "SM_LargeInnerWall",
+   "size": [
+    1208.0,
+    49.0,
+    2821.0
+   ],
+   "tris": 13560,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_LargeWindow01.SM_LargeWindow01",
+   "name": "SM_LargeWindow01",
+   "size": [
+    400.0,
+    4.0,
+    400.0
+   ],
+   "tris": 358,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_LargeWindowFramed.SM_LargeWindowFramed",
+   "name": "SM_LargeWindowFramed",
+   "size": [
+    831.0,
+    30.0,
+    855.0
+   ],
+   "tris": 2404,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_LargeWindowFramed02.SM_LargeWindowFramed02",
+   "name": "SM_LargeWindowFramed02",
+   "size": [
+    42.0,
+    812.0,
+    844.0
+   ],
+   "tris": 2820,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalBeam02.SM_MetalBeam02",
+   "name": "SM_MetalBeam02",
+   "size": [
+    1000.0,
+    23.0,
+    1000.0
+   ],
+   "tris": 556,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalBeam08.SM_MetalBeam08",
+   "name": "SM_MetalBeam08",
+   "size": [
+    1584.0,
+    162.0,
+    2344.0
+   ],
+   "tris": 4282,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalBeam14.SM_MetalBeam14",
+   "name": "SM_MetalBeam14",
+   "size": [
+    1442.0,
+    230.0,
+    1675.0
+   ],
+   "tris": 3682,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalFrame_01.SM_MetalFrame_01",
+   "name": "SM_MetalFrame_01",
+   "size": [
+    11.0,
+    225.0,
+    560.0
+   ],
+   "tris": 1792,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalWallPart_02.SM_MetalWallPart_02",
+   "name": "SM_MetalWallPart_02",
+   "size": [
+    21.0,
+    400.0,
+    400.0
+   ],
+   "tris": 508,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalWallPart_03.SM_MetalWallPart_03",
+   "name": "SM_MetalWallPart_03",
+   "size": [
+    400.0,
+    26.0,
+    600.0
+   ],
+   "tris": 444,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalWallPart_04.SM_MetalWallPart_04",
+   "name": "SM_MetalWallPart_04",
+   "size": [
+    400.0,
+    26.0,
+    600.0
+   ],
+   "tris": 528,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalWallPart_05.SM_MetalWallPart_05",
+   "name": "SM_MetalWallPart_05",
+   "size": [
+    21.0,
+    400.0,
+    400.0
+   ],
+   "tris": 508,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalWallPart_07.SM_MetalWallPart_07",
+   "name": "SM_MetalWallPart_07",
+   "size": [
+    48.0,
+    408.0,
+    900.0
+   ],
+   "tris": 1616,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalWallPart_08.SM_MetalWallPart_08",
+   "name": "SM_MetalWallPart_08",
+   "size": [
+    56.0,
+    408.0,
+    1320.0
+   ],
+   "tris": 2556,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_MetalWall_02.SM_MetalWall_02",
+   "name": "SM_MetalWall_02",
+   "size": [
+    400.0,
+    38.0,
+    600.0
+   ],
+   "tris": 660,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_Mirror02.SM_Mirror02",
+   "name": "SM_Mirror02",
+   "size": [
+    599.0,
+    22.0,
+    156.0
+   ],
+   "tris": 306,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_Mirror_01.SM_Mirror_01",
+   "name": "SM_Mirror_01",
+   "size": [
+    600.0,
+    2.0,
+    156.0
+   ],
+   "tris": 44,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_OfficeWoodenWall01.SM_OfficeWoodenWall01",
+   "name": "SM_OfficeWoodenWall01",
+   "size": [
+    150.0,
+    5.0,
+    300.0
+   ],
+   "tris": 12,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_PaintBoxWall_01.SM_PaintBoxWall_01",
+   "name": "SM_PaintBoxWall_01",
+   "size": [
+    200.0,
+    12.0,
+    300.0
+   ],
+   "tris": 92,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_PaintBoxWall_04.SM_PaintBoxWall_04",
+   "name": "SM_PaintBoxWall_04",
+   "size": [
+    205.0,
+    19.0,
+    282.0
+   ],
+   "tris": 20665,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_PaintWall_02.SM_PaintWall_02",
+   "name": "SM_PaintWall_02",
+   "size": [
+    200.0,
+    12.0,
+    300.0
+   ],
+   "tris": 1824,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_Partition_01.SM_Partition_01",
+   "name": "SM_Partition_01",
+   "size": [
+    150.0,
+    8.0,
+    322.0
+   ],
+   "tris": 488,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_Pipes_round_section1.SM_Pipes_round_section1",
+   "name": "SM_Pipes_round_section1",
+   "size": [
+    1219.0,
+    189.0,
+    820.0
+   ],
+   "tris": 27472,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_ShowerRoomWall_01.SM_ShowerRoomWall_01",
+   "name": "SM_ShowerRoomWall_01",
+   "size": [
+    20.0,
+    500.0,
+    500.0
+   ],
+   "tris": 12,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_ShowerRoomWall_02.SM_ShowerRoomWall_02",
+   "name": "SM_ShowerRoomWall_02",
+   "size": [
+    20.0,
+    500.0,
+    500.0
+   ],
+   "tris": 12,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_ShowerRoomWall_03.SM_ShowerRoomWall_03",
+   "name": "SM_ShowerRoomWall_03",
+   "size": [
+    20.0,
+    250.0,
+    500.0
+   ],
+   "tris": 12,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_ShowerRoomWall_04.SM_ShowerRoomWall_04",
+   "name": "SM_ShowerRoomWall_04",
+   "size": [
+    20.0,
+    500.0,
+    500.0
+   ],
+   "tris": 20,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_ShowerRoomWall_06.SM_ShowerRoomWall_06",
+   "name": "SM_ShowerRoomWall_06",
+   "size": [
+    20.0,
+    330.0,
+    500.0
+   ],
+   "tris": 20,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_ShowerRoomWall_07.SM_ShowerRoomWall_07",
+   "name": "SM_ShowerRoomWall_07",
+   "size": [
+    20.0,
+    250.0,
+    196.0
+   ],
+   "tris": 20,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_ShowerRoomWall_08.SM_ShowerRoomWall_08",
+   "name": "SM_ShowerRoomWall_08",
+   "size": [
+    20.0,
+    249.0,
+    196.0
+   ],
+   "tris": 20,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_ShowerRoomWall_5.SM_ShowerRoomWall_5",
+   "name": "SM_ShowerRoomWall_5",
+   "size": [
+    20.0,
+    500.0,
+    500.0
+   ],
+   "tris": 20,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_ShowerWalll01.SM_ShowerWalll01",
+   "name": "SM_ShowerWalll01",
+   "size": [
+    500.0,
+    20.0,
+    500.0
+   ],
+   "tris": 80,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_StyleDecal02.SM_StyleDecal02",
+   "name": "SM_StyleDecal02",
+   "size": [
+    1755.0,
+    0.0,
+    500.0
+   ],
+   "tris": 9,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_Train01.SM_Train01",
+   "name": "SM_Train01",
+   "size": [
+    2764.0,
+    473.0,
+    556.0
+   ],
+   "tris": 91524,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_WallPart_01.SM_WallPart_01",
+   "name": "SM_WallPart_01",
+   "size": [
+    9.0,
+    386.0,
+    400.0
+   ],
+   "tris": 84,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_WallPart_04.SM_WallPart_04",
+   "name": "SM_WallPart_04",
+   "size": [
+    22.0,
+    200.0,
+    400.0
+   ],
+   "tris": 340,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Meshes/SM_WireSetTop01.SM_WireSetTop01",
+   "name": "SM_WireSetTop01",
+   "size": [
+    1772.0,
+    340.0,
+    505.0
+   ],
+   "tris": 10084,
+   "nanite": "",
+   "role": "wall"
+  }
+ ]
+}

@@ -5,6 +5,7 @@
 #include "Classes/DCCClassPerks.h"
 
 #include "Characters/DCCCharacterBase.h"
+#include "Arcade/DCCSiegeHooks.h"
 #include "Classes/DCCBasicClasses.h"
 #include "Stats/DCCStatsComponent.h"
 #include "Stats/DCCRuleset.h"
@@ -18,6 +19,7 @@
 #include "Progression/DCCAchievementComponent.h"
 #include "UI/DCCEventLogTypes.h"
 #include "NiagaraFunctionLibrary.h"
+#include "NiagaraComponent.h"
 #include "NiagaraSystem.h"
 #include "UObject/ConstructorHelpers.h"
 
@@ -122,6 +124,7 @@ bool UDCCSkillComponent::FindSkill(FName SkillId, FDCCSkillDef& OutSkill) const
 		{
 			return false;
 		}
+		DCCSpellBook::ApplyPresentation(OutSkill);
 		DCCClassPerks::AdjustSkill(Cast<ADCCCharacterBase>(GetOwner()), OutSkill);
 		return true;
 	}
@@ -132,6 +135,8 @@ bool UDCCSkillComponent::FindSkill(FName SkillId, FDCCSkillDef& OutSkill) const
 	{
 		OutSkill.SkillId = SkillId;
 	}
+	// The Fab effect table wins over whatever the row was authored with (the old campfire, sparks and snow).
+	DCCSpellBook::ApplyPresentation(OutSkill);
 	// Class perks change a skill's cost, wait and area for whoever casts it.
 	DCCClassPerks::AdjustSkill(Cast<ADCCCharacterBase>(GetOwner()), OutSkill);
 
@@ -793,6 +798,7 @@ FDCCSkillResult UDCCSkillComponent::ActivateSkillInternal(const FDCCSkillDef& Sk
 						Magnitude = FMath::Max(1, FMath::RoundToInt(Magnitude * (100 + Bonus) / 100.0f));
 					}
 				}
+				Magnitude = DCCSiegeHooks::AdjustSpell(GetOwningCharacter(), Affected, Magnitude);
 				TargetStats->ApplyDamage(Magnitude);
 				if (ADCCCharacterBase* Caster = GetOwningCharacter())
 				{
@@ -1000,6 +1006,10 @@ void UDCCSkillComponent::PlaySkillEffects(const FDCCSkillResult& Result)
 		ADCCSpellFx::Play(World, Caster, Skill, Hit);
 	}
 
+	float CastScale = 1.0f;
+	float ImpactScale = 1.0f;
+	DCCSpellBook::ScalesFor(Result.SkillId, CastScale, ImpactScale);
+
 	if (Caster)
 	{
 		// LoadSynchronous rather than an async request: the effect is wanted on
@@ -1008,10 +1018,11 @@ void UDCCSkillComponent::PlaySkillEffects(const FDCCSkillResult& Result)
 		if (UNiagaraSystem* CastSystem = Skill.CastEffect.LoadSynchronous())
 		{
 			USkeletalMeshComponent* Mesh = Caster->GetMesh();
+			UNiagaraComponent* CastComp = nullptr;
 
 			if (Mesh && !Skill.CastSocketName.IsNone() && Mesh->DoesSocketExist(Skill.CastSocketName))
 			{
-				UNiagaraFunctionLibrary::SpawnSystemAttached(
+				CastComp = UNiagaraFunctionLibrary::SpawnSystemAttached(
 					CastSystem,
 					Mesh,
 					Skill.CastSocketName,
@@ -1028,8 +1039,14 @@ void UDCCSkillComponent::PlaySkillEffects(const FDCCSkillResult& Result)
 					+ Caster->GetActorForwardVector() * 60.0f
 					+ FVector(0.0f, 0.0f, 40.0f);
 
-				UNiagaraFunctionLibrary::SpawnSystemAtLocation(
-					World, CastSystem, Origin, Caster->GetActorRotation());
+				CastComp = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+					World, CastSystem, Origin, Caster->GetActorRotation(), FVector(CastScale), true);
+			}
+			if (CastComp)
+			{
+				CastComp->SetRelativeScale3D(FVector(CastScale));
+				// Auras loop. Cut them off or the glow stays on the crawler.
+				DCCSpellBook::StopAfter(CastComp, 1.4f);
 			}
 		}
 	}
@@ -1046,8 +1063,9 @@ void UDCCSkillComponent::PlaySkillEffects(const FDCCSkillResult& Result)
 			const FVector ImpactLocation =
 				Affected->GetActorLocation() + FVector(0.0f, 0.0f, Skill.ImpactEffectZOffset);
 
-			UNiagaraFunctionLibrary::SpawnSystemAtLocation(
-				World, ImpactSystem, ImpactLocation, FRotator::ZeroRotator);
+			UNiagaraComponent* ImpactComp = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+				World, ImpactSystem, ImpactLocation, FRotator::ZeroRotator, FVector(ImpactScale), true);
+			DCCSpellBook::StopAfter(ImpactComp, 1.8f);
 		}
 	}
 }

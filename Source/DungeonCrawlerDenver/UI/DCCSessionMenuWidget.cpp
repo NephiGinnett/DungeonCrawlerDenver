@@ -9,6 +9,7 @@
 #include "Arcade/DCCWalletComponent.h"
 #include "Session/DCCProfile.h"
 #include "Session/DCCSession.h"
+#include "Session/DCCOnline.h"
 #include "Engine/World.h"
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/PlayerController.h"
@@ -206,8 +207,13 @@ TSharedRef<SWidget> UDCCSessionMenuWidget::RebuildWidget()
 						+ SVerticalBox::Slot().AutoHeight().Padding(0, 2, 0, 14)
 						[
 							SNew(STextBlock)
-							.Text(NSLOCTEXT("DCC", "PartyInviteNote",
-								"Send it to your friends. They copy your message and click JOIN A PARTY. Not on your Wi-Fi? Everyone installs Tailscale and you send the Tailscale invite. (Or forward UDP 7777 on your router.)"))
+							.Text_Lambda([]()
+							{
+								// Signed in to Epic (Session/DCCOnline): friends just pick the party. Not: the old invite route.
+								return DCCOnline::InParty()
+									? NSLOCTEXT("DCC", "PartyInviteNoteOnline", "Your party is listed. Friends click JOIN A PARTY and pick it, from anywhere. The invite below is a backup.")
+									: NSLOCTEXT("DCC", "PartyInviteNote", "Send it to your friends. They copy your message and click JOIN A PARTY, then USE A COPIED INVITE. Not on your Wi-Fi? Everyone installs Tailscale and you send the Tailscale invite.");
+							})
 							.Font(Font(10))
 							.ColorAndOpacity(Dim)
 							.AutoWrapText(true)

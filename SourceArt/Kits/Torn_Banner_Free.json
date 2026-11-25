@@ -1,0 +1,95 @@
+{
+ "pack": "Torn_Banner_Free",
+ "maps": [
+  {
+   "path": "/Game/Torn_Banner_Free/Scenes/Torn_Banner_Free_demoscene.Torn_Banner_Free_demoscene",
+   "partitioned": false
+  }
+ ],
+ "meshes": [
+  {
+   "path": "/Game/Torn_Banner_Free/Models/SM_Banner_06.SM_Banner_06",
+   "name": "SM_Banner_06",
+   "size": [
+    363.0,
+    75.0,
+    275.0
+   ],
+   "tris": 2963,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Torn_Banner_Free/Models/SM_Torn_Banner_set_1_1.SM_Torn_Banner_set_1_1",
+   "name": "SM_Torn_Banner_set_1_1",
+   "size": [
+    217.0,
+    16.0,
+    134.0
+   ],
+   "tris": 567,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Torn_Banner_Free/Models/SM_Torn_Banner_set_1_2.SM_Torn_Banner_set_1_2",
+   "name": "SM_Torn_Banner_set_1_2",
+   "size": [
+    163.0,
+    9.0,
+    144.0
+   ],
+   "tris": 311,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Torn_Banner_Free/Models/SM_Banner_01.SM_Banner_01",
+   "name": "SM_Banner_01",
+   "size": [
+    216.0,
+    36.0,
+    573.0
+   ],
+   "tris": 2978,
+   "nanite": "False",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Torn_Banner_Free/Models/SM_Banner_010.SM_Banner_010",
+   "name": "SM_Banner_010",
+   "size": [
+    490.0,
+    42.0,
+    817.0
+   ],
+   "tris": 10681,
+   "nanite": "False",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Torn_Banner_Free/Models/SM_Banner_02.SM_Banner_02",
+   "name": "SM_Banner_02",
+   "size": [
+    305.0,
+    47.0,
+    964.0
+   ],
+   "tris": 4675,
+   "nanite": "False",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Torn_Banner_Free/Models/SM_Banner_05.SM_Banner_05",
+   "name": "SM_Banner_05",
+   "size": [
+    284.0,
+    36.0,
+    731.0
+   ],
+   "tris": 11050,
+   "nanite": "False",
+   "role": "wall"
+  }
+ ]
+}

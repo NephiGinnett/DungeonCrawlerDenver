@@ -5,6 +5,8 @@
 //   DCC.SkillTick <Skill> [delay]   one practice tick on a skill of the local crawler (grants it if unknown)
 //   DCC.Scrap <amount> [delay]      give the local player scrap
 
+#include "Session/DCCOnline.h"
+#include "Session/DCCSession.h"
 #include "Engine/SkeletalMesh.h"
 #include "Components/PointLightComponent.h"
 #include "Engine/PointLight.h"
@@ -38,6 +40,10 @@
 #include "EngineUtils.h"
 #include "Characters/DCCEnemyCharacter.h"
 #include "Equipment/DCCEquipmentComponent.h"
+#include "Skills/DCCSpellBook.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraSystem.h"
+#include "Misc/Paths.h"
 #include "Progression/DCCAchievementComponent.h"
 #include "Characters/DCCAttackStyle.h"
 #include "UI/DCCChatTypes.h"
@@ -244,6 +250,77 @@ static FAutoConsoleCommandWithWorldAndArgs GDevPerk(TEXT("DCC.Perk"),
 			if (UDCCClassComponent* Comp = Crawler ? Crawler->FindComponentByClass<UDCCClassComponent>() : nullptr)
 			{
 				Comp->Server_PickPerk(Tier, Option);
+			}
+		});
+	}));
+
+static FAutoConsoleCommandWithWorldAndArgs GDevShowFx(TEXT("DCC.ShowFx"),
+	TEXT("DCC.ShowFx <Niagara path> [delay]: (dev) spawn that effect 3 m in front of the camera."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		if (Args.Num() < 1)
+		{
+			return;
+		}
+		float Delay = 0.0f;
+		int32 PathCount = Args.Num();
+		if (Args.Num() >= 2 && Args.Last().IsNumeric())
+		{
+			Delay = FCString::Atof(*Args.Last());
+			PathCount = Args.Num() - 1;
+		}
+		FString Path;
+		for (int32 i = 0; i < PathCount; ++i)
+		{
+			if (i > 0) { Path += TEXT(" "); }
+			Path += Args[i];
+		}
+		After(World, Delay, [Path](UWorld* W)
+		{
+			FString LoadPath = Path;
+			if (!LoadPath.Contains(TEXT(".")))
+			{
+				LoadPath += TEXT(".") + FPaths::GetBaseFilename(LoadPath);
+			}
+			UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *LoadPath);
+			APlayerController* PC = W->GetFirstPlayerController();
+			if (!PC)
+			{
+				return;
+			}
+			FVector View;
+			FRotator Rot;
+			PC->GetPlayerViewPoint(View, Rot);
+			// On the body when there is one. Three metres in front of this bench camera lands behind her.
+			const FVector At = PC->GetPawn()
+				? PC->GetPawn()->GetActorLocation() + FVector(0.0f, 0.0f, 90.0f)
+				: View + Rot.Vector() * 300.0f;
+			if (System)
+			{
+				UNiagaraComponent* Comp = UNiagaraFunctionLibrary::SpawnSystemAtLocation(W, System, At, Rot, FVector(1.0f), true);
+				DCCSpellBook::StopAfter(Comp, 2.2f);
+				UE_LOG(LogTemp, Display, TEXT("[DCC ShowFx] %s"), *LoadPath);
+			}
+			else
+			{
+				UE_LOG(LogTemp, Warning, TEXT("[DCC ShowFx] failed to load %s"), *LoadPath);
+			}
+			FActorSpawnParameters Params;
+			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+			FRotator Face = Rot;
+			Face.Pitch = 0.0f;
+			Face.Yaw += 180.0f;
+			const FVector LabelAt = At + FVector(0.0f, 0.0f, 110.0f) - Rot.Vector() * 70.0f;
+			if (ATextRenderActor* Label = W->SpawnActor<ATextRenderActor>(LabelAt, Face, Params))
+			{
+				Label->SetReplicates(false);
+				if (UTextRenderComponent* Text = Label->GetTextRender())
+				{
+					Text->SetText(FText::FromString(FPaths::GetBaseFilename(LoadPath)));
+					Text->SetHorizontalAlignment(EHTA_Center);
+					Text->SetWorldSize(8.0f);
+					Text->SetTextRenderColor(FColor::White);
+				}
 			}
 		});
 	}));
@@ -461,6 +538,38 @@ static FAutoConsoleCommandWithWorldAndArgs GDevAnswer(TEXT("DCC.Answer"), TEXT("
 			{
 				if (Crawler->Wallet) { Crawler->Wallet->Server_PrimetimeAnswer(uint8(What)); }
 			}
+		});
+	}));
+
+// DCC.SpawnEnemy <Class> [count] [delay]: (dev) spawn enemies of a C++ class (e.g. DCCEnemy_DemonBull) 7 m in front of you.
+static FAutoConsoleCommandWithWorldAndArgs GDevSpawnEnemy(TEXT("DCC.SpawnEnemy"), TEXT("DCC.SpawnEnemy <Class> [count] [delay]: (dev) spawn enemies in front of you."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		if (Args.Num() < 1)
+		{
+			return;
+		}
+		const FString ClassName = Args[0];
+		const int32 Count = Args.Num() > 1 ? FMath::Clamp(FCString::Atoi(*Args[1]), 1, 12) : 1;
+		After(World, Args.Num() > 2 ? FCString::Atof(*Args[2]) : 0.0f, [ClassName, Count](UWorld* W)
+		{
+			UClass* Class = LoadClass<ADCCEnemyCharacter>(nullptr, *FString::Printf(TEXT("/Script/DungeonCrawlerDenver.%s"), *ClassName));
+			ADCCCharacterBase* Me = LocalCrawler(W);
+			if (!Class || !Me)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("[DCC Dev] SpawnEnemy: no class %s (or no player)"), *ClassName);
+				return;
+			}
+			const FVector Fwd = Me->GetActorForwardVector().GetSafeNormal2D();
+			for (int32 i = 0; i < Count; ++i)
+			{
+				const FVector Side = FVector::CrossProduct(Fwd, FVector::UpVector) * ((i - (Count - 1) * 0.5f) * 260.0f);
+				const FVector At = Me->GetActorLocation() + Fwd * 700.0f + Side + FVector(0, 0, 60);
+				FActorSpawnParameters P;
+				P.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+				W->SpawnActor<ADCCEnemyCharacter>(Class, At, (-Fwd).Rotation(), P);
+			}
+			UE_LOG(LogTemp, Log, TEXT("[DCC Dev] spawned %d x %s"), Count, *ClassName);
 		});
 	}));
 
@@ -1007,4 +1116,22 @@ static FAutoConsoleCommandWithWorldAndArgs GDevGoTo(TEXT("DCC.GoTo"), TEXT("DCC.
 	{
 		const FName Game = Args.Num() > 0 ? FName(*Args[0]) : NAME_None;
 		After(World, Args.Num() > 1 ? FCString::Atof(*Args[1]) : 0.0f, [Game](UWorld* W) { DCCArcade::Travel(W, Game); });
+	}));
+
+// DCC.Host [delay]: (dev) what HOST A PARTY does, from the place you are: open this game to others and list it with
+// Epic Online Services when signed in (2026-11-25, for testing the EOS net driver and its IP fallback).
+static FAutoConsoleCommandWithWorldAndArgs GDevHost(TEXT("DCC.Host"), TEXT("DCC.Host [delay]: (dev) host this game, as HOST A PARTY does."),
+	FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+	{
+		After(World, Args.Num() > 0 ? FCString::Atof(*Args[0]) : 0.0f, [](UWorld* W)
+		{
+			FString Error;
+			APlayerController* PC = W->GetFirstPlayerController();
+			const bool bOk = DCCSession::StartHosting(W, PC, Error);
+			UE_LOG(LogTemp, Log, TEXT("[DCC Host] %s %s"), bOk ? TEXT("hosting") : TEXT("failed:"), *Error);
+			if (bOk)
+			{
+				DCCOnline::HostParty(DCCSession::GetPreferredCrawler().ToString());
+			}
+		});
 	}));

@@ -79,6 +79,13 @@ public:
 	UPROPERTY(Replicated)
 	float BossHealth = -1.0f;
 
+	/** Latest Safe Room headlines, newest first. The server fills this. The wall TVs read it. */
+	UPROPERTY(Replicated)
+	TArray<FString> NewsLines;
+
+	/** Server. Keeps the newest 10 lines and mirrors them to Saved/TVNews.json through DCCNews::Post. */
+	void AddNews(const FString& Line);
+
 	/** What the HUD shows in this game (2026-11-13: only what players need). */
 	virtual bool ShowsHealth() const { return true; }
 	/** Weapons and other hand-held gear are drawn. On everywhere since 2026-11-15 (Zoe: "we don't need to hide weapons
@@ -108,6 +115,13 @@ public:
 	virtual FName GetGameId() const { return NAME_None; }
 	/** How to play, in one line, shown once per session as the game starts (the HUD's DrawArcadeTip). */
 	virtual FString GetTip() const { return FString(); }
+
+	/** Client and server. True when E should talk to this arena instead of the room. */
+	virtual bool CanUse(const class ADCCCharacterBase* Who) const { return false; }
+	/** Server. The player pressed E on something this arena owns. */
+	virtual void Use(class ADCCCharacterBase* Who) {}
+	/** True only while these two players are the live pair in an arena duel. */
+	virtual bool PlayersMayFight(const class ADCCCharacterBase* A, const class ADCCCharacterBase* B) const { return false; }
 	/** The rooms' walking grid, for characters that cannot use a navmesh here (Gate Run, Dead Air). */
 	virtual class UDCCDungeonGrid* GetChaseGrid() const { return nullptr; }
 

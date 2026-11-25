@@ -1,4 +1,9 @@
 #include "UI/DCCHUD.h"
+#include "Dom/JsonObject.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
+#include "Serialization/JsonReader.h"
+#include "Serialization/JsonSerializer.h"
 #include "Session/DCCIntegrity.h"
 #include "Arcade/DCCCasino.h"
 #include "Arcade/DCCSummons.h"
@@ -473,6 +478,11 @@ void ADCCHUD::NotifyHitBoxClick(FName BoxName)
 	if (AsString.StartsWith(TEXT("Quick|")))
 	{
 		const FString What = AsString.RightChop(6);
+		if (What == TEXT("Credits"))
+		{
+			bShowCredits = !bShowCredits;
+			return;
+		}
 		if (ADCCCharacterBase* Me = GetOwningCrawler())
 		{
 			if (What == TEXT("Loot") || What == TEXT("Party") || What == TEXT("Bench") || What == TEXT("Event"))
@@ -7507,7 +7517,8 @@ void ADCCHUD::DrawSeriesQuestBanner(FName GameId)
 	float QW = 0.0f, QH = 0.0f;
 	GetTextSize(Quest, QW, QH, Medium, 1.0f);
 	const float QX = (Canvas->SizeX - QW - 28.0f) * 0.5f;
-	const float QY = 68.0f;
+	// The title strip drops to y 84 while the health bar shows (DrawArcadeStatus), so the quest drops with it (2026-11-25).
+	const float QY = bHealthBarUp ? 124.0f : 68.0f;
 	DrawRect(FLinearColor(0.05f, 0.04f, 0.02f, 0.82f), QX, QY, QW + 28.0f, QH + 12.0f);
 	DrawRect(FLinearColor(1.0f, 0.78f, 0.35f), QX, QY, QW + 28.0f, 2.0f);
 	DrawText(Quest, FLinearColor(1.0f, 0.86f, 0.45f), QX + 14.0f, QY + 6.0f, Medium, 1.0f);
@@ -8364,7 +8375,8 @@ float ADCCHUD::DrawSettingsTab(float X, float Y, ADCCCharacterBase* Crawler)
 	const FString LogLabel = FString::Printf(TEXT("Log: %s"), *GetFeedFilterLabel().ToLower());
 	float BX = X;
 	for (const TPair<FString, FString>& B : { TPair<FString, FString>(TEXT("Pose bench"), TEXT("Bench")),
-		TPair<FString, FString>(FeedLabel, TEXT("Feed")), TPair<FString, FString>(LogLabel, TEXT("Log")) })
+		TPair<FString, FString>(FeedLabel, TEXT("Feed")), TPair<FString, FString>(LogLabel, TEXT("Log")),
+		TPair<FString, FString>(bShowCredits ? TEXT("Hide credits") : TEXT("Credits"), TEXT("Credits")) })
 	{
 		float TW = 0.0f, TH = 0.0f;
 		GetTextSize(B.Key, TW, TH);
@@ -8376,6 +8388,44 @@ float ADCCHUD::DrawSettingsTab(float X, float Y, ADCCCharacterBase* Crawler)
 		BX += BW + 6.0f;
 	}
 	Y += Row;
+	if (bShowCredits)
+	{
+		static TArray<FString> CreditLines;
+		static bool bLoaded = false;
+		if (!bLoaded)
+		{
+			bLoaded = true;
+			const FString Path = FPaths::ProjectContentDir() / TEXT("DCC/Credits/credits.json");
+			FString Text;
+			TSharedPtr<FJsonObject> Root;
+			if (FFileHelper::LoadFileToString(Text, *Path)
+				&& FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Text), Root) && Root.IsValid())
+			{
+				const TArray<TSharedPtr<FJsonValue>>* Arr = nullptr;
+				if (Root->TryGetArrayField(TEXT("lines"), Arr))
+				{
+					for (const TSharedPtr<FJsonValue>& Value : *Arr)
+					{
+						const FString Line = Value.IsValid() ? Value->AsString() : FString();
+						if (!Line.IsEmpty())
+						{
+							CreditLines.Add(Line);
+						}
+					}
+				}
+			}
+			if (CreditLines.IsEmpty())
+			{
+				CreditLines.Add(TEXT("Dungeon Crawler Denver"));
+				CreditLines.Add(TEXT("Fab library packs. See each pack folder for its license."));
+			}
+		}
+		for (const FString& Line : CreditLines)
+		{
+			DrawText(Line, BodyColour, X, Y);
+			Y += LineHeight;
+		}
+	}
 	return Y;
 }
 

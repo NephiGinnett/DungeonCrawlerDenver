@@ -1,0 +1,34 @@
+{
+  "champions": [
+    {
+      "stage": 10,
+      "name": "The Notary",
+      "kind": "notary",
+      "skill": "StaticBurst"
+    },
+    {
+      "stage": 20,
+      "name": "The Bull",
+      "kind": "brute",
+      "skill": "FireFingers"
+    },
+    {
+      "stage": 30,
+      "name": "The Auditor",
+      "kind": "auditor",
+      "skill": "FirstAid"
+    },
+    {
+      "stage": 40,
+      "name": "The Gatekeeper",
+      "kind": "boss",
+      "skill": "Whiteout"
+    },
+    {
+      "stage": 50,
+      "name": "The House",
+      "kind": "gatekeeper",
+      "skill": ""
+    }
+  ]
+}

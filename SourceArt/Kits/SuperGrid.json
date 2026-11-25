@@ -1,0 +1,399 @@
+{
+ "pack": "SuperGrid",
+ "maps": [
+  {
+   "path": "/Game/SuperGrid/Overview.Overview",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/SuperGrid/TutorialLevel/StarterTutorial.StarterTutorial",
+   "partitioned": false
+  }
+ ],
+ "meshes": [
+  {
+   "path": "/Game/SuperGrid/TutorialLevel/Utility/Meshes/Utility_GroundBox.Utility_GroundBox",
+   "name": "Utility_GroundBox",
+   "size": [
+    200.0,
+    210.0,
+    0.0
+   ],
+   "tris": 4,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/SuperGrid/TutorialLevel/Utility/Meshes/SM_Star.SM_Star",
+   "name": "SM_Star",
+   "size": [
+    182.0,
+    461.0,
+    437.0
+   ],
+   "tris": 1216,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SuperGrid/StarterPack/Source/New/SuperGrid_Arch1.SuperGrid_Arch1",
+   "name": "SuperGrid_Arch1",
+   "size": [
+    100.0,
+    100.0,
+    100.0
+   ],
+   "tris": 108,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SuperGrid/StarterPack/Source/New/SuperGrid_Arch2.SuperGrid_Arch2",
+   "name": "SuperGrid_Arch2",
+   "size": [
+    100.0,
+    100.0,
+    100.0
+   ],
+   "tris": 84,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SuperGrid/StarterPack/Source/New/SuperGrid_Box.SuperGrid_Box",
+   "name": "SuperGrid_Box",
+   "size": [
+    100.0,
+    100.0,
+    100.0
+   ],
+   "tris": 12,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SuperGrid/StarterPack/Source/New/SuperGrid_BoxCentered.SuperGrid_BoxCentered",
+   "name": "SuperGrid_BoxCentered",
+   "size": [
+    100.0,
+    100.0,
+    100.0
+   ],
+   "tris": 12,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SuperGrid/StarterPack/Source/New/SuperGrid_BoxHighRes.SuperGrid_BoxHighRes",
+   "name": "SuperGrid_BoxHighRes",
+   "size": [
+    100.0,
+    100.0,
+    100.0
+   ],
+   "tris": 12,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SuperGrid/StarterPack/Source/New/SuperGrid_Cone.SuperGrid_Cone",
+   "name": "SuperGrid_Cone",
+   "size": [
+    100.0,
+    100.0,
+    101.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SuperGrid/StarterPack/Source/New/SuperGrid_CornerInner.SuperGrid_CornerInner",
+   "name": "SuperGrid_CornerInner",
+   "size": [
+    200.0,
+    200.0,
+    200.0
+   ],
+   "tris": 251,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SuperGrid/StarterPack/Source/New/SuperGrid_CornerOuter.SuperGrid_CornerOuter",
+   "name": "SuperGrid_CornerOuter",
+   "size": [
+    200.0,
+    200.0,
+    200.0
+   ],
+   "tris": 252,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SuperGrid/StarterPack/Source/New/SuperGrid_CylinderBend.SuperGrid_CylinderBend",
+   "name": "SuperGrid_CylinderBend",
+   "size": [
+    100.0,
+    150.0,
+    150.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SuperGrid/StarterPack/Source/New/SuperGrid_CylinderFull.SuperGrid_CylinderFull",
+   "name": "SuperGrid_CylinderFull",
+   "size": [
+    100.0,
+    100.0,
+    100.0
+   ],
+   "tris": 96,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SuperGrid/StarterPack/Source/New/SuperGrid_CylinderHalf.SuperGrid_CylinderHalf",
+   "name": "SuperGrid_CylinderHalf",
+   "size": [
+    100.0,
+    50.0,
+    100.0
+   ],
+   "tris": 52,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SuperGrid/StarterPack/Source/New/SuperGrid_CylinderQuarter.SuperGrid_CylinderQuarter",
+   "name": "SuperGrid_CylinderQuarter",
+   "size": [
+    50.0,
+    50.0,
+    100.0
+   ],
+   "tris": 28,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SuperGrid/StarterPack/Source/New/SuperGrid_Hexagon.SuperGrid_Hexagon",
+   "name": "SuperGrid_Hexagon",
+   "size": [
+    173.0,
+    200.0,
+    100.0
+   ],
+   "tris": 24,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SuperGrid/StarterPack/Source/New/SuperGrid_Plane.SuperGrid_Plane",
+   "name": "SuperGrid_Plane",
+   "size": [
+    100.0,
+    100.0,
+    0.0
+   ],
+   "tris": 2,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SuperGrid/StarterPack/Source/New/SuperGrid_Pyramide.SuperGrid_Pyramide",
+   "name": "SuperGrid_Pyramide",
+   "size": [
+    100.0,
+    100.0,
+    100.0
+   ],
+   "tris": 6,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SuperGrid/StarterPack/Source/New/SuperGrid_Ramp.SuperGrid_Ramp",
+   "name": "SuperGrid_Ramp",
+   "size": [
+    100.0,
+    100.0,
+    100.0
+   ],
+   "tris": 8,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SuperGrid/StarterPack/Source/New/SuperGrid_RingFull.SuperGrid_RingFull",
+   "name": "SuperGrid_RingFull",
+   "size": [
+    100.0,
+    400.0,
+    400.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SuperGrid/StarterPack/Source/New/SuperGrid_RingPiece.SuperGrid_RingPiece",
+   "name": "SuperGrid_RingPiece",
+   "size": [
+    100.0,
+    113.0,
+    100.0
+   ],
+   "tris": 140,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SuperGrid/StarterPack/Source/New/SuperGrid_RingQuarter.SuperGrid_RingQuarter",
+   "name": "SuperGrid_RingQuarter",
+   "size": [
+    100.0,
+    200.0,
+    200.0
+   ],
+   "tris": 252,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SuperGrid/StarterPack/Source/New/SuperGrid_SlantedBox22.SuperGrid_SlantedBox22",
+   "name": "SuperGrid_SlantedBox22",
+   "size": [
+    100.0,
+    140.0,
+    100.0
+   ],
+   "tris": 12,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SuperGrid/StarterPack/Source/New/SuperGrid_SlantedBox35.SuperGrid_SlantedBox35",
+   "name": "SuperGrid_SlantedBox35",
+   "size": [
+    100.0,
+    170.0,
+    100.0
+   ],
+   "tris": 12,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SuperGrid/StarterPack/Source/New/SuperGrid_SlantedBox45.SuperGrid_SlantedBox45",
+   "name": "SuperGrid_SlantedBox45",
+   "size": [
+    100.0,
+    200.0,
+    100.0
+   ],
+   "tris": 12,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SuperGrid/StarterPack/Source/New/SuperGrid_Slope.SuperGrid_Slope",
+   "name": "SuperGrid_Slope",
+   "size": [
+    100.0,
+    100.0,
+    100.0
+   ],
+   "tris": 8,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SuperGrid/StarterPack/Source/New/SuperGrid_Stairs.SuperGrid_Stairs",
+   "name": "SuperGrid_Stairs",
+   "size": [
+    100.0,
+    100.0,
+    100.0
+   ],
+   "tris": 92,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SuperGrid/TutorialLevel/Utility/Meshes/Utility_CylinderTop.Utility_CylinderTop",
+   "name": "Utility_CylinderTop",
+   "size": [
+    100.0,
+    100.0,
+    0.0
+   ],
+   "tris": 24,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SuperGrid/TutorialLevel/Utility/Meshes/Utility_ExclamationMark.Utility_ExclamationMark",
+   "name": "Utility_ExclamationMark",
+   "size": [
+    7.0,
+    7.0,
+    40.0
+   ],
+   "tris": 160,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SuperGrid/TutorialLevel/Utility/Meshes/Utility_Helper.Utility_Helper",
+   "name": "Utility_Helper",
+   "size": [
+    52.0,
+    52.0,
+    10.0
+   ],
+   "tris": 220,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SuperGrid/TutorialLevel/Utility/Meshes/Utility_LightCone.Utility_LightCone",
+   "name": "Utility_LightCone",
+   "size": [
+    100.0,
+    100.0,
+    101.0
+   ],
+   "tris": 144,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SuperGrid/TutorialLevel/Utility/Meshes/Utility_ShowBox.Utility_ShowBox",
+   "name": "Utility_ShowBox",
+   "size": [
+    100.0,
+    100.0,
+    100.0
+   ],
+   "tris": 40,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/SuperGrid/TutorialLevel/Utility/Meshes/Utility_SmallRing.Utility_SmallRing",
+   "name": "Utility_SmallRing",
+   "size": [
+    100.0,
+    240.0,
+    240.0
+   ],
+   "tris": 480,
+   "nanite": "",
+   "role": "prop"
+  }
+ ]
+}

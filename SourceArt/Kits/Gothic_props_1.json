@@ -1,0 +1,263 @@
+{
+ "pack": "Gothic_props_1",
+ "maps": [
+  {
+   "path": "/Game/Gothic_props_1/Maps/Gothic_props_1.Gothic_props_1",
+   "partitioned": false
+  }
+ ],
+ "meshes": [
+  {
+   "path": "/Game/Gothic_props_1/Static_meshes/SM_Bridge1.SM_Bridge1",
+   "name": "SM_Bridge1",
+   "size": [
+    1064.0,
+    3464.0,
+    1275.0
+   ],
+   "tris": 7536,
+   "nanite": "False",
+   "role": "big"
+  },
+  {
+   "path": "/Game/Gothic_props_1/Static_meshes/SM_Bridge2.SM_Bridge2",
+   "name": "SM_Bridge2",
+   "size": [
+    1487.0,
+    4658.0,
+    2767.0
+   ],
+   "tris": 17888,
+   "nanite": "False",
+   "role": "big"
+  },
+  {
+   "path": "/Game/Gothic_props_1/Static_meshes/SM_Gate.SM_Gate",
+   "name": "SM_Gate",
+   "size": [
+    88.0,
+    873.0,
+    713.0
+   ],
+   "tris": 6956,
+   "nanite": "False",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Gothic_props_1/Static_meshes/SM_Column1.SM_Column1",
+   "name": "SM_Column1",
+   "size": [
+    50.0,
+    50.0,
+    247.0
+   ],
+   "tris": 116,
+   "nanite": "False",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Gothic_props_1/Static_meshes/SM_Column2.SM_Column2",
+   "name": "SM_Column2",
+   "size": [
+    50.0,
+    50.0,
+    247.0
+   ],
+   "tris": 81,
+   "nanite": "False",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Gothic_props_1/Static_meshes/SM_Column4.SM_Column4",
+   "name": "SM_Column4",
+   "size": [
+    44.0,
+    44.0,
+    357.0
+   ],
+   "tris": 184,
+   "nanite": "False",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Gothic_props_1/Static_meshes/SM_Column5.SM_Column5",
+   "name": "SM_Column5",
+   "size": [
+    44.0,
+    44.0,
+    357.0
+   ],
+   "tris": 220,
+   "nanite": "False",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Gothic_props_1/Static_meshes/SM_Pillar1.SM_Pillar1",
+   "name": "SM_Pillar1",
+   "size": [
+    73.0,
+    73.0,
+    583.0
+   ],
+   "tris": 196,
+   "nanite": "False",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Gothic_props_1/Static_meshes/SM_Pillar2.SM_Pillar2",
+   "name": "SM_Pillar2",
+   "size": [
+    84.0,
+    84.0,
+    616.0
+   ],
+   "tris": 980,
+   "nanite": "False",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Gothic_props_1/Static_meshes/SM_Arc.SM_Arc",
+   "name": "SM_Arc",
+   "size": [
+    197.0,
+    550.0,
+    525.0
+   ],
+   "tris": 1750,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Gothic_props_1/Static_meshes/SM_Ballista.SM_Ballista",
+   "name": "SM_Ballista",
+   "size": [
+    410.0,
+    458.0,
+    358.0
+   ],
+   "tris": 49911,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Gothic_props_1/Static_meshes/SM_Block1.SM_Block1",
+   "name": "SM_Block1",
+   "size": [
+    200.0,
+    200.0,
+    203.0
+   ],
+   "tris": 12,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Gothic_props_1/Static_meshes/SM_Block2.SM_Block2",
+   "name": "SM_Block2",
+   "size": [
+    215.0,
+    342.0,
+    203.0
+   ],
+   "tris": 60,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Gothic_props_1/Static_meshes/SM_Border1.SM_Border1",
+   "name": "SM_Border1",
+   "size": [
+    164.0,
+    30.0,
+    113.0
+   ],
+   "tris": 130,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Gothic_props_1/Static_meshes/SM_Column3.SM_Column3",
+   "name": "SM_Column3",
+   "size": [
+    44.0,
+    44.0,
+    177.0
+   ],
+   "tris": 220,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Gothic_props_1/Static_meshes/SM_Handrails1.SM_Handrails1",
+   "name": "SM_Handrails1",
+   "size": [
+    183.0,
+    17.0,
+    133.0
+   ],
+   "tris": 428,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Gothic_props_1/Static_meshes/SM_Steps.SM_Steps",
+   "name": "SM_Steps",
+   "size": [
+    335.0,
+    200.0,
+    200.0
+   ],
+   "tris": 164,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Gothic_props_1/Static_meshes/SM_Border2.SM_Border2",
+   "name": "SM_Border2",
+   "size": [
+    288.0,
+    30.0,
+    207.0
+   ],
+   "tris": 36,
+   "nanite": "False",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Gothic_props_1/Static_meshes/SM_Handrails2.SM_Handrails2",
+   "name": "SM_Handrails2",
+   "size": [
+    323.0,
+    17.0,
+    312.0
+   ],
+   "tris": 432,
+   "nanite": "False",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Gothic_props_1/Static_meshes/SM_Section1.SM_Section1",
+   "name": "SM_Section1",
+   "size": [
+    9.0,
+    193.0,
+    463.0
+   ],
+   "tris": 2128,
+   "nanite": "False",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Gothic_props_1/Static_meshes/SM_Section2.SM_Section2",
+   "name": "SM_Section2",
+   "size": [
+    14.0,
+    448.0,
+    450.0
+   ],
+   "tris": 9852,
+   "nanite": "False",
+   "role": "wall"
+  }
+ ]
+}

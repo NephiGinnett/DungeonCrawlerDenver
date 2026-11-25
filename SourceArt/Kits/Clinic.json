@@ -1,0 +1,859 @@
+{
+ "pack": "Clinic",
+ "maps": [
+  {
+   "path": "/Game/Clinic/Demo/FirstPersonBP/Maps/FirstPersonExampleMap.FirstPersonExampleMap",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/Clinic/Maps/Clinic.Clinic",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/Clinic/Maps/Overview.Overview",
+   "partitioned": false
+  }
+ ],
+ "meshes": [
+  {
+   "path": "/Game/Clinic/Demo/Geometry/Meshes/TemplateFloor.TemplateFloor",
+   "name": "TemplateFloor",
+   "size": [
+    4000.0,
+    4000.0,
+    200.0
+   ],
+   "tris": 128,
+   "nanite": "",
+   "role": "big"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Glass/SM_Entrance_BigGlassDoor.SM_Entrance_BigGlassDoor",
+   "name": "SM_Entrance_BigGlassDoor",
+   "size": [
+    120.0,
+    6.0,
+    218.0
+   ],
+   "tris": 216,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Props/SM_Entrance_DoorBottom.SM_Entrance_DoorBottom",
+   "name": "SM_Entrance_DoorBottom",
+   "size": [
+    17.0,
+    4.0,
+    65.0
+   ],
+   "tris": 180,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/SM_Entrance_InteriorDoor.SM_Entrance_InteriorDoor",
+   "name": "SM_Entrance_InteriorDoor",
+   "size": [
+    276.0,
+    44.0,
+    249.0
+   ],
+   "tris": 378,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/SM_Entrance_RoomDoor.SM_Entrance_RoomDoor",
+   "name": "SM_Entrance_RoomDoor",
+   "size": [
+    44.0,
+    188.0,
+    249.0
+   ],
+   "tris": 378,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/SM_Entrance_Celing.SM_Entrance_Celing",
+   "name": "SM_Entrance_Celing",
+   "size": [
+    1540.0,
+    1840.0,
+    70.0
+   ],
+   "tris": 620,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/SM_Entrance_Ground.SM_Entrance_Ground",
+   "name": "SM_Entrance_Ground",
+   "size": [
+    1540.0,
+    1840.0,
+    85.0
+   ],
+   "tris": 2100,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/SM_Entrance_SquareLight.SM_Entrance_SquareLight",
+   "name": "SM_Entrance_SquareLight",
+   "size": [
+    424.0,
+    424.0,
+    32.0
+   ],
+   "tris": 3840,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Props/SM_OfficeGroundMiddleDecor.SM_OfficeGroundMiddleDecor",
+   "name": "SM_OfficeGroundMiddleDecor",
+   "size": [
+    334.0,
+    334.0,
+    20.0
+   ],
+   "tris": 2966,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/SM_Room_TileGround.SM_Room_TileGround",
+   "name": "SM_Room_TileGround",
+   "size": [
+    1000.0,
+    1800.0,
+    2.0
+   ],
+   "tris": 2936,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Modular/SM_RoomWall_Decor_1.SM_RoomWall_Decor_1",
+   "name": "SM_RoomWall_Decor_1",
+   "size": [
+    35.0,
+    100.0,
+    400.0
+   ],
+   "tris": 360,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Modular/SM_RoomWall_Decor_2.SM_RoomWall_Decor_2",
+   "name": "SM_RoomWall_Decor_2",
+   "size": [
+    44.0,
+    100.0,
+    400.0
+   ],
+   "tris": 744,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Modular/SM_RoomWall_Decor_3.SM_RoomWall_Decor_3",
+   "name": "SM_RoomWall_Decor_3",
+   "size": [
+    35.0,
+    100.0,
+    400.0
+   ],
+   "tris": 246,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Modular/SM_RoomWall_Decor_4.SM_RoomWall_Decor_4",
+   "name": "SM_RoomWall_Decor_4",
+   "size": [
+    35.0,
+    100.0,
+    400.0
+   ],
+   "tris": 192,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Clinic/Demo/Geometry/Meshes/1M_Cube.1M_Cube",
+   "name": "1M_Cube",
+   "size": [
+    100.0,
+    100.0,
+    100.0
+   ],
+   "tris": 12,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Demo/Geometry/Meshes/1M_Cube_Chamfer.1M_Cube_Chamfer",
+   "name": "1M_Cube_Chamfer",
+   "size": [
+    100.0,
+    100.0,
+    100.0
+   ],
+   "tris": 204,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Demo/FirstPerson/Meshes/FirstPersonProjectileMesh.FirstPersonProjectileMesh",
+   "name": "FirstPersonProjectileMesh",
+   "size": [
+    320.0,
+    320.0,
+    320.0
+   ],
+   "tris": 528,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Modular/SM_Corridor.SM_Corridor",
+   "name": "SM_Corridor",
+   "size": [
+    276.0,
+    500.0,
+    249.0
+   ],
+   "tris": 378,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Props/SM_CorridoreWallFrame.SM_CorridoreWallFrame",
+   "name": "SM_CorridoreWallFrame",
+   "size": [
+    5.0,
+    280.0,
+    66.0
+   ],
+   "tris": 918,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Props/SM_Entrance_ArmChair01.SM_Entrance_ArmChair01",
+   "name": "SM_Entrance_ArmChair01",
+   "size": [
+    113.0,
+    86.0,
+    83.0
+   ],
+   "tris": 1232,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Props/SM_Entrance_CelingLight.SM_Entrance_CelingLight",
+   "name": "SM_Entrance_CelingLight",
+   "size": [
+    100.0,
+    33.0,
+    7.0
+   ],
+   "tris": 1344,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Props/SM_Entrance_Chair.SM_Entrance_Chair",
+   "name": "SM_Entrance_Chair",
+   "size": [
+    81.0,
+    70.0,
+    103.0
+   ],
+   "tris": 1434,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Props/SM_Entrance_FingersScreen.SM_Entrance_FingersScreen",
+   "name": "SM_Entrance_FingersScreen",
+   "size": [
+    23.0,
+    5.0,
+    39.0
+   ],
+   "tris": 156,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Props/SM_Entrance_MiddleTable.SM_Entrance_MiddleTable",
+   "name": "SM_Entrance_MiddleTable",
+   "size": [
+    388.0,
+    134.0,
+    85.0
+   ],
+   "tris": 1524,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Props/SM_Entrance_SmallLight.SM_Entrance_SmallLight",
+   "name": "SM_Entrance_SmallLight",
+   "size": [
+    101.0,
+    106.0,
+    18.0
+   ],
+   "tris": 1042,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Props/SM_Entrance_SmallTable01.SM_Entrance_SmallTable01",
+   "name": "SM_Entrance_SmallTable01",
+   "size": [
+    72.0,
+    132.0,
+    36.0
+   ],
+   "tris": 416,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Props/SM_Entrance_Sofa01.SM_Entrance_Sofa01",
+   "name": "SM_Entrance_Sofa01",
+   "size": [
+    284.0,
+    86.0,
+    83.0
+   ],
+   "tris": 1836,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/SM_Entrance_WallDecor.SM_Entrance_WallDecor",
+   "name": "SM_Entrance_WallDecor",
+   "size": [
+    183.0,
+    509.0,
+    335.0
+   ],
+   "tris": 164,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Props/SM_Keyboard.SM_Keyboard",
+   "name": "SM_Keyboard",
+   "size": [
+    74.0,
+    28.0,
+    2.0
+   ],
+   "tris": 228,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Props/SM_Laptop.SM_Laptop",
+   "name": "SM_Laptop",
+   "size": [
+    74.0,
+    9.0,
+    52.0
+   ],
+   "tris": 228,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Props/SM_Monitor_1.SM_Monitor_1",
+   "name": "SM_Monitor_1",
+   "size": [
+    62.0,
+    133.0,
+    35.0
+   ],
+   "tris": 480,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Props/SM_OfficeFrame04.SM_OfficeFrame04",
+   "name": "SM_OfficeFrame04",
+   "size": [
+    77.0,
+    5.0,
+    111.0
+   ],
+   "tris": 306,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Props/SM_OfficeMiddleModelDecor.SM_OfficeMiddleModelDecor",
+   "name": "SM_OfficeMiddleModelDecor",
+   "size": [
+    135.0,
+    132.0,
+    282.0
+   ],
+   "tris": 4998,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Props/SM_Planet01.SM_Planet01",
+   "name": "SM_Planet01",
+   "size": [
+    201.0,
+    210.0,
+    173.0
+   ],
+   "tris": 9584,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Props/SM_RoomMapMachine_Control.SM_RoomMapMachine_Control",
+   "name": "SM_RoomMapMachine_Control",
+   "size": [
+    92.0,
+    64.0,
+    100.0
+   ],
+   "tris": 1232,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Props/SM_RoomMapMachine_Machine.SM_RoomMapMachine_Machine",
+   "name": "SM_RoomMapMachine_Machine",
+   "size": [
+    312.0,
+    312.0,
+    83.0
+   ],
+   "tris": 7960,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Props/SM_RoomMedicalMachine_Control.SM_RoomMedicalMachine_Control",
+   "name": "SM_RoomMedicalMachine_Control",
+   "size": [
+    192.0,
+    64.0,
+    96.0
+   ],
+   "tris": 5624,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Props/SM_RoomMedicalMachine_Machine.SM_RoomMedicalMachine_Machine",
+   "name": "SM_RoomMedicalMachine_Machine",
+   "size": [
+    103.0,
+    218.0,
+    239.0
+   ],
+   "tris": 8384,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Props/SM_RoomPaintingTable_Table.SM_RoomPaintingTable_Table",
+   "name": "SM_RoomPaintingTable_Table",
+   "size": [
+    118.0,
+    259.0,
+    113.0
+   ],
+   "tris": 3334,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Modular/SM_RoomWallDecor_1.SM_RoomWallDecor_1",
+   "name": "SM_RoomWallDecor_1",
+   "size": [
+    37.0,
+    300.0,
+    98.0
+   ],
+   "tris": 1056,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Modular/SM_RoomWallDecor_2.SM_RoomWallDecor_2",
+   "name": "SM_RoomWallDecor_2",
+   "size": [
+    8.0,
+    300.0,
+    98.0
+   ],
+   "tris": 1716,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Modular/SM_RoomWall_Decor_5.SM_RoomWall_Decor_5",
+   "name": "SM_RoomWall_Decor_5",
+   "size": [
+    40.0,
+    200.0,
+    400.0
+   ],
+   "tris": 2244,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Props/SM_RoomWorkTable_ControlMonitor01.SM_RoomWorkTable_ControlMonitor01",
+   "name": "SM_RoomWorkTable_ControlMonitor01",
+   "size": [
+    63.0,
+    124.0,
+    127.0
+   ],
+   "tris": 1540,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/SM_RoomWorkTable_Cylinder.SM_RoomWorkTable_Cylinder",
+   "name": "SM_RoomWorkTable_Cylinder",
+   "size": [
+    305.0,
+    305.0,
+    200.0
+   ],
+   "tris": 240,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Props/SM_RoomWorkTable_MiddlePower.SM_RoomWorkTable_MiddlePower",
+   "name": "SM_RoomWorkTable_MiddlePower",
+   "size": [
+    53.0,
+    53.0,
+    140.0
+   ],
+   "tris": 4026,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Props/SM_RoomWorkTable_SmallMonitor.SM_RoomWorkTable_SmallMonitor",
+   "name": "SM_RoomWorkTable_SmallMonitor",
+   "size": [
+    43.0,
+    54.0,
+    19.0
+   ],
+   "tris": 992,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Props/SM_RoomWorkTable_Table.SM_RoomWorkTable_Table",
+   "name": "SM_RoomWorkTable_Table",
+   "size": [
+    372.0,
+    259.0,
+    137.0
+   ],
+   "tris": 4480,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Modular/SM_Room_Ceiling.SM_Room_Ceiling",
+   "name": "SM_Room_Ceiling",
+   "size": [
+    200.0,
+    300.0,
+    45.0
+   ],
+   "tris": 420,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Props/SM_Room_CelingLight01.SM_Room_CelingLight01",
+   "name": "SM_Room_CelingLight01",
+   "size": [
+    63.0,
+    63.0,
+    13.0
+   ],
+   "tris": 1728,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Props/SM_Room_GlassWallLock01.SM_Room_GlassWallLock01",
+   "name": "SM_Room_GlassWallLock01",
+   "size": [
+    34.0,
+    34.0,
+    11.0
+   ],
+   "tris": 2976,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Props/SM_Room_OfficeTable.SM_Room_OfficeTable",
+   "name": "SM_Room_OfficeTable",
+   "size": [
+    266.0,
+    409.0,
+    115.0
+   ],
+   "tris": 17130,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/SM_WallDecor_1.SM_WallDecor_1",
+   "name": "SM_WallDecor_1",
+   "size": [
+    17.0,
+    300.0,
+    45.0
+   ],
+   "tris": 1236,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/SM_WallDecor_2.SM_WallDecor_2",
+   "name": "SM_WallDecor_2",
+   "size": [
+    29.0,
+    500.0,
+    89.0
+   ],
+   "tris": 454,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/SM_WallModule_1.SM_WallModule_1",
+   "name": "SM_WallModule_1",
+   "size": [
+    500.0,
+    4.0,
+    100.0
+   ],
+   "tris": 180,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Props/SM_Entrance_BigMonitor.SM_Entrance_BigMonitor",
+   "name": "SM_Entrance_BigMonitor",
+   "size": [
+    1500.0,
+    190.0,
+    285.0
+   ],
+   "tris": 1092,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/SM_Entrance_Frame.SM_Entrance_Frame",
+   "name": "SM_Entrance_Frame",
+   "size": [
+    5.0,
+    347.0,
+    163.0
+   ],
+   "tris": 306,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Modular/SM_RoomWall_Decor_6.SM_RoomWall_Decor_6",
+   "name": "SM_RoomWall_Decor_6",
+   "size": [
+    35.0,
+    200.0,
+    398.0
+   ],
+   "tris": 228,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Modular/SM_RoomWall_Decor_7.SM_RoomWall_Decor_7",
+   "name": "SM_RoomWall_Decor_7",
+   "size": [
+    35.0,
+    200.0,
+    398.0
+   ],
+   "tris": 354,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Modular/SM_RoomWindow.SM_RoomWindow",
+   "name": "SM_RoomWindow",
+   "size": [
+    24.0,
+    400.0,
+    400.0
+   ],
+   "tris": 2380,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Glass/SM_Room_GlassWall02.SM_Room_GlassWall02",
+   "name": "SM_Room_GlassWall02",
+   "size": [
+    174.0,
+    1.0,
+    364.0
+   ],
+   "tris": 12,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/Glass/SM_Room_GlassWall06.SM_Room_GlassWall06",
+   "name": "SM_Room_GlassWall06",
+   "size": [
+    394.0,
+    1.0,
+    364.0
+   ],
+   "tris": 12,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/SM_Room_SteelWall01.SM_Room_SteelWall01",
+   "name": "SM_Room_SteelWall01",
+   "size": [
+    409.0,
+    6.0,
+    400.0
+   ],
+   "tris": 84,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/SM_Room_SteelWall02.SM_Room_SteelWall02",
+   "name": "SM_Room_SteelWall02",
+   "size": [
+    10.0,
+    717.0,
+    400.0
+   ],
+   "tris": 104,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/SM_Stacks.SM_Stacks",
+   "name": "SM_Stacks",
+   "size": [
+    114.0,
+    688.0,
+    400.0
+   ],
+   "tris": 4430,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/SM_Wall_1.SM_Wall_1",
+   "name": "SM_Wall_1",
+   "size": [
+    1040.0,
+    20.0,
+    400.0
+   ],
+   "tris": 12,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/SM_Wall_2.SM_Wall_2",
+   "name": "SM_Wall_2",
+   "size": [
+    24.0,
+    1800.0,
+    422.0
+   ],
+   "tris": 272,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/SM_Wall_3.SM_Wall_3",
+   "name": "SM_Wall_3",
+   "size": [
+    24.0,
+    1800.0,
+    700.0
+   ],
+   "tris": 40,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/SM_Wall_4.SM_Wall_4",
+   "name": "SM_Wall_4",
+   "size": [
+    1540.0,
+    24.0,
+    450.0
+   ],
+   "tris": 112,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/SM_Wall_5.SM_Wall_5",
+   "name": "SM_Wall_5",
+   "size": [
+    1540.0,
+    20.0,
+    450.0
+   ],
+   "tris": 28,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Clinic/Meshes/SM_Wall_6.SM_Wall_6",
+   "name": "SM_Wall_6",
+   "size": [
+    1040.0,
+    20.0,
+    400.0
+   ],
+   "tris": 28,
+   "nanite": "",
+   "role": "wall"
+  }
+ ]
+}

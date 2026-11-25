@@ -9,7 +9,7 @@ Run one arcade game as a test, take screenshots of its window, then close it.
 Extra command-line flags go in the DCC_TEST_ARGS environment variable (e.g. "-GateSeed=13 -GateTheme=2").
 
 <GameMode> is the class name without the prefix: DCCLobbyGameMode (the Den), DCCClimbGameMode (Fourteener),
-DCCHauntGameMode (Dead Air), DCCKartGameMode (Repo Rally), DCCNeonGameMode, DCCGateGameMode (Gate Run),
+DCCHauntGameMode (Dead Air), DCCBenchGameMode (the pose bench, a near-empty stage), DCCKartGameMode (Repo Rally), DCCNeonGameMode, DCCGateGameMode (Gate Run),
 DCCFrontDoorGameMode (main menu). Dev commands are comma-separated console commands; most DCC.* ones take a
 delay in seconds as their last argument (see Arcade/DCCDevCommands.cpp).
 
@@ -65,6 +65,15 @@ def main() -> int:
                 print("The game closed before the level came up. Read", log)
                 return 2
             time.sleep(1)
+        # DCC_TEST_WAITFOR="some log text": count <first_shot_s> from that line instead (2026-11-25, set previews,
+        # whose load time varies far more than the level's).
+        wait_for = os.environ.get("DCC_TEST_WAITFOR", "")
+        if wait_for:
+            started = time.time()
+            while time.time() - started < 600 and game.poll() is None:
+                if wait_for in log.read_text(encoding="utf-8", errors="ignore"):
+                    break
+                time.sleep(1)
         time.sleep(first)
         for i in range(shots):
             before = set(out.glob("*.png"))

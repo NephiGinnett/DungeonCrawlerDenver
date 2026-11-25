@@ -1,0 +1,507 @@
+{
+ "pack": "ModSci_EngiProps",
+ "maps": [
+  {
+   "path": "/Game/ModSci_EngiProps/Maps/IndividualTemp.IndividualTemp",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Maps/IndividualTemp_2.IndividualTemp_2",
+   "partitioned": false
+  }
+ ],
+ "meshes": [
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_PlasticPallet.SM_PlasticPallet",
+   "name": "SM_PlasticPallet",
+   "size": [
+    190.0,
+    190.0,
+    17.0
+   ],
+   "tris": 5728,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_RubberMat_Flat.SM_RubberMat_Flat",
+   "name": "SM_RubberMat_Flat",
+   "size": [
+    177.0,
+    103.0,
+    0.0
+   ],
+   "tris": 76,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_Wire_Floor_A.SM_Wire_Floor_A",
+   "name": "SM_Wire_Floor_A",
+   "size": [
+    329.0,
+    149.0,
+    6.0
+   ],
+   "tris": 5484,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_Wire_Floor_B.SM_Wire_Floor_B",
+   "name": "SM_Wire_Floor_B",
+   "size": [
+    234.0,
+    190.0,
+    6.0
+   ],
+   "tris": 6380,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_Pipe_ASV.SM_Pipe_ASV",
+   "name": "SM_Pipe_ASV",
+   "size": [
+    42.0,
+    17.0,
+    478.0
+   ],
+   "tris": 4522,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_AlarmLight.SM_AlarmLight",
+   "name": "SM_AlarmLight",
+   "size": [
+    12.0,
+    12.0,
+    16.0
+   ],
+   "tris": 2182,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_Case_A.SM_Case_A",
+   "name": "SM_Case_A",
+   "size": [
+    117.0,
+    66.0,
+    50.0
+   ],
+   "tris": 16493,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_CeilingSign.SM_CeilingSign",
+   "name": "SM_CeilingSign",
+   "size": [
+    7.0,
+    117.0,
+    115.0
+   ],
+   "tris": 1540,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_Ceiling_CoatedPipe_A.SM_Ceiling_CoatedPipe_A",
+   "name": "SM_Ceiling_CoatedPipe_A",
+   "size": [
+    164.0,
+    104.0,
+    51.0
+   ],
+   "tris": 2786,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_Ceiling_CoatedPipe_B.SM_Ceiling_CoatedPipe_B",
+   "name": "SM_Ceiling_CoatedPipe_B",
+   "size": [
+    245.0,
+    107.0,
+    51.0
+   ],
+   "tris": 3329,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_Ceiling_CoatedPipe_C.SM_Ceiling_CoatedPipe_C",
+   "name": "SM_Ceiling_CoatedPipe_C",
+   "size": [
+    184.0,
+    49.0,
+    50.0
+   ],
+   "tris": 2230,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_CoatedPipe_A.SM_CoatedPipe_A",
+   "name": "SM_CoatedPipe_A",
+   "size": [
+    21.0,
+    41.0,
+    112.0
+   ],
+   "tris": 2334,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_EmergencyButton.SM_EmergencyButton",
+   "name": "SM_EmergencyButton",
+   "size": [
+    19.0,
+    16.0,
+    21.0
+   ],
+   "tris": 2768,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_FireAlarmBell.SM_FireAlarmBell",
+   "name": "SM_FireAlarmBell",
+   "size": [
+    26.0,
+    15.0,
+    24.0
+   ],
+   "tris": 2934,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_FireExtinguisher.SM_FireExtinguisher",
+   "name": "SM_FireExtinguisher",
+   "size": [
+    24.0,
+    16.0,
+    62.0
+   ],
+   "tris": 6784,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_FireExtinguisher_Mount.SM_FireExtinguisher_Mount",
+   "name": "SM_FireExtinguisher_Mount",
+   "size": [
+    19.0,
+    24.0,
+    46.0
+   ],
+   "tris": 3368,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_FirePullStation.SM_FirePullStation",
+   "name": "SM_FirePullStation",
+   "size": [
+    20.0,
+    6.0,
+    27.0
+   ],
+   "tris": 918,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_IndustrialPlug_A.SM_IndustrialPlug_A",
+   "name": "SM_IndustrialPlug_A",
+   "size": [
+    13.0,
+    14.0,
+    8.0
+   ],
+   "tris": 2538,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_Light_B.SM_Light_B",
+   "name": "SM_Light_B",
+   "size": [
+    10.0,
+    166.0,
+    28.0
+   ],
+   "tris": 5152,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_NitrogenTank_Covered.SM_NitrogenTank_Covered",
+   "name": "SM_NitrogenTank_Covered",
+   "size": [
+    101.0,
+    88.0,
+    95.0
+   ],
+   "tris": 5648,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_OxygenTank.SM_OxygenTank",
+   "name": "SM_OxygenTank",
+   "size": [
+    18.0,
+    18.0,
+    77.0
+   ],
+   "tris": 2698,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_OxygenTank_B.SM_OxygenTank_B",
+   "name": "SM_OxygenTank_B",
+   "size": [
+    19.0,
+    77.0,
+    19.0
+   ],
+   "tris": 5594,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_Pipe_90.SM_Pipe_90",
+   "name": "SM_Pipe_90",
+   "size": [
+    116.0,
+    22.0,
+    93.0
+   ],
+   "tris": 2184,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_Pipe_90_b.SM_Pipe_90_b",
+   "name": "SM_Pipe_90_b",
+   "size": [
+    149.0,
+    17.0,
+    35.0
+   ],
+   "tris": 1528,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_Pipe_Bar.SM_Pipe_Bar",
+   "name": "SM_Pipe_Bar",
+   "size": [
+    157.0,
+    17.0,
+    35.0
+   ],
+   "tris": 2404,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_PortableLight.SM_PortableLight",
+   "name": "SM_PortableLight",
+   "size": [
+    84.0,
+    73.0,
+    177.0
+   ],
+   "tris": 20394,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_RubberMat_Rolled.SM_RubberMat_Rolled",
+   "name": "SM_RubberMat_Rolled",
+   "size": [
+    22.0,
+    103.0,
+    15.0
+   ],
+   "tris": 2596,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_SafetySwitch.SM_SafetySwitch",
+   "name": "SM_SafetySwitch",
+   "size": [
+    47.0,
+    28.0,
+    86.0
+   ],
+   "tris": 3150,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_Screwdriver.SM_Screwdriver",
+   "name": "SM_Screwdriver",
+   "size": [
+    21.0,
+    2.0,
+    2.0
+   ],
+   "tris": 1128,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_Socket_A.SM_Socket_A",
+   "name": "SM_Socket_A",
+   "size": [
+    9.0,
+    9.0,
+    4.0
+   ],
+   "tris": 1726,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_Socket_B.SM_Socket_B",
+   "name": "SM_Socket_B",
+   "size": [
+    18.0,
+    18.0,
+    1.0
+   ],
+   "tris": 1438,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_Toolbox.SM_Toolbox",
+   "name": "SM_Toolbox",
+   "size": [
+    53.0,
+    24.0,
+    29.0
+   ],
+   "tris": 4372,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_VOIPPhone.SM_VOIPPhone",
+   "name": "SM_VOIPPhone",
+   "size": [
+    10.0,
+    27.0,
+    42.0
+   ],
+   "tris": 10113,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_WallBrace_A.SM_WallBrace_A",
+   "name": "SM_WallBrace_A",
+   "size": [
+    18.0,
+    117.0,
+    7.0
+   ],
+   "tris": 628,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_WallBracket_A.SM_WallBracket_A",
+   "name": "SM_WallBracket_A",
+   "size": [
+    19.0,
+    45.0,
+    19.0
+   ],
+   "tris": 2896,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_WallPipes_Small_A.SM_WallPipes_Small_A",
+   "name": "SM_WallPipes_Small_A",
+   "size": [
+    5.0,
+    225.0,
+    103.0
+   ],
+   "tris": 2016,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_WaterDrum.SM_WaterDrum",
+   "name": "SM_WaterDrum",
+   "size": [
+    50.0,
+    50.0,
+    87.0
+   ],
+   "tris": 3078,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_WireReel_A.SM_WireReel_A",
+   "name": "SM_WireReel_A",
+   "size": [
+    100.0,
+    67.0,
+    75.0
+   ],
+   "tris": 9426,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_Wire_Wall_A.SM_Wire_Wall_A",
+   "name": "SM_Wire_Wall_A",
+   "size": [
+    73.0,
+    130.0,
+    35.0
+   ],
+   "tris": 5016,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_Wrench.SM_Wrench",
+   "name": "SM_Wrench",
+   "size": [
+    23.0,
+    7.0,
+    0.0
+   ],
+   "tris": 1240,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_EngiProps/Meshes/SM_Wire_Wall_B.SM_Wire_Wall_B",
+   "name": "SM_Wire_Wall_B",
+   "size": [
+    323.0,
+    29.0,
+    481.0
+   ],
+   "tris": 8344,
+   "nanite": "",
+   "role": "wall"
+  }
+ ]
+}

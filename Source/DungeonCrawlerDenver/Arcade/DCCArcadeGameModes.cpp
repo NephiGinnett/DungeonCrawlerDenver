@@ -4,6 +4,8 @@
 #include "Arcade/DCCArcadeHaunt.h"
 #include "Arcade/DCCArcadeAudit.h"
 #include "Arcade/DCCArcadeGate.h"
+#include "Arcade/DCCArcadeSiege.h"
+#include "Arcade/DCCArcadeRing.h"
 #include "Arcade/DCCArcadeFrontDoor.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
@@ -49,5 +51,7 @@ TSubclassOf<ADCCArcadeArena> ADCCNeonGameMode::GetArenaClass() const { return AD
 TSubclassOf<ADCCArcadeArena> ADCCHauntGameMode::GetArenaClass() const { return ADCCArcadeHaunt::StaticClass(); }
 TSubclassOf<ADCCArcadeArena> ADCCAuditGameMode::GetArenaClass() const { return ADCCArcadeAudit::StaticClass(); }
 TSubclassOf<ADCCArcadeArena> ADCCGateGameMode::GetArenaClass() const { return ADCCArcadeGate::StaticClass(); }
+TSubclassOf<ADCCArcadeArena> ADCCSiegeGameMode::GetArenaClass() const { return ADCCArcadeSiege::StaticClass(); }
+TSubclassOf<ADCCArcadeArena> ADCCRingGameMode::GetArenaClass() const { return ADCCArcadeRing::StaticClass(); }
 TSubclassOf<ADCCArcadeArena> ADCCFrontDoorGameMode::GetArenaClass() const { return ADCCArcadeFrontDoor::StaticClass(); }
 TSubclassOf<ADCCArcadeArena> ADCCBenchGameMode::GetArenaClass() const { return ADCCArcadeFrontDoor::StaticClass(); }

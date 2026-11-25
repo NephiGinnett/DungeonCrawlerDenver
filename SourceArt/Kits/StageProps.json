@@ -1,0 +1,467 @@
+{
+ "pack": "StageProps",
+ "maps": [
+  {
+   "path": "/Game/StageProps/Overview/AssetsOverview.AssetsOverview",
+   "partitioned": true
+  }
+ ],
+ "meshes": [
+  {
+   "path": "/Game/StageProps/Geometries/SM_50.SM_50",
+   "name": "SM_50",
+   "size": [
+    3124.0,
+    73.0,
+    1704.0
+   ],
+   "tris": 103536,
+   "nanite": "False",
+   "role": "big"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_53.SM_53",
+   "name": "SM_53",
+   "size": [
+    3137.0,
+    1458.0,
+    273.0
+   ],
+   "tris": 13788,
+   "nanite": "False",
+   "role": "big"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_54.SM_54",
+   "name": "SM_54",
+   "size": [
+    3147.0,
+    1466.0,
+    294.0
+   ],
+   "tris": 69372,
+   "nanite": "False",
+   "role": "big"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_01.SM_01",
+   "name": "SM_01",
+   "size": [
+    1881.0,
+    1181.0,
+    101.0
+   ],
+   "tris": 16024,
+   "nanite": "False",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_100.SM_100",
+   "name": "SM_100",
+   "size": [
+    817.0,
+    34.0,
+    97.0
+   ],
+   "tris": 13676,
+   "nanite": "False",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_101.SM_101",
+   "name": "SM_101",
+   "size": [
+    1055.0,
+    28.0,
+    97.0
+   ],
+   "tris": 16544,
+   "nanite": "False",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_23.SM_23",
+   "name": "SM_23",
+   "size": [
+    1706.0,
+    1438.0,
+    230.0
+   ],
+   "tris": 90672,
+   "nanite": "False",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_48.SM_48",
+   "name": "SM_48",
+   "size": [
+    1445.0,
+    53.0,
+    53.0
+   ],
+   "tris": 5904,
+   "nanite": "False",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_49.SM_49",
+   "name": "SM_49",
+   "size": [
+    1445.0,
+    314.0,
+    78.0
+   ],
+   "tris": 25180,
+   "nanite": "False",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_57.SM_57",
+   "name": "SM_57",
+   "size": [
+    1662.0,
+    1487.0,
+    157.0
+   ],
+   "tris": 90672,
+   "nanite": "False",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_59.SM_59",
+   "name": "SM_59",
+   "size": [
+    545.0,
+    24.0,
+    29.0
+   ],
+   "tris": 2896,
+   "nanite": "False",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_60.SM_60",
+   "name": "SM_60",
+   "size": [
+    293.0,
+    293.0,
+    27.0
+   ],
+   "tris": 9576,
+   "nanite": "False",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_61.SM_61",
+   "name": "SM_61",
+   "size": [
+    294.0,
+    294.0,
+    27.0
+   ],
+   "tris": 3232,
+   "nanite": "False",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_62.SM_62",
+   "name": "SM_62",
+   "size": [
+    544.0,
+    24.0,
+    29.0
+   ],
+   "tris": 6918,
+   "nanite": "False",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_63.SM_63",
+   "name": "SM_63",
+   "size": [
+    545.0,
+    24.0,
+    29.0
+   ],
+   "tris": 2896,
+   "nanite": "False",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_64.SM_64",
+   "name": "SM_64",
+   "size": [
+    544.0,
+    24.0,
+    29.0
+   ],
+   "tris": 6918,
+   "nanite": "False",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_65.SM_65",
+   "name": "SM_65",
+   "size": [
+    506.0,
+    36.0,
+    36.0
+   ],
+   "tris": 3764,
+   "nanite": "False",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_66.SM_66",
+   "name": "SM_66",
+   "size": [
+    507.0,
+    37.0,
+    37.0
+   ],
+   "tris": 1440,
+   "nanite": "False",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_67.SM_67",
+   "name": "SM_67",
+   "size": [
+    507.0,
+    37.0,
+    37.0
+   ],
+   "tris": 1440,
+   "nanite": "False",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_68.SM_68",
+   "name": "SM_68",
+   "size": [
+    506.0,
+    36.0,
+    36.0
+   ],
+   "tris": 3764,
+   "nanite": "False",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_69.SM_69",
+   "name": "SM_69",
+   "size": [
+    787.0,
+    27.0,
+    27.0
+   ],
+   "tris": 5936,
+   "nanite": "False",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_70.SM_70",
+   "name": "SM_70",
+   "size": [
+    787.0,
+    27.0,
+    27.0
+   ],
+   "tris": 5936,
+   "nanite": "False",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_102.SM_102",
+   "name": "SM_102",
+   "size": [
+    328.0,
+    83.0,
+    1191.0
+   ],
+   "tris": 274,
+   "nanite": "False",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_24.SM_24",
+   "name": "SM_24",
+   "size": [
+    72.0,
+    73.0,
+    1695.0
+   ],
+   "tris": 5616,
+   "nanite": "False",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_25.SM_25",
+   "name": "SM_25",
+   "size": [
+    72.0,
+    73.0,
+    1695.0
+   ],
+   "tris": 5616,
+   "nanite": "False",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_26.SM_26",
+   "name": "SM_26",
+   "size": [
+    72.0,
+    73.0,
+    1695.0
+   ],
+   "tris": 5616,
+   "nanite": "False",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_56.SM_56",
+   "name": "SM_56",
+   "size": [
+    72.0,
+    73.0,
+    1695.0
+   ],
+   "tris": 5616,
+   "nanite": "False",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_00.SM_00",
+   "name": "SM_00",
+   "size": [
+    300.0,
+    17.0,
+    147.0
+   ],
+   "tris": 2208,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_02.SM_02",
+   "name": "SM_02",
+   "size": [
+    437.0,
+    19.0,
+    129.0
+   ],
+   "tris": 6732,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_03.SM_03",
+   "name": "SM_03",
+   "size": [
+    580.0,
+    421.0,
+    101.0
+   ],
+   "tris": 4566,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_04.SM_04",
+   "name": "SM_04",
+   "size": [
+    393.0,
+    421.0,
+    101.0
+   ],
+   "tris": 3618,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_06.SM_06",
+   "name": "SM_06",
+   "size": [
+    17.0,
+    27.0,
+    14.0
+   ],
+   "tris": 16845,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_07.SM_07",
+   "name": "SM_07",
+   "size": [
+    18.0,
+    22.0,
+    32.0
+   ],
+   "tris": 3896,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_09.SM_09",
+   "name": "SM_09",
+   "size": [
+    24.0,
+    24.0,
+    33.0
+   ],
+   "tris": 2036,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_10.SM_10",
+   "name": "SM_10",
+   "size": [
+    54.0,
+    40.0,
+    63.0
+   ],
+   "tris": 4680,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_19.SM_19",
+   "name": "SM_19",
+   "size": [
+    26.0,
+    38.0,
+    26.0
+   ],
+   "tris": 21560,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_55.SM_55",
+   "name": "SM_55",
+   "size": [
+    217.0,
+    214.0,
+    63.0
+   ],
+   "tris": 516,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/StageProps/Geometries/SM_99.SM_99",
+   "name": "SM_99",
+   "size": [
+    33.0,
+    24.0,
+    54.0
+   ],
+   "tris": 3792,
+   "nanite": "False",
+   "role": "prop"
+  }
+ ]
+}

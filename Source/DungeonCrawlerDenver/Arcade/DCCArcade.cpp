@@ -52,6 +52,14 @@ namespace DCCArcade
 				TEXT("A gate opens over Denver. Walk in, clear 3 to 10 rooms of fights, trials and vaults, and drop the Gatekeeper before it collapses."),
 				TEXT("/Engine/Maps/Entry"), TEXT("/Script/DungeonCrawlerDenver.DCCGateGameMode"),
 				TEXT("BestScore"), true, TEXT("best run"), TEXT("pts"), FLinearColor(0.6f, 0.4f, 1.0f) },
+			{ TEXT("Siege"), TEXT("Dungeon Crawler Tower Defense"),
+				TEXT("You are the towers. Hold the wall. Step into the road and they have to fight you."),
+				TEXT("/Engine/Maps/Entry"), TEXT("/Script/DungeonCrawlerDenver.DCCSiegeGameMode"),
+				TEXT("BestWave"), true, TEXT("best wave"), TEXT("wave"), FLinearColor(0.95f, 0.45f, 0.2f) },
+			{ TEXT("Ring"), TEXT("The Champions' Ring"),
+				TEXT("Clear the ladder, or step onto the east pad for a tournament. Only the two in the ring can hit each other."),
+				TEXT("/Engine/Maps/Entry"), TEXT("/Script/DungeonCrawlerDenver.DCCRingGameMode"),
+				TEXT("BestStage"), true, TEXT("best stage"), TEXT("stage"), FLinearColor(0.85f, 0.70f, 0.25f) },
 		};
 		return List;
 	}
@@ -82,7 +90,8 @@ namespace DCCArcade
 
 	bool IsSeriesOpen(const APlayerState* Player, FName GameId)
 	{
-		if (GameId == TEXT("Crawler") || GameId == TEXT("Neon") || GameId == TEXT("Climb") || GameId == TEXT("RallyPractice") || GameId.IsNone())
+		if (GameId == TEXT("Crawler") || GameId == TEXT("Neon") || GameId == TEXT("Climb") || GameId == TEXT("RallyPractice")
+			|| GameId == TEXT("Siege") || GameId == TEXT("Ring") || GameId.IsNone())
 		{
 			return true;
 		}
@@ -139,6 +148,8 @@ namespace DCCArcade
 		if (GameId == TEXT("Kart")) { return TEXT("QUEST  Tow 10 cars to the yard."); }
 		if (GameId == TEXT("Neon")) { return TEXT("QUEST  Drive 500 metres."); }
 		if (GameId == TEXT("Crawler")) { return TEXT("QUEST  Clear a floor."); }
+		if (GameId == TEXT("Siege")) { return TEXT("QUEST  Hold the wall through wave 5."); }
+		if (GameId == TEXT("Ring")) { return TEXT("QUEST  Clear the first stage."); }
 		return FString();
 	}
 
@@ -318,6 +329,16 @@ namespace DCCArcade
 		if (GameId == TEXT("Kart")) { Yard(Player, Out); return; }
 		if (GameId == TEXT("Neon")) { Strip(Player, Out); return; }
 		if (GameId == TEXT("Crawler")) { Run(Player, Out); return; }
+		if (GameId == TEXT("Siege"))
+		{
+			Step(Out, TEXT("THE WALL"), TEXT("Hold the wall through wave 5."), nullptr);
+			return;
+		}
+		if (GameId == TEXT("Ring"))
+		{
+			Step(Out, TEXT("THE RING"), TEXT("Clear the first stage."), nullptr);
+			return;
+		}
 
 		// The Den, the front door, anywhere that is not already inside a game.
 		if (Ascent(Player, Out))
@@ -452,5 +473,5 @@ static void DCCArcadeCommand(const TArray<FString>& Args, UWorld* World)
 
 static FAutoConsoleCommandWithWorldAndArgs GArcadeCmd(
 	TEXT("DCC.Arcade"),
-	TEXT("DCC.Arcade [Crawler|Haunt|Climb|Kart|Neon|Audit|Gate]: take everyone to the arcade lobby, or straight into a game."),
+	TEXT("DCC.Arcade [Crawler|Haunt|Climb|Kart|Neon|Audit|Gate|Siege|Ring]: take everyone to the arcade lobby, or straight into a game."),
 	FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&DCCArcadeCommand));

@@ -1,0 +1,119 @@
+{
+ "pack": "ModernStreetProps_01",
+ "maps": [
+  {
+   "path": "/Game/ModernStreetProps_01/OverviewMap_ModernStreetProps_01.OverviewMap_ModernStreetProps_01",
+   "partitioned": false
+  }
+ ],
+ "meshes": [
+  {
+   "path": "/Game/ModernStreetProps_01/Meshes/SM_Modern_BarrierLarge_01.SM_Modern_BarrierLarge_01",
+   "name": "SM_Modern_BarrierLarge_01",
+   "size": [
+    100.0,
+    2.0,
+    75.0
+   ],
+   "tris": 188,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModernStreetProps_01/Meshes/SM_Modern_BarrierSmall_01.SM_Modern_BarrierSmall_01",
+   "name": "SM_Modern_BarrierSmall_01",
+   "size": [
+    50.0,
+    2.0,
+    75.0
+   ],
+   "tris": 188,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModernStreetProps_01/Meshes/SM_Modern_Bench_01.SM_Modern_Bench_01",
+   "name": "SM_Modern_Bench_01",
+   "size": [
+    150.0,
+    50.0,
+    50.0
+   ],
+   "tris": 28,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModernStreetProps_01/Meshes/SM_Modern_Bench_02.SM_Modern_Bench_02",
+   "name": "SM_Modern_Bench_02",
+   "size": [
+    150.0,
+    50.0,
+    77.0
+   ],
+   "tris": 64,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModernStreetProps_01/Meshes/SM_Modern_Bench_03.SM_Modern_Bench_03",
+   "name": "SM_Modern_Bench_03",
+   "size": [
+    150.0,
+    50.0,
+    50.0
+   ],
+   "tris": 36,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModernStreetProps_01/Meshes/SM_Modern_Bench_04.SM_Modern_Bench_04",
+   "name": "SM_Modern_Bench_04",
+   "size": [
+    151.0,
+    52.0,
+    88.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModernStreetProps_01/Meshes/SM_Modern_StreetLamp_01.SM_Modern_StreetLamp_01",
+   "name": "SM_Modern_StreetLamp_01",
+   "size": [
+    132.0,
+    20.0,
+    300.0
+   ],
+   "tris": 180,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModernStreetProps_01/Meshes/SM_Modern_TrafficCone_01.SM_Modern_TrafficCone_01",
+   "name": "SM_Modern_TrafficCone_01",
+   "size": [
+    45.0,
+    45.0,
+    75.0
+   ],
+   "tris": 128,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModernStreetProps_01/Meshes/SM_Modern_Trashcan_01.SM_Modern_Trashcan_01",
+   "name": "SM_Modern_Trashcan_01",
+   "size": [
+    51.0,
+    51.0,
+    86.0
+   ],
+   "tris": 174,
+   "nanite": "True",
+   "role": "prop"
+  }
+ ]
+}

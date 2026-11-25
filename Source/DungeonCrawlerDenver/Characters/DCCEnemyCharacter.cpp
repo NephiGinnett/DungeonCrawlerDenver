@@ -18,6 +18,7 @@
 #include "Navigation/PathFollowingComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
+#include "Arcade/DCCWalletComponent.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "Net/UnrealNetwork.h"
@@ -933,6 +934,61 @@ void ADCCEnemyCharacter::TickChargeCombat(float DeltaSeconds, ADCCCharacterBase*
 	}
 }
 
+void ADCCEnemyCharacter::TickHoldGround(float DeltaSeconds)
+{
+	(void)DeltaSeconds;
+	if (!CurrentTarget || !CurrentTarget->IsAlive())
+	{
+		ForgetTarget();
+		return;
+	}
+	if (Stats)
+	{
+		Stats->CurrentManaPoints = FMath::Max(Stats->CurrentManaPoints, Stats->MaxManaPoints);
+	}
+	const FVector To = CurrentTarget->GetActorLocation() - GetActorLocation();
+	if (!To.IsNearlyZero())
+	{
+		SetActorRotation(FRotator(0.0f, To.Rotation().Yaw, 0.0f));
+	}
+	if (AAIController* AI = Cast<AAIController>(GetController()))
+	{
+		AI->StopMovement();
+	}
+	if (TryUseSkill(CurrentTarget))
+	{
+		return;
+	}
+	const float Dist = FVector(To.X, To.Y, 0.0f).Size();
+	if (Dist <= GetEffectiveAttackRange())
+	{
+		PerformAttack(CurrentTarget);
+		return;
+	}
+	if (!bThrowsRocks || Dist > 1800.0f || !GetWorld() || GetWorld()->GetTimeSeconds() < NextRockTime)
+	{
+		return;
+	}
+	NextRockTime = GetWorld()->GetTimeSeconds() + 1.5f;
+	if (!bSaidRock)
+	{
+		bSaidRock = true;
+		if (PostedBy.IsValid() && PostedBy->Wallet)
+		{
+			PostedBy->Wallet->Tell(TEXT("I don't know any spells. I brought a rock."));
+		}
+	}
+	if (ADCCEnemyCharacter* Victim = Cast<ADCCEnemyCharacter>(CurrentTarget))
+	{
+		Victim->SiegeLastHit = PostedBy.IsValid() ? PostedBy.Get() : this;
+	}
+	if (CurrentTarget->Stats)
+	{
+		CurrentTarget->Stats->ApplyDamage(4);
+		NoteDamageDealtTo(CurrentTarget, 4);
+	}
+}
+
 void ADCCEnemyCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
@@ -970,6 +1026,17 @@ void ADCCEnemyCharacter::Tick(float DeltaSeconds)
 	}
 
 	AAIController* AIController = Cast<AAIController>(GetController());
+
+	// Tower defense marchers are moved by the arena. They only use this AI when a player
+	// is standing in the road in front of them.
+	if (bSiegeMarch && !bSiegeFight)
+	{
+		if (AIController)
+		{
+			AIController->StopMovement();
+		}
+		return;
+	}
 
 	// Independent of combat targeting on purpose - an ally gears up whether or
 	// not it currently has a fight, same as it keeps escorting either way.
@@ -1089,6 +1156,15 @@ void ADCCEnemyCharacter::Tick(float DeltaSeconds)
 
 	if (!CurrentTarget)
 	{
+		if (bHoldGround)
+		{
+			if (AIController)
+			{
+				AIController->StopMovement();
+			}
+			return;
+		}
+
 		// Nothing worth fighting. An ally checks for someone to save before
 		// falling back on escorting; a passive guard patrols; a mob idles
 		// exactly as it always did.
@@ -1104,6 +1180,12 @@ void ADCCEnemyCharacter::Tick(float DeltaSeconds)
 			TickPatrol(AIController);
 		}
 
+		return;
+	}
+
+	if (bHoldGround)
+	{
+		TickHoldGround(DeltaSeconds);
 		return;
 	}
 

@@ -113,3 +113,21 @@ class DUNGEONCRAWLERDENVER_API ADCCGateGameMode : public ADCCArcadeGameMode
 protected:
 	virtual TSubclassOf<ADCCArcadeArena> GetArenaClass() const override;
 };
+
+/** Dungeon Crawler Tower Defense (Arcade/DCCArcadeSiege). */
+UCLASS()
+class DUNGEONCRAWLERDENVER_API ADCCSiegeGameMode : public ADCCArcadeGameMode
+{
+	GENERATED_BODY()
+protected:
+	virtual TSubclassOf<ADCCArcadeArena> GetArenaClass() const override;
+};
+
+/** The Champions' Ring (Arcade/DCCArcadeRing). */
+UCLASS()
+class DUNGEONCRAWLERDENVER_API ADCCRingGameMode : public ADCCArcadeGameMode
+{
+	GENERATED_BODY()
+protected:
+	virtual TSubclassOf<ADCCArcadeArena> GetArenaClass() const override;
+};

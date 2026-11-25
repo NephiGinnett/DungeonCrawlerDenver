@@ -1,0 +1,227 @@
+{
+ "pack": "Barrels_Boxes",
+ "maps": [
+  {
+   "path": "/Game/Barrels_Boxes/Maps/Main.Main",
+   "partitioned": false
+  }
+ ],
+ "meshes": [
+  {
+   "path": "/Game/Barrels_Boxes/Meshes/SM_150x150.SM_150x150",
+   "name": "SM_150x150",
+   "size": [
+    150.0,
+    150.0,
+    5.0
+   ],
+   "tris": 60,
+   "nanite": "False",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Barrels_Boxes/Meshes/SM_Stand_LP.SM_Stand_LP",
+   "name": "SM_Stand_LP",
+   "size": [
+    102.0,
+    93.0,
+    48.0
+   ],
+   "tris": 460,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Barrels_Boxes/Meshes/SM_bag1.SM_bag1",
+   "name": "SM_bag1",
+   "size": [
+    96.0,
+    73.0,
+    34.0
+   ],
+   "tris": 818,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Barrels_Boxes/Meshes/SM_bag2.SM_bag2",
+   "name": "SM_bag2",
+   "size": [
+    88.0,
+    75.0,
+    56.0
+   ],
+   "tris": 1958,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Barrels_Boxes/Meshes/SM_bag3.SM_bag3",
+   "name": "SM_bag3",
+   "size": [
+    81.0,
+    68.0,
+    71.0
+   ],
+   "tris": 3154,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Barrels_Boxes/Meshes/SM_bag_knot.SM_bag_knot",
+   "name": "SM_bag_knot",
+   "size": [
+    56.0,
+    37.0,
+    63.0
+   ],
+   "tris": 1636,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Barrels_Boxes/Meshes/SM_barrel_big_LP.SM_barrel_big_LP",
+   "name": "SM_barrel_big_LP",
+   "size": [
+    122.0,
+    95.0,
+    92.0
+   ],
+   "tris": 752,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Barrels_Boxes/Meshes/SM_bucket_big.SM_bucket_big",
+   "name": "SM_bucket_big",
+   "size": [
+    43.0,
+    43.0,
+    42.0
+   ],
+   "tris": 384,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Barrels_Boxes/Meshes/SM_cube.SM_cube",
+   "name": "SM_cube",
+   "size": [
+    75.0,
+    75.0,
+    66.0
+   ],
+   "tris": 1032,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Barrels_Boxes/Meshes/SM_cube_lid.SM_cube_lid",
+   "name": "SM_cube_lid",
+   "size": [
+    71.0,
+    75.0,
+    8.0
+   ],
+   "tris": 196,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Barrels_Boxes/Meshes/SM_faucet.SM_faucet",
+   "name": "SM_faucet",
+   "size": [
+    20.0,
+    7.0,
+    10.0
+   ],
+   "tris": 1076,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Barrels_Boxes/Meshes/SM_lid.SM_lid",
+   "name": "SM_lid",
+   "size": [
+    73.0,
+    6.0,
+    61.0
+   ],
+   "tris": 284,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Barrels_Boxes/Meshes/SM_pallet.SM_pallet",
+   "name": "SM_pallet",
+   "size": [
+    91.0,
+    80.0,
+    19.0
+   ],
+   "tris": 622,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Barrels_Boxes/Meshes/SM_rope.SM_rope",
+   "name": "SM_rope",
+   "size": [
+    16.0,
+    24.0,
+    10.0
+   ],
+   "tris": 1216,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Barrels_Boxes/Meshes/SM_rum.SM_rum",
+   "name": "SM_rum",
+   "size": [
+    136.0,
+    152.0,
+    144.0
+   ],
+   "tris": 768,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Barrels_Boxes/Meshes/SM_tray_big.SM_tray_big",
+   "name": "SM_tray_big",
+   "size": [
+    93.0,
+    64.0,
+    48.0
+   ],
+   "tris": 2080,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Barrels_Boxes/Meshes/SM_tray_hight.SM_tray_hight",
+   "name": "SM_tray_hight",
+   "size": [
+    56.0,
+    56.0,
+    40.0
+   ],
+   "tris": 1772,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Barrels_Boxes/Meshes/SM_tray_low.SM_tray_low",
+   "name": "SM_tray_low",
+   "size": [
+    75.0,
+    72.0,
+    26.0
+   ],
+   "tris": 2364,
+   "nanite": "False",
+   "role": "prop"
+  }
+ ]
+}

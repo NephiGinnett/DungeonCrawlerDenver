@@ -1,0 +1,687 @@
+{
+ "pack": "BroadcastStudio",
+ "maps": [
+  {
+   "path": "/Game/BroadcastStudio/Maps/Overview.Overview",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/BroadcastStudio/Maps/Showcase.Showcase",
+   "partitioned": false
+  }
+ ],
+ "meshes": [
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_Desk_Cap_01.SM_BS_Desk_Cap_01",
+   "name": "SM_BS_Desk_Cap_01",
+   "size": [
+    159.0,
+    129.0,
+    6.0
+   ],
+   "tris": 736,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_Desk_Cap_02.SM_BS_Desk_Cap_02",
+   "name": "SM_BS_Desk_Cap_02",
+   "size": [
+    161.0,
+    150.0,
+    6.0
+   ],
+   "tris": 658,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_Stage_Base.SM_BS_Stage_Base",
+   "name": "SM_BS_Stage_Base",
+   "size": [
+    1008.0,
+    1008.0,
+    15.0
+   ],
+   "tris": 2238,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_Stage_Base_02.SM_BS_Stage_Base_02",
+   "name": "SM_BS_Stage_Base_02",
+   "size": [
+    1004.0,
+    1008.0,
+    15.0
+   ],
+   "tris": 1174,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_Stairs_01.SM_BS_Stairs_01",
+   "name": "SM_BS_Stairs_01",
+   "size": [
+    513.0,
+    513.0,
+    30.0
+   ],
+   "tris": 3262,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_Stairs_02.SM_BS_Stairs_02",
+   "name": "SM_BS_Stairs_02",
+   "size": [
+    820.0,
+    512.0,
+    30.0
+   ],
+   "tris": 1649,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_Stage_Column_01.SM_BS_Stage_Column_01",
+   "name": "SM_BS_Stage_Column_01",
+   "size": [
+    106.0,
+    106.0,
+    400.0
+   ],
+   "tris": 572,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_Stage_Column_02.SM_BS_Stage_Column_02",
+   "name": "SM_BS_Stage_Column_02",
+   "size": [
+    48.0,
+    48.0,
+    400.0
+   ],
+   "tris": 4172,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_Stage_Wall_02.SM_BS_Stage_Wall_02",
+   "name": "SM_BS_Stage_Wall_02",
+   "size": [
+    143.0,
+    52.0,
+    400.0
+   ],
+   "tris": 20548,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_Camera.SM_BS_Camera",
+   "name": "SM_BS_Camera",
+   "size": [
+    153.0,
+    56.0,
+    66.0
+   ],
+   "tris": 9091,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_CameraStand.SM_BS_CameraStand",
+   "name": "SM_BS_CameraStand",
+   "size": [
+    83.0,
+    85.0,
+    98.0
+   ],
+   "tris": 7762,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_CoffeeCup_01.SM_BS_CoffeeCup_01",
+   "name": "SM_BS_CoffeeCup_01",
+   "size": [
+    13.0,
+    9.0,
+    11.0
+   ],
+   "tris": 680,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_DeskMicrophone_01.SM_BS_DeskMicrophone_01",
+   "name": "SM_BS_DeskMicrophone_01",
+   "size": [
+    20.0,
+    13.0,
+    19.0
+   ],
+   "tris": 2284,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_DeskMicrophone_02.SM_BS_DeskMicrophone_02",
+   "name": "SM_BS_DeskMicrophone_02",
+   "size": [
+    20.0,
+    11.0,
+    20.0
+   ],
+   "tris": 3008,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_DeskPlants_01.SM_BS_DeskPlants_01",
+   "name": "SM_BS_DeskPlants_01",
+   "size": [
+    34.0,
+    31.0,
+    25.0
+   ],
+   "tris": 1476,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_DeskPlants_02.SM_BS_DeskPlants_02",
+   "name": "SM_BS_DeskPlants_02",
+   "size": [
+    45.0,
+    42.0,
+    28.0
+   ],
+   "tris": 1283,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_DeskPlants_03.SM_BS_DeskPlants_03",
+   "name": "SM_BS_DeskPlants_03",
+   "size": [
+    34.0,
+    33.0,
+    23.0
+   ],
+   "tris": 1668,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_Desk_CapFill_03.SM_BS_Desk_CapFill_03",
+   "name": "SM_BS_Desk_CapFill_03",
+   "size": [
+    72.0,
+    111.0,
+    81.0
+   ],
+   "tris": 1968,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_Desk_Cap_03.SM_BS_Desk_Cap_03",
+   "name": "SM_BS_Desk_Cap_03",
+   "size": [
+    64.0,
+    103.0,
+    6.0
+   ],
+   "tris": 322,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_Desk_MidFill_01.SM_BS_Desk_MidFill_01",
+   "name": "SM_BS_Desk_MidFill_01",
+   "size": [
+    100.0,
+    13.0,
+    81.0
+   ],
+   "tris": 100,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_Desk_Mid_01.SM_BS_Desk_Mid_01",
+   "name": "SM_BS_Desk_Mid_01",
+   "size": [
+    100.0,
+    103.0,
+    6.0
+   ],
+   "tris": 36,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_DrinkingGlass_01.SM_BS_DrinkingGlass_01",
+   "name": "SM_BS_DrinkingGlass_01",
+   "size": [
+    8.0,
+    8.0,
+    9.0
+   ],
+   "tris": 252,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_EndTable.SM_BS_EndTable",
+   "name": "SM_BS_EndTable",
+   "size": [
+    123.0,
+    123.0,
+    6.0
+   ],
+   "tris": 860,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_FloorLamp_01.SM_BS_FloorLamp_01",
+   "name": "SM_BS_FloorLamp_01",
+   "size": [
+    30.0,
+    30.0,
+    4.0
+   ],
+   "tris": 232,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_Guest_Chair.SM_BS_Guest_Chair",
+   "name": "SM_BS_Guest_Chair",
+   "size": [
+    123.0,
+    104.0,
+    120.0
+   ],
+   "tris": 4033,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_Guest_Couch.SM_BS_Guest_Couch",
+   "name": "SM_BS_Guest_Couch",
+   "size": [
+    123.0,
+    261.0,
+    120.0
+   ],
+   "tris": 5941,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_HostChair.SM_BS_HostChair",
+   "name": "SM_BS_HostChair",
+   "size": [
+    62.0,
+    69.0,
+    78.0
+   ],
+   "tris": 2646,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_HostChair_Base.SM_BS_HostChair_Base",
+   "name": "SM_BS_HostChair_Base",
+   "size": [
+    45.0,
+    45.0,
+    46.0
+   ],
+   "tris": 500,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_Lamp_Desk.SM_BS_Lamp_Desk",
+   "name": "SM_BS_Lamp_Desk",
+   "size": [
+    18.0,
+    18.0,
+    69.0
+   ],
+   "tris": 2118,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_Lamp_Table.SM_BS_Lamp_Table",
+   "name": "SM_BS_Lamp_Table",
+   "size": [
+    30.0,
+    30.0,
+    37.0
+   ],
+   "tris": 2342,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_LargePottedPlant_01.SM_BS_LargePottedPlant_01",
+   "name": "SM_BS_LargePottedPlant_01",
+   "size": [
+    212.0,
+    184.0,
+    281.0
+   ],
+   "tris": 3373,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_Panel_02.SM_BS_Panel_02",
+   "name": "SM_BS_Panel_02",
+   "size": [
+    223.0,
+    223.0,
+    400.0
+   ],
+   "tris": 676,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_Rack_01.SM_BS_Rack_01",
+   "name": "SM_BS_Rack_01",
+   "size": [
+    182.0,
+    363.0,
+    403.0
+   ],
+   "tris": 960,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_Rack_03.SM_BS_Rack_03",
+   "name": "SM_BS_Rack_03",
+   "size": [
+    341.0,
+    341.0,
+    403.0
+   ],
+   "tris": 960,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_Rack_Diffuser_01.SM_BS_Rack_Diffuser_01",
+   "name": "SM_BS_Rack_Diffuser_01",
+   "size": [
+    103.0,
+    103.0,
+    80.0
+   ],
+   "tris": 754,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_Rack_Hanger_01.SM_BS_Rack_Hanger_01",
+   "name": "SM_BS_Rack_Hanger_01",
+   "size": [
+    16.0,
+    33.0,
+    55.0
+   ],
+   "tris": 1092,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_Rack_Spotlight_01.SM_BS_Rack_Spotlight_01",
+   "name": "SM_BS_Rack_Spotlight_01",
+   "size": [
+    53.0,
+    53.0,
+    48.0
+   ],
+   "tris": 2004,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_Screen_02.SM_BS_Screen_02",
+   "name": "SM_BS_Screen_02",
+   "size": [
+    9.0,
+    156.0,
+    92.0
+   ],
+   "tris": 366,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_SoundProofing_01.SM_BS_SoundProofing_01",
+   "name": "SM_BS_SoundProofing_01",
+   "size": [
+    7.0,
+    60.0,
+    60.0
+   ],
+   "tris": 236,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_SoundProofing_02.SM_BS_SoundProofing_02",
+   "name": "SM_BS_SoundProofing_02",
+   "size": [
+    9.0,
+    60.0,
+    60.0
+   ],
+   "tris": 164,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_SoundProofing_03.SM_BS_SoundProofing_03",
+   "name": "SM_BS_SoundProofing_03",
+   "size": [
+    7.0,
+    60.0,
+    60.0
+   ],
+   "tris": 84,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_Stage_Wall_01.SM_BS_Stage_Wall_01",
+   "name": "SM_BS_Stage_Wall_01",
+   "size": [
+    189.0,
+    61.0,
+    400.0
+   ],
+   "tris": 388,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_SupportLegs_01.SM_BS_SupportLegs_01",
+   "name": "SM_BS_SupportLegs_01",
+   "size": [
+    78.0,
+    23.0,
+    81.0
+   ],
+   "tris": 472,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_SupportLegs_02.SM_BS_SupportLegs_02",
+   "name": "SM_BS_SupportLegs_02",
+   "size": [
+    80.0,
+    10.0,
+    81.0
+   ],
+   "tris": 120,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_SupportLegs_03.SM_BS_SupportLegs_03",
+   "name": "SM_BS_SupportLegs_03",
+   "size": [
+    78.0,
+    23.0,
+    71.0
+   ],
+   "tris": 472,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_SupportLegs_04.SM_BS_SupportLegs_04",
+   "name": "SM_BS_SupportLegs_04",
+   "size": [
+    80.0,
+    10.0,
+    71.0
+   ],
+   "tris": 120,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_Tripod_Base.SM_BS_Tripod_Base",
+   "name": "SM_BS_Tripod_Base",
+   "size": [
+    105.0,
+    119.0,
+    125.0
+   ],
+   "tris": 1480,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_Tripod_Middle.SM_BS_Tripod_Middle",
+   "name": "SM_BS_Tripod_Middle",
+   "size": [
+    4.0,
+    4.0,
+    102.0
+   ],
+   "tris": 116,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_Tripod_Top.SM_BS_Tripod_Top",
+   "name": "SM_BS_Tripod_Top",
+   "size": [
+    10.0,
+    10.0,
+    105.0
+   ],
+   "tris": 478,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_WallLamp_01.SM_BS_WallLamp_01",
+   "name": "SM_BS_WallLamp_01",
+   "size": [
+    34.0,
+    24.0,
+    49.0
+   ],
+   "tris": 1214,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_Panel_01.SM_BS_Panel_01",
+   "name": "SM_BS_Panel_01",
+   "size": [
+    200.0,
+    26.0,
+    400.0
+   ],
+   "tris": 52,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_Rack_02.SM_BS_Rack_02",
+   "name": "SM_BS_Rack_02",
+   "size": [
+    500.0,
+    45.0,
+    403.0
+   ],
+   "tris": 480,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_Screen_01.SM_BS_Screen_01",
+   "name": "SM_BS_Screen_01",
+   "size": [
+    10.0,
+    260.0,
+    154.0
+   ],
+   "tris": 464,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_Stage_Wall_03.SM_BS_Stage_Wall_03",
+   "name": "SM_BS_Stage_Wall_03",
+   "size": [
+    200.0,
+    26.0,
+    400.0
+   ],
+   "tris": 52,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_Stage_Wall_04.SM_BS_Stage_Wall_04",
+   "name": "SM_BS_Stage_Wall_04",
+   "size": [
+    26.0,
+    200.0,
+    400.0
+   ],
+   "tris": 52,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/BroadcastStudio/Meshes/SM_BS_Stage_Wall_05.SM_BS_Stage_Wall_05",
+   "name": "SM_BS_Stage_Wall_05",
+   "size": [
+    200.0,
+    26.0,
+    400.0
+   ],
+   "tris": 52,
+   "nanite": "",
+   "role": "wall"
+  }
+ ]
+}

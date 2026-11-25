@@ -1,0 +1,30 @@
+{
+ "pack": "StylizedVolClouds",
+ "maps": [
+  {
+   "path": "/Game/StylizedVolClouds/Maps/AfterStorm.AfterStorm",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/StylizedVolClouds/Maps/Cloudy.Cloudy",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/StylizedVolClouds/Maps/Foggy.Foggy",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/StylizedVolClouds/Maps/LittleCloudy.LittleCloudy",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/StylizedVolClouds/Maps/S.S",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/StylizedVolClouds/Maps/Storm.Storm",
+   "partitioned": false
+  }
+ ],
+ "meshes": []
+}

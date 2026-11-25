@@ -1,0 +1,555 @@
+{
+ "pack": "MetroMaintenanceStation",
+ "maps": [
+  {
+   "path": "/Game/MetroMaintenanceStation/Maps/Metro1.Metro1",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Maps/Showcase.Showcase",
+   "partitioned": false
+  }
+ ],
+ "meshes": [
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Fences/SM_InteriorFenceDoor_01.SM_InteriorFenceDoor_01",
+   "name": "SM_InteriorFenceDoor_01",
+   "size": [
+    155.0,
+    4.0,
+    249.0
+   ],
+   "tris": 216,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Structure/SM_TunnelBaseDoor.SM_TunnelBaseDoor",
+   "name": "SM_TunnelBaseDoor",
+   "size": [
+    391.0,
+    250.0,
+    336.0
+   ],
+   "tris": 2896,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Structure/SM_TunnelSideDoor.SM_TunnelSideDoor",
+   "name": "SM_TunnelSideDoor",
+   "size": [
+    95.0,
+    250.0,
+    221.0
+   ],
+   "tris": 157,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Structure/SM_Rails_Sunk_01.SM_Rails_Sunk_01",
+   "name": "SM_Rails_Sunk_01",
+   "size": [
+    500.0,
+    500.0,
+    22.0
+   ],
+   "tris": 2540,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Structure/SM_TunnelFloor.SM_TunnelFloor",
+   "name": "SM_TunnelFloor",
+   "size": [
+    320.0,
+    250.0,
+    20.0
+   ],
+   "tris": 22,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Props/SM_GuidePole_01.SM_GuidePole_01",
+   "name": "SM_GuidePole_01",
+   "size": [
+    25.0,
+    22.0,
+    200.0
+   ],
+   "tris": 616,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Structure/SM_Pillar_01.SM_Pillar_01",
+   "name": "SM_Pillar_01",
+   "size": [
+    152.0,
+    120.0,
+    550.0
+   ],
+   "tris": 190,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Props/SM_Brick.SM_Brick",
+   "name": "SM_Brick",
+   "size": [
+    10.0,
+    20.0,
+    6.0
+   ],
+   "tris": 44,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Structure/SM_Ceiling_01.SM_Ceiling_01",
+   "name": "SM_Ceiling_01",
+   "size": [
+    740.0,
+    332.0,
+    136.0
+   ],
+   "tris": 782,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Structure/SM_Ceiling_02.SM_Ceiling_02",
+   "name": "SM_Ceiling_02",
+   "size": [
+    740.0,
+    332.0,
+    123.0
+   ],
+   "tris": 10,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Structure/SM_Ceiling_Reinforcement_04.SM_Ceiling_Reinforcement_04",
+   "name": "SM_Ceiling_Reinforcement_04",
+   "size": [
+    250.0,
+    50.0,
+    60.0
+   ],
+   "tris": 18,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Fences/SM_Fence_01_150.SM_Fence_01_150",
+   "name": "SM_Fence_01_150",
+   "size": [
+    155.0,
+    5.0,
+    103.0
+   ],
+   "tris": 456,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Fences/SM_Fence_01_200.SM_Fence_01_200",
+   "name": "SM_Fence_01_200",
+   "size": [
+    205.0,
+    5.0,
+    103.0
+   ],
+   "tris": 456,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Fences/SM_Fence_02_150.SM_Fence_02_150",
+   "name": "SM_Fence_02_150",
+   "size": [
+    156.0,
+    6.0,
+    101.0
+   ],
+   "tris": 27800,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Fences/SM_Fence_02_150_Half.SM_Fence_02_150_Half",
+   "name": "SM_Fence_02_150_Half",
+   "size": [
+    154.0,
+    6.0,
+    101.0
+   ],
+   "tris": 27532,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Props/SM_FuseBox.SM_FuseBox",
+   "name": "SM_FuseBox",
+   "size": [
+    110.0,
+    50.0,
+    168.0
+   ],
+   "tris": 1322,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Props/SM_GuideLight_02.SM_GuideLight_02",
+   "name": "SM_GuideLight_02",
+   "size": [
+    60.0,
+    15.0,
+    50.0
+   ],
+   "tris": 552,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Structure/SM_Platform_01.SM_Platform_01",
+   "name": "SM_Platform_01",
+   "size": [
+    700.0,
+    500.0,
+    150.0
+   ],
+   "tris": 338,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Structure/SM_Platform_01_Half.SM_Platform_01_Half",
+   "name": "SM_Platform_01_Half",
+   "size": [
+    350.0,
+    500.0,
+    150.0
+   ],
+   "tris": 195,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Structure/SM_Platform_01_Mid.SM_Platform_01_Mid",
+   "name": "SM_Platform_01_Mid",
+   "size": [
+    400.0,
+    500.0,
+    150.0
+   ],
+   "tris": 116,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Structure/SM_Rails_Sunk_02.SM_Rails_Sunk_02",
+   "name": "SM_Rails_Sunk_02",
+   "size": [
+    500.0,
+    500.0,
+    105.0
+   ],
+   "tris": 6500,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Structure/SM_Rails_Sunk_03.SM_Rails_Sunk_03",
+   "name": "SM_Rails_Sunk_03",
+   "size": [
+    500.0,
+    500.0,
+    105.0
+   ],
+   "tris": 6264,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Props/SM_Sign.SM_Sign",
+   "name": "SM_Sign",
+   "size": [
+    134.0,
+    20.0,
+    203.0
+   ],
+   "tris": 1874,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Structure/SM_TunnelBase.SM_TunnelBase",
+   "name": "SM_TunnelBase",
+   "size": [
+    420.0,
+    250.0,
+    336.0
+   ],
+   "tris": 3888,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Structure/SM_TunnelBaseCover.SM_TunnelBaseCover",
+   "name": "SM_TunnelBaseCover",
+   "size": [
+    400.0,
+    250.0,
+    327.0
+   ],
+   "tris": 2978,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Structure/SM_TunnelBaseCoverBroken.SM_TunnelBaseCoverBroken",
+   "name": "SM_TunnelBaseCoverBroken",
+   "size": [
+    400.0,
+    188.0,
+    327.0
+   ],
+   "tris": 1220,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Structure/SM_TunnelBaseCoverSingle.SM_TunnelBaseCoverSingle",
+   "name": "SM_TunnelBaseCoverSingle",
+   "size": [
+    116.0,
+    62.0,
+    11.0
+   ],
+   "tris": 96,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Structure/SM_TunnelBigBase.SM_TunnelBigBase",
+   "name": "SM_TunnelBigBase",
+   "size": [
+    500.0,
+    600.0,
+    700.0
+   ],
+   "tris": 36,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Structure/SM_TunnelBigPass.SM_TunnelBigPass",
+   "name": "SM_TunnelBigPass",
+   "size": [
+    500.0,
+    600.0,
+    700.0
+   ],
+   "tris": 130,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Props/SM_TunnelLamp.SM_TunnelLamp",
+   "name": "SM_TunnelLamp",
+   "size": [
+    67.0,
+    18.0,
+    16.0
+   ],
+   "tris": 464,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Structure/SM_TunnelSide.SM_TunnelSide",
+   "name": "SM_TunnelSide",
+   "size": [
+    220.0,
+    250.0,
+    214.0
+   ],
+   "tris": 36,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Structure/SM_TunnelSide_02.SM_TunnelSide_02",
+   "name": "SM_TunnelSide_02",
+   "size": [
+    330.0,
+    100.0,
+    100.0
+   ],
+   "tris": 276,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Props/SM_TunnelWireHolders.SM_TunnelWireHolders",
+   "name": "SM_TunnelWireHolders",
+   "size": [
+    24.0,
+    250.0,
+    128.0
+   ],
+   "tris": 5680,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Structure/SM_Tunnel_Divider.SM_Tunnel_Divider",
+   "name": "SM_Tunnel_Divider",
+   "size": [
+    124.0,
+    595.0,
+    289.0
+   ],
+   "tris": 256,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Props/SM_Wires_01.SM_Wires_01",
+   "name": "SM_Wires_01",
+   "size": [
+    9.0,
+    330.0,
+    58.0
+   ],
+   "tris": 6348,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Structure/SM_Ceiling_Reinforcement_01.SM_Ceiling_Reinforcement_01",
+   "name": "SM_Ceiling_Reinforcement_01",
+   "size": [
+    1002.0,
+    100.0,
+    295.0
+   ],
+   "tris": 1088,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Structure/SM_Ceiling_Reinforcement_02.SM_Ceiling_Reinforcement_02",
+   "name": "SM_Ceiling_Reinforcement_02",
+   "size": [
+    1000.0,
+    100.0,
+    295.0
+   ],
+   "tris": 1121,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Structure/SM_Ceiling_Reinforcement_03.SM_Ceiling_Reinforcement_03",
+   "name": "SM_Ceiling_Reinforcement_03",
+   "size": [
+    1004.0,
+    100.0,
+    232.0
+   ],
+   "tris": 1054,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Fences/SM_InteriorFence_00.SM_InteriorFence_00",
+   "name": "SM_InteriorFence_00",
+   "size": [
+    461.0,
+    5.0,
+    400.0
+   ],
+   "tris": 216,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Fences/SM_InteriorFence_01.SM_InteriorFence_01",
+   "name": "SM_InteriorFence_01",
+   "size": [
+    401.0,
+    5.0,
+    280.0
+   ],
+   "tris": 266,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Fences/SM_InteriorFence_01_2.SM_InteriorFence_01_2",
+   "name": "SM_InteriorFence_01_2",
+   "size": [
+    401.0,
+    5.0,
+    280.0
+   ],
+   "tris": 266,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Fences/SM_InteriorFence_02.SM_InteriorFence_02",
+   "name": "SM_InteriorFence_02",
+   "size": [
+    401.0,
+    5.0,
+    280.0
+   ],
+   "tris": 266,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Structure/SM_TunnelFrame.SM_TunnelFrame",
+   "name": "SM_TunnelFrame",
+   "size": [
+    450.0,
+    5.0,
+    367.0
+   ],
+   "tris": 3568,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Structure/SM_TunnelPassSingle.SM_TunnelPassSingle",
+   "name": "SM_TunnelPassSingle",
+   "size": [
+    500.0,
+    0.0,
+    400.0
+   ],
+   "tris": 49,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/MetroMaintenanceStation/Assets/Structure/SM_TunnelWallPanel.SM_TunnelWallPanel",
+   "name": "SM_TunnelWallPanel",
+   "size": [
+    2.0,
+    700.0,
+    550.0
+   ],
+   "tris": 108,
+   "nanite": "",
+   "role": "wall"
+  }
+ ]
+}

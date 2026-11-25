@@ -1,0 +1,12 @@
+{
+  "moments": {
+    "Start": "/Game/RadioSoldier_Announcer/wav/26_Entering_Hostile_Territory.26_Entering_Hostile_Territory",
+    "Wave": "/Game/RadioSoldier_Announcer/wav/02_Hostiles_Inbound.02_Hostiles_Inbound",
+    "Boss": "/Game/RadioSoldier_Announcer/wav/16_Enemy_On_the_Move.16_Enemy_On_the_Move",
+    "Wall": "/Game/RadioSoldier_Announcer/wav/25_We_re_Under_Attack.25_We_re_Under_Attack",
+    "Good": "/Game/RadioSoldier_Announcer/wav/13_Good_Work_Soldier.13_Good_Work_Soldier",
+    "Win": "/Game/RadioSoldier_Announcer/wav/20_Mission_Accomplished.20_Mission_Accomplished",
+    "Lose": "/Game/RadioSoldier_Announcer/wav/18_Objective_Lost.18_Objective_Lost",
+    "Fight": "/Game/RadioSoldier_Announcer/wav/24_Fire_At_Will.24_Fire_At_Will"
+  }
+}

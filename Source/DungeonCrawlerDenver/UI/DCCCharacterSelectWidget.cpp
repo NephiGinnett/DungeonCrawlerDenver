@@ -20,6 +20,7 @@
 #include "Widgets/Text/STextBlock.h"
 #include "UI/DCCMenuStyle.h"
 #include "Session/DCCBuildStamp.h"
+#include "Session/DCCOnline.h"
 
 namespace
 {
@@ -77,6 +78,9 @@ void UDCCCharacterSelectWidget::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
 	SetIsFocusable(true);
+	// The main menu means "not in a party": stop listing or leave any EOS party, then make sure we are signed in.
+	DCCOnline::EndParty();
+	DCCOnline::Start();
 }
 
 void UDCCCharacterSelectWidget::Refresh()
@@ -274,14 +278,49 @@ TSharedRef<SWidget> UDCCCharacterSelectWidget::RebuildWidget()
 		+ SVerticalBox::Slot().AutoHeight().Padding(0.0f, 0.0f, 0.0f, 10.0f)
 		[
 			BigButton(NSLOCTEXT("DCC", "MenuHost", "HOST A PARTY"),
-				NSLOCTEXT("DCC", "MenuHostSub", "Open the Safe Room to your friends. You get an invite to copy and send them."),
+				NSLOCTEXT("DCC", "MenuHostSub", "Open the Safe Room to your friends. They will see your party under JOIN A PARTY."),
 				Gold, 20, NotLeaving, [Self]() { if (Self.IsValid()) { Self->HostParty(); } })
 		]
 		+ SVerticalBox::Slot().AutoHeight().Padding(0.0f, 0.0f, 0.0f, 10.0f)
 		[
 			BigButton(NSLOCTEXT("DCC", "MenuJoin", "JOIN A PARTY"),
-				NSLOCTEXT("DCC", "MenuJoinSub", "Copy the invite message your host sent you, then click here."),
+				NSLOCTEXT("DCC", "MenuJoinSub", "See your friends' open parties and pick one."),
 				FLinearColor(0.45f, 0.85f, 1.0f), 20, NotLeaving, [Self]() { if (Self.IsValid()) { Self->JoinParty(); } })
+		]
+		// The party list (EOS), under JOIN A PARTY once it is clicked.
+		+ SVerticalBox::Slot().AutoHeight().Padding(12.0f, 0.0f, 0.0f, 10.0f)
+		[
+			SNew(SVerticalBox)
+			.Visibility_Lambda([Self]() { return Self.IsValid() && Self->bPartyPicker ? EVisibility::Visible : EVisibility::Collapsed; })
+			+ SVerticalBox::Slot().AutoHeight().Padding(0.0f, 0.0f, 0.0f, 6.0f)
+			[
+				SNew(STextBlock).Font(Font(11)).ColorAndOpacity(Dim).AutoWrapText(true)
+				.Text_Lambda([Self]() { return Self.IsValid() ? FText::FromString(Self->PartyNote) : FText::GetEmpty(); })
+			]
+			+ SVerticalBox::Slot().AutoHeight()
+			[
+				SAssignNew(PartyList, SVerticalBox)
+			]
+			+ SVerticalBox::Slot().AutoHeight().Padding(0.0f, 6.0f, 0.0f, 0.0f)
+			[
+				SNew(SHorizontalBox)
+				+ SHorizontalBox::Slot().AutoWidth().Padding(0.0f, 0.0f, 8.0f, 0.0f)
+				[
+					SNew(SButton).IsFocusable(false).ContentPadding(FMargin(12.0f, 5.0f))
+					.ButtonStyle(DCCMenu::ButtonStyle(DCCMenu::Cyan, false))
+					.IsEnabled_Lambda([Self]() { return Self.IsValid() && !Self->bSearching && !Self->bLeaving; })
+					.OnClicked_Lambda([Self]() { if (Self.IsValid()) { Self->RefreshParties(); } return FReply::Handled(); })
+					[ SNew(STextBlock).Text(NSLOCTEXT("DCC", "MenuPartyRefresh", "REFRESH")).Font(DCCMenu::Caps(9, 160)).ColorAndOpacity(Ink) ]
+				]
+				+ SHorizontalBox::Slot().AutoWidth()
+				[
+					SNew(SButton).IsFocusable(false).ContentPadding(FMargin(12.0f, 5.0f))
+					.ButtonStyle(DCCMenu::ButtonStyle(DCCMenu::Cyan, false))
+					.IsEnabled_Lambda([Self]() { return Self.IsValid() && !Self->bLeaving; })
+					.OnClicked_Lambda([Self]() { if (Self.IsValid()) { Self->JoinFromInvite(); } return FReply::Handled(); })
+					[ SNew(STextBlock).Text(NSLOCTEXT("DCC", "MenuPartyInvite", "USE A COPIED INVITE")).Font(DCCMenu::Caps(9, 160)).ColorAndOpacity(Ink) ]
+				]
+			]
 		];
 
 	if (!LastJoin.IsEmpty())
@@ -300,6 +339,13 @@ TSharedRef<SWidget> UDCCCharacterSelectWidget::RebuildWidget()
 		.Text_Lambda([Self]() { return Self.IsValid() ? FText::FromString(Self->Message) : FText::GetEmpty(); })
 		.ColorAndOpacity_Lambda([Self]() { return FSlateColor(Self.IsValid() && Self->bMessageIsError ? Bad : Good); })
 		.Visibility_Lambda([Self]() { return Self.IsValid() && !Self->Message.IsEmpty() ? EVisibility::Visible : EVisibility::Collapsed; })
+	];
+
+	// Whether Epic Online Services is signed in (parties work) or not (invite codes still do).
+	Panel->AddSlot().AutoHeight().Padding(0.0f, 0.0f, 0.0f, 6.0f)
+	[
+		SNew(STextBlock).Font(Font(10)).ColorAndOpacity(Dim).AutoWrapText(true)
+		.Text_Lambda([]() { return FText::FromString(DCCOnline::GetStatusText()); })
 	];
 
 	Panel->AddSlot().FillHeight(1.0f)[ SNew(SSpacer) ];
@@ -513,7 +559,28 @@ void UDCCCharacterSelectWidget::HostParty()
 		return;
 	}
 	bLeaving = DCCArcade::Travel(GetWorld(), TEXT("Lobby"));
+	if (bLeaving)
+	{
+		DCCOnline::HostParty(DCCSession::GetPreferredCrawler().ToString()); // friends see it under JOIN A PARTY
+	}
 	SetMessage(bLeaving ? TEXT("Hosting. Opening the Safe Room...") : TEXT("Could not open the Safe Room. Try again."), !bLeaving);
+}
+
+bool UDCCCharacterSelectWidget::ReadyToJoin()
+{
+	if (bLeaving)
+	{
+		return false;
+	}
+	// The host has the saves, so the host decides whether the password is right. Send what was typed (or what
+	// this PC remembers); a wrong one comes back here as an error.
+	if (PasswordHash().IsEmpty())
+	{
+		SetMessage(FString::Printf(TEXT("Type %s's password in the box under the crawlers first."), *DCCSession::GetPreferredCrawler().ToString()), true);
+		return false;
+	}
+	DCCSession::SavePasswordHash(DCCSession::GetPreferredCrawler(), PasswordHash());
+	return true;
 }
 
 void UDCCCharacterSelectWidget::JoinParty()
@@ -522,22 +589,109 @@ void UDCCCharacterSelectWidget::JoinParty()
 	{
 		return;
 	}
-	// The host has the saves, so the host decides whether the password is right. Send what was typed (or what
-	// this PC remembers); a wrong one comes back here as an error.
-	if (PasswordHash().IsEmpty())
+	// Signed in to Epic: show the open parties. Not: the invite on the clipboard, as before.
+	if (!DCCOnline::IsOnline())
 	{
-		SetMessage(FString::Printf(TEXT("Type %s's password in the box under the crawlers first."), *DCCSession::GetPreferredCrawler().ToString()), true);
+		JoinFromInvite();
 		return;
 	}
-	DCCSession::SavePasswordHash(DCCSession::GetPreferredCrawler(), PasswordHash());
+	bPartyPicker = !bPartyPicker;
+	if (bPartyPicker)
+	{
+		RefreshParties();
+	}
+}
+
+void UDCCCharacterSelectWidget::JoinFromInvite()
+{
+	if (!ReadyToJoin())
+	{
+		return;
+	}
 	FString Target;
 	if (!DCCSession::JoinFromClipboard(GetOwningPlayer(), Target))
 	{
-		SetMessage(TEXT("No invite found. Copy the whole message your host sent (Ctrl+C), then click JOIN A PARTY again."), true);
+		SetMessage(TEXT("No invite found. Copy the whole message your host sent (Ctrl+C), then click again."), true);
 		return;
 	}
 	bLeaving = true;
 	SetMessage(FString::Printf(TEXT("Joining the party at %s..."), *Target), false);
+}
+
+void UDCCCharacterSelectWidget::RefreshParties()
+{
+	if (bSearching)
+	{
+		return;
+	}
+	bSearching = true;
+	PartyNote = TEXT("Looking for parties...");
+	if (PartyList.IsValid())
+	{
+		PartyList->ClearChildren();
+	}
+	TWeakObjectPtr<UDCCCharacterSelectWidget> Self(this);
+	DCCOnline::FindParties([Self](const TArray<DCCOnline::FParty>& Parties, const FString& Error)
+	{
+		UDCCCharacterSelectWidget* W = Self.Get();
+		if (!W)
+		{
+			return;
+		}
+		W->bSearching = false;
+		if (!W->PartyList.IsValid())
+		{
+			return;
+		}
+		W->PartyList->ClearChildren();
+		if (!Error.IsEmpty())
+		{
+			W->PartyNote = Error;
+			return;
+		}
+		W->PartyNote = Parties.Num() == 0
+			? TEXT("No open parties right now. Ask a friend to click HOST A PARTY, then REFRESH.")
+			: TEXT("Pick a party:");
+		for (int32 i = 0; i < Parties.Num(); ++i)
+		{
+			const DCCOnline::FParty& Party = Parties[i];
+			const FString Title = FString::Printf(TEXT("%s's party"), *Party.HostName);
+			const FString Sub = FString::Printf(TEXT("%s  -  %d of %d crawlers"), Party.Place.IsEmpty() ? TEXT("Safe Room") : *Party.Place,
+				Party.Players, Party.MaxPlayers);
+			W->PartyList->AddSlot().AutoHeight().Padding(0.0f, 0.0f, 0.0f, 6.0f)
+			[
+				BigButton(FText::FromString(Title), FText::FromString(Sub), FLinearColor(0.45f, 0.85f, 1.0f), 16,
+					TAttribute<bool>::CreateLambda([Self]() { return Self.IsValid() && !Self->bLeaving; }),
+					[Self, i]() { if (Self.IsValid()) { Self->JoinOnline(i); } })
+			];
+		}
+	});
+}
+
+void UDCCCharacterSelectWidget::JoinOnline(int32 Index)
+{
+	if (!ReadyToJoin())
+	{
+		return;
+	}
+	bLeaving = true;
+	SetMessage(TEXT("Joining the party..."), false);
+	TWeakObjectPtr<UDCCCharacterSelectWidget> Self(this);
+	DCCOnline::JoinParty(Index, [Self](const FString& Address, const FString& Error)
+	{
+		UDCCCharacterSelectWidget* W = Self.Get();
+		if (!W)
+		{
+			return;
+		}
+		if (!Error.IsEmpty())
+		{
+			W->bLeaving = false;
+			W->SetMessage(Error, true);
+			return;
+		}
+		DCCSession::Join(W->GetOwningPlayer(), Address);
+	});
 }
 
 void UDCCCharacterSelectWidget::RejoinLast()

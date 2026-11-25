@@ -142,6 +142,29 @@ public:
 	void ForgetTarget() { CurrentTarget = nullptr; }
 
 	/**
+	 * Dungeon Crawler Tower Defense (2026-11-25). Server only, not reflected.
+	 * A marcher walks the road until a player stands in front of it. A posted
+	 * ally holds still and fights from the post. Camps wait until someone hits them.
+	 */
+	bool bSiegeMarch = false;
+	bool bSiegeFight = false;
+	bool bSiegeCamp = false;
+	bool bSiegePaid = false;
+	int32 SiegeMarchIndex = 0;
+	int32 SiegeWave = 1;
+	int32 SiegeHits = 0;
+	float SiegeMarchSpeed = 320.0f;
+	float SiegeSoak = 0.0f;
+	double SiegeSlowUntil = 0.0;
+	double SiegeFreezeUntil = 0.0;
+	TWeakObjectPtr<ADCCCharacterBase> SiegeLastHit;
+	bool bHoldGround = false;
+	bool bThrowsRocks = false;
+	bool bSaidRock = false;
+	float NextRockTime = 0.0f;
+	TWeakObjectPtr<ADCCCharacterBase> PostedBy;
+
+	/**
 	 * Walk this grid instead of asking the navmesh.
 	 * Generated floors have no baked nav, and MoveToActor on an empty mesh is a no-op.
 	 */
@@ -519,6 +542,7 @@ protected:
 	 * ranged attack, which looks broken even when the numbers are right.
 	 */
 	bool TryUseSkill(ADCCCharacterBase* Target);
+	void TickHoldGround(float DeltaSeconds);
 
 	/**
 	 * Server only. The whole of this character's turn while its

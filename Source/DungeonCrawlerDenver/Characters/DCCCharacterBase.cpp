@@ -14,6 +14,7 @@
 #include "Arcade/DCCClimbItems.h"
 #include "Arcade/DCCArcade.h"
 #include "Arcade/DCCArcadeArena.h"
+#include "Arcade/DCCSiegeHooks.h"
 #include "Arcade/DCCArcadeGames.h"
 #include "Arcade/DCCCasino.h"
 #include "Arcade/DCCSummons.h"
@@ -58,6 +59,7 @@
 #include "Classes/DCCBasicClasses.h"
 #include "Classes/DCCClassPerks.h"
 #include "Skills/DCCSpellFx.h"
+#include "Skills/DCCSpellBook.h"
 #include "Onboarding/DCCOnboardingComponent.h"
 #include "Rooms/DCCTaleFloor.h"
 #include "Bench/DCCBenchData.h"
@@ -1827,17 +1829,16 @@ int32 ADCCCharacterBase::ModifyIncomingDamage(int32 Damage, ADCCCharacterBase* A
 		return Damage;
 	}
 	const float ClassScale = DCCBasicClasses::DamageTakenScale(this);
-	if (!Wallet)
-	{
-		return FMath::Max(1, FMath::RoundToInt(Damage * ClassScale));
-	}
-	const FName Plate = Wallet->WornIn(DCCCosmetics::Shoulders);
 	float Keep = 1.0f;
-	if (Plate == FName(TEXT("CardboardPlate"))) { Keep = 0.85f; }
-	else if (Plate == FName(TEXT("SpikedPauldrons"))) { Keep = 0.70f; }
-	else if (Plate == FName(TEXT("PitBossPlate"))) { Keep = 0.55f; }
-	(void)Attacker;
-	return FMath::Max(1, FMath::RoundToInt(Damage * Keep * ClassScale));
+	if (Wallet)
+	{
+		const FName Plate = Wallet->WornIn(DCCCosmetics::Shoulders);
+		if (Plate == FName(TEXT("CardboardPlate"))) { Keep = 0.85f; }
+		else if (Plate == FName(TEXT("SpikedPauldrons"))) { Keep = 0.70f; }
+		else if (Plate == FName(TEXT("PitBossPlate"))) { Keep = 0.55f; }
+	}
+	const int32 Scaled = FMath::Max(1, FMath::RoundToInt(Damage * Keep * ClassScale));
+	return DCCSiegeHooks::AdjustMelee(Attacker, this, Scaled);
 }
 
 void ADCCCharacterBase::ForgetFall(double SafeSeconds)
@@ -2834,6 +2835,21 @@ void ADCCCharacterBase::BuildInteractionOptions()
 	InteractionIndex = FMath::Clamp(InteractionIndex, 0, InteractionOptions.Num() - 1);
 }
 
+void ADCCCharacterBase::Server_ArenaUse_Implementation()
+{
+	if (UWorld* World = GetWorld())
+	{
+		for (TActorIterator<ADCCArcadeArena> It(World); It; ++It)
+		{
+			if (It->CanUse(this))
+			{
+				It->Use(this);
+			}
+			break;
+		}
+	}
+}
+
 void ADCCCharacterBase::HandleInteractPressed()
 {
 	// A System window on screen owns E until it is read. Checked before death,
@@ -3021,6 +3037,27 @@ void ADCCCharacterBase::HandleInteractPressed()
 	{
 		HandleNPCInteractionConfirm();
 		return;
+	}
+
+	// An arcade mark (tower, podium, pad). Distance only, so the lobby never eats E.
+	if (UWorld* ArenaWorld = GetWorld())
+	{
+		for (TActorIterator<ADCCArcadeArena> ArenaIt(ArenaWorld); ArenaIt; ++ArenaIt)
+		{
+			if (ArenaIt->CanUse(this))
+			{
+				if (HasAuthority())
+				{
+					ArenaIt->Use(this);
+				}
+				else
+				{
+					Server_ArenaUse();
+				}
+				return;
+			}
+			break;
+		}
 	}
 
 	// Standing at a casino game: E sits you down. The play panel is the next press.
@@ -4661,7 +4698,7 @@ void ADCCCharacterBase::Detonate(const FVector& Where, const FDCCEquipmentDef& D
 		const int32 Dealt = FMath::Max(1, FMath::RoundToInt(Damage * Falloff));
 		Victim->Stats->ApplyDamage(Dealt, Def.WeaponDamageType);
 		NoteDamageDealtTo(Victim, Dealt);
-		Victim->ReactToHitFrom(Where);
+		Victim->ReactToHitFrom(Where, Def.WeaponDamageType);
 		Total += Dealt;
 		if (!Victim->Stats->IsAlive() && Victim != this && IsHostileTo(Victim))
 		{
@@ -4681,20 +4718,13 @@ void ADCCCharacterBase::Multicast_Explosion_Implementation(FVector Where, float 
 		return;
 	}
 
-	static const TCHAR* Sparks = TEXT("/Game/Legendary_Forge/Fx/Sparks/NS_sparks.NS_sparks");
-	static const TCHAR* Smoke = TEXT("/Game/Legendary_Forge/Fx/Smoke/NS_smoke.NS_smoke");
-	static const TCHAR* Fire = TEXT("/Game/Legendary_Forge/Fx/Fire/NS_fire.NS_fire");
-	const float Scale = FMath::Clamp(Radius / 250.0f, 0.6f, 3.0f);
-	for (const TCHAR* Path : { Sparks, Smoke, bFire ? Fire : nullptr })
+	const TCHAR* Bang = bFire
+		? TEXT("/Game/Free_Spells/VFX_Niagara/NS_Free_Spells_Explosion.NS_Free_Spells_Explosion")
+		: TEXT("/Game/NiagaraExamples/FX_Explosions/NS_Dirt_Explosion_Small.NS_Dirt_Explosion_Small");
+	if (UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, Bang))
 	{
-		if (!Path)
-		{
-			continue;
-		}
-		if (UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, Path))
-		{
-			UNiagaraFunctionLibrary::SpawnSystemAtLocation(World, System, Where, FRotator::ZeroRotator, FVector(Scale));
-		}
+		const float Scale = FMath::Clamp(Radius / 450.0f, 0.4f, 1.5f);
+		DCCSpellBook::SpawnPuff(this, System, Where, Scale, 1.6f, 2500.0f);
 	}
 
 	// A hard, short flash: reads as a bang even where the particles are thin.
@@ -5992,7 +6022,7 @@ FDCCAttackResult ADCCCharacterBase::PerformAttack(ADCCCharacterBase* Target, boo
 			// reading it (the Feed, achievements, the skill-mark system), and
 			// the stagger is what tells the player the swing landed at all.
 			Result.Damage = 0;
-			Target->ReactToHitFrom(GetActorLocation());
+			Target->ReactToHitFrom(GetActorLocation(), AttackDamageType);
 			return Result;
 		}
 
@@ -6002,7 +6032,7 @@ FDCCAttackResult ADCCCharacterBase::PerformAttack(ADCCCharacterBase* Target, boo
 
 		// Staggered away from whoever swung, so the direction of the blow is
 		// legible as well as the fact of it.
-		Target->ReactToHitFrom(GetActorLocation());
+		Target->ReactToHitFrom(GetActorLocation(), AttackDamageType);
 
 		// Local to whoever was hit. Cast rather than assumed, because most things
 		// taking damage in this game are AI and have no camera at all.
@@ -6503,6 +6533,23 @@ bool ADCCCharacterBase::IsHostileTo(const ADCCCharacterBase* Other) const
 	if (Other->CheatStrikes >= 3 && CheatStrikes < 3 && IsPlayerControlled() && Other->IsPlayerControlled())
 	{
 		return true;
+	}
+
+	// The Champions' Ring: only the two people in the live match can hit each other.
+	// Everyone else in the stands stays on the usual faction rule.
+	if (IsPlayerControlled() && Other->IsPlayerControlled())
+	{
+		if (UWorld* World = GetWorld())
+		{
+			for (TActorIterator<ADCCArcadeArena> It(World); It; ++It)
+			{
+				if (It->PlayersMayFight(this, Other))
+				{
+					return true;
+				}
+				break;
+			}
+		}
 	}
 
 	return IsCrawler() != Other->IsCrawler();
@@ -7879,7 +7926,7 @@ void ADCCCharacterBase::Multicast_PlayCast_Implementation(float HoldSeconds, FNa
 	PlayCharacterSound(CastSound);
 }
 
-void ADCCCharacterBase::Multicast_PlayHitReaction_Implementation()
+void ADCCCharacterBase::Multicast_PlayHitReaction_Implementation(EDCCDamageType DamageType)
 {
 	// The stutter: this character alone runs at near-zero time for a beat (its animation and its movement, so the
 	// shove waits too), then everything resumes. The timer is on world time, which this actor's dilation does not
@@ -7903,9 +7950,22 @@ void ADCCCharacterBase::Multicast_PlayHitReaction_Implementation()
 	{
 		PlayOneShotAnimation(HitReactionAnimation, HitReactionSeconds);
 	}
+
+	// A small one-shot. Nothing past about 25 m, and it is switched off quickly so a looping impact cannot linger.
+	if (UWorld* World = GetWorld())
+	{
+		if (World->GetNetMode() != NM_DedicatedServer)
+		{
+			if (UNiagaraSystem* Puff = LoadObject<UNiagaraSystem>(nullptr, DCCSpellBook::HitPuffPath(DamageType)))
+			{
+				const float Scale = DamageType == EDCCDamageType::Piercing ? 0.40f : 0.32f;
+				DCCSpellBook::SpawnPuff(this, Puff, GetActorLocation() + FVector(0.0f, 0.0f, 70.0f), Scale, 0.75f, 2500.0f);
+			}
+		}
+	}
 }
 
-void ADCCCharacterBase::ReactToHitFrom(const FVector& ImpactSource)
+void ADCCCharacterBase::ReactToHitFrom(const FVector& ImpactSource, EDCCDamageType DamageType)
 {
 	UWorld* World = GetWorld();
 	if (!HasAuthority() || !World || !IsAlive() || bIsDowned)
@@ -7938,7 +7998,7 @@ void ADCCCharacterBase::ReactToHitFrom(const FVector& ImpactSource)
 		LaunchCharacter(Away * HitStaggerStrength + FVector(0.0f, 0.0f, 90.0f), false, false);
 	}
 
-	Multicast_PlayHitReaction();
+	Multicast_PlayHitReaction(DamageType);
 }
 
 void ADCCCharacterBase::ApplyCollapsedBody()
@@ -7998,8 +8058,7 @@ void ADCCCharacterBase::ApplyCollapsedBody()
 
 		if (UNiagaraSystem* DissolveSystem = DeathDissolveEffect.LoadSynchronous())
 		{
-			UNiagaraFunctionLibrary::SpawnSystemAtLocation(
-				GetWorld(), DissolveSystem, GetActorLocation(), GetActorRotation());
+			DCCSpellBook::SpawnPuff(this, DissolveSystem, GetActorLocation() + FVector(0.0f, 0.0f, 40.0f), 0.45f, 1.2f, 2500.0f);
 		}
 	}
 }

@@ -1,0 +1,767 @@
+{
+ "pack": "ModSci_Engineer",
+ "maps": [
+  {
+   "path": "/Game/ModSci_Engineer/Maps/Example_Dynamic.Example_Dynamic",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Maps/Example_Dynamic_2.Example_Dynamic_2",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Maps/Example_Dynamic_Blue.Example_Dynamic_Blue",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Maps/Example_Dynamic_White.Example_Dynamic_White",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Maps/Example_Stationary.Example_Stationary",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Maps/Example_Stationary_2.Example_Stationary_2",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Maps/Overview.Overview",
+   "partitioned": false
+  }
+ ],
+ "meshes": [
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_Door_Small_A.SM_Door_Small_A",
+   "name": "SM_Door_Small_A",
+   "size": [
+    23.0,
+    166.0,
+    275.0
+   ],
+   "tris": 9544,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_Door_Small_A_Glass.SM_Door_Small_A_Glass",
+   "name": "SM_Door_Small_A_Glass",
+   "size": [
+    0.0,
+    36.0,
+    106.0
+   ],
+   "tris": 2,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_Door_Small_UI.SM_Door_Small_UI",
+   "name": "SM_Door_Small_UI",
+   "size": [
+    21.0,
+    7.0,
+    7.0
+   ],
+   "tris": 4,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_Doorway_SideBrace.SM_Doorway_SideBrace",
+   "name": "SM_Doorway_SideBrace",
+   "size": [
+    59.0,
+    40.0,
+    480.0
+   ],
+   "tris": 4074,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_Doorway_Small_A.SM_Doorway_Small_A",
+   "name": "SM_Doorway_Small_A",
+   "size": [
+    80.0,
+    360.0,
+    390.0
+   ],
+   "tris": 5220,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_Doorway_Small_A3.SM_Doorway_Small_A3",
+   "name": "SM_Doorway_Small_A3",
+   "size": [
+    16.0,
+    215.0,
+    314.0
+   ],
+   "tris": 3692,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_GlassFloor_Door.SM_GlassFloor_Door",
+   "name": "SM_GlassFloor_Door",
+   "size": [
+    10.0,
+    360.0,
+    80.0
+   ],
+   "tris": 12,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_GlassFloor_Door_B.SM_GlassFloor_Door_B",
+   "name": "SM_GlassFloor_Door_B",
+   "size": [
+    10.0,
+    360.0,
+    70.0
+   ],
+   "tris": 12,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_AirDuct_End.SM_AirDuct_End",
+   "name": "SM_AirDuct_End",
+   "size": [
+    360.0,
+    96.0,
+    40.0
+   ],
+   "tris": 2784,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_AirDuct_Mid.SM_AirDuct_Mid",
+   "name": "SM_AirDuct_Mid",
+   "size": [
+    360.0,
+    96.0,
+    40.0
+   ],
+   "tris": 2736,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_Ceiling_HB_A.SM_Ceiling_HB_A",
+   "name": "SM_Ceiling_HB_A",
+   "size": [
+    360.0,
+    480.0,
+    32.0
+   ],
+   "tris": 1677,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_FloorPipes_End_B.SM_FloorPipes_End_B",
+   "name": "SM_FloorPipes_End_B",
+   "size": [
+    370.0,
+    314.0,
+    53.0
+   ],
+   "tris": 2560,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_FloorPipes_Mid_A.SM_FloorPipes_Mid_A",
+   "name": "SM_FloorPipes_Mid_A",
+   "size": [
+    360.0,
+    178.0,
+    38.0
+   ],
+   "tris": 2304,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_FloorPipes_Mid_B.SM_FloorPipes_Mid_B",
+   "name": "SM_FloorPipes_Mid_B",
+   "size": [
+    360.0,
+    314.0,
+    53.0
+   ],
+   "tris": 2560,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_Floor_A1.SM_Floor_A1",
+   "name": "SM_Floor_A1",
+   "size": [
+    360.0,
+    240.0,
+    3.0
+   ],
+   "tris": 1228,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_Floor_A_Pipes.SM_Floor_A_Pipes",
+   "name": "SM_Floor_A_Pipes",
+   "size": [
+    354.0,
+    28.0,
+    25.0
+   ],
+   "tris": 640,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_GlassFloor_Glass.SM_GlassFloor_Glass",
+   "name": "SM_GlassFloor_Glass",
+   "size": [
+    328.0,
+    328.0,
+    0.0
+   ],
+   "tris": 28,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_GlassFloor_Panel.SM_GlassFloor_Panel",
+   "name": "SM_GlassFloor_Panel",
+   "size": [
+    328.0,
+    328.0,
+    0.0
+   ],
+   "tris": 26,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_GlassFloor_Side_A.SM_GlassFloor_Side_A",
+   "name": "SM_GlassFloor_Side_A",
+   "size": [
+    360.0,
+    60.0,
+    1.0
+   ],
+   "tris": 20,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_Intersection_Floor.SM_Intersection_Floor",
+   "name": "SM_Intersection_Floor",
+   "size": [
+    360.0,
+    360.0,
+    30.0
+   ],
+   "tris": 2824,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_Pipe_Medium.SM_Pipe_Medium",
+   "name": "SM_Pipe_Medium",
+   "size": [
+    360.0,
+    21.0,
+    21.0
+   ],
+   "tris": 320,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_Pipe_Small.SM_Pipe_Small",
+   "name": "SM_Pipe_Small",
+   "size": [
+    360.0,
+    8.0,
+    8.0
+   ],
+   "tris": 320,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_Truss_A_Wires_Mid.SM_Truss_A_Wires_Mid",
+   "name": "SM_Truss_A_Wires_Mid",
+   "size": [
+    360.0,
+    41.0,
+    46.0
+   ],
+   "tris": 3080,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_Wall_Wire_A.SM_Wall_Wire_A",
+   "name": "SM_Wall_Wire_A",
+   "size": [
+    208.0,
+    50.0,
+    22.0
+   ],
+   "tris": 2936,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_Intersection_Beam.SM_Intersection_Beam",
+   "name": "SM_Intersection_Beam",
+   "size": [
+    22.0,
+    22.0,
+    570.0
+   ],
+   "tris": 256,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_Intersection_PipeValve.SM_Intersection_PipeValve",
+   "name": "SM_Intersection_PipeValve",
+   "size": [
+    31.0,
+    38.0,
+    387.0
+   ],
+   "tris": 5422,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_PipeValve_A.SM_PipeValve_A",
+   "name": "SM_PipeValve_A",
+   "size": [
+    31.0,
+    38.0,
+    478.0
+   ],
+   "tris": 5422,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_Wall_HB_Edge.SM_Wall_HB_Edge",
+   "name": "SM_Wall_HB_Edge",
+   "size": [
+    4.0,
+    20.0,
+    480.0
+   ],
+   "tris": 12,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_AirDuct_Brace.SM_AirDuct_Brace",
+   "name": "SM_AirDuct_Brace",
+   "size": [
+    7.0,
+    117.0,
+    51.0
+   ],
+   "tris": 628,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_AirDuct_Vent.SM_AirDuct_Vent",
+   "name": "SM_AirDuct_Vent",
+   "size": [
+    24.0,
+    62.0,
+    5.0
+   ],
+   "tris": 1354,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_Ceiling_Wire_Brace.SM_Ceiling_Wire_Brace",
+   "name": "SM_Ceiling_Wire_Brace",
+   "size": [
+    25.0,
+    124.0,
+    42.0
+   ],
+   "tris": 2528,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_Ceiling_Wires_End.SM_Ceiling_Wires_End",
+   "name": "SM_Ceiling_Wires_End",
+   "size": [
+    177.0,
+    87.0,
+    38.0
+   ],
+   "tris": 1076,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_Ceiling_Wires_Mid.SM_Ceiling_Wires_Mid",
+   "name": "SM_Ceiling_Wires_Mid",
+   "size": [
+    180.0,
+    84.0,
+    39.0
+   ],
+   "tris": 792,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_ElectricBox_A.SM_ElectricBox_A",
+   "name": "SM_ElectricBox_A",
+   "size": [
+    8.0,
+    53.0,
+    140.0
+   ],
+   "tris": 3746,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_ElectricBox_B.SM_ElectricBox_B",
+   "name": "SM_ElectricBox_B",
+   "size": [
+    18.0,
+    57.0,
+    138.0
+   ],
+   "tris": 4868,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_ElectricBox_C.SM_ElectricBox_C",
+   "name": "SM_ElectricBox_C",
+   "size": [
+    6.0,
+    43.0,
+    194.0
+   ],
+   "tris": 2352,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_ElectricDistribBox.SM_ElectricDistribBox",
+   "name": "SM_ElectricDistribBox",
+   "size": [
+    20.0,
+    49.0,
+    43.0
+   ],
+   "tris": 2174,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_FloorPipes_End_A.SM_FloorPipes_End_A",
+   "name": "SM_FloorPipes_End_A",
+   "size": [
+    370.0,
+    196.0,
+    56.0
+   ],
+   "tris": 3900,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_Floor_A2.SM_Floor_A2",
+   "name": "SM_Floor_A2",
+   "size": [
+    360.0,
+    60.0,
+    55.0
+   ],
+   "tris": 1790,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_Floor_A_End.SM_Floor_A_End",
+   "name": "SM_Floor_A_End",
+   "size": [
+    20.0,
+    360.0,
+    90.0
+   ],
+   "tris": 640,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_GlassFloor_A.SM_GlassFloor_A",
+   "name": "SM_GlassFloor_A",
+   "size": [
+    360.0,
+    360.0,
+    123.0
+   ],
+   "tris": 3162,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_GlassFloor_Divider.SM_GlassFloor_Divider",
+   "name": "SM_GlassFloor_Divider",
+   "size": [
+    20.0,
+    340.0,
+    80.0
+   ],
+   "tris": 624,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_GlassFloor_Wire_A.SM_GlassFloor_Wire_A",
+   "name": "SM_GlassFloor_Wire_A",
+   "size": [
+    563.0,
+    201.0,
+    94.0
+   ],
+   "tris": 4122,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_GlassFloor_Wire_B.SM_GlassFloor_Wire_B",
+   "name": "SM_GlassFloor_Wire_B",
+   "size": [
+    517.0,
+    151.0,
+    94.0
+   ],
+   "tris": 3994,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_Intersection_Ceiling.SM_Intersection_Ceiling",
+   "name": "SM_Intersection_Ceiling",
+   "size": [
+    360.0,
+    360.0,
+    177.0
+   ],
+   "tris": 2640,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_Intersection_Floor_B.SM_Intersection_Floor_B",
+   "name": "SM_Intersection_Floor_B",
+   "size": [
+    420.0,
+    420.0,
+    220.0
+   ],
+   "tris": 60,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_Light_A.SM_Light_A",
+   "name": "SM_Light_A",
+   "size": [
+    12.0,
+    82.0,
+    15.0
+   ],
+   "tris": 1128,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_NitrogenTank.SM_NitrogenTank",
+   "name": "SM_NitrogenTank",
+   "size": [
+    24.0,
+    24.0,
+    93.0
+   ],
+   "tris": 4552,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_Rail_A.SM_Rail_A",
+   "name": "SM_Rail_A",
+   "size": [
+    164.0,
+    7.0,
+    78.0
+   ],
+   "tris": 2248,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_Stairs_A.SM_Stairs_A",
+   "name": "SM_Stairs_A",
+   "size": [
+    98.0,
+    287.0,
+    90.0
+   ],
+   "tris": 12284,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_StorageAreaNetwork.SM_StorageAreaNetwork",
+   "name": "SM_StorageAreaNetwork",
+   "size": [
+    24.0,
+    42.0,
+    71.0
+   ],
+   "tris": 2302,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_Truss_A.SM_Truss_A",
+   "name": "SM_Truss_A",
+   "size": [
+    183.0,
+    56.0,
+    55.0
+   ],
+   "tris": 464,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_Truss_A_Wires_End.SM_Truss_A_Wires_End",
+   "name": "SM_Truss_A_Wires_End",
+   "size": [
+    31.0,
+    44.0,
+    44.0
+   ],
+   "tris": 418,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_WallBrace.SM_WallBrace",
+   "name": "SM_WallBrace",
+   "size": [
+    5.0,
+    33.0,
+    25.0
+   ],
+   "tris": 376,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_Wall_Pipe_A.SM_Wall_Pipe_A",
+   "name": "SM_Wall_Pipe_A",
+   "size": [
+    21.0,
+    40.0,
+    112.0
+   ],
+   "tris": 1020,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_Intersection_Wall.SM_Intersection_Wall",
+   "name": "SM_Intersection_Wall",
+   "size": [
+    360.0,
+    44.0,
+    480.0
+   ],
+   "tris": 3192,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_Intersection_Wall2.SM_Intersection_Wall2",
+   "name": "SM_Intersection_Wall2",
+   "size": [
+    360.0,
+    44.0,
+    480.0
+   ],
+   "tris": 3312,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_Intersection_Wall3.SM_Intersection_Wall3",
+   "name": "SM_Intersection_Wall3",
+   "size": [
+    360.0,
+    44.0,
+    480.0
+   ],
+   "tris": 3192,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_Wall_HB_A.SM_Wall_HB_A",
+   "name": "SM_Wall_HB_A",
+   "size": [
+    360.0,
+    42.0,
+    480.0
+   ],
+   "tris": 3192,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_Wall_HB_A2.SM_Wall_HB_A2",
+   "name": "SM_Wall_HB_A2",
+   "size": [
+    360.0,
+    42.0,
+    480.0
+   ],
+   "tris": 3312,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/ModSci_Engineer/Meshes/SM_Wall_HB_A3.SM_Wall_HB_A3",
+   "name": "SM_Wall_HB_A3",
+   "size": [
+    360.0,
+    42.0,
+    480.0
+   ],
+   "tris": 3192,
+   "nanite": "",
+   "role": "wall"
+  }
+ ]
+}

@@ -1,0 +1,795 @@
+{
+ "pack": "AbandonedPowerPlant",
+ "maps": [
+  {
+   "path": "/Game/AbandonedPowerPlant/Maps/PowerPlant.PowerPlant",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Maps/Showcase.Showcase",
+   "partitioned": false
+  }
+ ],
+ "meshes": [
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Doors/SM_Door_01.SM_Door_01",
+   "name": "SM_Door_01",
+   "size": [
+    400.0,
+    19.0,
+    319.0
+   ],
+   "tris": 2832,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Doors/SM_Door_02.SM_Door_02",
+   "name": "SM_Door_02",
+   "size": [
+    449.0,
+    19.0,
+    319.0
+   ],
+   "tris": 2832,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Doors/SM_Door_03.SM_Door_03",
+   "name": "SM_Door_03",
+   "size": [
+    411.0,
+    96.0,
+    318.0
+   ],
+   "tris": 1866,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Doors/SM_Door_Single_01.SM_Door_Single_01",
+   "name": "SM_Door_Single_01",
+   "size": [
+    140.0,
+    13.0,
+    308.0
+   ],
+   "tris": 966,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Walls/SM_Wall_Door_200.SM_Wall_Door_200",
+   "name": "SM_Wall_Door_200",
+   "size": [
+    200.0,
+    20.0,
+    400.0
+   ],
+   "tris": 52,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Walls/SM_Wall_Door_300_01.SM_Wall_Door_300_01",
+   "name": "SM_Wall_Door_300_01",
+   "size": [
+    300.0,
+    20.0,
+    400.0
+   ],
+   "tris": 52,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Walls/SM_Wall_Door_Large_01.SM_Wall_Door_Large_01",
+   "name": "SM_Wall_Door_Large_01",
+   "size": [
+    400.0,
+    45.0,
+    400.0
+   ],
+   "tris": 132,
+   "nanite": "",
+   "role": "door"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Ceiling/SM_Ceiling_02.SM_Ceiling_02",
+   "name": "SM_Ceiling_02",
+   "size": [
+    200.0,
+    400.0,
+    42.0
+   ],
+   "tris": 148,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Floor/SM_Floor_01.SM_Floor_01",
+   "name": "SM_Floor_01",
+   "size": [
+    300.0,
+    300.0,
+    0.0
+   ],
+   "tris": 72,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Platforms/SM_Platform_200x100.SM_Platform_200x100",
+   "name": "SM_Platform_200x100",
+   "size": [
+    200.0,
+    100.0,
+    22.0
+   ],
+   "tris": 1084,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Rubble/SM_Rubble_01.SM_Rubble_01",
+   "name": "SM_Rubble_01",
+   "size": [
+    325.0,
+    73.0,
+    12.0
+   ],
+   "tris": 3864,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Rubble/SM_Rubble_03.SM_Rubble_03",
+   "name": "SM_Rubble_03",
+   "size": [
+    524.0,
+    564.0,
+    13.0
+   ],
+   "tris": 10924,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Platforms/SM_SteelBeam_01.SM_SteelBeam_01",
+   "name": "SM_SteelBeam_01",
+   "size": [
+    20.0,
+    300.0,
+    10.0
+   ],
+   "tris": 92,
+   "nanite": "",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Walls/SM_Corner_01.SM_Corner_01",
+   "name": "SM_Corner_01",
+   "size": [
+    105.0,
+    105.0,
+    400.0
+   ],
+   "tris": 68,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Walls/SM_Corner_02.SM_Corner_02",
+   "name": "SM_Corner_02",
+   "size": [
+    100.0,
+    100.0,
+    400.0
+   ],
+   "tris": 68,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Walls/SM_Corner_Bare.SM_Corner_Bare",
+   "name": "SM_Corner_Bare",
+   "size": [
+    100.0,
+    100.0,
+    400.0
+   ],
+   "tris": 28,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Walls/SM_Pillar_Half_01.SM_Pillar_Half_01",
+   "name": "SM_Pillar_Half_01",
+   "size": [
+    50.0,
+    20.0,
+    400.0
+   ],
+   "tris": 20,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Walls/SM_Pillar_Reinforce_01.SM_Pillar_Reinforce_01",
+   "name": "SM_Pillar_Reinforce_01",
+   "size": [
+    20.0,
+    11.0,
+    400.0
+   ],
+   "tris": 1526,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Walls/SM_Wall_Plain_100.SM_Wall_Plain_100",
+   "name": "SM_Wall_Plain_100",
+   "size": [
+    100.0,
+    20.0,
+    400.0
+   ],
+   "tris": 12,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Walls/SM_Wall_Plain_Outward_100.SM_Wall_Plain_Outward_100",
+   "name": "SM_Wall_Plain_Outward_100",
+   "size": [
+    100.0,
+    25.0,
+    400.0
+   ],
+   "tris": 32,
+   "nanite": "",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Ceiling/SM_Ceiling_01.SM_Ceiling_01",
+   "name": "SM_Ceiling_01",
+   "size": [
+    200.0,
+    200.0,
+    42.0
+   ],
+   "tris": 62,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Ceiling/SM_Frame_01_CeilingFrame_01.SM_Frame_01_CeilingFrame_01",
+   "name": "SM_Frame_01_CeilingFrame_01",
+   "size": [
+    300.0,
+    300.0,
+    151.0
+   ],
+   "tris": 4164,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Rubble/SM_RubblePiece_00.SM_RubblePiece_00",
+   "name": "SM_RubblePiece_00",
+   "size": [
+    6.0,
+    7.0,
+    5.0
+   ],
+   "tris": 160,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Rubble/SM_RubblePiece_01.SM_RubblePiece_01",
+   "name": "SM_RubblePiece_01",
+   "size": [
+    15.0,
+    8.0,
+    6.0
+   ],
+   "tris": 138,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Rubble/SM_RubblePiece_02.SM_RubblePiece_02",
+   "name": "SM_RubblePiece_02",
+   "size": [
+    20.0,
+    8.0,
+    6.0
+   ],
+   "tris": 108,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Rubble/SM_RubblePiece_03.SM_RubblePiece_03",
+   "name": "SM_RubblePiece_03",
+   "size": [
+    10.0,
+    8.0,
+    6.0
+   ],
+   "tris": 126,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Rubble/SM_RubblePiece_04.SM_RubblePiece_04",
+   "name": "SM_RubblePiece_04",
+   "size": [
+    16.0,
+    10.0,
+    1.0
+   ],
+   "tris": 104,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Rubble/SM_RubblePiece_05.SM_RubblePiece_05",
+   "name": "SM_RubblePiece_05",
+   "size": [
+    11.0,
+    13.0,
+    4.0
+   ],
+   "tris": 132,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Rubble/SM_RubblePiece_06.SM_RubblePiece_06",
+   "name": "SM_RubblePiece_06",
+   "size": [
+    13.0,
+    10.0,
+    1.0
+   ],
+   "tris": 104,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Rubble/SM_Rubble_02.SM_Rubble_02",
+   "name": "SM_Rubble_02",
+   "size": [
+    129.0,
+    113.0,
+    17.0
+   ],
+   "tris": 7848,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Rubble/SM_Rubble_04.SM_Rubble_04",
+   "name": "SM_Rubble_04",
+   "size": [
+    218.0,
+    259.0,
+    53.0
+   ],
+   "tris": 22385,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Platforms/SM_Stairs_01.SM_Stairs_01",
+   "name": "SM_Stairs_01",
+   "size": [
+    100.0,
+    200.0,
+    200.0
+   ],
+   "tris": 2312,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Platforms/SM_Stairs_02.SM_Stairs_02",
+   "name": "SM_Stairs_02",
+   "size": [
+    100.0,
+    119.0,
+    100.0
+   ],
+   "tris": 1480,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Platforms/SM_Stairs_03.SM_Stairs_03",
+   "name": "SM_Stairs_03",
+   "size": [
+    100.0,
+    100.0,
+    100.0
+   ],
+   "tris": 1132,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Windows/SM_WindowFrame_01.SM_WindowFrame_01",
+   "name": "SM_WindowFrame_01",
+   "size": [
+    71.0,
+    5.0,
+    62.0
+   ],
+   "tris": 372,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Windows/SM_WindowFrame_02.SM_WindowFrame_02",
+   "name": "SM_WindowFrame_02",
+   "size": [
+    71.0,
+    9.0,
+    124.0
+   ],
+   "tris": 732,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Windows/SM_Window_Medium_02.SM_Window_Medium_02",
+   "name": "SM_Window_Medium_02",
+   "size": [
+    150.0,
+    45.0,
+    252.0
+   ],
+   "tris": 2532,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Windows/SM_Window_Tall_03.SM_Window_Tall_03",
+   "name": "SM_Window_Tall_03",
+   "size": [
+    150.0,
+    31.0,
+    250.0
+   ],
+   "tris": 2508,
+   "nanite": "",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Walls/SM_Wall_Plain_200.SM_Wall_Plain_200",
+   "name": "SM_Wall_Plain_200",
+   "size": [
+    200.0,
+    20.0,
+    400.0
+   ],
+   "tris": 12,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Walls/SM_Wall_Plain_300.SM_Wall_Plain_300",
+   "name": "SM_Wall_Plain_300",
+   "size": [
+    300.0,
+    20.0,
+    400.0
+   ],
+   "tris": 12,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Walls/SM_Wall_Plain_Outward_200.SM_Wall_Plain_Outward_200",
+   "name": "SM_Wall_Plain_Outward_200",
+   "size": [
+    200.0,
+    25.0,
+    400.0
+   ],
+   "tris": 32,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Walls/SM_Wall_Plain_Outward_300.SM_Wall_Plain_Outward_300",
+   "name": "SM_Wall_Plain_Outward_300",
+   "size": [
+    300.0,
+    25.0,
+    400.0
+   ],
+   "tris": 32,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Walls/SM_Wall_Structure_01.SM_Wall_Structure_01",
+   "name": "SM_Wall_Structure_01",
+   "size": [
+    300.0,
+    20.0,
+    400.0
+   ],
+   "tris": 68,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Walls/SM_Wall_Structure_02.SM_Wall_Structure_02",
+   "name": "SM_Wall_Structure_02",
+   "size": [
+    300.0,
+    20.0,
+    400.0
+   ],
+   "tris": 124,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Walls/SM_Wall_Window_Medium_01.SM_Wall_Window_Medium_01",
+   "name": "SM_Wall_Window_Medium_01",
+   "size": [
+    300.0,
+    20.0,
+    400.0
+   ],
+   "tris": 80,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Walls/SM_Wall_Window_Medium_02.SM_Wall_Window_Medium_02",
+   "name": "SM_Wall_Window_Medium_02",
+   "size": [
+    200.0,
+    20.0,
+    400.0
+   ],
+   "tris": 80,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Walls/SM_Wall_Window_Medium_03.SM_Wall_Window_Medium_03",
+   "name": "SM_Wall_Window_Medium_03",
+   "size": [
+    300.0,
+    25.0,
+    400.0
+   ],
+   "tris": 100,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Walls/SM_Wall_Window_Medium_04.SM_Wall_Window_Medium_04",
+   "name": "SM_Wall_Window_Medium_04",
+   "size": [
+    200.0,
+    25.0,
+    400.0
+   ],
+   "tris": 100,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Walls/SM_Wall_Window_Small_01.SM_Wall_Window_Small_01",
+   "name": "SM_Wall_Window_Small_01",
+   "size": [
+    200.0,
+    25.0,
+    400.0
+   ],
+   "tris": 100,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Walls/SM_Wall_Window_Small_02.SM_Wall_Window_Small_02",
+   "name": "SM_Wall_Window_Small_02",
+   "size": [
+    300.0,
+    25.0,
+    400.0
+   ],
+   "tris": 100,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Walls/SM_Wall_Window_Small_03.SM_Wall_Window_Small_03",
+   "name": "SM_Wall_Window_Small_03",
+   "size": [
+    200.0,
+    20.0,
+    400.0
+   ],
+   "tris": 80,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Walls/SM_Wall_Window_Small_04.SM_Wall_Window_Small_04",
+   "name": "SM_Wall_Window_Small_04",
+   "size": [
+    300.0,
+    20.0,
+    400.0
+   ],
+   "tris": 80,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Walls/SM_Wall_Window_Tall_01.SM_Wall_Window_Tall_01",
+   "name": "SM_Wall_Window_Tall_01",
+   "size": [
+    300.0,
+    25.0,
+    400.0
+   ],
+   "tris": 100,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Walls/SM_Wall_Window_Tall_02.SM_Wall_Window_Tall_02",
+   "name": "SM_Wall_Window_Tall_02",
+   "size": [
+    200.0,
+    25.0,
+    400.0
+   ],
+   "tris": 100,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Walls/SM_Wall_Window_Tall_03.SM_Wall_Window_Tall_03",
+   "name": "SM_Wall_Window_Tall_03",
+   "size": [
+    300.0,
+    20.0,
+    400.0
+   ],
+   "tris": 80,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Walls/SM_Wall_Window_Tall_04.SM_Wall_Window_Tall_04",
+   "name": "SM_Wall_Window_Tall_04",
+   "size": [
+    200.0,
+    20.0,
+    400.0
+   ],
+   "tris": 80,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Walls/SM_Wall_Window_Wide_01.SM_Wall_Window_Wide_01",
+   "name": "SM_Wall_Window_Wide_01",
+   "size": [
+    600.0,
+    25.0,
+    400.0
+   ],
+   "tris": 100,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Walls/SM_Wall_Window_Wide_02.SM_Wall_Window_Wide_02",
+   "name": "SM_Wall_Window_Wide_02",
+   "size": [
+    600.0,
+    20.0,
+    400.0
+   ],
+   "tris": 80,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Windows/SM_Window_Medium_01.SM_Window_Medium_01",
+   "name": "SM_Window_Medium_01",
+   "size": [
+    150.0,
+    4.0,
+    200.0
+   ],
+   "tris": 2532,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Windows/SM_Window_Medium_03.SM_Window_Medium_03",
+   "name": "SM_Window_Medium_03",
+   "size": [
+    150.0,
+    28.0,
+    200.0
+   ],
+   "tris": 2532,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Windows/SM_Window_Small_01.SM_Window_Small_01",
+   "name": "SM_Window_Small_01",
+   "size": [
+    150.0,
+    4.0,
+    150.0
+   ],
+   "tris": 1740,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Windows/SM_Window_Small_02.SM_Window_Small_02",
+   "name": "SM_Window_Small_02",
+   "size": [
+    150.0,
+    17.0,
+    150.0
+   ],
+   "tris": 1740,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Windows/SM_Window_Small_03.SM_Window_Small_03",
+   "name": "SM_Window_Small_03",
+   "size": [
+    150.0,
+    17.0,
+    150.0
+   ],
+   "tris": 1368,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Windows/SM_Window_Tall_01.SM_Window_Tall_01",
+   "name": "SM_Window_Tall_01",
+   "size": [
+    150.0,
+    4.0,
+    250.0
+   ],
+   "tris": 3252,
+   "nanite": "",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/AbandonedPowerPlant/Assets/Windows/SM_Window_Tall_02.SM_Window_Tall_02",
+   "name": "SM_Window_Tall_02",
+   "size": [
+    150.0,
+    16.0,
+    250.0
+   ],
+   "tris": 2508,
+   "nanite": "",
+   "role": "wall"
+  }
+ ]
+}

@@ -1,0 +1,404 @@
+{
+  "stages": [
+    {
+      "stage": 1,
+      "name": "Stage 1",
+      "kind": "debtor",
+      "hp": 80,
+      "count": 1,
+      "skill": ""
+    },
+    {
+      "stage": 2,
+      "name": "Stage 2",
+      "kind": "clerk",
+      "hp": 90,
+      "count": 1,
+      "skill": ""
+    },
+    {
+      "stage": 3,
+      "name": "Stage 3",
+      "kind": "hound",
+      "hp": 100,
+      "count": 1,
+      "skill": ""
+    },
+    {
+      "stage": 4,
+      "name": "Stage 4",
+      "kind": "stalker",
+      "hp": 112,
+      "count": 1,
+      "skill": ""
+    },
+    {
+      "stage": 5,
+      "name": "Stage 5",
+      "kind": "brute",
+      "hp": 126,
+      "count": 1,
+      "skill": ""
+    },
+    {
+      "stage": 6,
+      "name": "Stage 6",
+      "kind": "debtor",
+      "hp": 141,
+      "count": 1,
+      "skill": ""
+    },
+    {
+      "stage": 7,
+      "name": "Stage 7",
+      "kind": "clerk",
+      "hp": 158,
+      "count": 1,
+      "skill": ""
+    },
+    {
+      "stage": 8,
+      "name": "Stage 8",
+      "kind": "hound",
+      "hp": 177,
+      "count": 1,
+      "skill": ""
+    },
+    {
+      "stage": 9,
+      "name": "Stage 9",
+      "kind": "stalker",
+      "hp": 99,
+      "count": 2,
+      "skill": ""
+    },
+    {
+      "stage": 10,
+      "name": "The Notary",
+      "kind": "notary",
+      "hp": 222,
+      "count": 1,
+      "skill": "StaticBurst"
+    },
+    {
+      "stage": 11,
+      "name": "Stage 11",
+      "kind": "debtor",
+      "hp": 124,
+      "count": 2,
+      "skill": ""
+    },
+    {
+      "stage": 12,
+      "name": "Stage 12",
+      "kind": "clerk",
+      "hp": 139,
+      "count": 2,
+      "skill": ""
+    },
+    {
+      "stage": 13,
+      "name": "Stage 13",
+      "kind": "hound",
+      "hp": 156,
+      "count": 2,
+      "skill": ""
+    },
+    {
+      "stage": 14,
+      "name": "Stage 14",
+      "kind": "stalker",
+      "hp": 174,
+      "count": 2,
+      "skill": ""
+    },
+    {
+      "stage": 15,
+      "name": "Stage 15",
+      "kind": "brute",
+      "hp": 195,
+      "count": 2,
+      "skill": ""
+    },
+    {
+      "stage": 16,
+      "name": "Stage 16",
+      "kind": "debtor",
+      "hp": 219,
+      "count": 2,
+      "skill": ""
+    },
+    {
+      "stage": 17,
+      "name": "Stage 17",
+      "kind": "clerk",
+      "hp": 163,
+      "count": 3,
+      "skill": ""
+    },
+    {
+      "stage": 18,
+      "name": "Stage 18",
+      "kind": "hound",
+      "hp": 183,
+      "count": 3,
+      "skill": ""
+    },
+    {
+      "stage": 19,
+      "name": "Stage 19",
+      "kind": "stalker",
+      "hp": 205,
+      "count": 3,
+      "skill": ""
+    },
+    {
+      "stage": 20,
+      "name": "The Bull",
+      "kind": "brute",
+      "hp": 689,
+      "count": 1,
+      "skill": "FireFingers"
+    },
+    {
+      "stage": 21,
+      "name": "Stage 21",
+      "kind": "debtor",
+      "hp": 257,
+      "count": 3,
+      "skill": ""
+    },
+    {
+      "stage": 22,
+      "name": "Stage 22",
+      "kind": "clerk",
+      "hp": 288,
+      "count": 3,
+      "skill": ""
+    },
+    {
+      "stage": 23,
+      "name": "Stage 23",
+      "kind": "hound",
+      "hp": 322,
+      "count": 3,
+      "skill": ""
+    },
+    {
+      "stage": 24,
+      "name": "Stage 24",
+      "kind": "stalker",
+      "hp": 361,
+      "count": 3,
+      "skill": ""
+    },
+    {
+      "stage": 25,
+      "name": "Stage 25",
+      "kind": "brute",
+      "hp": 303,
+      "count": 4,
+      "skill": ""
+    },
+    {
+      "stage": 26,
+      "name": "Stage 26",
+      "kind": "debtor",
+      "hp": 340,
+      "count": 4,
+      "skill": ""
+    },
+    {
+      "stage": 27,
+      "name": "Stage 27",
+      "kind": "clerk",
+      "hp": 380,
+      "count": 4,
+      "skill": ""
+    },
+    {
+      "stage": 28,
+      "name": "Stage 28",
+      "kind": "hound",
+      "hp": 426,
+      "count": 4,
+      "skill": ""
+    },
+    {
+      "stage": 29,
+      "name": "Stage 29",
+      "kind": "stalker",
+      "hp": 477,
+      "count": 4,
+      "skill": ""
+    },
+    {
+      "stage": 30,
+      "name": "The Auditor",
+      "kind": "auditor",
+      "hp": 2140,
+      "count": 1,
+      "skill": "FirstAid"
+    },
+    {
+      "stage": 31,
+      "name": "Stage 31",
+      "kind": "debtor",
+      "hp": 599,
+      "count": 4,
+      "skill": ""
+    },
+    {
+      "stage": 32,
+      "name": "Stage 32",
+      "kind": "clerk",
+      "hp": 671,
+      "count": 4,
+      "skill": ""
+    },
+    {
+      "stage": 33,
+      "name": "Stage 33",
+      "kind": "hound",
+      "hp": 601,
+      "count": 5,
+      "skill": ""
+    },
+    {
+      "stage": 34,
+      "name": "Stage 34",
+      "kind": "stalker",
+      "hp": 673,
+      "count": 5,
+      "skill": ""
+    },
+    {
+      "stage": 35,
+      "name": "Stage 35",
+      "kind": "brute",
+      "hp": 754,
+      "count": 5,
+      "skill": ""
+    },
+    {
+      "stage": 36,
+      "name": "Stage 36",
+      "kind": "debtor",
+      "hp": 844,
+      "count": 5,
+      "skill": ""
+    },
+    {
+      "stage": 37,
+      "name": "Stage 37",
+      "kind": "clerk",
+      "hp": 946,
+      "count": 5,
+      "skill": ""
+    },
+    {
+      "stage": 38,
+      "name": "Stage 38",
+      "kind": "hound",
+      "hp": 1059,
+      "count": 5,
+      "skill": ""
+    },
+    {
+      "stage": 39,
+      "name": "Stage 39",
+      "kind": "stalker",
+      "hp": 1186,
+      "count": 5,
+      "skill": ""
+    },
+    {
+      "stage": 40,
+      "name": "The Gatekeeper",
+      "kind": "boss",
+      "hp": 6646,
+      "count": 1,
+      "skill": "Whiteout"
+    },
+    {
+      "stage": 41,
+      "name": "Stage 41",
+      "kind": "debtor",
+      "hp": 1240,
+      "count": 6,
+      "skill": ""
+    },
+    {
+      "stage": 42,
+      "name": "Stage 42",
+      "kind": "clerk",
+      "hp": 1389,
+      "count": 6,
+      "skill": ""
+    },
+    {
+      "stage": 43,
+      "name": "Stage 43",
+      "kind": "hound",
+      "hp": 1556,
+      "count": 6,
+      "skill": ""
+    },
+    {
+      "stage": 44,
+      "name": "Stage 44",
+      "kind": "stalker",
+      "hp": 1743,
+      "count": 6,
+      "skill": ""
+    },
+    {
+      "stage": 45,
+      "name": "Stage 45",
+      "kind": "brute",
+      "hp": 1952,
+      "count": 6,
+      "skill": ""
+    },
+    {
+      "stage": 46,
+      "name": "Stage 46",
+      "kind": "debtor",
+      "hp": 2186,
+      "count": 6,
+      "skill": ""
+    },
+    {
+      "stage": 47,
+      "name": "Stage 47",
+      "kind": "clerk",
+      "hp": 2448,
+      "count": 6,
+      "skill": ""
+    },
+    {
+      "stage": 48,
+      "name": "Stage 48",
+      "kind": "hound",
+      "hp": 2742,
+      "count": 6,
+      "skill": ""
+    },
+    {
+      "stage": 49,
+      "name": "Stage 49",
+      "kind": "stalker",
+      "hp": 2633,
+      "count": 7,
+      "skill": ""
+    },
+    {
+      "stage": 50,
+      "name": "The House",
+      "kind": "gatekeeper",
+      "hp": 20643,
+      "count": 1,
+      "skill": ""
+    }
+  ]
+}

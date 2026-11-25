@@ -1,0 +1,3051 @@
+{
+ "pack": "DerelictCorridor",
+ "maps": [
+  {
+   "path": "/Game/DerelictCorridor/Maps/DerelictCorridor.DerelictCorridor",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_BrokenTiles_01.ASY_BrokenTiles_01",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_BrokenTiles_02.ASY_BrokenTiles_02",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_Ceiling_01.ASY_Ceiling_01",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_Ceiling_02.ASY_Ceiling_02",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_Ceiling_06.ASY_Ceiling_06",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_Ceiling_07.ASY_Ceiling_07",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_DarkPipe_01.ASY_DarkPipe_01",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_DarkPipe_02.ASY_DarkPipe_02",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_DarkPipe_03.ASY_DarkPipe_03",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_Dolley_01.ASY_Dolley_01",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_DoubleDoor_01.ASY_DoubleDoor_01",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_GreyPipe_01.ASY_GreyPipe_01",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_HalfColorPipe_01.ASY_HalfColorPipe_01",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_HalfWhitePipe_01.ASY_HalfWhitePipe_01",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_Half_DarkPipe_01.ASY_Half_DarkPipe_01",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_Pebbles_01.ASY_Pebbles_01",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_Pebbles_02.ASY_Pebbles_02",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_Pebbles_03.ASY_Pebbles_03",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_Pebbles_04.ASY_Pebbles_04",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_Pebbles_05.ASY_Pebbles_05",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_Pebbles_06.ASY_Pebbles_06",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_PlasticPipe_01.ASY_PlasticPipe_01",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_RubblePile_01.ASY_RubblePile_01",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_RubblePile_02.ASY_RubblePile_02",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_RubblePile_03.ASY_RubblePile_03",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_RustedPipe_01.ASY_RustedPipe_01",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_RustedPipe_02.ASY_RustedPipe_02",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_RustedPipe_03.ASY_RustedPipe_03",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_RustedPipe_04.ASY_RustedPipe_04",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_RustedPipe_04_A.ASY_RustedPipe_04_A",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_SingleDoor_02.ASY_SingleDoor_02",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_TileFloor_01.ASY_TileFloor_01",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_TileFloor_02.ASY_TileFloor_02",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_WhitePipe_01.ASY_WhitePipe_01",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_WhitePipe_01_A.ASY_WhitePipe_01_A",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_WhitePipe_02.ASY_WhitePipe_02",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/DerelictCorridor/Maps/PackedLevels/ASY_WhitePipe_03.ASY_WhitePipe_03",
+   "partitioned": true
+  }
+ ],
+ "meshes": [
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Door/Door_01/SM_Door_01.SM_Door_01",
+   "name": "SM_Door_01",
+   "size": [
+    121.0,
+    4.0,
+    214.0
+   ],
+   "tris": 252,
+   "nanite": "True",
+   "role": "door"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Door/Door_01/SM_Door_Center_02.SM_Door_Center_02",
+   "name": "SM_Door_Center_02",
+   "size": [
+    512.0,
+    16.0,
+    384.0
+   ],
+   "tris": 68,
+   "nanite": "True",
+   "role": "door"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Door/Door_01/SM_Door_Glass.SM_Door_Glass",
+   "name": "SM_Door_Glass",
+   "size": [
+    31.0,
+    0.0,
+    68.0
+   ],
+   "tris": 8,
+   "nanite": "False",
+   "role": "door"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Door/Door_01/SM_Door_Glass_02.SM_Door_Glass_02",
+   "name": "SM_Door_Glass_02",
+   "size": [
+    31.0,
+    0.0,
+    68.0
+   ],
+   "tris": 8,
+   "nanite": "False",
+   "role": "door"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Door/Door_Window_01/SM_Door_Window_01.SM_Door_Window_01",
+   "name": "SM_Door_Window_01",
+   "size": [
+    512.0,
+    16.0,
+    384.0
+   ],
+   "tris": 120,
+   "nanite": "True",
+   "role": "door"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Door/DoubleDoor_01/SM_DoubleDoor_Center.SM_DoubleDoor_Center",
+   "name": "SM_DoubleDoor_Center",
+   "size": [
+    512.0,
+    16.0,
+    384.0
+   ],
+   "tris": 44,
+   "nanite": "True",
+   "role": "door"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Door/DoubleDoor_01/SM_DoubleDoor_Center_02.SM_DoubleDoor_Center_02",
+   "name": "SM_DoubleDoor_Center_02",
+   "size": [
+    512.0,
+    16.0,
+    384.0
+   ],
+   "tris": 44,
+   "nanite": "True",
+   "role": "door"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Door/DoubleDoor_01/SM_DoubleDoor_Center_03.SM_DoubleDoor_Center_03",
+   "name": "SM_DoubleDoor_Center_03",
+   "size": [
+    512.0,
+    16.0,
+    384.0
+   ],
+   "tris": 44,
+   "nanite": "True",
+   "role": "door"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Cables/SM_Cables_01_Cable_Wall_Single_01.SM_Cables_01_Cable_Wall_Single_01",
+   "name": "SM_Cables_01_Cable_Wall_Single_01",
+   "size": [
+    513.0,
+    2.0,
+    4.0
+   ],
+   "tris": 520,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Cables/SM_Cables_01_Cable_Wall_Single_05.SM_Cables_01_Cable_Wall_Single_05",
+   "name": "SM_Cables_01_Cable_Wall_Single_05",
+   "size": [
+    257.0,
+    2.0,
+    4.0
+   ],
+   "tris": 362,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Cables/SM_Cables_01_Cable_Wall_Single_06.SM_Cables_01_Cable_Wall_Single_06",
+   "name": "SM_Cables_01_Cable_Wall_Single_06",
+   "size": [
+    257.0,
+    2.0,
+    8.0
+   ],
+   "tris": 331,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Cables/SM_Cables_01_Cable_Wall_Strand_10.SM_Cables_01_Cable_Wall_Strand_10",
+   "name": "SM_Cables_01_Cable_Wall_Strand_10",
+   "size": [
+    259.0,
+    4.0,
+    7.0
+   ],
+   "tris": 303,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Cables/SM_Cables_01_Cables_Hanging_01.SM_Cables_01_Cables_Hanging_01",
+   "name": "SM_Cables_01_Cables_Hanging_01",
+   "size": [
+    515.0,
+    32.0,
+    15.0
+   ],
+   "tris": 2602,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Cables/SM_Cables_01_Cables_Hanging_05.SM_Cables_01_Cables_Hanging_05",
+   "name": "SM_Cables_01_Cables_Hanging_05",
+   "size": [
+    515.0,
+    31.0,
+    72.0
+   ],
+   "tris": 2414,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Cables/SM_Cables_01_Cables_Hanging_Half.SM_Cables_01_Cables_Hanging_Half",
+   "name": "SM_Cables_01_Cables_Hanging_Half",
+   "size": [
+    258.0,
+    31.0,
+    14.0
+   ],
+   "tris": 1266,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Cables/SM_Cables_01_Cables_Wall_Big.SM_Cables_01_Cables_Wall_Big",
+   "name": "SM_Cables_01_Cables_Wall_Big",
+   "size": [
+    514.0,
+    15.0,
+    58.0
+   ],
+   "tris": 1736,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Cables/SM_Cables_01_Cables_Wall_Medium_01.SM_Cables_01_Cables_Wall_Medium_01",
+   "name": "SM_Cables_01_Cables_Wall_Medium_01",
+   "size": [
+    514.0,
+    5.0,
+    16.0
+   ],
+   "tris": 1690,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Cables/SM_Cables_01_Cables_Wall_Medium_02.SM_Cables_01_Cables_Wall_Medium_02",
+   "name": "SM_Cables_01_Cables_Wall_Medium_02",
+   "size": [
+    516.0,
+    6.0,
+    61.0
+   ],
+   "tris": 1207,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Cables/SM_Cables_01_Cables_Wall_Thin_01.SM_Cables_01_Cables_Wall_Thin_01",
+   "name": "SM_Cables_01_Cables_Wall_Thin_01",
+   "size": [
+    515.0,
+    4.0,
+    16.0
+   ],
+   "tris": 980,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Ceiling/SM_Ceiling_01.SM_Ceiling_01",
+   "name": "SM_Ceiling_01",
+   "size": [
+    512.0,
+    512.0,
+    32.0
+   ],
+   "tris": 12,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Ceiling/SM_Ceiling_02.SM_Ceiling_02",
+   "name": "SM_Ceiling_02",
+   "size": [
+    512.0,
+    512.0,
+    11.0
+   ],
+   "tris": 182,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Ceiling/SM_Ceiling_04.SM_Ceiling_04",
+   "name": "SM_Ceiling_04",
+   "size": [
+    548.0,
+    540.0,
+    65.0
+   ],
+   "tris": 240,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Ceiling/SM_Ceiling_05.SM_Ceiling_05",
+   "name": "SM_Ceiling_05",
+   "size": [
+    512.0,
+    512.0,
+    24.0
+   ],
+   "tris": 12,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Ceiling/SM_Ceiling_06.SM_Ceiling_06",
+   "name": "SM_Ceiling_06",
+   "size": [
+    512.0,
+    512.0,
+    3.0
+   ],
+   "tris": 12,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Chair/SM_ChairBar.SM_ChairBar",
+   "name": "SM_ChairBar",
+   "size": [
+    158.0,
+    9.0,
+    12.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_Broken_01/SM_Collapsed_Floor_01.SM_Collapsed_Floor_01",
+   "name": "SM_Collapsed_Floor_01",
+   "size": [
+    512.0,
+    512.0,
+    32.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_01/SM_Floor_01.SM_Floor_01",
+   "name": "SM_Floor_01",
+   "size": [
+    512.0,
+    512.0,
+    32.0
+   ],
+   "tris": 12,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_01/SM_Floor_01.SM_Floor_01",
+   "name": "SM_Floor_01",
+   "size": [
+    512.0,
+    512.0,
+    32.0
+   ],
+   "tris": 12,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Half_01/SM_Floor_Half_01.SM_Floor_Half_01",
+   "name": "SM_Floor_Half_01",
+   "size": [
+    512.0,
+    384.0,
+    32.0
+   ],
+   "tris": 12,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_AbaFact_Tarp_Wrinkled_01/SM_Ind_AbaFact_Tarp_Wrinkled_01.SM_Ind_AbaFact_Tarp_Wrinkled_01",
+   "name": "SM_Ind_AbaFact_Tarp_Wrinkled_01",
+   "size": [
+    181.0,
+    120.0,
+    6.0
+   ],
+   "tris": 1445,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_AbaFact_Tarp_Wrinkled_02/SM_Ind_AbaFact_Tarp_Wrinkled_02.SM_Ind_AbaFact_Tarp_Wrinkled_02",
+   "name": "SM_Ind_AbaFact_Tarp_Wrinkled_02",
+   "size": [
+    277.0,
+    151.0,
+    10.0
+   ],
+   "tris": 3188,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Con_Pile_Rubble_Gravel_Patch_01/SM_Ind_Con_Pile_Rubble_Gravel_Patch_01.SM_Ind_Con_Pile_Rubble_Gravel_Patch_01",
+   "name": "SM_Ind_Con_Pile_Rubble_Gravel_Patch_01",
+   "size": [
+    267.0,
+    223.0,
+    23.0
+   ],
+   "tris": 9524,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Con_Supplies_Beam_Metal_Rusty_02/SM_Ind_Con_Supplies_Beam_Metal_Rusty_02_A.SM_Ind_Con_Supplies_Beam_Metal_Rusty_02_A",
+   "name": "SM_Ind_Con_Supplies_Beam_Metal_Rusty_02_A",
+   "size": [
+    307.0,
+    23.0,
+    24.0
+   ],
+   "tris": 1704,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Con_Supplies_Beam_Metal_Rusty_02/SM_Ind_Con_Supplies_Beam_Metal_Rusty_02_B.SM_Ind_Con_Supplies_Beam_Metal_Rusty_02_B",
+   "name": "SM_Ind_Con_Supplies_Beam_Metal_Rusty_02_B",
+   "size": [
+    307.0,
+    23.0,
+    17.0
+   ],
+   "tris": 957,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Con_Supplies_Beam_Metal_Rusty_02/SM_Ind_Con_Supplies_Beam_Metal_Rusty_02_C.SM_Ind_Con_Supplies_Beam_Metal_Rusty_02_C",
+   "name": "SM_Ind_Con_Supplies_Beam_Metal_Rusty_02_C",
+   "size": [
+    296.0,
+    372.0,
+    30.0
+   ],
+   "tris": 1316,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Con_Supplies_Beam_Metal_Rusty_02/SM_Ind_Con_Supplies_Beam_Metal_Rusty_02_D.SM_Ind_Con_Supplies_Beam_Metal_Rusty_02_D",
+   "name": "SM_Ind_Con_Supplies_Beam_Metal_Rusty_02_D",
+   "size": [
+    273.0,
+    605.0,
+    39.0
+   ],
+   "tris": 1232,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Con_Supplies_Plank_Wood_Long_01/SM_Ind_Con_Supplies_Plank_Wood_Long_01.SM_Ind_Con_Supplies_Plank_Wood_Long_01",
+   "name": "SM_Ind_Con_Supplies_Plank_Wood_Long_01",
+   "size": [
+    300.0,
+    23.0,
+    5.0
+   ],
+   "tris": 300,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Ware_Equipment_Ladder_Metal_Worn_01/SM_Ind_Ware_Equipment_Ladder_Metal_Worn_01.SM_Ind_Ware_Equipment_Ladder_Metal_Worn_01",
+   "name": "SM_Ind_Ware_Equipment_Ladder_Metal_Worn_01",
+   "size": [
+    258.0,
+    37.0,
+    12.0
+   ],
+   "tris": 1798,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Ware_Furn_Table_Wood_Worn_01/SM_Ind_Ware_Furn_Table_Wood_Worn_01_D.SM_Ind_Ware_Furn_Table_Wood_Worn_01_D",
+   "name": "SM_Ind_Ware_Furn_Table_Wood_Worn_01_D",
+   "size": [
+    152.0,
+    86.0,
+    5.0
+   ],
+   "tris": 3434,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/LightFixture/SM_Lightbulbs_Fluerescent_01.SM_Lightbulbs_Fluerescent_01",
+   "name": "SM_Lightbulbs_Fluerescent_01",
+   "size": [
+    187.0,
+    13.0,
+    5.0
+   ],
+   "tris": 252,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/Decals/Ind_Road_Decal_Metal_Rusty_01/SM_Metal_Cover_01.SM_Metal_Cover_01",
+   "name": "SM_Metal_Cover_01",
+   "size": [
+    173.0,
+    96.0,
+    0.0
+   ],
+   "tris": 2,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_01/SM_TileGroup_01_A.SM_TileGroup_01_A",
+   "name": "SM_TileGroup_01_A",
+   "size": [
+    455.0,
+    477.0,
+    1.0
+   ],
+   "tris": 108,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_01/SM_TileGroup_01_B.SM_TileGroup_01_B",
+   "name": "SM_TileGroup_01_B",
+   "size": [
+    475.0,
+    510.0,
+    1.0
+   ],
+   "tris": 144,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_01/SM_TileGroup_01_C.SM_TileGroup_01_C",
+   "name": "SM_TileGroup_01_C",
+   "size": [
+    512.0,
+    476.0,
+    1.0
+   ],
+   "tris": 96,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_01/SM_TileGroup_01_D.SM_TileGroup_01_D",
+   "name": "SM_TileGroup_01_D",
+   "size": [
+    475.0,
+    366.0,
+    1.0
+   ],
+   "tris": 24,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_01/SM_TileGroup_01_E.SM_TileGroup_01_E",
+   "name": "SM_TileGroup_01_E",
+   "size": [
+    512.0,
+    182.0,
+    1.0
+   ],
+   "tris": 48,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_01/SM_TileGroup_01_F.SM_TileGroup_01_F",
+   "name": "SM_TileGroup_01_F",
+   "size": [
+    405.0,
+    513.0,
+    4.0
+   ],
+   "tris": 192,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_01/SM_TileGroup_01_G.SM_TileGroup_01_G",
+   "name": "SM_TileGroup_01_G",
+   "size": [
+    422.0,
+    477.0,
+    1.0
+   ],
+   "tris": 96,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_01/SM_TileGroup_01_H.SM_TileGroup_01_H",
+   "name": "SM_TileGroup_01_H",
+   "size": [
+    475.0,
+    475.0,
+    3.0
+   ],
+   "tris": 216,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_01/SM_TileGroup_01_I.SM_TileGroup_01_I",
+   "name": "SM_TileGroup_01_I",
+   "size": [
+    476.0,
+    476.0,
+    1.0
+   ],
+   "tris": 156,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_01/SM_TileGroup_01_J.SM_TileGroup_01_J",
+   "name": "SM_TileGroup_01_J",
+   "size": [
+    432.0,
+    438.0,
+    1.0
+   ],
+   "tris": 120,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_01/SM_TileGroup_01_K.SM_TileGroup_01_K",
+   "name": "SM_TileGroup_01_K",
+   "size": [
+    475.0,
+    475.0,
+    1.0
+   ],
+   "tris": 72,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_01/SM_TileGroup_01_L.SM_TileGroup_01_L",
+   "name": "SM_TileGroup_01_L",
+   "size": [
+    512.0,
+    404.0,
+    1.0
+   ],
+   "tris": 144,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_01/SM_TileGroup_01_M.SM_TileGroup_01_M",
+   "name": "SM_TileGroup_01_M",
+   "size": [
+    511.0,
+    219.0,
+    1.0
+   ],
+   "tris": 108,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_01/SM_TileGroup_01_N.SM_TileGroup_01_N",
+   "name": "SM_TileGroup_01_N",
+   "size": [
+    438.0,
+    474.0,
+    1.0
+   ],
+   "tris": 96,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_01/SM_TileGroup_01_O.SM_TileGroup_01_O",
+   "name": "SM_TileGroup_01_O",
+   "size": [
+    328.0,
+    438.0,
+    3.0
+   ],
+   "tris": 108,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_01/SM_TileGroup_01_P.SM_TileGroup_01_P",
+   "name": "SM_TileGroup_01_P",
+   "size": [
+    455.0,
+    513.0,
+    5.0
+   ],
+   "tris": 216,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_02/SM_TileGroup_02_A.SM_TileGroup_02_A",
+   "name": "SM_TileGroup_02_A",
+   "size": [
+    407.0,
+    146.0,
+    1.0
+   ],
+   "tris": 60,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_02/SM_TileGroup_02_B.SM_TileGroup_02_B",
+   "name": "SM_TileGroup_02_B",
+   "size": [
+    512.0,
+    182.0,
+    1.0
+   ],
+   "tris": 48,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_02/SM_TileGroup_02_C.SM_TileGroup_02_C",
+   "name": "SM_TileGroup_02_C",
+   "size": [
+    475.0,
+    182.0,
+    1.0
+   ],
+   "tris": 24,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_02/SM_TileGroup_02_D.SM_TileGroup_02_D",
+   "name": "SM_TileGroup_02_D",
+   "size": [
+    455.0,
+    222.0,
+    1.0
+   ],
+   "tris": 132,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_02/SM_TileGroup_02_E.SM_TileGroup_02_E",
+   "name": "SM_TileGroup_02_E",
+   "size": [
+    257.0,
+    183.0,
+    1.0
+   ],
+   "tris": 48,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_02/SM_TileGroup_02_F.SM_TileGroup_02_F",
+   "name": "SM_TileGroup_02_F",
+   "size": [
+    438.0,
+    255.0,
+    1.0
+   ],
+   "tris": 72,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_02/SM_TileGroup_02_G.SM_TileGroup_02_G",
+   "name": "SM_TileGroup_02_G",
+   "size": [
+    270.0,
+    218.0,
+    1.0
+   ],
+   "tris": 36,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_02/SM_TileGroup_02_H.SM_TileGroup_02_H",
+   "name": "SM_TileGroup_02_H",
+   "size": [
+    443.0,
+    220.0,
+    3.0
+   ],
+   "tris": 84,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_02/SM_TileGroup_02_J.SM_TileGroup_02_J",
+   "name": "SM_TileGroup_02_J",
+   "size": [
+    464.0,
+    109.0,
+    1.0
+   ],
+   "tris": 48,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_02/SM_TileGroup_02_K.SM_TileGroup_02_K",
+   "name": "SM_TileGroup_02_K",
+   "size": [
+    383.0,
+    257.0,
+    4.0
+   ],
+   "tris": 108,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_02/SM_TileGroup_02_L.SM_TileGroup_02_L",
+   "name": "SM_TileGroup_02_L",
+   "size": [
+    438.0,
+    147.0,
+    1.0
+   ],
+   "tris": 60,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_02/SM_TileGroup_02_M.SM_TileGroup_02_M",
+   "name": "SM_TileGroup_02_M",
+   "size": [
+    328.0,
+    219.0,
+    3.0
+   ],
+   "tris": 84,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_02/SM_TileGroup_02_N.SM_TileGroup_02_N",
+   "name": "SM_TileGroup_02_N",
+   "size": [
+    511.0,
+    219.0,
+    1.0
+   ],
+   "tris": 108,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_02/SM_TileGroup_02_O.SM_TileGroup_02_O",
+   "name": "SM_TileGroup_02_O",
+   "size": [
+    475.0,
+    220.0,
+    1.0
+   ],
+   "tris": 60,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_Broken_01/SM_TileGroup_03_A.SM_TileGroup_03_A",
+   "name": "SM_TileGroup_03_A",
+   "size": [
+    366.0,
+    475.0,
+    1.0
+   ],
+   "tris": 24,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_Broken_01/SM_TileGroup_03_B.SM_TileGroup_03_B",
+   "name": "SM_TileGroup_03_B",
+   "size": [
+    183.0,
+    512.0,
+    11.0
+   ],
+   "tris": 48,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_Broken_01/SM_TileGroup_03_C.SM_TileGroup_03_C",
+   "name": "SM_TileGroup_03_C",
+   "size": [
+    402.0,
+    422.0,
+    20.0
+   ],
+   "tris": 84,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_Broken_01/SM_TileGroup_03_D.SM_TileGroup_03_D",
+   "name": "SM_TileGroup_03_D",
+   "size": [
+    478.0,
+    457.0,
+    31.0
+   ],
+   "tris": 96,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_Broken_01/SM_TileGroup_03_E.SM_TileGroup_03_E",
+   "name": "SM_TileGroup_03_E",
+   "size": [
+    476.0,
+    476.0,
+    37.0
+   ],
+   "tris": 156,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_Broken_01/SM_TileGroup_03_F.SM_TileGroup_03_F",
+   "name": "SM_TileGroup_03_F",
+   "size": [
+    513.0,
+    456.0,
+    34.0
+   ],
+   "tris": 216,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_Broken_01/SM_TileGroup_03_G.SM_TileGroup_03_G",
+   "name": "SM_TileGroup_03_G",
+   "size": [
+    475.0,
+    475.0,
+    28.0
+   ],
+   "tris": 72,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_Broken_01/SM_TileGroup_03_H.SM_TileGroup_03_H",
+   "name": "SM_TileGroup_03_H",
+   "size": [
+    475.0,
+    475.0,
+    16.0
+   ],
+   "tris": 216,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_Broken_01/SM_TileGroup_03_I.SM_TileGroup_03_I",
+   "name": "SM_TileGroup_03_I",
+   "size": [
+    218.0,
+    510.0,
+    34.0
+   ],
+   "tris": 108,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_Broken_01/SM_TileGroup_03_J.SM_TileGroup_03_J",
+   "name": "SM_TileGroup_03_J",
+   "size": [
+    510.0,
+    475.0,
+    26.0
+   ],
+   "tris": 144,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_Broken_01/SM_TileGroup_03_K.SM_TileGroup_03_K",
+   "name": "SM_TileGroup_03_K",
+   "size": [
+    437.0,
+    327.0,
+    34.0
+   ],
+   "tris": 120,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_Broken_01/SM_TileGroup_03_L.SM_TileGroup_03_L",
+   "name": "SM_TileGroup_03_L",
+   "size": [
+    513.0,
+    405.0,
+    29.0
+   ],
+   "tris": 216,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_Broken_01/SM_TileGroup_03_M.SM_TileGroup_03_M",
+   "name": "SM_TileGroup_03_M",
+   "size": [
+    404.0,
+    512.0,
+    32.0
+   ],
+   "tris": 144,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_Broken_01/SM_TileGroup_03_N.SM_TileGroup_03_N",
+   "name": "SM_TileGroup_03_N",
+   "size": [
+    475.0,
+    512.0,
+    18.0
+   ],
+   "tris": 84,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_Broken_01/SM_TileGroup_03_O.SM_TileGroup_03_O",
+   "name": "SM_TileGroup_03_O",
+   "size": [
+    438.0,
+    361.0,
+    18.0
+   ],
+   "tris": 120,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_Broken_01/SM_TileGroup_03_P.SM_TileGroup_03_P",
+   "name": "SM_TileGroup_03_P",
+   "size": [
+    476.0,
+    438.0,
+    26.0
+   ],
+   "tris": 96,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Urb_Road_Sheet_Metal_Rusty_03/SM_Urb_Road_Sheet_Metal_Rusty_03.SM_Urb_Road_Sheet_Metal_Rusty_03",
+   "name": "SM_Urb_Road_Sheet_Metal_Rusty_03",
+   "size": [
+    186.0,
+    308.0,
+    5.0
+   ],
+   "tris": 310,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/WaterPlane/SM_Water_Small.SM_Water_Small",
+   "name": "SM_Water_Small",
+   "size": [
+    538.0,
+    172.0,
+    0.0
+   ],
+   "tris": 2,
+   "nanite": "False",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Con_Supplies_Plank_Wood_Long_02/SM_Ind_Con_Supplies_Plank_Wood_Long_02.SM_Ind_Con_Supplies_Plank_Wood_Long_02",
+   "name": "SM_Ind_Con_Supplies_Plank_Wood_Long_02",
+   "size": [
+    20.0,
+    15.0,
+    303.0
+   ],
+   "tris": 1218,
+   "nanite": "True",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Pillars/SM_Pillar_01.SM_Pillar_01",
+   "name": "SM_Pillar_01",
+   "size": [
+    32.0,
+    32.0,
+    384.0
+   ],
+   "tris": 28,
+   "nanite": "True",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Pillars/SM_Pillar_02.SM_Pillar_02",
+   "name": "SM_Pillar_02",
+   "size": [
+    32.0,
+    32.0,
+    384.0
+   ],
+   "tris": 28,
+   "nanite": "True",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Pillars/SM_Pillar_WallAligned_01.SM_Pillar_WallAligned_01",
+   "name": "SM_Pillar_WallAligned_01",
+   "size": [
+    32.0,
+    32.0,
+    384.0
+   ],
+   "tris": 28,
+   "nanite": "True",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Walls/SM_Wall_Quarter_01.SM_Wall_Quarter_01",
+   "name": "SM_Wall_Quarter_01",
+   "size": [
+    128.0,
+    24.0,
+    384.0
+   ],
+   "tris": 17,
+   "nanite": "True",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Misc_Bits/SM_Bits_01.SM_Bits_01",
+   "name": "SM_Bits_01",
+   "size": [
+    100.0,
+    100.0,
+    20.0
+   ],
+   "tris": 224,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Bracket/SM_Bracket_01.SM_Bracket_01",
+   "name": "SM_Bracket_01",
+   "size": [
+    29.0,
+    4.0,
+    11.0
+   ],
+   "tris": 592,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Bracket/SM_Bracket_02.SM_Bracket_02",
+   "name": "SM_Bracket_02",
+   "size": [
+    7.0,
+    140.0,
+    59.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Cables/SM_Cables_01_Cable_Wall_Single_02.SM_Cables_01_Cable_Wall_Single_02",
+   "name": "SM_Cables_01_Cable_Wall_Single_02",
+   "size": [
+    138.0,
+    3.0,
+    201.0
+   ],
+   "tris": 952,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Cables/SM_Cables_01_Cable_Wall_Single_03.SM_Cables_01_Cable_Wall_Single_03",
+   "name": "SM_Cables_01_Cable_Wall_Single_03",
+   "size": [
+    147.0,
+    2.0,
+    38.0
+   ],
+   "tris": 484,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Cables/SM_Cables_01_Cable_Wall_Single_07.SM_Cables_01_Cable_Wall_Single_07",
+   "name": "SM_Cables_01_Cable_Wall_Single_07",
+   "size": [
+    129.0,
+    2.0,
+    4.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Cables/SM_Cables_01_Cable_Wall_Single_08.SM_Cables_01_Cable_Wall_Single_08",
+   "name": "SM_Cables_01_Cable_Wall_Single_08",
+   "size": [
+    10.0,
+    2.0,
+    9.0
+   ],
+   "tris": 304,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Cables/SM_Cables_01_Cable_Wall_Single_09.SM_Cables_01_Cable_Wall_Single_09",
+   "name": "SM_Cables_01_Cable_Wall_Single_09",
+   "size": [
+    12.0,
+    2.0,
+    12.0
+   ],
+   "tris": 258,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Cables/SM_Cables_01_Cable_Wall_Strand_04.SM_Cables_01_Cable_Wall_Strand_04",
+   "name": "SM_Cables_01_Cable_Wall_Strand_04",
+   "size": [
+    258.0,
+    4.0,
+    52.0
+   ],
+   "tris": 1441,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Cables/SM_Cables_01_Cable_Wall_Strand_06.SM_Cables_01_Cable_Wall_Strand_06",
+   "name": "SM_Cables_01_Cable_Wall_Strand_06",
+   "size": [
+    130.0,
+    4.0,
+    6.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Cables/SM_Cables_01_Cable_Wall_Strand_07.SM_Cables_01_Cable_Wall_Strand_07",
+   "name": "SM_Cables_01_Cable_Wall_Strand_07",
+   "size": [
+    22.0,
+    4.0,
+    20.0
+   ],
+   "tris": 264,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Cables/SM_Cables_01_Cable_Wall_Strand_08.SM_Cables_01_Cable_Wall_Strand_08",
+   "name": "SM_Cables_01_Cable_Wall_Strand_08",
+   "size": [
+    130.0,
+    4.0,
+    6.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Cables/SM_Cables_01_Cables_Hanging_02.SM_Cables_01_Cables_Hanging_02",
+   "name": "SM_Cables_01_Cables_Hanging_02",
+   "size": [
+    515.0,
+    32.0,
+    110.0
+   ],
+   "tris": 1535,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Cables/SM_Cables_01_Cables_Hanging_03.SM_Cables_01_Cables_Hanging_03",
+   "name": "SM_Cables_01_Cables_Hanging_03",
+   "size": [
+    266.0,
+    32.0,
+    112.0
+   ],
+   "tris": 2107,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Cables/SM_Cables_01_Cables_Hanging_04.SM_Cables_01_Cables_Hanging_04",
+   "name": "SM_Cables_01_Cables_Hanging_04",
+   "size": [
+    65.0,
+    64.0,
+    5.0
+   ],
+   "tris": 1130,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Cables/SM_Cables_01_Cables_Wall_Medium_04.SM_Cables_01_Cables_Wall_Medium_04",
+   "name": "SM_Cables_01_Cables_Wall_Medium_04",
+   "size": [
+    64.0,
+    66.0,
+    14.0
+   ],
+   "tris": 800,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Cables/SM_Cables_01_Cables_Wall_Thin_02.SM_Cables_01_Cables_Wall_Thin_02",
+   "name": "SM_Cables_01_Cables_Wall_Thin_02",
+   "size": [
+    514.0,
+    8.0,
+    117.0
+   ],
+   "tris": 1939,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Misc_Bits/SM_Cage_01.SM_Cage_01",
+   "name": "SM_Cage_01",
+   "size": [
+    402.0,
+    12.0,
+    84.0
+   ],
+   "tris": 1189,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Vents/SM_CeilingVent_01.SM_CeilingVent_01",
+   "name": "SM_CeilingVent_01",
+   "size": [
+    45.0,
+    45.0,
+    3.0
+   ],
+   "tris": 552,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Chair/SM_ChairConnector.SM_ChairConnector",
+   "name": "SM_ChairConnector",
+   "size": [
+    18.0,
+    18.0,
+    11.0
+   ],
+   "tris": 415,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Chair/SM_ChairLeg_01.SM_ChairLeg_01",
+   "name": "SM_ChairLeg_01",
+   "size": [
+    6.0,
+    70.0,
+    42.0
+   ],
+   "tris": 526,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Chair/SM_ChairSeat_02.SM_ChairSeat_02",
+   "name": "SM_ChairSeat_02",
+   "size": [
+    57.0,
+    59.0,
+    61.0
+   ],
+   "tris": 442,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Forest_Scatter_Branch_Debris_04/SM_Forest_Scatter_Branch_Debris_04.SM_Forest_Scatter_Branch_Debris_04",
+   "name": "SM_Forest_Scatter_Branch_Debris_04",
+   "size": [
+    9.0,
+    2.0,
+    1.0
+   ],
+   "tris": 1404,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Forest_Scatter_Rock_Set_01/SM_Forest_Scatter_Rock_Set_01_A.SM_Forest_Scatter_Rock_Set_01_A",
+   "name": "SM_Forest_Scatter_Rock_Set_01_A",
+   "size": [
+    14.0,
+    9.0,
+    7.0
+   ],
+   "tris": 1980,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Forest_Scatter_Rock_Set_01/SM_Forest_Scatter_Rock_Set_01_B.SM_Forest_Scatter_Rock_Set_01_B",
+   "name": "SM_Forest_Scatter_Rock_Set_01_B",
+   "size": [
+    16.0,
+    13.0,
+    12.0
+   ],
+   "tris": 1462,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Forest_Scatter_Rock_Set_01/SM_Forest_Scatter_Rock_Set_01_C.SM_Forest_Scatter_Rock_Set_01_C",
+   "name": "SM_Forest_Scatter_Rock_Set_01_C",
+   "size": [
+    17.0,
+    10.0,
+    10.0
+   ],
+   "tris": 1302,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Forest_Scatter_Rock_Set_01/SM_Forest_Scatter_Rock_Set_01_D.SM_Forest_Scatter_Rock_Set_01_D",
+   "name": "SM_Forest_Scatter_Rock_Set_01_D",
+   "size": [
+    12.0,
+    7.0,
+    7.0
+   ],
+   "tris": 1296,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Forest_Scatter_Rock_Set_01/SM_Forest_Scatter_Rock_Set_01_E.SM_Forest_Scatter_Rock_Set_01_E",
+   "name": "SM_Forest_Scatter_Rock_Set_01_E",
+   "size": [
+    12.0,
+    7.0,
+    9.0
+   ],
+   "tris": 864,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/His_Med_Debris_Piece_Wood_Damaged_02/SM_His_Med_Debris_Piece_Wood_Damaged_02.SM_His_Med_Debris_Piece_Wood_Damaged_02",
+   "name": "SM_His_Med_Debris_Piece_Wood_Damaged_02",
+   "size": [
+    35.0,
+    3.0,
+    2.0
+   ],
+   "tris": 1218,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_AbaFact_Tank_Gas_Metal_Worn_02/SM_Ind_AbaFact_Tank_Gas_Metal_Worn_02.SM_Ind_AbaFact_Tank_Gas_Metal_Worn_02",
+   "name": "SM_Ind_AbaFact_Tank_Gas_Metal_Worn_02",
+   "size": [
+    31.0,
+    31.0,
+    45.0
+   ],
+   "tris": 1714,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Aba_Box_Electric_Metal_Pristine_01/SM_Ind_Aba_Box_Electric_Metal_Pristine_01.SM_Ind_Aba_Box_Electric_Metal_Pristine_01",
+   "name": "SM_Ind_Aba_Box_Electric_Metal_Pristine_01",
+   "size": [
+    28.0,
+    35.0,
+    23.0
+   ],
+   "tris": 2906,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Aba_Box_Electric_Metal_Worn_01/SM_Ind_Aba_Box_Electric_Metal_Worn_01.SM_Ind_Aba_Box_Electric_Metal_Worn_01",
+   "name": "SM_Ind_Aba_Box_Electric_Metal_Worn_01",
+   "size": [
+    26.0,
+    22.0,
+    15.0
+   ],
+   "tris": 3562,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Aba_Box_Electric_Metal_Worn_02/SM_Ind_Aba_Box_Electric_Metal_Worn_02.SM_Ind_Aba_Box_Electric_Metal_Worn_02",
+   "name": "SM_Ind_Aba_Box_Electric_Metal_Worn_02",
+   "size": [
+    40.0,
+    23.0,
+    14.0
+   ],
+   "tris": 3282,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Aba_Box_Electric_Metal_Worn_03/SM_Ind_Aba_Box_Electric_Metal_Worn_03.SM_Ind_Aba_Box_Electric_Metal_Worn_03",
+   "name": "SM_Ind_Aba_Box_Electric_Metal_Worn_03",
+   "size": [
+    38.0,
+    43.0,
+    26.0
+   ],
+   "tris": 2946,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Con_Set_Pipe_PVC_Mod_01/SM_Ind_Con_Set_Pipe_PVC_Mod_01_A.SM_Ind_Con_Set_Pipe_PVC_Mod_01_A",
+   "name": "SM_Ind_Con_Set_Pipe_PVC_Mod_01_A",
+   "size": [
+    14.0,
+    8.0,
+    11.0
+   ],
+   "tris": 2256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Con_Set_Pipe_PVC_Mod_01/SM_Ind_Con_Set_Pipe_PVC_Mod_01_B.SM_Ind_Con_Set_Pipe_PVC_Mod_01_B",
+   "name": "SM_Ind_Con_Set_Pipe_PVC_Mod_01_B",
+   "size": [
+    13.0,
+    8.0,
+    13.0
+   ],
+   "tris": 2572,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Con_Set_Pipe_PVC_Mod_01/SM_Ind_Con_Set_Pipe_PVC_Mod_01_C.SM_Ind_Con_Set_Pipe_PVC_Mod_01_C",
+   "name": "SM_Ind_Con_Set_Pipe_PVC_Mod_01_C",
+   "size": [
+    101.0,
+    8.0,
+    8.0
+   ],
+   "tris": 1268,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Con_Set_Pipe_PVC_Mod_01/SM_Ind_Con_Set_Pipe_PVC_Mod_01_D.SM_Ind_Con_Set_Pipe_PVC_Mod_01_D",
+   "name": "SM_Ind_Con_Set_Pipe_PVC_Mod_01_D",
+   "size": [
+    17.0,
+    8.0,
+    13.0
+   ],
+   "tris": 2833,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Con_Set_Pipe_PVC_Mod_01/SM_Ind_Con_Set_Pipe_PVC_Mod_01_E.SM_Ind_Con_Set_Pipe_PVC_Mod_01_E",
+   "name": "SM_Ind_Con_Set_Pipe_PVC_Mod_01_E",
+   "size": [
+    20.0,
+    8.0,
+    16.0
+   ],
+   "tris": 3344,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Container_Metal_Set_01/SM_Ind_Container_Metal_Set_01_A.SM_Ind_Container_Metal_Set_01_A",
+   "name": "SM_Ind_Container_Metal_Set_01_A",
+   "size": [
+    24.0,
+    15.0,
+    9.0
+   ],
+   "tris": 774,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Container_Metal_Set_01/SM_Ind_Container_Metal_Set_01_B.SM_Ind_Container_Metal_Set_01_B",
+   "name": "SM_Ind_Container_Metal_Set_01_B",
+   "size": [
+    14.0,
+    11.0,
+    7.0
+   ],
+   "tris": 1016,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Container_Metal_Set_01/SM_Ind_Container_Metal_Set_01_C.SM_Ind_Container_Metal_Set_01_C",
+   "name": "SM_Ind_Container_Metal_Set_01_C",
+   "size": [
+    21.0,
+    23.0,
+    9.0
+   ],
+   "tris": 566,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Container_Metal_Set_01/SM_Ind_Container_Metal_Set_01_D.SM_Ind_Container_Metal_Set_01_D",
+   "name": "SM_Ind_Container_Metal_Set_01_D",
+   "size": [
+    19.0,
+    18.0,
+    20.0
+   ],
+   "tris": 1286,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Container_Metal_Set_01/SM_Ind_Container_Metal_Set_01_E.SM_Ind_Container_Metal_Set_01_E",
+   "name": "SM_Ind_Container_Metal_Set_01_E",
+   "size": [
+    10.0,
+    10.0,
+    18.0
+   ],
+   "tris": 1222,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Container_Oil_Plastic_Pack_01/SM_Ind_Container_Oil_Plastic_Pack_01_A.SM_Ind_Container_Oil_Plastic_Pack_01_A",
+   "name": "SM_Ind_Container_Oil_Plastic_Pack_01_A",
+   "size": [
+    11.0,
+    6.0,
+    20.0
+   ],
+   "tris": 892,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Container_Oil_Plastic_Pack_01/SM_Ind_Container_Oil_Plastic_Pack_01_B.SM_Ind_Container_Oil_Plastic_Pack_01_B",
+   "name": "SM_Ind_Container_Oil_Plastic_Pack_01_B",
+   "size": [
+    17.0,
+    7.0,
+    22.0
+   ],
+   "tris": 1260,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Container_Oil_Plastic_Pack_01/SM_Ind_Container_Oil_Plastic_Pack_01_C.SM_Ind_Container_Oil_Plastic_Pack_01_C",
+   "name": "SM_Ind_Container_Oil_Plastic_Pack_01_C",
+   "size": [
+    10.0,
+    6.0,
+    22.0
+   ],
+   "tris": 1220,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Container_Oil_Plastic_Pack_01/SM_Ind_Container_Oil_Plastic_Pack_01_D.SM_Ind_Container_Oil_Plastic_Pack_01_D",
+   "name": "SM_Ind_Container_Oil_Plastic_Pack_01_D",
+   "size": [
+    12.0,
+    6.0,
+    25.0
+   ],
+   "tris": 1012,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Container_Oil_Plastic_Pack_01/SM_Ind_Container_Oil_Plastic_Pack_01_E.SM_Ind_Container_Oil_Plastic_Pack_01_E",
+   "name": "SM_Ind_Container_Oil_Plastic_Pack_01_E",
+   "size": [
+    15.0,
+    11.0,
+    22.0
+   ],
+   "tris": 1240,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Container_Oil_Plastic_Pack_01/SM_Ind_Container_Oil_Plastic_Pack_01_F.SM_Ind_Container_Oil_Plastic_Pack_01_F",
+   "name": "SM_Ind_Container_Oil_Plastic_Pack_01_F",
+   "size": [
+    16.0,
+    8.0,
+    22.0
+   ],
+   "tris": 1236,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Fact_Panel_ElectricalBox_Metal_Worn_01/SM_Ind_Fact_Panel_ElectricalBox_Metal_Worn_01.SM_Ind_Fact_Panel_ElectricalBox_Metal_Worn_01",
+   "name": "SM_Ind_Fact_Panel_ElectricalBox_Metal_Worn_01",
+   "size": [
+    64.0,
+    41.0,
+    47.0
+   ],
+   "tris": 1268,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Junk_Cover_Drain_Metal_Rusty_01/SM_Ind_Junk_Cover_Drain_Metal_Rusty_01.SM_Ind_Junk_Cover_Drain_Metal_Rusty_01",
+   "name": "SM_Ind_Junk_Cover_Drain_Metal_Rusty_01",
+   "size": [
+    51.0,
+    18.0,
+    4.0
+   ],
+   "tris": 11054,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Mine_Beam_Square_Wood_Worn_01/SM_Ind_Mine_Beam_Square_Wood_Worn_01.SM_Ind_Mine_Beam_Square_Wood_Worn_01",
+   "name": "SM_Ind_Mine_Beam_Square_Wood_Worn_01",
+   "size": [
+    123.0,
+    18.0,
+    11.0
+   ],
+   "tris": 3872,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_OW_Equipment_Toolbox_Metal_Green_01/SM_Ind_OW_Equipment_Toolbox_Metal_Green_01.SM_Ind_OW_Equipment_Toolbox_Metal_Green_01",
+   "name": "SM_Ind_OW_Equipment_Toolbox_Metal_Green_01",
+   "size": [
+    45.0,
+    22.0,
+    28.0
+   ],
+   "tris": 2302,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Rubble_Debris_Concrete_Pack_01/SM_Ind_Rubble_Debris_Concrete_Pack_01_A.SM_Ind_Rubble_Debris_Concrete_Pack_01_A",
+   "name": "SM_Ind_Rubble_Debris_Concrete_Pack_01_A",
+   "size": [
+    37.0,
+    30.0,
+    9.0
+   ],
+   "tris": 14642,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Rubble_Debris_Concrete_Pack_01/SM_Ind_Rubble_Debris_Concrete_Pack_01_B.SM_Ind_Rubble_Debris_Concrete_Pack_01_B",
+   "name": "SM_Ind_Rubble_Debris_Concrete_Pack_01_B",
+   "size": [
+    55.0,
+    39.0,
+    10.0
+   ],
+   "tris": 11484,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Rubble_Debris_Concrete_Pack_01/SM_Ind_Rubble_Debris_Concrete_Pack_01_C.SM_Ind_Rubble_Debris_Concrete_Pack_01_C",
+   "name": "SM_Ind_Rubble_Debris_Concrete_Pack_01_C",
+   "size": [
+    37.0,
+    31.0,
+    6.0
+   ],
+   "tris": 11532,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Rubble_Debris_Concrete_Pack_01/SM_Ind_Rubble_Debris_Concrete_Pack_01_D.SM_Ind_Rubble_Debris_Concrete_Pack_01_D",
+   "name": "SM_Ind_Rubble_Debris_Concrete_Pack_01_D",
+   "size": [
+    30.0,
+    23.0,
+    7.0
+   ],
+   "tris": 17538,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Rubble_Debris_Concrete_Pack_01/SM_Ind_Rubble_Debris_Concrete_Pack_01_E.SM_Ind_Rubble_Debris_Concrete_Pack_01_E",
+   "name": "SM_Ind_Rubble_Debris_Concrete_Pack_01_E",
+   "size": [
+    25.0,
+    19.0,
+    11.0
+   ],
+   "tris": 19124,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Rubble_Debris_Concrete_Pack_01/SM_Ind_Rubble_Debris_Concrete_Pack_01_F.SM_Ind_Rubble_Debris_Concrete_Pack_01_F",
+   "name": "SM_Ind_Rubble_Debris_Concrete_Pack_01_F",
+   "size": [
+    30.0,
+    20.0,
+    8.0
+   ],
+   "tris": 15646,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Rubble_Debris_Pile_Gravel_M_01/SM_Ind_Rubble_Debris_Pile_Gravel_M_01.SM_Ind_Rubble_Debris_Pile_Gravel_M_01",
+   "name": "SM_Ind_Rubble_Debris_Pile_Gravel_M_01",
+   "size": [
+    131.0,
+    94.0,
+    18.0
+   ],
+   "tris": 27891,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Rubble_Debris_Plank_Wood_Broken_01/SM_Ind_Rubble_Debris_Plank_Wood_Broken_01.SM_Ind_Rubble_Debris_Plank_Wood_Broken_01",
+   "name": "SM_Ind_Rubble_Debris_Plank_Wood_Broken_01",
+   "size": [
+    27.0,
+    3.0,
+    1.0
+   ],
+   "tris": 948,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Rubble_Pile_Concrete_M_01/SM_Ind_Rubble_Pile_Concrete_M_01.SM_Ind_Rubble_Pile_Concrete_M_01",
+   "name": "SM_Ind_Rubble_Pile_Concrete_M_01",
+   "size": [
+    365.0,
+    407.0,
+    103.0
+   ],
+   "tris": 25293,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Rubble_Pile_Concrete_M_02/SM_Ind_Rubble_Pile_Concrete_M_02.SM_Ind_Rubble_Pile_Concrete_M_02",
+   "name": "SM_Ind_Rubble_Pile_Concrete_M_02",
+   "size": [
+    277.0,
+    353.0,
+    72.0
+   ],
+   "tris": 24429,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Rubble_Pile_Debris_Concrete_M_01/SM_Ind_Rubble_Pile_Debris_Concrete_M_01.SM_Ind_Rubble_Pile_Debris_Concrete_M_01",
+   "name": "SM_Ind_Rubble_Pile_Debris_Concrete_M_01",
+   "size": [
+    79.0,
+    53.0,
+    15.0
+   ],
+   "tris": 21341,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Rubble_Pile_Debris_Concrete_M_05/SM_Ind_Rubble_Pile_Debris_Concrete_M_05.SM_Ind_Rubble_Pile_Debris_Concrete_M_05",
+   "name": "SM_Ind_Rubble_Pile_Debris_Concrete_M_05",
+   "size": [
+    67.0,
+    117.0,
+    17.0
+   ],
+   "tris": 15462,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Set_Pipe_Metal_Mod_01/SM_Ind_Set_Pipe_Metal_Mod_01_A.SM_Ind_Set_Pipe_Metal_Mod_01_A",
+   "name": "SM_Ind_Set_Pipe_Metal_Mod_01_A",
+   "size": [
+    45.0,
+    16.0,
+    50.0
+   ],
+   "tris": 564,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Set_Pipe_Metal_Mod_01/SM_Ind_Set_Pipe_Metal_Mod_01_B.SM_Ind_Set_Pipe_Metal_Mod_01_B",
+   "name": "SM_Ind_Set_Pipe_Metal_Mod_01_B",
+   "size": [
+    28.0,
+    28.0,
+    16.0
+   ],
+   "tris": 956,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Set_Pipe_Metal_Mod_01/SM_Ind_Set_Pipe_Metal_Mod_01_C.SM_Ind_Set_Pipe_Metal_Mod_01_C",
+   "name": "SM_Ind_Set_Pipe_Metal_Mod_01_C",
+   "size": [
+    7.0,
+    17.0,
+    21.0
+   ],
+   "tris": 2599,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Set_Pipe_Metal_Mod_01/SM_Ind_Set_Pipe_Metal_Mod_01_D.SM_Ind_Set_Pipe_Metal_Mod_01_D",
+   "name": "SM_Ind_Set_Pipe_Metal_Mod_01_D",
+   "size": [
+    43.0,
+    29.0,
+    16.0
+   ],
+   "tris": 589,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Set_Pipe_Metal_Mod_01/SM_Ind_Set_Pipe_Metal_Mod_01_E.SM_Ind_Set_Pipe_Metal_Mod_01_E",
+   "name": "SM_Ind_Set_Pipe_Metal_Mod_01_E",
+   "size": [
+    24.0,
+    22.0,
+    45.0
+   ],
+   "tris": 2660,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Set_Pipe_Metal_Mod_01/SM_Ind_Set_Pipe_Metal_Mod_01_F.SM_Ind_Set_Pipe_Metal_Mod_01_F",
+   "name": "SM_Ind_Set_Pipe_Metal_Mod_01_F",
+   "size": [
+    100.0,
+    16.0,
+    16.0
+   ],
+   "tris": 331,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Set_Pipe_Metal_Mod_01/SM_Ind_Set_Pipe_Metal_Mod_01_G.SM_Ind_Set_Pipe_Metal_Mod_01_G",
+   "name": "SM_Ind_Set_Pipe_Metal_Mod_01_G",
+   "size": [
+    43.0,
+    43.0,
+    16.0
+   ],
+   "tris": 669,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Ware_Cabinet_Electric_Metal_Dirty_01/SM_Ind_Ware_Cabinet_Electric_Metal_Dirty_01.SM_Ind_Ware_Cabinet_Electric_Metal_Dirty_01",
+   "name": "SM_Ind_Ware_Cabinet_Electric_Metal_Dirty_01",
+   "size": [
+    129.0,
+    33.0,
+    163.0
+   ],
+   "tris": 5031,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Ware_Equipment_Cable_Rubber_Black_01/SM_Ind_Ware_Equipment_Cable_Rubber_Black_01.SM_Ind_Ware_Equipment_Cable_Rubber_Black_01",
+   "name": "SM_Ind_Ware_Equipment_Cable_Rubber_Black_01",
+   "size": [
+    32.0,
+    29.0,
+    5.0
+   ],
+   "tris": 4938,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Ware_Equipment_Handtruck_Metal_Worn_01/SM_Ind_Ware_Equipment_Handtruck_Metal_Worn_01_A.SM_Ind_Ware_Equipment_Handtruck_Metal_Worn_01_A",
+   "name": "SM_Ind_Ware_Equipment_Handtruck_Metal_Worn_01_A",
+   "size": [
+    51.0,
+    63.0,
+    105.0
+   ],
+   "tris": 1052,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Ware_Equipment_Handtruck_Metal_Worn_01/SM_Ind_Ware_Equipment_Handtruck_Metal_Worn_01_B.SM_Ind_Ware_Equipment_Handtruck_Metal_Worn_01_B",
+   "name": "SM_Ind_Ware_Equipment_Handtruck_Metal_Worn_01_B",
+   "size": [
+    6.0,
+    16.0,
+    16.0
+   ],
+   "tris": 2802,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Ware_Equipment_Handtruck_Metal_Worn_01/SM_Ind_Ware_Equipment_Handtruck_Metal_Worn_01_C.SM_Ind_Ware_Equipment_Handtruck_Metal_Worn_01_C",
+   "name": "SM_Ind_Ware_Equipment_Handtruck_Metal_Worn_01_C",
+   "size": [
+    6.0,
+    16.0,
+    16.0
+   ],
+   "tris": 2922,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Ware_Equipment_Ladder_Metal_01/SM_Ind_Ware_Equipment_Ladder_Metal_01.SM_Ind_Ware_Equipment_Ladder_Metal_01",
+   "name": "SM_Ind_Ware_Equipment_Ladder_Metal_01",
+   "size": [
+    49.0,
+    108.0,
+    172.0
+   ],
+   "tris": 1308,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Ware_Furn_Table_Wood_Worn_01/SM_Ind_Ware_Furn_Table_Wood_Worn_01_A.SM_Ind_Ware_Furn_Table_Wood_Worn_01_A",
+   "name": "SM_Ind_Ware_Furn_Table_Wood_Worn_01_A",
+   "size": [
+    152.0,
+    86.0,
+    77.0
+   ],
+   "tris": 3350,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Ware_Furn_Table_Wood_Worn_01/SM_Ind_Ware_Furn_Table_Wood_Worn_01_B.SM_Ind_Ware_Furn_Table_Wood_Worn_01_B",
+   "name": "SM_Ind_Ware_Furn_Table_Wood_Worn_01_B",
+   "size": [
+    53.0,
+    65.0,
+    12.0
+   ],
+   "tris": 1808,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Ware_Furn_Table_Wood_Worn_01/SM_Ind_Ware_Furn_Table_Wood_Worn_01_C.SM_Ind_Ware_Furn_Table_Wood_Worn_01_C",
+   "name": "SM_Ind_Ware_Furn_Table_Wood_Worn_01_C",
+   "size": [
+    52.0,
+    82.0,
+    12.0
+   ],
+   "tris": 1250,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Ware_Light_Bulkhead_Metal_Caged_01/SM_Ind_Ware_Light_Bulkhead_Metal_Caged_01_A.SM_Ind_Ware_Light_Bulkhead_Metal_Caged_01_A",
+   "name": "SM_Ind_Ware_Light_Bulkhead_Metal_Caged_01_A",
+   "size": [
+    14.0,
+    13.0,
+    21.0
+   ],
+   "tris": 3962,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Ware_Light_Bulkhead_Metal_Caged_01/SM_Ind_Ware_Light_Bulkhead_Metal_Caged_01_B.SM_Ind_Ware_Light_Bulkhead_Metal_Caged_01_B",
+   "name": "SM_Ind_Ware_Light_Bulkhead_Metal_Caged_01_B",
+   "size": [
+    14.0,
+    13.0,
+    21.0
+   ],
+   "tris": 3962,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Ware_Light_Ceiling_Metal_Hanging_01/SM_Ind_Ware_Light_Ceiling_Metal_Hanging_01.SM_Ind_Ware_Light_Ceiling_Metal_Hanging_01",
+   "name": "SM_Ind_Ware_Light_Ceiling_Metal_Hanging_01",
+   "size": [
+    13.0,
+    51.0,
+    8.0
+   ],
+   "tris": 2818,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Ware_Light_Ceiling_Metal_Hanging_02/SM_Ind_Ware_Light_Ceiling_Metal_Hanging_02.SM_Ind_Ware_Light_Ceiling_Metal_Hanging_02",
+   "name": "SM_Ind_Ware_Light_Ceiling_Metal_Hanging_02",
+   "size": [
+    32.0,
+    32.0,
+    28.0
+   ],
+   "tris": 2452,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Ware_Light_Ceiling_Metal_Hanging_03/SM_Ind_Ware_Light_Ceiling_Metal_Hanging_03.SM_Ind_Ware_Light_Ceiling_Metal_Hanging_03",
+   "name": "SM_Ind_Ware_Light_Ceiling_Metal_Hanging_03",
+   "size": [
+    41.0,
+    41.0,
+    36.0
+   ],
+   "tris": 1582,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Ware_Light_Ceiling_Metal_Hanging_04/SM_Ind_Ware_Light_Ceiling_Metal_Hanging_04.SM_Ind_Ware_Light_Ceiling_Metal_Hanging_04",
+   "name": "SM_Ind_Ware_Light_Ceiling_Metal_Hanging_04",
+   "size": [
+    125.0,
+    30.0,
+    20.0
+   ],
+   "tris": 1800,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Ware_Storage_Cabinet_Metal_Rusty_01/SM_Ind_Ware_Storage_Cabinet_Metal_Rusty_01.SM_Ind_Ware_Storage_Cabinet_Metal_Rusty_01",
+   "name": "SM_Ind_Ware_Storage_Cabinet_Metal_Rusty_01",
+   "size": [
+    68.0,
+    52.0,
+    174.0
+   ],
+   "tris": 1598,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Ware_Storage_Crate_Plastic_White_01/SM_Ind_Ware_Storage_Crate_Plastic_White_01.SM_Ind_Ware_Storage_Crate_Plastic_White_01",
+   "name": "SM_Ind_Ware_Storage_Crate_Plastic_White_01",
+   "size": [
+    40.0,
+    31.0,
+    27.0
+   ],
+   "tris": 6544,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Ware_Storage_Crate_Trap_Covered_03/SM_Ind_Ware_Storage_Crate_Trap_Covered_03.SM_Ind_Ware_Storage_Crate_Trap_Covered_03",
+   "name": "SM_Ind_Ware_Storage_Crate_Trap_Covered_03",
+   "size": [
+    83.0,
+    66.0,
+    77.0
+   ],
+   "tris": 8444,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Ware_Storage_Pallet_Wood_Worn_01/SM_Ind_Ware_Storage_Pallet_Wood_Worn_01.SM_Ind_Ware_Storage_Pallet_Wood_Worn_01",
+   "name": "SM_Ind_Ware_Storage_Pallet_Wood_Worn_01",
+   "size": [
+    116.0,
+    76.0,
+    13.0
+   ],
+   "tris": 2486,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Ware_Storage_Sheet_Cardboard_Flat_06/SM_Ind_Ware_Storage_Sheet_Cardboard_Flat_06_A.SM_Ind_Ware_Storage_Sheet_Cardboard_Flat_06_A",
+   "name": "SM_Ind_Ware_Storage_Sheet_Cardboard_Flat_06_A",
+   "size": [
+    80.0,
+    78.0,
+    36.0
+   ],
+   "tris": 1284,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Ware_Storage_Sheet_Cardboard_Flat_06/SM_Ind_Ware_Storage_Sheet_Cardboard_Flat_06_B.SM_Ind_Ware_Storage_Sheet_Cardboard_Flat_06_B",
+   "name": "SM_Ind_Ware_Storage_Sheet_Cardboard_Flat_06_B",
+   "size": [
+    80.0,
+    79.0,
+    3.0
+   ],
+   "tris": 2244,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Ind_Ware_Storage_Shelf_Metal_Rusted_01/SM_Ind_Ware_Storage_Shelf_Metal_Rusted_01.SM_Ind_Ware_Storage_Shelf_Metal_Rusted_01",
+   "name": "SM_Ind_Ware_Storage_Shelf_Metal_Rusted_01",
+   "size": [
+    203.0,
+    76.0,
+    180.0
+   ],
+   "tris": 2760,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/LightFixture/SM_Light_Fixture_01.SM_Light_Fixture_01",
+   "name": "SM_Light_Fixture_01",
+   "size": [
+    24.0,
+    42.0,
+    35.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/LightFixture/SM_Light_Fixture_01_Emissive.SM_Light_Fixture_01_Emissive",
+   "name": "SM_Light_Fixture_01_Emissive",
+   "size": [
+    16.0,
+    34.0,
+    29.0
+   ],
+   "tris": 40,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Misc_Bits/SM_Pipe_End_01.SM_Pipe_End_01",
+   "name": "SM_Pipe_End_01",
+   "size": [
+    7.0,
+    13.0,
+    13.0
+   ],
+   "tris": 984,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Res_Furn_Chair_Metal_Armless_01/SM_Res_Furn_Chair_Metal_Armless_01.SM_Res_Furn_Chair_Metal_Armless_01",
+   "name": "SM_Res_Furn_Chair_Metal_Armless_01",
+   "size": [
+    47.0,
+    39.0,
+    81.0
+   ],
+   "tris": 1124,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Res_Furn_Stool_Metal_Worn_01/SM_Res_Furn_Stool_Metal_Worn_01.SM_Res_Furn_Stool_Metal_Worn_01",
+   "name": "SM_Res_Furn_Stool_Metal_Worn_01",
+   "size": [
+    39.0,
+    35.0,
+    58.0
+   ],
+   "tris": 2766,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_01/SM_SingleTile_01_A.SM_SingleTile_01_A",
+   "name": "SM_SingleTile_01_A",
+   "size": [
+    37.0,
+    36.0,
+    4.0
+   ],
+   "tris": 76,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_01/SM_SingleTile_01_B.SM_SingleTile_01_B",
+   "name": "SM_SingleTile_01_B",
+   "size": [
+    36.0,
+    36.0,
+    4.0
+   ],
+   "tris": 76,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_01/SM_SingleTile_01_C.SM_SingleTile_01_C",
+   "name": "SM_SingleTile_01_C",
+   "size": [
+    36.0,
+    36.0,
+    2.0
+   ],
+   "tris": 76,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_01/SM_SingleTile_01_D.SM_SingleTile_01_D",
+   "name": "SM_SingleTile_01_D",
+   "size": [
+    36.0,
+    36.0,
+    6.0
+   ],
+   "tris": 252,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_01/SM_SingleTile_01_E.SM_SingleTile_01_E",
+   "name": "SM_SingleTile_01_E",
+   "size": [
+    37.0,
+    37.0,
+    3.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_02/SM_SingleTile_02_A.SM_SingleTile_02_A",
+   "name": "SM_SingleTile_02_A",
+   "size": [
+    36.0,
+    36.0,
+    1.0
+   ],
+   "tris": 12,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_02/SM_SingleTile_02_B.SM_SingleTile_02_B",
+   "name": "SM_SingleTile_02_B",
+   "size": [
+    37.0,
+    36.0,
+    4.0
+   ],
+   "tris": 76,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_02/SM_SingleTile_02_C.SM_SingleTile_02_C",
+   "name": "SM_SingleTile_02_C",
+   "size": [
+    36.0,
+    36.0,
+    4.0
+   ],
+   "tris": 76,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_Broken_01/SM_SingleTile_03_A.SM_SingleTile_03_A",
+   "name": "SM_SingleTile_03_A",
+   "size": [
+    36.0,
+    37.0,
+    4.0
+   ],
+   "tris": 76,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_Broken_01/SM_SingleTile_03_B.SM_SingleTile_03_B",
+   "name": "SM_SingleTile_03_B",
+   "size": [
+    37.0,
+    37.0,
+    11.0
+   ],
+   "tris": 76,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_Broken_01/SM_SingleTile_03_C.SM_SingleTile_03_C",
+   "name": "SM_SingleTile_03_C",
+   "size": [
+    35.0,
+    36.0,
+    13.0
+   ],
+   "tris": 76,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Switch_Button/SM_Switch_01.SM_Switch_01",
+   "name": "SM_Switch_01",
+   "size": [
+    18.0,
+    37.0,
+    9.0
+   ],
+   "tris": 369,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Floor/Floor_Addon_02/SM_TileGroup_02_I.SM_TileGroup_02_I",
+   "name": "SM_TileGroup_02_I",
+   "size": [
+    148.0,
+    110.0,
+    1.0
+   ],
+   "tris": 24,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Ceiling/Tiles/SM_Tile_01.SM_Tile_01",
+   "name": "SM_Tile_01",
+   "size": [
+    103.0,
+    103.0,
+    3.0
+   ],
+   "tris": 48,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Ceiling/Tiles/SM_Tile_02.SM_Tile_02",
+   "name": "SM_Tile_02",
+   "size": [
+    103.0,
+    103.0,
+    3.0
+   ],
+   "tris": 48,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Ceiling/Tiles/SM_Tile_03.SM_Tile_03",
+   "name": "SM_Tile_03",
+   "size": [
+    103.0,
+    103.0,
+    3.0
+   ],
+   "tris": 48,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Ceiling/Tiles/SM_Tile_04.SM_Tile_04",
+   "name": "SM_Tile_04",
+   "size": [
+    103.0,
+    103.0,
+    10.0
+   ],
+   "tris": 252,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Ceiling/Tiles/SM_Tile_05.SM_Tile_05",
+   "name": "SM_Tile_05",
+   "size": [
+    103.0,
+    103.0,
+    6.0
+   ],
+   "tris": 252,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Ceiling/Tiles/SM_Tile_06.SM_Tile_06",
+   "name": "SM_Tile_06",
+   "size": [
+    103.0,
+    103.0,
+    5.0
+   ],
+   "tris": 252,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Ceiling/Tiles/SM_Tile_07.SM_Tile_07",
+   "name": "SM_Tile_07",
+   "size": [
+    115.0,
+    104.0,
+    38.0
+   ],
+   "tris": 252,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Ceiling/Tiles/SM_Tile_08.SM_Tile_08",
+   "name": "SM_Tile_08",
+   "size": [
+    114.0,
+    113.0,
+    43.0
+   ],
+   "tris": 252,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Ceiling/Tiles/SM_Tile_09.SM_Tile_09",
+   "name": "SM_Tile_09",
+   "size": [
+    103.0,
+    103.0,
+    42.0
+   ],
+   "tris": 252,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Urb_Office_Heater_White_Old_01/SM_Urb_Office_Heater_White_Old_01.SM_Urb_Office_Heater_White_Old_01",
+   "name": "SM_Urb_Office_Heater_White_Old_01",
+   "size": [
+    81.0,
+    20.0,
+    66.0
+   ],
+   "tris": 9016,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Urb_Road_Cabinet_Electric_Metal_01/SM_Urb_Road_Cabinet_Electric_Metal_01.SM_Urb_Road_Cabinet_Electric_Metal_01",
+   "name": "SM_Urb_Road_Cabinet_Electric_Metal_01",
+   "size": [
+    102.0,
+    24.0,
+    98.0
+   ],
+   "tris": 1278,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Urb_Street_ElectricalBox_Metal_Worn_01/SM_Urb_Street_ElectricalBox_Metal_Worn_01.SM_Urb_Street_ElectricalBox_Metal_Worn_01",
+   "name": "SM_Urb_Street_ElectricalBox_Metal_Worn_01",
+   "size": [
+    20.0,
+    16.0,
+    65.0
+   ],
+   "tris": 2208,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Urb_Street_ElectricalBox_Metal_Worn_02/SM_Urb_Street_ElectricalBox_Metal_Worn_02.SM_Urb_Street_ElectricalBox_Metal_Worn_02",
+   "name": "SM_Urb_Street_ElectricalBox_Metal_Worn_02",
+   "size": [
+    48.0,
+    34.0,
+    178.0
+   ],
+   "tris": 3824,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Fab/Megascans/3D/Urb_Street_Hatch_Metal_Worn_01/SM_Urb_Street_Hatch_Metal_Worn_01.SM_Urb_Street_Hatch_Metal_Worn_01",
+   "name": "SM_Urb_Street_Hatch_Metal_Worn_01",
+   "size": [
+    71.0,
+    9.0,
+    62.0
+   ],
+   "tris": 1368,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Vents/SM_Vent_Straight_01.SM_Vent_Straight_01",
+   "name": "SM_Vent_Straight_01",
+   "size": [
+    32.0,
+    126.0,
+    58.0
+   ],
+   "tris": 890,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Fans/SM_WallFan_01.SM_WallFan_01",
+   "name": "SM_WallFan_01",
+   "size": [
+    29.0,
+    52.0,
+    14.0
+   ],
+   "tris": 1205,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Fans/SM_WallFan_02.SM_WallFan_02",
+   "name": "SM_WallFan_02",
+   "size": [
+    45.0,
+    45.0,
+    8.0
+   ],
+   "tris": 450,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Vents/SM_WallVent_01.SM_WallVent_01",
+   "name": "SM_WallVent_01",
+   "size": [
+    62.0,
+    32.0,
+    4.0
+   ],
+   "tris": 686,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/WaterPlane/SM_Water_M_01.SM_Water_M_01",
+   "name": "SM_Water_M_01",
+   "size": [
+    100.0,
+    100.0,
+    0.0
+   ],
+   "tris": 2,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Windows/SM_Window_01.SM_Window_01",
+   "name": "SM_Window_01",
+   "size": [
+    192.0,
+    19.0,
+    141.0
+   ],
+   "tris": 375,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Windows/SM_Window_Frame_01.SM_Window_Frame_01",
+   "name": "SM_Window_Frame_01",
+   "size": [
+    176.0,
+    4.0,
+    133.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Windows/SM_Window_Glass_01.SM_Window_Glass_01",
+   "name": "SM_Window_Glass_01",
+   "size": [
+    202.0,
+    0.0,
+    100.0
+   ],
+   "tris": 16,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Windows/SM_Window_Glass_02.SM_Window_Glass_02",
+   "name": "SM_Window_Glass_02",
+   "size": [
+    202.0,
+    0.0,
+    100.0
+   ],
+   "tris": 16,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Cables/SM_Cables_01_Cable_Wall_Single_04.SM_Cables_01_Cable_Wall_Single_04",
+   "name": "SM_Cables_01_Cable_Wall_Single_04",
+   "size": [
+    257.0,
+    3.0,
+    232.0
+   ],
+   "tris": 558,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Cables/SM_Cables_01_Cable_Wall_Strand_01.SM_Cables_01_Cable_Wall_Strand_01",
+   "name": "SM_Cables_01_Cable_Wall_Strand_01",
+   "size": [
+    257.0,
+    4.0,
+    236.0
+   ],
+   "tris": 915,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Cables/SM_Cables_01_Cable_Wall_Strand_02.SM_Cables_01_Cable_Wall_Strand_02",
+   "name": "SM_Cables_01_Cable_Wall_Strand_02",
+   "size": [
+    257.0,
+    5.0,
+    235.0
+   ],
+   "tris": 608,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Cables/SM_Cables_01_Cable_Wall_Strand_03.SM_Cables_01_Cable_Wall_Strand_03",
+   "name": "SM_Cables_01_Cable_Wall_Strand_03",
+   "size": [
+    258.0,
+    4.0,
+    241.0
+   ],
+   "tris": 1236,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Cables/SM_Cables_01_Cables_Wall_Medium_03.SM_Cables_01_Cables_Wall_Medium_03",
+   "name": "SM_Cables_01_Cables_Wall_Medium_03",
+   "size": [
+    333.0,
+    22.0,
+    211.0
+   ],
+   "tris": 1282,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Walls/SM_Wall_Center_01.SM_Wall_Center_01",
+   "name": "SM_Wall_Center_01",
+   "size": [
+    512.0,
+    16.0,
+    384.0
+   ],
+   "tris": 252,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Walls/SM_Wall_Half_01.SM_Wall_Half_01",
+   "name": "SM_Wall_Half_01",
+   "size": [
+    256.0,
+    24.0,
+    384.0
+   ],
+   "tris": 18,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Walls/SM_Wall_QuarterAligned_01.SM_Wall_QuarterAligned_01",
+   "name": "SM_Wall_QuarterAligned_01",
+   "size": [
+    512.0,
+    16.0,
+    384.0
+   ],
+   "tris": 22,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Windows/Window_01/SM_Window_01.SM_Window_01",
+   "name": "SM_Window_01",
+   "size": [
+    512.0,
+    16.0,
+    384.0
+   ],
+   "tris": 106,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Windows/Window_02/SM_Window_02.SM_Window_02",
+   "name": "SM_Window_02",
+   "size": [
+    512.0,
+    16.0,
+    384.0
+   ],
+   "tris": 252,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/DerelictCorridor/Assets/Custom/Modules/Windows/Window_Wide_01/SM_Window_Wide_01.SM_Window_Wide_01",
+   "name": "SM_Window_Wide_01",
+   "size": [
+    512.0,
+    16.0,
+    384.0
+   ],
+   "tris": 96,
+   "nanite": "True",
+   "role": "wall"
+  }
+ ]
+}

@@ -1,0 +1,687 @@
+{
+ "pack": "ElderboomVillage",
+ "maps": [
+  {
+   "path": "/Game/ElderboomVillage/Maps/L_ElderboomVillage.L_ElderboomVillage",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/ElderboomVillage/Maps/L_ShowCase.L_ShowCase",
+   "partitioned": false
+  }
+ ],
+ "meshes": [
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Medieval_Modular_Door_ueojadodw_lod3_Var1.SM_Medieval_Modular_Door_ueojadodw_lod3_Var1",
+   "name": "SM_Medieval_Modular_Door_ueojadodw_lod3_Var1",
+   "size": [
+    200.0,
+    18.0,
+    200.0
+   ],
+   "tris": 4702,
+   "nanite": "False",
+   "role": "door"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Medieval_Modular_Door_ueoqaewdw_lod3_Var1.SM_Medieval_Modular_Door_ueoqaewdw_lod3_Var1",
+   "name": "SM_Medieval_Modular_Door_ueoqaewdw_lod3_Var1",
+   "size": [
+    151.0,
+    19.0,
+    201.0
+   ],
+   "tris": 5402,
+   "nanite": "False",
+   "role": "door"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Medieval_Modular_Door_ueoqceudw_lod3_Var1.SM_Medieval_Modular_Door_ueoqceudw_lod3_Var1",
+   "name": "SM_Medieval_Modular_Door_ueoqceudw_lod3_Var1",
+   "size": [
+    301.0,
+    22.0,
+    201.0
+   ],
+   "tris": 3621,
+   "nanite": "False",
+   "role": "door"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Modular_Building_Door_xd4ffcpdw_lod3_Var1.SM_Modular_Building_Door_xd4ffcpdw_lod3_Var1",
+   "name": "SM_Modular_Building_Door_xd4ffcpdw_lod3_Var1",
+   "size": [
+    310.0,
+    27.0,
+    310.0
+   ],
+   "tris": 3072,
+   "nanite": "False",
+   "role": "door"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_AssetPlatform.SM_AssetPlatform",
+   "name": "SM_AssetPlatform",
+   "size": [
+    200.0,
+    200.0,
+    10.0
+   ],
+   "tris": 4096,
+   "nanite": "False",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_50x500.SM_50x500",
+   "name": "SM_50x500",
+   "size": [
+    50.0,
+    50.0,
+    500.0
+   ],
+   "tris": 36,
+   "nanite": "False",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Worn_Wooden_Beam_tgmsdc0fa_lod3.SM_Worn_Wooden_Beam_tgmsdc0fa_lod3",
+   "name": "SM_Worn_Wooden_Beam_tgmsdc0fa_lod3",
+   "size": [
+    24.0,
+    23.0,
+    251.0
+   ],
+   "tris": 1048,
+   "nanite": "False",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_02_04.SM_02_04",
+   "name": "SM_02_04",
+   "size": [
+    42.0,
+    45.0,
+    61.0
+   ],
+   "tris": 1632,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_05_05.SM_05_05",
+   "name": "SM_05_05",
+   "size": [
+    32.0,
+    31.0,
+    38.0
+   ],
+   "tris": 306,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_77C74DB9.SM_77C74DB9",
+   "name": "SM_77C74DB9",
+   "size": [
+    399.0,
+    200.0,
+    270.0
+   ],
+   "tris": 8,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_BlackAlder_Field_02.SM_BlackAlder_Field_02",
+   "name": "SM_BlackAlder_Field_02",
+   "size": [
+    1780.0,
+    1933.0,
+    1928.0
+   ],
+   "tris": 20758,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_BlackAlder_Field_04.SM_BlackAlder_Field_04",
+   "name": "SM_BlackAlder_Field_04",
+   "size": [
+    693.0,
+    777.0,
+    1186.0
+   ],
+   "tris": 9746,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_BlackAlder_Field_04_PP.SM_BlackAlder_Field_04_PP",
+   "name": "SM_BlackAlder_Field_04_PP",
+   "size": [
+    693.0,
+    777.0,
+    1186.0
+   ],
+   "tris": 9746,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_BlackAlder_Forest_01.SM_BlackAlder_Forest_01",
+   "name": "SM_BlackAlder_Forest_01",
+   "size": [
+    949.0,
+    891.0,
+    2171.0
+   ],
+   "tris": 7768,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_BlackAlder_Forest_05_PP.SM_BlackAlder_Forest_05_PP",
+   "name": "SM_BlackAlder_Forest_05_PP",
+   "size": [
+    743.0,
+    867.0,
+    1159.0
+   ],
+   "tris": 9581,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Blacksmith_Anvil_uckmegpfa_lod3.SM_Blacksmith_Anvil_uckmegpfa_lod3",
+   "name": "SM_Blacksmith_Anvil_uckmegpfa_lod3",
+   "size": [
+    69.0,
+    63.0,
+    66.0
+   ],
+   "tris": 8326,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Burnt_Firewood_Pack_udyjbjxva_lod3_Var1.SM_Burnt_Firewood_Pack_udyjbjxva_lod3_Var1",
+   "name": "SM_Burnt_Firewood_Pack_udyjbjxva_lod3_Var1",
+   "size": [
+    18.0,
+    6.0,
+    6.0
+   ],
+   "tris": 1614,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Campfire_uenpfeifa_lod3_Var1.SM_Campfire_uenpfeifa_lod3_Var1",
+   "name": "SM_Campfire_uenpfeifa_lod3_Var1",
+   "size": [
+    142.0,
+    124.0,
+    21.0
+   ],
+   "tris": 5188,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Chopped_Wood_Pile_rlCaz_lod3_Var1.SM_Chopped_Wood_Pile_rlCaz_lod3_Var1",
+   "name": "SM_Chopped_Wood_Pile_rlCaz_lod3_Var1",
+   "size": [
+    222.0,
+    255.0,
+    114.0
+   ],
+   "tris": 30372,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_F27FCDA4.SM_F27FCDA4",
+   "name": "SM_F27FCDA4",
+   "size": [
+    100.0,
+    100.0,
+    200.0
+   ],
+   "tris": 808,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Grass_Clumps_rbojr_Var1_lod1.SM_Grass_Clumps_rbojr_Var1_lod1",
+   "name": "SM_Grass_Clumps_rbojr_Var1_lod1",
+   "size": [
+    86.0,
+    86.0,
+    29.0
+   ],
+   "tris": 864,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Grass_Clumps_rbojr_Var2_lod1.SM_Grass_Clumps_rbojr_Var2_lod1",
+   "name": "SM_Grass_Clumps_rbojr_Var2_lod1",
+   "size": [
+    90.0,
+    80.0,
+    25.0
+   ],
+   "tris": 188,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Grass_Clumps_rbojr_Var3_lod1.SM_Grass_Clumps_rbojr_Var3_lod1",
+   "name": "SM_Grass_Clumps_rbojr_Var3_lod1",
+   "size": [
+    87.0,
+    85.0,
+    26.0
+   ],
+   "tris": 464,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Japanese_Wooden_Well_Roof_ui2jbif_lod0.SM_Japanese_Wooden_Well_Roof_ui2jbif_lod0",
+   "name": "SM_Japanese_Wooden_Well_Roof_ui2jbif_lod0",
+   "size": [
+    305.0,
+    172.0,
+    251.0
+   ],
+   "tris": 42080,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_MERGED_StaticMeshActor_31.SM_MERGED_StaticMeshActor_31",
+   "name": "SM_MERGED_StaticMeshActor_31",
+   "size": [
+    233.0,
+    234.0,
+    340.0
+   ],
+   "tris": 492,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Medieval_Modular_Corner_Wall_uebrabtdw_lod3_Var1.SM_Medieval_Modular_Corner_Wall_uebrabtdw_lod3_Var1",
+   "name": "SM_Medieval_Modular_Corner_Wall_uebrabtdw_lod3_Var1",
+   "size": [
+    102.0,
+    102.0,
+    201.0
+   ],
+   "tris": 8155,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Medieval_Modular_Corner_Wall_ueoidegdw_lod3_Var1.SM_Medieval_Modular_Corner_Wall_ueoidegdw_lod3_Var1",
+   "name": "SM_Medieval_Modular_Corner_Wall_ueoidegdw_lod3_Var1",
+   "size": [
+    103.0,
+    103.0,
+    200.0
+   ],
+   "tris": 2161,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Medieval_Modular_Corner_uewhehjdw_lod3_Var1.SM_Medieval_Modular_Corner_uewhehjdw_lod3_Var1",
+   "name": "SM_Medieval_Modular_Corner_uewhehjdw_lod3_Var1",
+   "size": [
+    103.0,
+    101.0,
+    200.0
+   ],
+   "tris": 4996,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Medieval_Modular_Wall_ueojbazdw_lod3_Var1.SM_Medieval_Modular_Wall_ueojbazdw_lod3_Var1",
+   "name": "SM_Medieval_Modular_Wall_ueojbazdw_lod3_Var1",
+   "size": [
+    101.0,
+    49.0,
+    200.0
+   ],
+   "tris": 1324,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Medieval_Modular_Wall_ueoqbdhdw_lod3_Var1.SM_Medieval_Modular_Wall_ueoqbdhdw_lod3_Var1",
+   "name": "SM_Medieval_Modular_Wall_ueoqbdhdw_lod3_Var1",
+   "size": [
+    200.0,
+    50.0,
+    200.0
+   ],
+   "tris": 1360,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Medieval_Modular_Wall_uewiaiqdw_lod3_Var1.SM_Medieval_Modular_Wall_uewiaiqdw_lod3_Var1",
+   "name": "SM_Medieval_Modular_Wall_uewiaiqdw_lod3_Var1",
+   "size": [
+    100.0,
+    16.0,
+    200.0
+   ],
+   "tris": 5006,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Modular_Fence_ufflaitdw_lod3_Var1.SM_Modular_Fence_ufflaitdw_lod3_Var1",
+   "name": "SM_Modular_Fence_ufflaitdw_lod3_Var1",
+   "size": [
+    16.0,
+    14.0,
+    120.0
+   ],
+   "tris": 2778,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Modular_Fence_ufflaitdw_lod3_Var2.SM_Modular_Fence_ufflaitdw_lod3_Var2",
+   "name": "SM_Modular_Fence_ufflaitdw_lod3_Var2",
+   "size": [
+    302.0,
+    27.0,
+    120.0
+   ],
+   "tris": 4760,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Mossy_Gravestone_wjuvdeuqx_lod3_Var1.SM_Mossy_Gravestone_wjuvdeuqx_lod3_Var1",
+   "name": "SM_Mossy_Gravestone_wjuvdeuqx_lod3_Var1",
+   "size": [
+    51.0,
+    20.0,
+    121.0
+   ],
+   "tris": 1812,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Mossy_Stone_Wall_ukhgdfyga_lod3_Var1.SM_Mossy_Stone_Wall_ukhgdfyga_lod3_Var1",
+   "name": "SM_Mossy_Stone_Wall_ukhgdfyga_lod3_Var1",
+   "size": [
+    311.0,
+    53.0,
+    90.0
+   ],
+   "tris": 7329,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Old_Gravestone_wjuvdfeqx_lod3_Var1.SM_Old_Gravestone_wjuvdfeqx_lod3_Var1",
+   "name": "SM_Old_Gravestone_wjuvdfeqx_lod3_Var1",
+   "size": [
+    93.0,
+    25.0,
+    190.0
+   ],
+   "tris": 1930,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Old_Metal_Pot_ufljdc2fa_lod3_Var1.SM_Old_Metal_Pot_ufljdc2fa_lod3_Var1",
+   "name": "SM_Old_Metal_Pot_ufljdc2fa_lod3_Var1",
+   "size": [
+    30.0,
+    28.0,
+    21.0
+   ],
+   "tris": 5536,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Old_Stone_Well_ufhoagrfa_lod0_Var1.SM_Old_Stone_Well_ufhoagrfa_lod0_Var1",
+   "name": "SM_Old_Stone_Well_ufhoagrfa_lod0_Var1",
+   "size": [
+    276.0,
+    269.0,
+    92.0
+   ],
+   "tris": 24684,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Old_Wooden_Bench_uchpfjefa_lod3.SM_Old_Wooden_Bench_uchpfjefa_lod3",
+   "name": "SM_Old_Wooden_Bench_uchpfjefa_lod3",
+   "size": [
+    33.0,
+    190.0,
+    48.0
+   ],
+   "tris": 3936,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Old_Wooden_Bench_udlufetqx_lod3.SM_Old_Wooden_Bench_udlufetqx_lod3",
+   "name": "SM_Old_Wooden_Bench_udlufetqx_lod3",
+   "size": [
+    230.0,
+    55.0,
+    109.0
+   ],
+   "tris": 7824,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Old_Wooden_Carafe_udzjebtfa_lod3_Var1.SM_Old_Wooden_Carafe_udzjebtfa_lod3_Var1",
+   "name": "SM_Old_Wooden_Carafe_udzjebtfa_lod3_Var1",
+   "size": [
+    45.0,
+    40.0,
+    53.0
+   ],
+   "tris": 2026,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Old_Wooden_Trough_ugrxdbsfa_lod3_Var1.SM_Old_Wooden_Trough_ugrxdbsfa_lod3_Var1",
+   "name": "SM_Old_Wooden_Trough_ugrxdbsfa_lod3_Var1",
+   "size": [
+    78.0,
+    269.0,
+    83.0
+   ],
+   "tris": 10210,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Round_Hay_Bale_rlCay_lod3.SM_Round_Hay_Bale_rlCay_lod3",
+   "name": "SM_Round_Hay_Bale_rlCay_lod3",
+   "size": [
+    161.0,
+    132.0,
+    149.0
+   ],
+   "tris": 3961,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Wooden_Barrel_uc2ichvqx_lod3.SM_Wooden_Barrel_uc2ichvqx_lod3",
+   "name": "SM_Wooden_Barrel_uc2ichvqx_lod3",
+   "size": [
+    42.0,
+    42.0,
+    58.0
+   ],
+   "tris": 5450,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Wooden_Bollard_tlttae1fa_lod3.SM_Wooden_Bollard_tlttae1fa_lod3",
+   "name": "SM_Wooden_Bollard_tlttae1fa_lod3",
+   "size": [
+    23.0,
+    15.0,
+    79.0
+   ],
+   "tris": 1162,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Wooden_Wheel_ugciag2ga_lod3_Var1.SM_Wooden_Wheel_ugciag2ga_lod3_Var1",
+   "name": "SM_Wooden_Wheel_ugciag2ga_lod3_Var1",
+   "size": [
+    150.0,
+    150.0,
+    36.0
+   ],
+   "tris": 8540,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_duvar.SM_duvar",
+   "name": "SM_duvar",
+   "size": [
+    65.0,
+    393.0,
+    122.0
+   ],
+   "tris": 43876,
+   "nanite": "False",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_400x200.SM_400x200",
+   "name": "SM_400x200",
+   "size": [
+    400.0,
+    20.0,
+    200.0
+   ],
+   "tris": 12,
+   "nanite": "False",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Medieval_Modular_Gable_udsreiudw_lod3_Var1.SM_Medieval_Modular_Gable_udsreiudw_lod3_Var1",
+   "name": "SM_Medieval_Modular_Gable_udsreiudw_lod3_Var1",
+   "size": [
+    435.0,
+    13.0,
+    279.0
+   ],
+   "tris": 1548,
+   "nanite": "False",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Medieval_Modular_Gable_uebrcgcdw_lod3_Var1.SM_Medieval_Modular_Gable_uebrcgcdw_lod3_Var1",
+   "name": "SM_Medieval_Modular_Gable_uebrcgcdw_lod3_Var1",
+   "size": [
+    421.0,
+    26.0,
+    330.0
+   ],
+   "tris": 7859,
+   "nanite": "False",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Medieval_Modular_Wall_udsreafdw_lod3_Var1.SM_Medieval_Modular_Wall_udsreafdw_lod3_Var1",
+   "name": "SM_Medieval_Modular_Wall_udsreafdw_lod3_Var1",
+   "size": [
+    301.0,
+    19.0,
+    201.0
+   ],
+   "tris": 1260,
+   "nanite": "False",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Medieval_Modular_Wall_udsrededw_lod3_Var1.SM_Medieval_Modular_Wall_udsrededw_lod3_Var1",
+   "name": "SM_Medieval_Modular_Wall_udsrededw_lod3_Var1",
+   "size": [
+    200.0,
+    17.0,
+    200.0
+   ],
+   "tris": 1287,
+   "nanite": "False",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Medieval_Modular_Wall_uebmdapdw_lod3_Var1.SM_Medieval_Modular_Wall_uebmdapdw_lod3_Var1",
+   "name": "SM_Medieval_Modular_Wall_uebmdapdw_lod3_Var1",
+   "size": [
+    351.0,
+    19.0,
+    200.0
+   ],
+   "tris": 8005,
+   "nanite": "False",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Medieval_Modular_Wall_uewibagdw_lod3_Var1.SM_Medieval_Modular_Wall_uewibagdw_lod3_Var1",
+   "name": "SM_Medieval_Modular_Wall_uewibagdw_lod3_Var1",
+   "size": [
+    201.0,
+    17.0,
+    201.0
+   ],
+   "tris": 4158,
+   "nanite": "False",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_Medieval_Modular_Wall_uewibaydw_lod3_Var1.SM_Medieval_Modular_Wall_uewibaydw_lod3_Var1",
+   "name": "SM_Medieval_Modular_Wall_uewibaydw_lod3_Var1",
+   "size": [
+    200.0,
+    16.0,
+    200.0
+   ],
+   "tris": 2084,
+   "nanite": "False",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/ElderboomVillage/Meshes/SM_cati.SM_cati",
+   "name": "SM_cati",
+   "size": [
+    328.0,
+    28.0,
+    409.0
+   ],
+   "tris": 11528,
+   "nanite": "False",
+   "role": "wall"
+  }
+ ]
+}

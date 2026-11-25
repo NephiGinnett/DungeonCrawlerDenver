@@ -1,0 +1,1151 @@
+{
+ "pack": "Scene_Saloon",
+ "maps": [
+  {
+   "path": "/Game/Scene_Saloon/Maps/Historic_Saloon.Historic_Saloon",
+   "partitioned": false
+  },
+  {
+   "path": "/Game/Scene_Saloon/Maps/PackedLevels/PL_His_Sal_Bar_01.PL_His_Sal_Bar_01",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/Scene_Saloon/Maps/PackedLevels/PL_His_Sal_Configuration_Table_01.PL_His_Sal_Configuration_Table_01",
+   "partitioned": true
+  },
+  {
+   "path": "/Game/Scene_Saloon/Maps/PackedLevels/PL_His_Sal_Configuration_Table_02.PL_His_Sal_Configuration_Table_02",
+   "partitioned": true
+  }
+ ],
+ "meshes": [
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/His_Sal_Interior_Door_Wood_Worn_01/SM_His_Sal_Interior_Door_Wood_Worn_01.SM_His_Sal_Interior_Door_Wood_Worn_01",
+   "name": "SM_His_Sal_Interior_Door_Wood_Worn_01",
+   "size": [
+    120.0,
+    16.0,
+    243.0
+   ],
+   "tris": 1948,
+   "nanite": "True",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/Custom/His_Sal_Wall_01/SM_His_Sal_Wall_Door_Modular_01.SM_His_Sal_Wall_Door_Modular_01",
+   "name": "SM_His_Sal_Wall_Door_Modular_01",
+   "size": [
+    10.0,
+    400.0,
+    240.0
+   ],
+   "tris": 60,
+   "nanite": "True",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/His_Wil_Saloon_Door_Wood_01/SM_His_Wil_Saloon_Door_Wood_01.SM_His_Wil_Saloon_Door_Wood_01",
+   "name": "SM_His_Wil_Saloon_Door_Wood_01",
+   "size": [
+    154.0,
+    7.0,
+    223.0
+   ],
+   "tris": 630,
+   "nanite": "True",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/His_Wil_Saloon_Door_Wood_Worn_01/SM_His_Wil_Saloon_Door_Wood_Worn_01.SM_His_Wil_Saloon_Door_Wood_Worn_01",
+   "name": "SM_His_Wil_Saloon_Door_Wood_Worn_01",
+   "size": [
+    90.0,
+    9.0,
+    139.0
+   ],
+   "tris": 1766,
+   "nanite": "True",
+   "role": "door"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/Floor_Edge.Floor_Edge",
+   "name": "Floor_Edge",
+   "size": [
+    1000.0,
+    200.0,
+    50.0
+   ],
+   "tris": 104,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/Pipe.Pipe",
+   "name": "Pipe",
+   "size": [
+    1000.0,
+    15.0,
+    15.0
+   ],
+   "tris": 124,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/SM_DisplayFrame_Side.SM_DisplayFrame_Side",
+   "name": "SM_DisplayFrame_Side",
+   "size": [
+    30.0,
+    201.0,
+    23.0
+   ],
+   "tris": 16,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/SM_DisplayFrame_Side_Bottom.SM_DisplayFrame_Side_Bottom",
+   "name": "SM_DisplayFrame_Side_Bottom",
+   "size": [
+    30.0,
+    200.0,
+    17.0
+   ],
+   "tris": 16,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/SM_DisplayFrame_Side_Top.SM_DisplayFrame_Side_Top",
+   "name": "SM_DisplayFrame_Side_Top",
+   "size": [
+    1.0,
+    200.0,
+    23.0
+   ],
+   "tris": 36,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/His_Wil_Saloon_Trim_Modular_01/SM_His_Wil_Saloon_Trim_Modular_01_A.SM_His_Wil_Saloon_Trim_Modular_01_A",
+   "name": "SM_His_Wil_Saloon_Trim_Modular_01_A",
+   "size": [
+    200.0,
+    26.0,
+    21.0
+   ],
+   "tris": 3690,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/Ind_Con_Supplies_Plank_wood_Long_01/SM_Ind_Con_Supplies_Plank_wood_Long_01.SM_Ind_Con_Supplies_Plank_wood_Long_01",
+   "name": "SM_Ind_Con_Supplies_Plank_wood_Long_01",
+   "size": [
+    300.0,
+    23.0,
+    5.0
+   ],
+   "tris": 570,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/Ind_Sup_Beam_Wood_Old_04/SM_Ind_Sup_Beam_Wood_Old_04.SM_Ind_Sup_Beam_Wood_Old_04",
+   "name": "SM_Ind_Sup_Beam_Wood_Old_04",
+   "size": [
+    402.0,
+    42.0,
+    27.0
+   ],
+   "tris": 3260,
+   "nanite": "True",
+   "role": "floor"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/His_Sal_Interior_Pillar_Wood_Worn_01/SM_His_Sal_Interior_Pillar_Wood_Worn_01.SM_His_Sal_Interior_Pillar_Wood_Worn_01",
+   "name": "SM_His_Sal_Interior_Pillar_Wood_Worn_01",
+   "size": [
+    53.0,
+    38.0,
+    225.0
+   ],
+   "tris": 4322,
+   "nanite": "True",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/ShadowBox_1MPanel.ShadowBox_1MPanel",
+   "name": "ShadowBox_1MPanel",
+   "size": [
+    100.0,
+    18.0,
+    500.0
+   ],
+   "tris": 674,
+   "nanite": "True",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/ShadowBox_1MPanel2.ShadowBox_1MPanel2",
+   "name": "ShadowBox_1MPanel2",
+   "size": [
+    100.0,
+    16.0,
+    500.0
+   ],
+   "tris": 48,
+   "nanite": "True",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/Tile_10MPillar_B.Tile_10MPillar_B",
+   "name": "Tile_10MPillar_B",
+   "size": [
+    50.0,
+    100.0,
+    1000.0
+   ],
+   "tris": 52,
+   "nanite": "True",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/Tile_10MPillar_B_2.Tile_10MPillar_B_2",
+   "name": "Tile_10MPillar_B_2",
+   "size": [
+    50.0,
+    94.0,
+    1000.0
+   ],
+   "tris": 52,
+   "nanite": "True",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/Tile_Edge.Tile_Edge",
+   "name": "Tile_Edge",
+   "size": [
+    100.0,
+    50.0,
+    1000.0
+   ],
+   "tris": 52,
+   "nanite": "True",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/Tile_Edge_2.Tile_Edge_2",
+   "name": "Tile_Edge_2",
+   "size": [
+    100.0,
+    50.0,
+    1000.0
+   ],
+   "tris": 52,
+   "nanite": "True",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/TrimFeature_MetalTrim_Straight.TrimFeature_MetalTrim_Straight",
+   "name": "TrimFeature_MetalTrim_Straight",
+   "size": [
+    57.0,
+    2.0,
+    200.0
+   ],
+   "tris": 252,
+   "nanite": "True",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/TrimFeature_MetalTrim_Straight_B.TrimFeature_MetalTrim_Straight_B",
+   "name": "TrimFeature_MetalTrim_Straight_B",
+   "size": [
+    57.0,
+    2.0,
+    200.0
+   ],
+   "tris": 76,
+   "nanite": "True",
+   "role": "pillar"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/Display_Corner_B.Display_Corner_B",
+   "name": "Display_Corner_B",
+   "size": [
+    9.0,
+    100.0,
+    100.0
+   ],
+   "tris": 320,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/Display_Corner_C.Display_Corner_C",
+   "name": "Display_Corner_C",
+   "size": [
+    5.0,
+    100.0,
+    100.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/Display_Curve_B.Display_Curve_B",
+   "name": "Display_Curve_B",
+   "size": [
+    100.0,
+    200.0,
+    100.0
+   ],
+   "tris": 252,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/Display_Curve_C.Display_Curve_C",
+   "name": "Display_Curve_C",
+   "size": [
+    95.0,
+    200.0,
+    95.0
+   ],
+   "tris": 164,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/Display_EdgeCurve_B.Display_EdgeCurve_B",
+   "name": "Display_EdgeCurve_B",
+   "size": [
+    100.0,
+    100.0,
+    100.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/Display_EdgeCurve_C.Display_EdgeCurve_C",
+   "name": "Display_EdgeCurve_C",
+   "size": [
+    95.0,
+    100.0,
+    95.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/Display_Side_B.Display_Side_B",
+   "name": "Display_Side_B",
+   "size": [
+    10.0,
+    200.0,
+    100.0
+   ],
+   "tris": 200,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/Display_Side_C.Display_Side_C",
+   "name": "Display_Side_C",
+   "size": [
+    5.0,
+    200.0,
+    100.0
+   ],
+   "tris": 12,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/Floor_Corner.Floor_Corner",
+   "name": "Floor_Corner",
+   "size": [
+    200.0,
+    200.0,
+    50.0
+   ],
+   "tris": 284,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/Podium_01.Podium_01",
+   "name": "Podium_01",
+   "size": [
+    266.0,
+    266.0,
+    58.0
+   ],
+   "tris": 344,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/Podium_02.Podium_02",
+   "name": "Podium_02",
+   "size": [
+    200.0,
+    200.0,
+    58.0
+   ],
+   "tris": 252,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/SM_DisplayFrame_Corner.SM_DisplayFrame_Corner",
+   "name": "SM_DisplayFrame_Corner",
+   "size": [
+    30.0,
+    61.0,
+    61.0
+   ],
+   "tris": 128,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/SM_DisplayFrame_Corner_Bottom.SM_DisplayFrame_Corner_Bottom",
+   "name": "SM_DisplayFrame_Corner_Bottom",
+   "size": [
+    30.0,
+    58.0,
+    58.0
+   ],
+   "tris": 128,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/SM_DisplayFrame_Corner_Top.SM_DisplayFrame_Corner_Top",
+   "name": "SM_DisplayFrame_Corner_Top",
+   "size": [
+    1.0,
+    61.0,
+    61.0
+   ],
+   "tris": 103,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/His_Med_Storage_Barrel_Metal_L_03/SM_His_Med_Storage_Barrel_Metal_L_03.SM_His_Med_Storage_Barrel_Metal_L_03",
+   "name": "SM_His_Med_Storage_Barrel_Metal_L_03",
+   "size": [
+    41.0,
+    42.0,
+    58.0
+   ],
+   "tris": 2302,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/His_Med_Storage_Barrel_Wood_Worn_01/SM_His_Med_Storage_Barrel_Wood_Worn_01.SM_His_Med_Storage_Barrel_Wood_Worn_01",
+   "name": "SM_His_Med_Storage_Barrel_Wood_Worn_01",
+   "size": [
+    61.0,
+    60.0,
+    85.0
+   ],
+   "tris": 4818,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/His_Med_Storage_Barrel_Wood_Worn_02/SM_His_Med_Storage_Barrel_Wood_Worn_02.SM_His_Med_Storage_Barrel_Wood_Worn_02",
+   "name": "SM_His_Med_Storage_Barrel_Wood_Worn_02",
+   "size": [
+    70.0,
+    69.0,
+    97.0
+   ],
+   "tris": 2792,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/His_Med_Storage_Barrel_Wood_Worn_03/SM_His_Med_Storage_Barrel_Wood_Worn_03.SM_His_Med_Storage_Barrel_Wood_Worn_03",
+   "name": "SM_His_Med_Storage_Barrel_Wood_Worn_03",
+   "size": [
+    44.0,
+    44.0,
+    52.0
+   ],
+   "tris": 3086,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/His_Med_Tableware_Plate_Metal_Old_01/SM_His_Med_Tableware_Plate_Metal_Old_01.SM_His_Med_Tableware_Plate_Metal_Old_01",
+   "name": "SM_His_Med_Tableware_Plate_Metal_Old_01",
+   "size": [
+    22.0,
+    22.0,
+    2.0
+   ],
+   "tris": 1254,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/His_Sal_Bar_Wood_Pack_01/SM_His_Sal_Bar_Wood_Pack_01_A.SM_His_Sal_Bar_Wood_Pack_01_A",
+   "name": "SM_His_Sal_Bar_Wood_Pack_01_A",
+   "size": [
+    73.0,
+    74.0,
+    106.0
+   ],
+   "tris": 2322,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/His_Sal_Bar_Wood_Pack_01/SM_His_Sal_Bar_Wood_Pack_01_B.SM_His_Sal_Bar_Wood_Pack_01_B",
+   "name": "SM_His_Sal_Bar_Wood_Pack_01_B",
+   "size": [
+    150.0,
+    70.0,
+    106.0
+   ],
+   "tris": 2158,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/Custom/His_Sal_Bottle_Glass_01/SM_His_Sal_Bottle_Glass_01.SM_His_Sal_Bottle_Glass_01",
+   "name": "SM_His_Sal_Bottle_Glass_01",
+   "size": [
+    7.0,
+    7.0,
+    30.0
+   ],
+   "tris": 1201,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/Custom/His_Sal_Cloth_01/SM_His_Sal_Cloth_Various_DetailLevels_Cloth_Medium.SM_His_Sal_Cloth_Various_DetailLevels_Cloth_Medium",
+   "name": "SM_His_Sal_Cloth_Various_DetailLevels_Cloth_Medium",
+   "size": [
+    86.0,
+    102.0,
+    6.0
+   ],
+   "tris": 2279,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/His_Sal_Furniture_Lamp_Wood_Old_02/SM_His_Sal_Furniture_Lamp_Wood_Old_02_A.SM_His_Sal_Furniture_Lamp_Wood_Old_02_A",
+   "name": "SM_His_Sal_Furniture_Lamp_Wood_Old_02_A",
+   "size": [
+    32.0,
+    32.0,
+    159.0
+   ],
+   "tris": 1662,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/His_Sal_Furniture_Lamp_Wood_Old_02/SM_His_Sal_Furniture_Lamp_Wood_Old_02_B.SM_His_Sal_Furniture_Lamp_Wood_Old_02_B",
+   "name": "SM_His_Sal_Furniture_Lamp_Wood_Old_02_B",
+   "size": [
+    58.0,
+    57.0,
+    52.0
+   ],
+   "tris": 2014,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/Custom/His_Sal_Glass_01/SM_His_Sal_Glass_01.SM_His_Sal_Glass_01",
+   "name": "SM_His_Sal_Glass_01",
+   "size": [
+    7.0,
+    7.0,
+    8.0
+   ],
+   "tris": 534,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/His_Sal_Sign_Saloon_Wood_Worn_01/SM_His_Sal_Sign_Saloon_Wood_Worn_01.SM_His_Sal_Sign_Saloon_Wood_Worn_01",
+   "name": "SM_His_Sal_Sign_Saloon_Wood_Worn_01",
+   "size": [
+    203.0,
+    10.0,
+    67.0
+   ],
+   "tris": 5406,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/His_Wil_Cart_Wheel_Wood_Old_01/SM_His_Wil_Cart_Wheel_Wood_Old_01.SM_His_Wil_Cart_Wheel_Wood_Old_01",
+   "name": "SM_His_Wil_Cart_Wheel_Wood_Old_01",
+   "size": [
+    148.0,
+    148.0,
+    36.0
+   ],
+   "tris": 5906,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/His_Wil_Equipment_Horseshoe_Metal_Rusted_01/SM_His_Wil_Equipment_Horseshoe_Metal_Rusted_01.SM_His_Wil_Equipment_Horseshoe_Metal_Rusted_01",
+   "name": "SM_His_Wil_Equipment_Horseshoe_Metal_Rusted_01",
+   "size": [
+    13.0,
+    13.0,
+    3.0
+   ],
+   "tris": 1578,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/His_Wil_Equipment_Saddle_Leather_Worn_01/SM_His_Wil_Equipment_Saddle_Leather_Worn_01.SM_His_Wil_Equipment_Saddle_Leather_Worn_01",
+   "name": "SM_His_Wil_Equipment_Saddle_Leather_Worn_01",
+   "size": [
+    45.0,
+    34.0,
+    28.0
+   ],
+   "tris": 20766,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/His_Wil_Furniture_Table_Wood_Worn_01/SM_His_Wil_Furniture_Table_Wood_Worn_01.SM_His_Wil_Furniture_Table_Wood_Worn_01",
+   "name": "SM_His_Wil_Furniture_Table_Wood_Worn_01",
+   "size": [
+    78.0,
+    79.0,
+    53.0
+   ],
+   "tris": 7312,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/His_Wil_Saloon_Trim_Modular_01/SM_His_Wil_Saloon_Trim_Modular_01_B.SM_His_Wil_Saloon_Trim_Modular_01_B",
+   "name": "SM_His_Wil_Saloon_Trim_Modular_01_B",
+   "size": [
+    21.0,
+    25.0,
+    20.0
+   ],
+   "tris": 4462,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/His_Wil_Saloon_Window_Wood_Worn_02/SM_His_Wil_Saloon_Window_Wood_Worn_02.SM_His_Wil_Saloon_Window_Wood_Worn_02",
+   "name": "SM_His_Wil_Saloon_Window_Wood_Worn_02",
+   "size": [
+    127.0,
+    11.0,
+    203.0
+   ],
+   "tris": 4619,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/His_Wil_Storage_BarrelStand_Wood_Worn_01/SM_His_Wil_Storage_BarrelStand_Wood_Worn_01.SM_His_Wil_Storage_BarrelStand_Wood_Worn_01",
+   "name": "SM_His_Wil_Storage_BarrelStand_Wood_Worn_01",
+   "size": [
+    47.0,
+    48.0,
+    106.0
+   ],
+   "tris": 7388,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/Ind_Old_Furniture_Shelf_Wood_Worn_01/SM_Ind_Old_Furniture_Shelf_Wood_Worn_01.SM_Ind_Old_Furniture_Shelf_Wood_Worn_01",
+   "name": "SM_Ind_Old_Furniture_Shelf_Wood_Worn_01",
+   "size": [
+    148.0,
+    29.0,
+    129.0
+   ],
+   "tris": 1598,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/Mis_Ant_Bone_Ornate_01/SM_Mis_Ant_Bone_Ornate_01.SM_Mis_Ant_Bone_Ornate_01",
+   "name": "SM_Mis_Ant_Bone_Ornate_01",
+   "size": [
+    10.0,
+    16.0,
+    14.0
+   ],
+   "tris": 2242,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/Res_Book_Hardback_Paper_Brown_01/SM_Res_Book_Hardback_Paper_Brown_01.SM_Res_Book_Hardback_Paper_Brown_01",
+   "name": "SM_Res_Book_Hardback_Paper_Brown_01",
+   "size": [
+    2.0,
+    13.0,
+    19.0
+   ],
+   "tris": 1584,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/Res_Fur_Chair_Wood_Old_03/SM_Res_Fur_Chair_Wood_Old_03.SM_Res_Fur_Chair_Wood_Old_03",
+   "name": "SM_Res_Fur_Chair_Wood_Old_03",
+   "size": [
+    52.0,
+    50.0,
+    87.0
+   ],
+   "tris": 2340,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/Res_Fur_Chair_Wood_Worn_02/SM_Res_Fur_Chair_Wood_Worn_02.SM_Res_Fur_Chair_Wood_Worn_02",
+   "name": "SM_Res_Fur_Chair_Wood_Worn_02",
+   "size": [
+    49.0,
+    43.0,
+    84.0
+   ],
+   "tris": 1508,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/Res_Fur_Stool_Metal_Worn_01/SM_Res_Fur_Stool_Metal_Worn_01.SM_Res_Fur_Stool_Metal_Worn_01",
+   "name": "SM_Res_Fur_Stool_Metal_Worn_01",
+   "size": [
+    39.0,
+    35.0,
+    58.0
+   ],
+   "tris": 3168,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/Res_Fur_Stool_Wood_Armless_01/SM_Res_Fur_Stool_Wood_Armless_01.SM_Res_Fur_Stool_Wood_Armless_01",
+   "name": "SM_Res_Fur_Stool_Wood_Armless_01",
+   "size": [
+    34.0,
+    31.0,
+    66.0
+   ],
+   "tris": 2292,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/Res_Rur_Furniture_Shelf_Wood_Old_01/SM_Res_Rur_Furniture_Shelf_Wood_Old_01.SM_Res_Rur_Furniture_Shelf_Wood_Old_01",
+   "name": "SM_Res_Rur_Furniture_Shelf_Wood_Old_01",
+   "size": [
+    85.0,
+    19.0,
+    23.0
+   ],
+   "tris": 1224,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/Res_Rur_Storage_Bucket_Metal_Worn_03/SM_Res_Rur_Storage_Bucket_Metal_Worn_03.SM_Res_Rur_Storage_Bucket_Metal_Worn_03",
+   "name": "SM_Res_Rur_Storage_Bucket_Metal_Worn_03",
+   "size": [
+    44.0,
+    37.0,
+    34.0
+   ],
+   "tris": 1948,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/Res_Sto_Chest_Wood_Worn_08/SM_Res_Sto_Chest_Wood_Worn_08.SM_Res_Sto_Chest_Wood_Worn_08",
+   "name": "SM_Res_Sto_Chest_Wood_Worn_08",
+   "size": [
+    103.0,
+    68.0,
+    82.0
+   ],
+   "tris": 4630,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/Res_Sto_Flask_Ceramic_Worn_01/SM_Res_Sto_Flask_Ceramic_Worn_01.SM_Res_Sto_Flask_Ceramic_Worn_01",
+   "name": "SM_Res_Sto_Flask_Ceramic_Worn_01",
+   "size": [
+    11.0,
+    9.0,
+    20.0
+   ],
+   "tris": 650,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/Urb_Dec_PictureFrame_Wood_Worn_01/SM_Urb_Dec_PictureFrame_Wood_Worn_01.SM_Urb_Dec_PictureFrame_Wood_Worn_01",
+   "name": "SM_Urb_Dec_PictureFrame_Wood_Worn_01",
+   "size": [
+    64.0,
+    5.0,
+    90.0
+   ],
+   "tris": 1716,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/Urb_Set_Stairs_Wood_Modular_01/SM_Urb_Set_Stairs_Wood_Modular_01_A.SM_Urb_Set_Stairs_Wood_Modular_01_A",
+   "name": "SM_Urb_Set_Stairs_Wood_Modular_01_A",
+   "size": [
+    325.0,
+    15.0,
+    124.0
+   ],
+   "tris": 5884,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/Urb_Set_Stairs_Wood_Modular_01/SM_Urb_Set_Stairs_Wood_Modular_01_B.SM_Urb_Set_Stairs_Wood_Modular_01_B",
+   "name": "SM_Urb_Set_Stairs_Wood_Modular_01_B",
+   "size": [
+    15.0,
+    15.0,
+    124.0
+   ],
+   "tris": 1470,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/Urb_Set_Stairs_Wood_Modular_01/SM_Urb_Set_Stairs_Wood_Modular_01_C.SM_Urb_Set_Stairs_Wood_Modular_01_C",
+   "name": "SM_Urb_Set_Stairs_Wood_Modular_01_C",
+   "size": [
+    250.0,
+    142.0,
+    307.0
+   ],
+   "tris": 6590,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/Urb_Set_Stairs_Wood_Modular_01/SM_Urb_Set_Stairs_Wood_Modular_01_D.SM_Urb_Set_Stairs_Wood_Modular_01_D",
+   "name": "SM_Urb_Set_Stairs_Wood_Modular_01_D",
+   "size": [
+    150.0,
+    137.0,
+    263.0
+   ],
+   "tris": 5004,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/ShadowBox_RoundEdge.ShadowBox_RoundEdge",
+   "name": "ShadowBox_RoundEdge",
+   "size": [
+    100.0,
+    116.0,
+    116.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/Splitter_Curve.Splitter_Curve",
+   "name": "Splitter_Curve",
+   "size": [
+    1000.0,
+    200.0,
+    200.0
+   ],
+   "tris": 602,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/TagBar_Middle.TagBar_Middle",
+   "name": "TagBar_Middle",
+   "size": [
+    25.0,
+    100.0,
+    32.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/TagBar_TitleCap.TagBar_TitleCap",
+   "name": "TagBar_TitleCap",
+   "size": [
+    25.0,
+    50.0,
+    32.0
+   ],
+   "tris": 696,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/TagBar_TitleCap1.TagBar_TitleCap1",
+   "name": "TagBar_TitleCap1",
+   "size": [
+    25.0,
+    50.0,
+    32.0
+   ],
+   "tris": 672,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/Tile_InnerCurveEdge.Tile_InnerCurveEdge",
+   "name": "Tile_InnerCurveEdge",
+   "size": [
+    50.0,
+    200.0,
+    200.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/Tile_InnerCurveEdge2.Tile_InnerCurveEdge2",
+   "name": "Tile_InnerCurveEdge2",
+   "size": [
+    50.0,
+    200.0,
+    200.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/Tile_InnerCurveEdge_2.Tile_InnerCurveEdge_2",
+   "name": "Tile_InnerCurveEdge_2",
+   "size": [
+    50.0,
+    200.0,
+    200.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/Tile_InnerCurve_B.Tile_InnerCurve_B",
+   "name": "Tile_InnerCurve_B",
+   "size": [
+    1000.0,
+    400.0,
+    250.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/TrimFeature_MetalTrim_Bend.TrimFeature_MetalTrim_Bend",
+   "name": "TrimFeature_MetalTrim_Bend",
+   "size": [
+    57.0,
+    151.0,
+    151.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/TrimFeature_MetalTrim_Bend_B.TrimFeature_MetalTrim_Bend_B",
+   "name": "TrimFeature_MetalTrim_Bend_B",
+   "size": [
+    57.0,
+    151.0,
+    151.0
+   ],
+   "tris": 256,
+   "nanite": "True",
+   "role": "prop"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/Display_Main_B.Display_Main_B",
+   "name": "Display_Main_B",
+   "size": [
+    10.0,
+    200.0,
+    200.0
+   ],
+   "tris": 12,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/Display_Main_C.Display_Main_C",
+   "name": "Display_Main_C",
+   "size": [
+    5.0,
+    200.0,
+    200.0
+   ],
+   "tris": 12,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/QuixelLogo.QuixelLogo",
+   "name": "QuixelLogo",
+   "size": [
+    18.0,
+    372.0,
+    435.0
+   ],
+   "tris": 262,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/Custom/His_Sal_Curtain_01/SM_His_Sal_Curtain_01.SM_His_Sal_Curtain_01",
+   "name": "SM_His_Sal_Curtain_01",
+   "size": [
+    229.0,
+    27.0,
+    204.0
+   ],
+   "tris": 2947,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/Custom/His_Sal_Wall_01/SM_His_Sal_Wall_Modular_01.SM_His_Sal_Wall_Modular_01",
+   "name": "SM_His_Sal_Wall_Modular_01",
+   "size": [
+    10.0,
+    400.0,
+    240.0
+   ],
+   "tris": 20,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/Custom/His_Sal_Wall_01/SM_His_Sal_Wall_Short_Modular_01.SM_His_Sal_Wall_Short_Modular_01",
+   "name": "SM_His_Sal_Wall_Short_Modular_01",
+   "size": [
+    10.0,
+    200.0,
+    240.0
+   ],
+   "tris": 12,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/Custom/His_Sal_Wall_01/SM_His_Sal_Wall_Window_Modular_01.SM_His_Sal_Wall_Window_Modular_01",
+   "name": "SM_His_Sal_Wall_Window_Modular_01",
+   "size": [
+    10.0,
+    400.0,
+    240.0
+   ],
+   "tris": 116,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Scene_Saloon/Assets/MS/3D/His_Wil_Saloon_Set_Wood_Modular_01/SM_His_Wil_Saloon_Set_Wood_Modular_01.SM_His_Wil_Saloon_Set_Wood_Modular_01",
+   "name": "SM_His_Wil_Saloon_Set_Wood_Modular_01",
+   "size": [
+    200.0,
+    12.0,
+    225.0
+   ],
+   "tris": 1853,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/Splitter_Wall.Splitter_Wall",
+   "name": "Splitter_Wall",
+   "size": [
+    1000.0,
+    100.0,
+    500.0
+   ],
+   "tris": 842,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/Splitter_Wall2.Splitter_Wall2",
+   "name": "Splitter_Wall2",
+   "size": [
+    1000.0,
+    100.0,
+    500.0
+   ],
+   "tris": 1364,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/Tile_10MWall.Tile_10MWall",
+   "name": "Tile_10MWall",
+   "size": [
+    1000.0,
+    100.0,
+    1000.0
+   ],
+   "tris": 12,
+   "nanite": "True",
+   "role": "wall"
+  },
+  {
+   "path": "/Game/Scene_Saloon/VisualFramework/DemoRoom/Meshes/UELogo.UELogo",
+   "name": "UELogo",
+   "size": [
+    18.0,
+    393.0,
+    396.0
+   ],
+   "tris": 952,
+   "nanite": "True",
+   "role": "wall"
+  }
+ ]
+}
