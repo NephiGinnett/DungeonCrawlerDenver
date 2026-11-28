@@ -9111,6 +9111,18 @@ void ADCCHUD::DrawDenStrip(const ADCCArcadeLobby* Lobby)
 	{
 		return;
 	}
+	if (!Lobby->UsesVotePads())
+	{
+		if (Lobby->CountdownLine.IsEmpty() || !GEngine)
+		{
+			return;
+		}
+		UFont* Small = GEngine->GetSmallFont();
+		float W = 0.0f, H = 0.0f;
+		GetTextSize(Lobby->CountdownLine, W, H, Small, 1.0f);
+		DrawText(Lobby->CountdownLine, FLinearColor(1.0f, 0.86f, 0.45f), (Canvas->SizeX - W) * 0.5f, 120.0f, Small, 1.0f);
+		return;
+	}
 	const TArray<DCCArcade::FGame>& Games = DCCArcade::Games();
 	const int32 N = Games.Num();
 	const float Tile = 52.0f, Gap = 18.0f;

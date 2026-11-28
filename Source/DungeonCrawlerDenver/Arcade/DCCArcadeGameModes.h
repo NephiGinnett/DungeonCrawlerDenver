@@ -35,6 +35,15 @@ protected:
 	virtual TSubclassOf<ADCCArcadeArena> GetArenaClass() const override;
 };
 
+/** The old voting Den. Not on the way in. DCC.Arcade VotingDen still builds it. */
+UCLASS()
+class DUNGEONCRAWLERDENVER_API ADCCVotingDenGameMode : public ADCCArcadeGameMode
+{
+	GENERATED_BODY()
+protected:
+	virtual TSubclassOf<ADCCArcadeArena> GetArenaClass() const override;
+};
+
 UCLASS()
 class DUNGEONCRAWLERDENVER_API ADCCClimbGameMode : public ADCCArcadeGameMode
 {

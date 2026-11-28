@@ -107,24 +107,38 @@ void ADCCArcadeLobby::BuildLocal()
 
 	// Text faces +X at yaw 0; the north wall's signs turn to face the room (-Y).
 	Sign(O + FVector(0, W - 40, 780), -90.0f, TEXT("THE SAFE ROOM"), FColor(255, 120, 230), 90.0f);
-	Sign(O + FVector(0, W - 40, 680), -90.0f, TEXT("Stand on a game to vote. Majority wins. Everyone goes together."), FColor(200, 190, 220), 30.0f);
+	Sign(O + FVector(0, W - 40, 680), -90.0f,
+		UsesVotePads() ? TEXT("Stand on a game to vote. Majority wins. Everyone goes together.") : TEXT("ENTER THE WORLD DUNGEON"),
+		FColor(200, 190, 220), UsesVotePads() ? 30.0f : 48.0f);
 
-	const TArray<DCCArcade::FGame>& Games = DCCArcade::Games();
-	for (int32 i = 0; i < Games.Num(); ++i)
+	if (UsesVotePads())
 	{
-		const DCCArcade::FGame& Game = Games[i];
-		const FVector Pad = PadCenter(i);
-		// No collision: you stand on the floor, and the pad sinks under your feet (TickPads).
-		// 14 cm tall (it was 6) so it can press 10 cm and still show; TickPads lifts the dressing on it to match.
-		PadTops.Add(Block(Pad + FVector(0, 0, 7), FVector(700, 700, 14), Game.Colour * 0.6f, 0.0f, false));
-		Block(Pad + FVector(0, 520, 220), FVector(420, 180, 440), Game.Colour * 0.35f);
-		Sign(Pad + FVector(0, 420, 520), -90.0f, FString(Game.Title).ToUpper(), ToColor(Game.Colour), 44.0f);
-		// (The one-line pitch under the name came off on 2026-11-21: less to read. The name and the record stay.)
-		// The game's record, on its own board where you vote for it (2026-11-16: it used to be a long list on screen).
-		RecordSigns.Add(Sign(Pad + FVector(0, 420, 428), -90.0f, TEXT(" "), FColor(255, 214, 120), 22.0f, false));
-		RecordShown.Add(FString());
-		Light(Pad + FVector(0, 0, 400), Game.Colour, 9000.0f, 900.0f);
-		FDCCDenDecor::Dress(this, Game.Id, Pad, Game.Colour);
+		const TArray<DCCArcade::FGame>& Games = DCCArcade::Games();
+		for (int32 i = 0; i < Games.Num(); ++i)
+		{
+			const DCCArcade::FGame& Game = Games[i];
+			const FVector Pad = PadCenter(i);
+			// No collision: you stand on the floor, and the pad sinks under your feet (TickPads).
+			// 14 cm tall (it was 6) so it can press 10 cm and still show; TickPads lifts the dressing on it to match.
+			PadTops.Add(Block(Pad + FVector(0, 0, 7), FVector(700, 700, 14), Game.Colour * 0.6f, 0.0f, false));
+			Block(Pad + FVector(0, 520, 220), FVector(420, 180, 440), Game.Colour * 0.35f);
+			Sign(Pad + FVector(0, 420, 520), -90.0f, FString(Game.Title).ToUpper(), ToColor(Game.Colour), 44.0f);
+			// (The one-line pitch under the name came off on 2026-11-21: less to read. The name and the record stay.)
+			// The game's record, on its own board where you vote for it (2026-11-16: it used to be a long list on screen).
+			RecordSigns.Add(Sign(Pad + FVector(0, 420, 428), -90.0f, TEXT(" "), FColor(255, 214, 120), 22.0f, false));
+			RecordShown.Add(FString());
+			Light(Pad + FVector(0, 0, 400), Game.Colour, 9000.0f, 900.0f);
+			FDCCDenDecor::Dress(this, Game.Id, Pad, Game.Colour);
+		}
+	}
+	else
+	{
+		const FVector Pad = DungeonDoorCenter();
+		const FLinearColor Gold(1.0f, 0.75f, 0.3f);
+		PadTops.Add(Block(Pad + FVector(0, 0, 7), FVector(900, 900, 14), Gold * 0.7f, 0.0f, false));
+		Block(Pad + FVector(0, 520, 220), FVector(640, 180, 440), Gold * 0.35f);
+		Sign(Pad + FVector(0, 420, 540), -90.0f, TEXT("ENTER THE WORLD DUNGEON"), FColor(255, 214, 120), 32.0f);
+		Light(Pad + FVector(0, 0, 400), Gold, 9000.0f, 1100.0f);
 	}
 	for (int32 i = -2; i <= 2; ++i)
 	{
@@ -267,16 +281,20 @@ void ADCCArcadeLobby::ServerBegin()
 void ADCCArcadeLobby::TickPads(float DeltaSeconds)
 {
 	UWorld* World = GetWorld();
-	const TArray<DCCArcade::FGame>& Games = DCCArcade::Games();
-	if (!World || PadTops.Num() != Games.Num())
+	const int32 Count = UsesVotePads() ? DCCArcade::Games().Num() : PadTops.Num();
+	if (!World || Count == 0 || PadTops.Num() != Count)
 	{
 		return;
 	}
+	auto CentreFor = [this](int32 Index)
+	{
+		return UsesVotePads() ? PadCenter(Index) : DungeonDoorCenter();
+	};
 	// The first time: everything lying on each pad (its colour slab and the dressing on top of it) rides down with it.
 	if (PadRiders.IsEmpty())
 	{
-		PadRiders.SetNum(Games.Num());
-		PadSink.Init(0.0f, Games.Num());
+		PadRiders.SetNum(Count);
+		PadSink.Init(0.0f, Count);
 		for (TActorIterator<AActor> It(World); It; ++It)
 		{
 			AActor* Actor = *It;
@@ -285,9 +303,9 @@ void ADCCArcadeLobby::TickPads(float DeltaSeconds)
 				continue;
 			}
 			const FVector L = Actor->GetActorLocation();
-			for (int32 i = 0; i < Games.Num(); ++i)
+			for (int32 i = 0; i < Count; ++i)
 			{
-				const FVector D = L - PadCenter(i);
+				const FVector D = L - CentreFor(i);
 				if (FMath::Abs(D.X) <= 360.0f && FMath::Abs(D.Y) <= 360.0f && D.Z > -5.0f && D.Z < 40.0f)
 				{
 					Actor->GetRootComponent()->SetMobility(EComponentMobility::Movable);
@@ -301,13 +319,13 @@ void ADCCArcadeLobby::TickPads(float DeltaSeconds)
 		}
 	}
 	bSomeoneOnPad = false;
-	for (int32 i = 0; i < Games.Num(); ++i)
+	for (int32 i = 0; i < Count; ++i)
 	{
 		// Anyone standing on it (crawlers only: a player's pawn has a PlayerState).
 		bool bOccupied = false;
 		for (TActorIterator<APawn> It(World); It && !bOccupied; ++It)
 		{
-			const FVector D = It->GetActorLocation() - PadCenter(i);
+			const FVector D = It->GetActorLocation() - CentreFor(i);
 			bOccupied = It->GetPlayerState() && FMath::Abs(D.X) <= 350.0f && FMath::Abs(D.Y) <= 350.0f && FMath::Abs(D.Z) < 250.0f;
 		}
 		bSomeoneOnPad |= bOccupied;
@@ -646,6 +664,73 @@ void ADCCArcadeLobby::ClientTick(float DeltaSeconds)
 	bWasOnChopPad = bOnChop;
 }
 
+void ADCCArcadeLobby::TickDungeonDoor()
+{
+	TArray<APlayerController*> Players;
+	GetPlayers(Players);
+	int32 Present = 0;
+	int32 OnDoor = 0;
+	for (APlayerController* PC : Players)
+	{
+		const APawn* Pawn = PC ? PC->GetPawn() : nullptr;
+		if (!Pawn)
+		{
+			continue;
+		}
+		if (const ADCCCasinoCascade* Casino = ADCCCasinoCascade::Get(GetWorld()))
+		{
+			if (Casino->IsSeatedState(PC->PlayerState))
+			{
+				continue;
+			}
+		}
+		++Present;
+		const FVector D = Pawn->GetActorLocation() - DungeonDoorCenter();
+		if (FMath::Abs(D.X) <= 400.0f && FMath::Abs(D.Y) <= 400.0f)
+		{
+			++OnDoor;
+		}
+	}
+
+	const double Now = ServerTime();
+	if (OnDoor == 0)
+	{
+		CountdownEndsAt = -1.0;
+		bAllVotedCountdown = false;
+	}
+	else if (OnDoor >= Present && !bAllVotedCountdown)
+	{
+		bAllVotedCountdown = true;
+		CountdownEndsAt = CountdownEndsAt < 0.0 ? Now + 5.0 : FMath::Min(CountdownEndsAt, Now + 5.0);
+	}
+	else if (CountdownEndsAt < 0.0)
+	{
+		CountdownEndsAt = Now + 20.0;
+	}
+	if (OnDoor < Present)
+	{
+		bAllVotedCountdown = false;
+	}
+
+	Title = TEXT("THE SAFE ROOM");
+	Accent = FLinearColor(1.0f, 0.75f, 0.3f);
+	StatusLines.Reset();
+	CountdownLine.Reset();
+	PadVotes.Reset();
+	LeadingPad = -1;
+	if (CountdownEndsAt > 0.0 && !bLeaving)
+	{
+		const int32 Left = FMath::Max(0, FMath::CeilToInt(CountdownEndsAt - Now));
+		CountdownLine = FString::Printf(TEXT("Entering the World Dungeon in %d s"), Left);
+		StatusLines.Add(CountdownLine);
+		if (Now >= CountdownEndsAt)
+		{
+			bLeaving = true;
+			DCCArcade::Travel(GetWorld(), TEXT("Crawler"));
+		}
+	}
+}
+
 void ADCCArcadeLobby::ServerTick(float DeltaSeconds)
 {
 	RefreshTimer -= DeltaSeconds;
@@ -665,6 +750,12 @@ void ADCCArcadeLobby::ServerTick(float DeltaSeconds)
 	{
 		TubeStarted.Init(0.0, TubeCount);
 		TubeTiers.Init(0, TubeCount);
+	}
+
+	if (!UsesVotePads())
+	{
+		TickDungeonDoor();
+		return;
 	}
 
 	const TArray<DCCArcade::FGame>& Games = DCCArcade::Games();

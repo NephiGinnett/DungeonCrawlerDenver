@@ -7,7 +7,11 @@
 class ADCCRover;
 class APlayerState;
 
-/** The Den. Players call it the Safe Room. Stand on a game's pad to vote for it. */
+/**
+ * The voting Den (2026-11-13). Players call it the Safe Room and stand on a game's pad to vote.
+ * Kept in the build. The game sends everyone to ADCCDescentDen instead. Open this one with
+ * DCC.Arcade VotingDen.
+ */
 UCLASS()
 class DUNGEONCRAWLERDENVER_API ADCCArcadeLobby : public ADCCArcadeArena
 {
@@ -23,6 +27,11 @@ protected:
 public:
 	virtual bool ShowsHealth() const override { return false; } // nothing can hurt you in the Den
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	/** False on the Safe Room players enter. The vote pads stay on this class. */
+	virtual bool UsesVotePads() const { return true; }
+	/** The one pad on the Safe Room, in the middle of where the vote row used to be. */
+	FVector DungeonDoorCenter() const { return GetActorLocation() + FVector(0.0f, 900.0f, 0.0f); }
 
 	/** The vote strip (2026-11-16, Zoe: "just add a small logo for each game and the number of players underneath"):
 	 *  players standing on each game's pad, in DCCArcade::Games() order. */
@@ -104,9 +113,23 @@ private:
 	TArray<float> PadSink;
 	bool bSomeoneOnPad = false;
 	void TickPads(float DeltaSeconds);
+	/** Safe Room only. Standing on the one pad takes the party into the World Dungeon. */
+	void TickDungeonDoor();
 	/** The record line on each pad's board (local), and what it last said. */
 	TArray<TWeakObjectPtr<class ATextRenderActor>> RecordSigns;
 	TArray<FString> RecordShown;
+};
+
+/**
+ * The Safe Room players enter (2026-11-27). Same room as the voting Den: casino, prize counter,
+ * Chop Shop, summoning tubes and Hiss. No minigame pads. One door reads ENTER THE WORLD DUNGEON.
+ */
+UCLASS()
+class DUNGEONCRAWLERDENVER_API ADCCDescentDen : public ADCCArcadeLobby
+{
+	GENERATED_BODY()
+public:
+	virtual bool UsesVotePads() const override { return false; }
 };
 
 /** A falling rock in Fourteener. Replicated as where and when, so every machine draws the same fall. */

@@ -1987,3 +1987,9 @@ Crafting is written up in `Docs/crafting-benches.md` and not built. Alchemy and 
 
 Editor DLL `UnrealEditor-DungeonCrawlerDenver.dll`, 9,873,408 bytes, 9:36 PM. No numbered hot-reload DLL. Not playtested. `Profile_Zoe.sav` was not rewritten.
 
+### 2026-11-27 (Grok): the Safe Room, and the snapshot
+
+`NARROW_THE_BASE.md` (Downloads) is the milestone plan: one Mountain broadcast instead of a lobby of minigames. Before any of that, local work since the 2026-11-25.1640 friend build was committed as `33731bc` and pushed to `main`. An itch cook of that same tree was started so friends keep the current game while the reshape is tried.
+
+The Den players walk into is now `ADCCDescentDen`. It is the same room (casino, prize counter, Chop Shop, tubes, Hiss) with no vote pads. The north wall and the one pad read ENTER THE WORLD DUNGEON. Standing there takes the party to the crawler hub, on the old vote countdown. The voting Den is still `ADCCArcadeLobby`, opened with `DCC.Arcade VotingDen`. Not playtested. Not in the itch build that was cooking.
+

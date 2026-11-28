@@ -43,7 +43,8 @@ void ADCCArcadeGameMode::InitGame(const FString& MapName, const FString& Options
 	}
 }
 
-TSubclassOf<ADCCArcadeArena> ADCCLobbyGameMode::GetArenaClass() const { return ADCCArcadeLobby::StaticClass(); }
+TSubclassOf<ADCCArcadeArena> ADCCLobbyGameMode::GetArenaClass() const { return ADCCDescentDen::StaticClass(); }
+TSubclassOf<ADCCArcadeArena> ADCCVotingDenGameMode::GetArenaClass() const { return ADCCArcadeLobby::StaticClass(); }
 TSubclassOf<ADCCArcadeArena> ADCCClimbGameMode::GetArenaClass() const { return ADCCArcadeClimb::StaticClass(); }
 TSubclassOf<ADCCArcadeArena> ADCCKartGameMode::GetArenaClass() const { return ADCCArcadeKart::StaticClass(); }
 TSubclassOf<ADCCArcadeArena> ADCCKartPracticeGameMode::GetArenaClass() const { return ADCCArcadeKartPractice::StaticClass(); }

@@ -502,6 +502,10 @@ namespace DCCArcade
 		{
 			Mode = TEXT("/Script/DungeonCrawlerDenver.DCCFrontDoorGameMode");
 		}
+		else if (GameId == TEXT("VotingDen"))
+		{
+			Mode = TEXT("/Script/DungeonCrawlerDenver.DCCVotingDenGameMode");
+		}
 		else if (const FGame* Game = Find(GameId))
 		{
 			Map = Game->Map;
@@ -525,5 +529,5 @@ static void DCCArcadeCommand(const TArray<FString>& Args, UWorld* World)
 
 static FAutoConsoleCommandWithWorldAndArgs GArcadeCmd(
 	TEXT("DCC.Arcade"),
-	TEXT("DCC.Arcade [Crawler|Haunt|Climb|Kart|Neon|Audit|Gate|Siege|Ring]: take everyone to the arcade lobby, or straight into a game."),
+	TEXT("DCC.Arcade [Crawler|Haunt|Climb|Kart|Neon|Audit|Gate|Siege|Ring|VotingDen]: take everyone to the Safe Room, into a game, or to the old voting Den."),
 	FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&DCCArcadeCommand));
