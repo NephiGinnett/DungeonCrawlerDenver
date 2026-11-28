@@ -5,7 +5,9 @@
 #include "Arcade/DCCArcadeGameModes.h"
 #include "Arcade/DCCWalletComponent.h"
 #include "Characters/DCCCharacterBase.h"
+#include "Items/DCCInventoryComponent.h"
 #include "Stats/DCCStatsComponent.h"
+#include "Vehicles/DCCRover.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "Engine/World.h"
@@ -141,15 +143,15 @@ namespace DCCArcade
 
 	FString SeriesQuestLine(FName GameId)
 	{
-		if (GameId == TEXT("Climb")) { return TEXT("QUEST  Reach the summit."); }
-		if (GameId == TEXT("Haunt")) { return TEXT("QUEST  Film the dark and bring the tape up."); }
-		if (GameId == TEXT("Audit")) { return TEXT("QUEST  Land your hits before the clock runs out."); }
-		if (GameId == TEXT("Gate")) { return TEXT("QUEST  Clear the rooms and drop the Gatekeeper."); }
-		if (GameId == TEXT("Kart")) { return TEXT("QUEST  Tow 10 cars to the yard."); }
-		if (GameId == TEXT("Neon")) { return TEXT("QUEST  Drive 500 metres."); }
-		if (GameId == TEXT("Crawler")) { return TEXT("QUEST  Clear a floor."); }
-		if (GameId == TEXT("Siege")) { return TEXT("QUEST  Hold the wall through wave 5."); }
-		if (GameId == TEXT("Ring")) { return TEXT("QUEST  Clear the first stage."); }
+		if (GameId == TEXT("Climb")) { return TEXT("Reach the summit. Prize: a fire axe."); }
+		if (GameId == TEXT("Haunt")) { return TEXT("Film the dark and bring the tape up. Prize: a nail gun."); }
+		if (GameId == TEXT("Audit")) { return TEXT("Land your hits before the clock runs out. Prize: the complaint folder."); }
+		if (GameId == TEXT("Gate")) { return TEXT("Clear the rooms and drop the Gatekeeper. Prize: a ceremonial sword."); }
+		if (GameId == TEXT("Kart")) { return TEXT("Tow 10 cars to the yard. Prize: a loss-prevention sidearm."); }
+		if (GameId == TEXT("Neon")) { return TEXT("Drive 500 metres. Prize: a bar gun."); }
+		if (GameId == TEXT("Crawler")) { return TEXT("Clear a floor. Prize: a chef's knife."); }
+		if (GameId == TEXT("Siege")) { return TEXT("Hold the wall through wave 5. Prize: a shield."); }
+		if (GameId == TEXT("Ring")) { return TEXT("Climb the ladder. The House pays a mallet."); }
 		return FString();
 	}
 
@@ -331,12 +333,21 @@ namespace DCCArcade
 		if (GameId == TEXT("Crawler")) { Run(Player, Out); return; }
 		if (GameId == TEXT("Siege"))
 		{
-			Step(Out, TEXT("THE WALL"), TEXT("Hold the wall through wave 5."), nullptr);
+			if (Stat(Player, TEXT("Quest"), TEXT("Siege")) < 1.0f)
+			{
+				Step(Out, TEXT("THE WALL"), TEXT("Hold the wall through wave 5."), TEXT("Prize: a load-bearing shield."));
+			}
 			return;
 		}
 		if (GameId == TEXT("Ring"))
 		{
-			Step(Out, TEXT("THE RING"), TEXT("Clear the first stage."), nullptr);
+			const float Best = Stat(Player, TEXT("Ring"), TEXT("BestStage"));
+			if (Best < 50.0f)
+			{
+				Step(Out, TEXT("THE RING"),
+					Best < 1.0f ? TEXT("Clear the first stage.") : TEXT("Keep climbing."),
+					nullptr);
+			}
 			return;
 		}
 
@@ -364,6 +375,20 @@ namespace DCCArcade
 		Yard(Player, Out);
 	}
 
+	const TCHAR* ClearPrizeLine(FName GameId)
+	{
+		if (GameId == TEXT("Climb")) { return TEXT("Prize: a fire axe."); }
+		if (GameId == TEXT("Haunt")) { return TEXT("Prize: a nail gun."); }
+		if (GameId == TEXT("Audit")) { return TEXT("Prize: the complaint folder."); }
+		if (GameId == TEXT("Gate")) { return TEXT("Prize: a ceremonial sword."); }
+		if (GameId == TEXT("Kart")) { return TEXT("Prize: a loss-prevention sidearm."); }
+		if (GameId == TEXT("Neon")) { return TEXT("Prize: a bar gun."); }
+		if (GameId == TEXT("Crawler")) { return TEXT("Prize: a chef's knife."); }
+		if (GameId == TEXT("Siege")) { return TEXT("Prize: a shield."); }
+		if (GameId == TEXT("Ring")) { return TEXT("The House pays a mallet."); }
+		return nullptr;
+	}
+
 	int32 SeriesQuestXp()
 	{
 		// 250 since the level cap went to 20 (2026-11-22): at 100 a first clear was a fifteenth of a level.
@@ -382,16 +407,43 @@ namespace DCCArcade
 			return false;
 		}
 		DCCProfile::SetForKey(Key, TEXT("Quest"), GameId, 1.0f);
+		// Driving possesses the rover, so the crawler is the car's Driver, not the pawn.
 		ADCCCharacterBase* Crawler = Cast<ADCCCharacterBase>(Player->GetPawn());
+		if (!Crawler)
+		{
+			if (const ADCCRover* Rover = Cast<ADCCRover>(Player->GetPawn()))
+			{
+				Crawler = Rover->Driver;
+			}
+		}
 		if (Crawler && Crawler->Stats)
 		{
 			Crawler->Stats->AddExperience(Xp);
 		}
+		// One existing piece of gear, once, for clearing the game. The Ring's prize is the
+		// mallet at stage 50, so it is not in this list.
+		FName PrizeId = NAME_None;
+		const TCHAR* PrizeName = nullptr;
+		if (GameId == TEXT("Climb")) { PrizeId = TEXT("FireAxe"); PrizeName = TEXT("Fire Axe"); }
+		else if (GameId == TEXT("Haunt")) { PrizeId = TEXT("NailGunPro"); PrizeName = TEXT("Cordless Nail Gun"); }
+		else if (GameId == TEXT("Audit")) { PrizeId = TEXT("ComplaintFolderOverstuffed"); PrizeName = TEXT("Complaint Folder"); }
+		else if (GameId == TEXT("Gate")) { PrizeId = TEXT("WallSword"); PrizeName = TEXT("Ceremonial Sword"); }
+		else if (GameId == TEXT("Kart")) { PrizeId = TEXT("SecuritySidearm"); PrizeName = TEXT("Loss Prevention Sidearm"); }
+		else if (GameId == TEXT("Neon")) { PrizeId = TEXT("SodaGun"); PrizeName = TEXT("Bar Gun"); }
+		else if (GameId == TEXT("Siege")) { PrizeId = TEXT("FeatureWallShield"); PrizeName = TEXT("Load-Bearing Shield"); }
+		else if (GameId == TEXT("Crawler")) { PrizeId = TEXT("ChefsKnife"); PrizeName = TEXT("Chef's Knife"); }
+		if (!PrizeId.IsNone() && Crawler && Crawler->Inventory)
+		{
+			Crawler->Inventory->AddGearRecord(PrizeId);
+		}
 		if (Crawler && Crawler->Wallet)
 		{
-			Crawler->Wallet->Tell(FString::Printf(TEXT("QUEST DONE  +%d XP"), Xp));
+			Crawler->Wallet->Tell(PrizeName
+				? FString::Printf(TEXT("CLEARED  +%d XP   %s"), Xp, PrizeName)
+				: FString::Printf(TEXT("CLEARED  +%d XP"), Xp));
 		}
-		UE_LOG(LogTemp, Log, TEXT("[DCC Quest] %s finished %s  +%d XP"), *Key, *GameId.ToString(), Xp);
+		UE_LOG(LogTemp, Log, TEXT("[DCC Quest] %s finished %s  +%d XP%s"), *Key, *GameId.ToString(), Xp,
+			PrizeName ? *FString::Printf(TEXT("  prize %s"), PrizeName) : TEXT(""));
 		return true;
 	}
 

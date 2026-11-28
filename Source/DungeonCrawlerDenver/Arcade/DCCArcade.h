@@ -99,6 +99,8 @@ namespace DCCArcade
 	void BoardSteps(const APlayerState* Player, FName GameId, TArray<FBoardStep>& Out);
 	/** The same payout for every series quest. */
 	int32 SeriesQuestXp();
-	/** Marks Quest.<GameId> and grants Xp once. True the first time. */
+	/** Marks Quest.<GameId>, grants Xp once, and puts that game's clear prize in the bag. True the first time. */
 	bool CompleteSeriesQuest(APlayerState* Player, FName GameId, int32 Xp);
+	/** The one prize for clearing this game, for the gold line. Null when the game has none. */
+	const TCHAR* ClearPrizeLine(FName GameId);
 }

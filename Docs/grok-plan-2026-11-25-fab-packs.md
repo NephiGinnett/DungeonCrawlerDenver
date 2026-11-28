@@ -268,9 +268,9 @@ set** (a big Mannequin locomotion library). Add its clips to `Docs/animation-cat
 idles, turns and walks for the NPC Forge people and the studio audience (Part E2). Do not wire its motion-matching
 Blueprints into our characters.
 
-### H5. The Champions' Ring: stage names [GROK]
-All 50 stages in `Content/DCC/Ring/ladder.json` are named "Stage N". Give each a real name in the System's voice
-(from `Tools/gen_ring_ladder.py`, not by hand). The title strip shows the name only when it is not "Stage N".
+### H5. The Champions' Ring: stage names [GROK] — done 2026-11-25
+`Tools/gen_ring_ladder.py` names all 50. The five champions are unchanged. The other forty-five have short
+System names (Late Notice through Breaker). The title strip shows "Stage 12  Unpaid". Not played.
 
 ---
 
@@ -284,15 +284,15 @@ once. Read `Docs/kits.md` first.
 (`LooksLikeDoor`) and open by themselves when any character comes within about 2.5 m, then shut 2 s after the doorway
 is clear. Narrow leaves swing away from the opener; wide doors slide along the wall. `SetLocked(true)` keeps one shut.
 
-### I1. Door sounds
-A creak or a slide when a door starts to open and when it shuts. Add two `USoundBase*` to the component, chosen by
-`bSlide`, from what the packs have (search `Content/` for door, creak, slide, hiss; `UltimateUIMenusSFX` as a last
-resort). Play at the door, quiet enough that ten doors on a wave do not stack into noise (one sound per door per second).
+### I1. Door sounds — done 2026-11-26
+A creak or a slide when a door starts to open and when it shuts. Two `USoundBase*` on the component, chosen by
+`bSlide`. The packs have no creak: swing uses `S_SciFiDoorClose01`, slide uses `S_SciFiDoorOpen01`. Played at the
+door, quiet, at most once a second. Heard in the Power Plant hall.
 
-### I2. Lockdowns (a twist, uses SetLocked)
+### I2. Lockdowns (a twist, uses SetLocked) — done 2026-11-26
 Hiss (Primetime) or a tower defense event can lock doors: "LOCKDOWN. The side door is staying shut." In tower defense
-a locked route door turns a wave back to the yard for 15 s. Add a small `DCCSets::LockDoorsNear(World, At, Radius,
-bLock)` helper; do not change the door's opening rules.
+waves 2, 6, 10, and 14 lock the annex side door and turn bodies still outside back to the yard for 15 s.
+`DCCSets::LockDoorsNear` is the helper. Opening rules are unchanged. Seen: one door locked, the banner up, the leaf shut.
 
 ### I3. Loose props
 Small clutter in a set (bottles, cans, buckets, small boxes: under about 60 cm and not attached to a wall) should get

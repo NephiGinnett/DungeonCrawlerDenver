@@ -34,6 +34,8 @@
 #include "Skills/DCCSkillComponent.h"
 #include "Skills/DCCSkillTypes.h"
 #include "Stats/DCCStatsComponent.h"
+#include "Net/UnrealNetwork.h"
+#include "TimerManager.h"
 
 namespace
 {
@@ -165,6 +167,7 @@ void ADCCArcadeSiege::BuildLocal()
 	// The hall. Turned 90 degrees so its length runs along the road; its own sun and sky are dropped for the arena's.
 	DCCSets::FOptions HallOptions;
 	// Its doors work (DCCSets' default): they open as a wave or a player walks up and shut behind them.
+	// A lockdown (DriveLockdown) locks the annex's side door and turns that wave back to the yard.
 	DCCSets::Load(GetWorld(), TEXT("PowerPlant"), O + FVector(1061.0f, -1853.0f, 0.0f), FRotator(0.0f, 90.0f, 0.0f),
 		TEXT("DCCSiegeHall"), HallOptions);
 	// The hall is dark inside: work lights down its length, warm over the road, cold at the Wall.
@@ -472,10 +475,12 @@ void ADCCArcadeSiege::ServerTick(float DeltaSeconds)
 		return;
 	}
 	const double Now = ServerTime();
-	if (Queue.Num() > 0 && Now >= NextSpawnAt)
+	if (Queue.Num() > 0 && Now >= NextSpawnAt && !bRouteLocked)
 	{
 		SpawnNext();
 	}
+	DriveLockdown(Now);
+	SyncRouteDoors();
 
 	bool bLive = false;
 	for (const TWeakObjectPtr<ADCCEnemyCharacter>& Marcher : Marchers)
@@ -561,6 +566,97 @@ bool ADCCArcadeSiege::PlayerNearRoad(const ADCCEnemyCharacter* Marcher) const
 	return false;
 }
 
+void ADCCArcadeSiege::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(ADCCArcadeSiege, bRouteLocked);
+}
+
+void ADCCArcadeSiege::ClientTick(float DeltaSeconds)
+{
+	Super::ClientTick(DeltaSeconds);
+	SyncRouteDoors();
+}
+
+void ADCCArcadeSiege::DriveLockdown(double Now)
+{
+	if (Road.Num() < 2 || bEnded)
+	{
+		return;
+	}
+	if (bRouteLocked)
+	{
+		if (Now >= LockdownUntil)
+		{
+			bRouteLocked = false;
+			DCCNews::Post(GetWorld(), TEXT("The side door is open."));
+			UE_LOG(LogTemp, Log, TEXT("[DCC Siege] lockdown over"));
+		}
+		return;
+	}
+	// Waves 2, 6, 10, 14. Once each, when the first body reaches the side door.
+	if (!bWaveArmed || CurrentWave < 2 || (CurrentWave % 4) != 2 || LockdownWave == CurrentWave)
+	{
+		return;
+	}
+	const FVector DoorAt = Road[1];
+	bool bClose = false;
+	for (const TWeakObjectPtr<ADCCEnemyCharacter>& Marcher : Marchers)
+	{
+		const ADCCEnemyCharacter* Body = Marcher.Get();
+		if (!Body || !Body->IsAlive() || Body->SiegeMarchIndex > 1)
+		{
+			continue;
+		}
+		if (FVector::Dist2D(Body->GetActorLocation(), DoorAt) < 700.0f)
+		{
+			bClose = true;
+			break;
+		}
+	}
+	if (!bClose)
+	{
+		return;
+	}
+	LockdownWave = CurrentWave;
+	LockdownUntil = Now + 15.0;
+	bRouteLocked = true;
+	UE_LOG(LogTemp, Log, TEXT("[DCC Siege] lockdown. side door, 15 s"));
+	DCCNews::Post(GetWorld(), TEXT("LOCKDOWN. The side door is staying shut."));
+}
+
+void ADCCArcadeSiege::SyncRouteDoors()
+{
+	UWorld* World = GetWorld();
+	if (!World || Road.Num() < 2)
+	{
+		return;
+	}
+	const float Now = World->GetTimeSeconds();
+	if (bRouteLocked)
+	{
+		if (Now < NextLockLook)
+		{
+			return;
+		}
+		NextLockLook = Now + 0.5f;
+		const int32 N = DCCSets::LockDoorsNear(World, Road[1], 650.0f, true);
+		if (N > 0 && !bDoorsLatched)
+		{
+			bDoorsLatched = true;
+			UE_LOG(LogTemp, Log, TEXT("[DCC Siege] locked %d doors by the side door"), N);
+		}
+		return;
+	}
+	if (bDoorsLatched)
+	{
+		const int32 N = DCCSets::LockDoorsNear(World, Road[1], 650.0f, false);
+		bDoorsLatched = false;
+		NextLockLook = 0.0f;
+		UE_LOG(LogTemp, Log, TEXT("[DCC Siege] opened %d doors by the side door"), N);
+	}
+}
+
 void ADCCArcadeSiege::DriveMarchers(float DeltaSeconds)
 {
 	const double Now = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0;
@@ -586,6 +682,24 @@ void ADCCArcadeSiege::DriveMarchers(float DeltaSeconds)
 			AI->StopMovement();
 		}
 		Marcher->ForgetTarget();
+		// Still outside the side door: walk back to the yard until the lockdown ends.
+		if (bRouteLocked && Marcher->SiegeMarchIndex <= 1 && Road.Num() > 0)
+		{
+			FVector Back = Road[0] - Marcher->GetActorLocation();
+			Back.Z = 0.0f;
+			if (Back.Size() < 160.0f)
+			{
+				Marcher->SetMovementSpeedOverride(1.0f);
+				continue;
+			}
+			float Speed = Marcher->SiegeMarchSpeed;
+			if (bFreeze) Speed = 1.0f;
+			else if (bSlow) Speed *= 0.6f;
+			Marcher->SetMovementSpeedOverride(Speed);
+			Marcher->AddMovementInput(Back.GetSafeNormal(), 1.0f);
+			Marcher->SetActorRotation(FRotator(0.0f, Back.Rotation().Yaw, 0.0f));
+			continue;
+		}
 		if (Marcher->SiegeMarchIndex >= Road.Num())
 		{
 			if (Marcher->Stats)
@@ -1193,6 +1307,10 @@ void ADCCArcadeSiege::RefreshStatus()
 	StatusLines.Reset();
 	StatusLines.Add(FString::Printf(TEXT("Wave %d"), FMath::Max(1, CurrentWave)));
 	StatusLines.Add(FString::Printf(TEXT("Wall %d / %d"), WallHp, WallMax));
+	if (bRouteLocked)
+	{
+		StatusLines.Add(TEXT("!LOCKDOWN. The side door is staying shut."));
+	}
 	for (const FDCCSiegeCaster& Caster : Casters)
 	{
 		if (Caster.bChanneling)
@@ -1340,10 +1458,29 @@ namespace DCCSiegeHooks
 
 static void SiegeWaveCmd(const TArray<FString>& Args, UWorld* World)
 {
-	if (ADCCArcadeSiege* Siege = ADCCArcadeSiege::Get(World))
+	const int32 Wave = Args.Num() ? FCString::Atoi(*Args[0]) : 1;
+	const float Delay = Args.Num() > 1 ? FCString::Atof(*Args[1]) : 0.0f;
+	auto Go = [Wave](UWorld* InWorld)
 	{
-		Siege->DevWave(Args.Num() ? FCString::Atoi(*Args[0]) : 1);
+		if (ADCCArcadeSiege* Siege = ADCCArcadeSiege::Get(InWorld))
+		{
+			Siege->DevWave(Wave);
+		}
+	};
+	if (!World || Delay <= 0.0f)
+	{
+		Go(World);
+		return;
 	}
+	FTimerHandle Handle;
+	TWeakObjectPtr<UWorld> Weak(World);
+	World->GetTimerManager().SetTimer(Handle, FTimerDelegate::CreateLambda([Weak, Go]()
+	{
+		if (Weak.IsValid())
+		{
+			Go(Weak.Get());
+		}
+	}), Delay, false);
 }
 static void SiegeWallCmd(const TArray<FString>& Args, UWorld* World)
 {
@@ -1368,7 +1505,7 @@ static void SiegePostCmd(const TArray<FString>& Args, UWorld* World)
 	}
 }
 
-static FAutoConsoleCommandWithWorldAndArgs GSiegeWave(TEXT("DCC.SiegeWave"), TEXT("DCC.SiegeWave <n>: jump the tower defense to wave n."), FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&SiegeWaveCmd));
+static FAutoConsoleCommandWithWorldAndArgs GSiegeWave(TEXT("DCC.SiegeWave"), TEXT("DCC.SiegeWave <n> [delay]: jump the tower defense to wave n."), FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&SiegeWaveCmd));
 static FAutoConsoleCommandWithWorldAndArgs GSiegeWall(TEXT("DCC.SiegeWall"), TEXT("DCC.SiegeWall <hp>: set the wall's health."), FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&SiegeWallCmd));
 static FAutoConsoleCommandWithWorldAndArgs GSiegeCamp(TEXT("DCC.SiegeCamp"), TEXT("DCC.SiegeCamp <0|1>: clear a camp, or bring it back."), FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&SiegeCampCmd));
 static FAutoConsoleCommandWithWorldAndArgs GSiegePost(TEXT("DCC.SiegePost"), TEXT("DCC.SiegePost: plant an ally on the first post."), FConsoleCommandWithWorldAndArgsDelegate::CreateStatic(&SiegePostCmd));

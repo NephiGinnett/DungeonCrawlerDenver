@@ -2218,20 +2218,52 @@ void ADCCHUD::DrawQuestTracker()
 	// right, in the Safe Room only. Inside a game the game's own strip says what matters.
 	if (Arena && !bFloorQuests)
 	{
-		if (!Arena->GetGameId().IsNone() || Steps.IsEmpty() || !GEngine)
+		if (!Arena->GetGameId().IsNone() || !GEngine)
 		{
 			return;
 		}
 		UFont* Small = GEngine->GetSmallFont();
-		const FString Next = FString::Printf(TEXT("NEXT   %s: %s"), *Steps[0].Line, *Steps[0].Now);
+		FString Next;
+		if (const ADCCCharacterBase* Crawler = GetOwningCrawler())
+		{
+			if (const UDCCAchievementComponent* Ach = UDCCAchievementComponent::Find(const_cast<ADCCCharacterBase*>(Crawler)))
+			{
+				TArray<FName> Pending;
+				Ach->GetPendingRewardIds(Pending);
+				if (Pending.Num() > 0)
+				{
+					FString Title = Pending[0].ToString();
+					TArray<FDCCAchievementDef> Visible;
+					Ach->GetVisibleAchievements(Visible);
+					for (const FDCCAchievementDef& Def : Visible)
+					{
+						if (Def.AchievementId == Pending[0])
+						{
+							Title = Def.DisplayName.ToString();
+							break;
+						}
+					}
+					Next = FString::Printf(TEXT("OPEN   %s"), *Title);
+				}
+			}
+		}
+		if (Next.IsEmpty())
+		{
+			if (Steps.IsEmpty())
+			{
+				return;
+			}
+			Next = FString::Printf(TEXT("CLEAR   %s: %s"), *Steps[0].Line, *Steps[0].Now);
+		}
 		float NW = 0.0f, NH = 0.0f;
 		GetTextSize(Next, NW, NH, Small, 1.0f);
 		const float NX = Canvas->SizeX - NW - 40.0f, NY = 18.0f;
 		DrawRect(FLinearColor(0.02f, 0.03f, 0.06f, 0.6f), NX - 12.0f, NY - 5.0f, NW + 24.0f, NH + 10.0f);
-		DrawText(TEXT("NEXT"), HeadingColour, NX, NY, Small, 1.0f);
+		const FString Tag = Next.StartsWith(TEXT("OPEN")) ? TEXT("OPEN") : TEXT("CLEAR");
+		DrawText(Tag, HeadingColour, NX, NY, Small, 1.0f);
 		float LW = 0.0f, LH = 0.0f;
-		GetTextSize(TEXT("NEXT"), LW, LH, Small, 1.0f);
-		DrawText(Next.RightChop(4), BodyColour, NX + LW, NY, Small, 1.0f);
+		GetTextSize(Tag, LW, LH, Small, 1.0f);
+		DrawText(Next.RightChop(Tag.Len()), BodyColour, NX + LW, NY, Small, 1.0f);
 		return;
 	}
 	const UDCCQuestComponent* QuestLog = bFloorQuests ? UDCCQuestComponent::Get(this) : nullptr;
@@ -2240,10 +2272,8 @@ void ADCCHUD::DrawQuestTracker()
 	{
 		QuestLog->GetActiveQuests(Active);
 	}
-	if (Steps.IsEmpty() && Active.IsEmpty())
-	{
-		return;
-	}
+	// An empty series still draws when the crawler has achievement-table rows. The return for
+	// a truly blank card is below, after those rows are collected.
 
 	struct FRow
 	{
@@ -2305,6 +2335,49 @@ void ADCCHUD::DrawQuestTracker()
 		if (!Step.Then.IsEmpty())
 		{
 			AddWrapped(FString::Printf(TEXT("      %s"), *Step.Then), DimColour);
+		}
+	}
+	// The player's own table, under the clear lines (2026-11-26). Unopened rewards first.
+	if (const ADCCCharacterBase* Crawler = GetOwningCrawler())
+	{
+		if (const UDCCAchievementComponent* Ach = UDCCAchievementComponent::Find(const_cast<ADCCCharacterBase*>(Crawler)))
+		{
+			TArray<FDCCAchievementDef> Visible;
+			Ach->GetVisibleAchievements(Visible);
+			int32 Shown = 0;
+			for (const FDCCAchievementDef& Def : Visible)
+			{
+				if (Shown >= 4 || !Ach->IsUnlocked(Def.AchievementId))
+				{
+					continue;
+				}
+				bool bClaimed = true;
+				for (const FDCCAchievementProgress& Entry : Ach->Progress)
+				{
+					if (Entry.AchievementId == Def.AchievementId)
+					{
+						bClaimed = Entry.bRewardClaimed;
+						break;
+					}
+				}
+				if (bClaimed)
+				{
+					continue;
+				}
+				AddWrapped(FString::Printf(TEXT("  [!] %s"), *Def.DisplayName.ToString()), HeadingColour);
+				++Shown;
+			}
+			for (const FDCCAchievementDef& Def : Visible)
+			{
+				if (Shown >= 4 || Ach->IsUnlocked(Def.AchievementId))
+				{
+					continue;
+				}
+				const int32 Have = Ach->GetStatTotal(Def.Stat);
+				AddWrapped(FString::Printf(TEXT("  [ ] %s  %d/%d"),
+					*Def.DisplayName.ToString(), FMath::Min(Have, Def.Threshold), Def.Threshold), BodyColour);
+				++Shown;
+			}
 		}
 	}
 	if (!Steps.IsEmpty() && !Active.IsEmpty())
@@ -2370,12 +2443,16 @@ void ADCCHUD::DrawQuestTracker()
 		Rows.Add({ FString::Printf(TEXT("  -> %s  (%.0f m)"),
 			*NearestLabel.ToString(), NearestDistance / 100.0f), HeadingColour });
 	}
+	if (Rows.IsEmpty())
+	{
+		return;
+	}
 
 	float PanelW = 280.0f;
 	if (Font)
 	{
 		float TW = 0.0f, TH = 0.0f;
-		GetTextSize(TEXT("OBJECTIVES"), TW, TH, Font, 1.0f);
+		GetTextSize(TEXT("ACHIEVEMENTS"), TW, TH, Font, 1.0f);
 		PanelW = FMath::Max(PanelW, TW);
 		for (const FRow& Row : Rows)
 		{
@@ -2393,7 +2470,7 @@ void ADCCHUD::DrawQuestTracker()
 
 	DrawRect(FLinearColor(0.02f, 0.03f, 0.06f, 0.72f),
 		X - 12.0f, Y - 10.0f, PanelW + 24.0f, (Rows.Num() + 1) * LineHeight + 28.0f);
-	DrawText(TEXT("OBJECTIVES"), HeadingColour, X, Y, Font, 1.0f);
+	DrawText(TEXT("ACHIEVEMENTS"), HeadingColour, X, Y, Font, 1.0f);
 	Y += LineHeight + 4.0f;
 	for (const FRow& Row : Rows)
 	{
@@ -7500,15 +7577,19 @@ void ADCCHUD::DrawSeriesQuestBanner(FName GameId)
 	{
 		return;
 	}
-	// The gold line is the same current step as the OBJECTIVES card. A finished
-	// line with nothing left to hand off stays quiet. The one-liner remains only
-	// when there is no player to read a profile from.
+	// One clear goal, and the prize for it. A finished line stays quiet.
+	// The one-liner remains only when there is no player to read a profile from.
 	const APlayerState* State = PlayerOwner ? PlayerOwner->PlayerState : nullptr;
 	TArray<DCCArcade::FBoardStep> Steps;
 	DCCArcade::BoardSteps(State, GameId, Steps);
-	const FString Quest = Steps.Num() > 0
-		? FString::Printf(TEXT("QUEST  %s"), *Steps[0].Now)
-		: (State ? FString() : DCCArcade::SeriesQuestLine(GameId));
+	FString Quest = Steps.Num() > 0 ? Steps[0].Now : (State ? FString() : DCCArcade::SeriesQuestLine(GameId));
+	if (Steps.Num() > 0)
+	{
+		if (const TCHAR* Prize = DCCArcade::ClearPrizeLine(GameId))
+		{
+			Quest = FString::Printf(TEXT("%s  %s"), *Steps[0].Now, Prize);
+		}
+	}
 	if (Quest.IsEmpty())
 	{
 		return;

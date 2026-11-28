@@ -10,6 +10,7 @@
 #include "Arcade/DCCRallyItems.h"
 #include "Arcade/DCCSpray.h"
 #include "Arcade/DCCBounties.h"
+#include "Progression/DCCAchievementComponent.h"
 #include "Session/DCCProfile.h"
 #include "Arcade/DCCWalletComponent.h"
 #include "Characters/DCCCharacterBase.h"
@@ -46,7 +47,7 @@ using namespace DCCMenu;
 
 namespace
 {
-	enum class EKind : uint8 { Cosmetic, Gun, Trophy, Chop, Supply, Spray, Bounty };
+	enum class EKind : uint8 { Cosmetic, Gun, Trophy, Chop, Supply, Spray, Bounty, Achievement };
 
 	struct FEntry
 	{
@@ -122,6 +123,70 @@ namespace
 			}
 		}
 		return Lists[FMath::Clamp(Tab, 0, 5)];
+	}
+
+	// The crawler's own achievement table, on top of the standing clears. Rebuilt every time the counter opens.
+	void AppendTableAchievements(const UDCCCosmeticShopWidget* Widget, TArray<FEntry>& Out)
+	{
+		const APlayerController* PC = Widget ? Widget->GetOwningPlayer() : nullptr;
+		const ADCCCharacterBase* Crawler = PC ? Cast<ADCCCharacterBase>(PC->GetPawn()) : nullptr;
+		const UDCCAchievementComponent* Ach = Crawler ? UDCCAchievementComponent::Find(const_cast<ADCCCharacterBase*>(Crawler)) : nullptr;
+		if (!Ach)
+		{
+			return;
+		}
+		TArray<FDCCAchievementDef> Visible;
+		Ach->GetVisibleAchievements(Visible);
+		int32 Added = 0;
+		auto AddRow = [&](const FDCCAchievementDef& Def, int32 State)
+		{
+			if (Added >= 12)
+			{
+				return;
+			}
+			FEntry E;
+			E.Kind = EKind::Achievement;
+			E.Id = Def.AchievementId;
+			E.Name = Def.DisplayName.ToString();
+			E.Blurb = Def.Announcement.IsEmpty() ? Def.DisplayName.ToString() : Def.Announcement.ToString();
+			E.Caption = TEXT("YOUR RECORD");
+			E.Colour = FLinearColor(0.78f, 0.58f, 1.0f);
+			E.Price = State;
+			TArray<FString> Pay;
+			if (Def.ExperienceReward > 0) { Pay.Add(FString::Printf(TEXT("+%d XP"), Def.ExperienceReward)); }
+			if (Def.FavorReward != 0) { Pay.Add(FString::Printf(TEXT("%+d FAVOR"), Def.FavorReward)); }
+			if (Def.LootBoxReward != EDCCLootBoxTier::None) { Pay.Add(TEXT("A LOOT BOX")); }
+			E.PerLevel = Pay.Num() > 0 ? FString::Join(Pay, TEXT("  ")) : TEXT("ON THE RECORD");
+			Out.Add(E);
+			++Added;
+		};
+		for (const FDCCAchievementDef& Def : Visible)
+		{
+			if (!Ach->IsUnlocked(Def.AchievementId))
+			{
+				continue;
+			}
+			bool bClaimed = false;
+			for (const FDCCAchievementProgress& Entry : Ach->Progress)
+			{
+				if (Entry.AchievementId == Def.AchievementId)
+				{
+					bClaimed = Entry.bRewardClaimed;
+					break;
+				}
+			}
+			if (!bClaimed)
+			{
+				AddRow(Def, 1);
+			}
+		}
+		for (const FDCCAchievementDef& Def : Visible)
+		{
+			if (!Ach->IsUnlocked(Def.AchievementId))
+			{
+				AddRow(Def, 0);
+			}
+		}
 	}
 
 	FLinearColor TabColour(int32 Tab)
@@ -215,6 +280,9 @@ TSharedRef<SWidget> UDCCCosmeticShopWidget::RebuildWidget()
 			return W && W->BountyPaid(E.Id) ? NSLOCTEXT("DCC", "BountyPaid", "CLAIMED")
 				: W && W->BountyDone(E.Id) ? FText::Format(NSLOCTEXT("DCC", "BountyClaim", "CLAIM  +{0}"), FText::AsNumber(E.Price))
 				: NSLOCTEXT("DCC", "BountyNotYet", "NOT YET");
+		case EKind::Achievement:
+			return E.Price > 0 ? NSLOCTEXT("DCC", "AchClaim", "CLAIM")
+				: NSLOCTEXT("DCC", "BountyNotYet", "NOT YET");
 		case EKind::Spray:
 			return W && W->Owns(E.Id) ? NSLOCTEXT("DCC", "ShopSprayChange", "CHANGE PICTURE")
 				: FText::Format(NSLOCTEXT("DCC", "ShopSprayBuy", "BUY  {0}  &  PICK A PICTURE"), FText::AsNumber(E.Price));
@@ -240,6 +308,7 @@ TSharedRef<SWidget> UDCCCosmeticShopWidget::RebuildWidget()
 		case EKind::Supply: return W->Tickets >= E.Price;
 		case EKind::Spray: return W->Owns(E.Id) || W->Tickets >= E.Price;
 		case EKind::Bounty: return W->BountyDone(E.Id) && !W->BountyPaid(E.Id);
+		case EKind::Achievement: return E.Price > 0;
 		case EKind::Chop:
 		default:
 		{
@@ -265,6 +334,15 @@ TSharedRef<SWidget> UDCCCosmeticShopWidget::RebuildWidget()
 		case EKind::Chop: W->Server_BuyChop(E.Id); break;
 		case EKind::Supply: W->Server_BuySupply(E.Id); break;
 		case EKind::Bounty: W->Server_ClaimBounty(E.Id); break;
+		case EKind::Achievement:
+			if (ADCCCharacterBase* Crawler = Cast<ADCCCharacterBase>(W->GetOwner()))
+			{
+				if (UDCCAchievementComponent* Ach = UDCCAchievementComponent::Find(Crawler))
+				{
+					Ach->RequestClaimReward(E.Id);
+				}
+			}
+			break;
 		case EKind::Spray:
 		{
 			// The picture is picked here, on this PC; only then is the can bought (a cancelled pick costs nothing).
@@ -299,6 +377,7 @@ TSharedRef<SWidget> UDCCCosmeticShopWidget::RebuildWidget()
 		case EKind::Supply: return FText::GetEmpty();
 		case EKind::Spray: return W->Owns(E.Id) ? NSLOCTEXT("DCC", "TagOwned", "OWNED") : FText::GetEmpty();
 		case EKind::Bounty: return W->BountyPaid(E.Id) ? NSLOCTEXT("DCC", "TagPaid", "PAID") : W->BountyDone(E.Id) ? NSLOCTEXT("DCC", "TagDone", "DONE") : FText::GetEmpty();
+		case EKind::Achievement: return E.Price > 0 ? NSLOCTEXT("DCC", "TagDone", "DONE") : FText::GetEmpty();
 		case EKind::Chop:
 		default:
 		{
@@ -314,6 +393,7 @@ TSharedRef<SWidget> UDCCCosmeticShopWidget::RebuildWidget()
 		{
 		case EKind::Cosmetic:
 		case EKind::Bounty: return FText::Format(NSLOCTEXT("DCC", "PriceBounty", "+{0} TICKETS"), FText::AsNumber(E.Price));
+		case EKind::Achievement: return FText::FromString(E.PerLevel).ToUpper();
 		case EKind::Gun:
 		case EKind::Spray:
 		case EKind::Supply: return FText::Format(NSLOCTEXT("DCC", "PriceTickets", "{0} TICKETS"), FText::AsNumber(E.Price));
@@ -323,11 +403,20 @@ TSharedRef<SWidget> UDCCCosmeticShopWidget::RebuildWidget()
 		}
 	};
 
+	// Tab 5 is the standing clears plus this crawler's achievement table. The table is live, so it is not cached.
+	TSharedRef<TArray<FEntry>> Achievements = MakeShared<TArray<FEntry>>();
+	*Achievements = Entries(5);
+	AppendTableAchievements(this, *Achievements);
+	auto ListFor = [Achievements](int32 Which) -> const TArray<FEntry>&
+	{
+		return Which == 5 ? *Achievements : Entries(Which);
+	};
+
 	// The entry the right panel shows: hovered, else clicked, else the first one that is visible.
-	auto Focused = [Self, Wallet]() -> const FEntry*
+	auto Focused = [Self, Wallet, ListFor]() -> const FEntry*
 	{
 		if (!Self.IsValid()) { return nullptr; }
-		const TArray<FEntry>& List = Entries(Self->Tab);
+		const TArray<FEntry>& List = ListFor(Self->Tab);
 		const UDCCWalletComponent* W = Wallet();
 		auto Visible = [W](const FEntry& E) { return E.Kind != EKind::Trophy || (W && W->TrophyCount(E.Id) > 0); };
 		for (const FName& Want : { Self->HoverId, Self->SelectedId[FMath::Clamp(Self->Tab, 0, 5)] })
@@ -344,7 +433,7 @@ TSharedRef<SWidget> UDCCCosmeticShopWidget::RebuildWidget()
 	auto BuildGrid = [&](int32 Tab) -> TSharedRef<SWidget>
 	{
 		TSharedRef<SWrapBox> Grid = SNew(SWrapBox).UseAllottedSize(true).InnerSlotPadding(FVector2D(10.0f, 10.0f));
-		for (const FEntry& Entry : Entries(Tab))
+		for (const FEntry& Entry : ListFor(Tab))
 		{
 			const FEntry E = Entry;
 			Grid->AddSlot()
@@ -629,7 +718,7 @@ TSharedRef<SWidget> UDCCCosmeticShopWidget::RebuildWidget()
 			+ SHorizontalBox::Slot().FillWidth(1.0f).VAlign(VAlign_Center)
 			[
 				Header(NSLOCTEXT("DCC", "DenShopKicker", "SYSTEM  /  THE SAFE ROOM"),
-					TAttribute<FText>::CreateLambda([Self]() { return Self.IsValid() && Self->Tab == 2 ? NSLOCTEXT("DCC", "ChopTitle", "THE CHOP SHOP") : Self.IsValid() && Self->Tab == 3 ? NSLOCTEXT("DCC", "MineTitle", "MINE OUTFITTERS") : Self.IsValid() && Self->Tab == 4 ? NSLOCTEXT("DCC", "TradingTitle", "TRADING POST") : Self.IsValid() && Self->Tab == 5 ? NSLOCTEXT("DCC", "BountyTitle", "BOUNTY BOARD") : NSLOCTEXT("DCC", "DenShopTitle", "PRIZE COUNTER"); }),
+					TAttribute<FText>::CreateLambda([Self]() { return Self.IsValid() && Self->Tab == 2 ? NSLOCTEXT("DCC", "ChopTitle", "THE CHOP SHOP") : Self.IsValid() && Self->Tab == 3 ? NSLOCTEXT("DCC", "MineTitle", "MINE OUTFITTERS") : Self.IsValid() && Self->Tab == 4 ? NSLOCTEXT("DCC", "TradingTitle", "TRADING POST") : Self.IsValid() && Self->Tab == 5 ? NSLOCTEXT("DCC", "AchieveTitle", "ACHIEVEMENTS") : NSLOCTEXT("DCC", "DenShopTitle", "PRIZE COUNTER"); }),
 					TAttribute<FSlateColor>::CreateLambda([Self]() { return FSlateColor(Self.IsValid() ? TabColour(Self->Tab) : Gold); }))
 			]
 			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(0.0f, 0.0f, 10.0f, 0.0f)
@@ -655,7 +744,7 @@ TSharedRef<SWidget> UDCCCosmeticShopWidget::RebuildWidget()
 			+ SHorizontalBox::Slot().AutoWidth().Padding(0.0f, 0.0f, 8.0f, 0.0f)[ TabButton(1, NSLOCTEXT("DCC", "TabTrophies", "TROPHIES")) ]
 			+ SHorizontalBox::Slot().AutoWidth().Padding(0.0f, 0.0f, 8.0f, 0.0f)[ TabButton(2, NSLOCTEXT("DCC", "TabChop", "CHOP SHOP")) ]
 			+ SHorizontalBox::Slot().AutoWidth().Padding(0.0f, 0.0f, 8.0f, 0.0f)[ TabButton(3, NSLOCTEXT("DCC", "TabMine", "OUTFITTERS")) ]
-			+ SHorizontalBox::Slot().AutoWidth().Padding(0.0f, 0.0f, 8.0f, 0.0f)[ TabButton(5, NSLOCTEXT("DCC", "TabBounties", "BOUNTIES")) ]
+			+ SHorizontalBox::Slot().AutoWidth().Padding(0.0f, 0.0f, 8.0f, 0.0f)[ TabButton(5, NSLOCTEXT("DCC", "TabAchievements", "ACHIEVEMENTS")) ]
 			// Only in a Fourteener round: it sells kit for that round.
 			+ SHorizontalBox::Slot().AutoWidth()
 			[
@@ -676,7 +765,7 @@ TSharedRef<SWidget> UDCCCosmeticShopWidget::RebuildWidget()
 						: Self->Tab == 1 ? NSLOCTEXT("DCC", "TabTrophiesNote", "What you brought home. Sell what is worth tickets.")
 						: Self->Tab == 2 ? NSLOCTEXT("DCC", "TabChopNote", "Scrap from Repo Rally and Neon Mile. Applies next shift.")
 						: Self->Tab == 3 ? NSLOCTEXT("DCC", "TabMineNote", "Credits from Dead Air. Kit to go deeper into Mount Fourteener.")
-						: Self->Tab == 5 ? NSLOCTEXT("DCC", "TabBountiesNote", "Goals across the games. Each one pays once.")
+						: Self->Tab == 5 ? NSLOCTEXT("DCC", "TabAchievementsNote", "Clears, and your own record. Each one pays once.")
 						: NSLOCTEXT("DCC", "TabTradingNote", "Fort Tiner. Tickets for kit you carry up this round.");
 				})
 			]

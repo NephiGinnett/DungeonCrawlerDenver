@@ -352,5 +352,6 @@ Claude also makes or imports the champion bodies Zoe names.
 - **Still open, do not guess these:**
   1. "Cillinan riding a giraffe pillar": a giraffe he rides into the ring, or a pillar shaped like a giraffe? Leave
      Cillinan's champion stage as a plain Cillinan fight until Zoe says.
-  2. **Crafting:** Salvage needs somewhere to be spent. Build a small crafting bench, or keep Salvage as a score for
-     now?
+- **Crafting (answered 2026-11-26):** she wants it. Alchemy, Mechanics, and the same shape as the books' professions,
+  in our own words. The brief for the next session is `Docs/crafting-benches.md`. Salvage is the material. The Chop
+  Shop becomes the Mechanics bench. Alchemy is a new tab. The Prize Counter stays a ticket shop. Not built this pass.

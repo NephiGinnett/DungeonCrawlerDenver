@@ -382,7 +382,9 @@ void ADCCArcadeRing::OnStageClear()
 	BossHealth = -1.0f;
 	BestBanked = FMath::Max(BestBanked, Stage);
 	const FDCCRingStage* Step = FindStage(Ladder, Stage);
-	const int32 Tickets = 3 + Stage / 5;
+	// A full climb (stages 1-50) pays 958 tickets: 10 + Stage/3 on the card (908)
+	// and a 50 ticket purse when the House falls. Worth a ten-pull at the tubes.
+	const int32 Tickets = 10 + Stage / 3;
 	TArray<APlayerController*> Players;
 	GetPlayers(Players);
 	for (APlayerController* PC : Players)
@@ -400,7 +402,7 @@ void ADCCArcadeRing::OnStageClear()
 		}
 		if (Stage == 50)
 		{
-			UDCCWalletComponent::AwardTickets(State, 30, TEXT("the house"));
+			UDCCWalletComponent::AwardTickets(State, 50, TEXT("the house"));
 			const FString Key = DCCProfile::KeyFor(State);
 			DCCProfile::SetForKey(Key, TEXT("Titles"), TEXT("CHAMPION OF THE RING"), 1.0f);
 			if (ADCCCharacterBase* Pawn = Cast<ADCCCharacterBase>(PC->GetPawn()))
@@ -694,7 +696,7 @@ void ADCCArcadeRing::EndTournament(int32 WinnerSeed)
 	{
 		if (State)
 		{
-			UDCCWalletComponent::AwardTickets(State, 40, TEXT("ring tournament"));
+			UDCCWalletComponent::AwardTickets(State, 750, TEXT("ring tournament"));
 			const FString Key = DCCProfile::KeyFor(State);
 			DCCProfile::SetForKey(Key, TEXT("Titles"), TEXT("CHAMPION OF THE RING"), 1.0f);
 			if (ADCCCharacterBase* Pawn = Cast<ADCCCharacterBase>(PC->GetPawn()))
@@ -708,20 +710,20 @@ void ADCCArcadeRing::EndTournament(int32 WinnerSeed)
 			DCCNews::Post(GetWorld(), FString::Printf(TEXT("%s is CHAMPION OF THE RING."), *State->GetPlayerName()));
 		}
 		Multicast_Announce(TEXT("Win"));
-		StatusLines = { TEXT("CHAMPION OF THE RING."), TEXT("40 tickets.") };
+		StatusLines = { TEXT("CHAMPION OF THE RING."), TEXT("750 tickets.") };
 	}
 	else
 	{
 		if (State)
 		{
-			UDCCWalletComponent::AwardTickets(State, 12, TEXT("ring exhibition"));
+			UDCCWalletComponent::AwardTickets(State, 200, TEXT("ring exhibition"));
 		}
 		FDCCRolledLoot Rolled;
 		Rolled.PickupClass = ADCCPickup_Equipment::StaticClass();
 		Rolled.EquipmentItemId = TEXT("FlareGunEmergency");
 		DCCLoot::SpawnRolledLoot(GetWorld(), Rolled, GetActorLocation() + FVector(0, 220, 40), nullptr);
 		Multicast_Announce(TEXT("Win"));
-		StatusLines = { TEXT("Exhibition closed."), TEXT("12 tickets and a Rare flare gun.") };
+		StatusLines = { TEXT("Exhibition closed."), TEXT("200 tickets and a flare gun.") };
 	}
 	UE_LOG(LogTemp, Log, TEXT("[DCC Ring] tournament won by %s. humans %d."), *Seeds[WinnerSeed].Name, Humans);
 }

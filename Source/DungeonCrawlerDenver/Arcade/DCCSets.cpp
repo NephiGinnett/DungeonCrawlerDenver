@@ -16,6 +16,7 @@
 #include "Engine/PostProcessVolume.h"
 #include "Engine/SkyLight.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/PlayerStart.h"
@@ -254,6 +255,55 @@ ULevelStreamingDynamic* DCCSets::Load(UWorld* World, const FString& NameOrPath, 
 		}
 	}), 0.25f, true);
 	return Set;
+}
+
+int32 DCCSets::LockDoorsNear(UWorld* World, const FVector& At, float Radius, bool bLock)
+{
+	if (!World || Radius <= 0.0f)
+	{
+		return 0;
+	}
+	int32 Touched = 0;
+	int32 Seen = 0;
+	float Nearest = MAX_flt;
+	FVector NearestAt = FVector::ZeroVector;
+	for (TActorIterator<AActor> It(World); It; ++It)
+	{
+		TArray<UDCCSetDoorComponent*> Doors;
+		It->GetComponents(Doors);
+		for (UDCCSetDoorComponent* Door : Doors)
+		{
+			if (!Door)
+			{
+				continue;
+			}
+			const FVector Middle = Door->ClosedMiddle();
+			const float D = FVector::Dist2D(Middle, At);
+			++Seen;
+			if (D < Nearest)
+			{
+				Nearest = D;
+				NearestAt = Middle;
+			}
+			if (D <= Radius && FMath::Abs(Middle.Z - At.Z) <= 400.0f)
+			{
+				Door->SetLocked(bLock);
+				++Touched;
+			}
+		}
+	}
+	if (Touched == 0 && Seen > 0 && bLock)
+	{
+		static float LastMiss = -10.0f;
+		const float Now = World->GetTimeSeconds();
+		if (Now - LastMiss > 2.0f)
+		{
+			LastMiss = Now;
+			UE_LOG(LogTemp, Log, TEXT("[DCC Sets] no door within %.0f of %s. nearest %.0f at %s (%d doors)"),
+				Radius, *At.ToCompactString(), Nearest, *NearestAt.ToCompactString(), Seen);
+		}
+	}
+	return Touched;
 }
 
 void DCCSets::Unload(ULevelStreamingDynamic* Set)

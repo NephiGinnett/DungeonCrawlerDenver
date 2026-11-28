@@ -5,6 +5,7 @@
 #include "DCCSetDoor.generated.h"
 
 class UStaticMeshComponent;
+class USoundBase;
 
 // A working door inside a streamed set (Arcade/DCCSets.h), 2026-11-25.
 //
@@ -27,6 +28,10 @@ public:
 
 	// Keep it shut (and stop it opening) or let it work again. For games that lock a door (a puzzle, a lockdown).
 	void SetLocked(bool bLock) { bLocked = bLock; }
+	bool IsLocked() const { return bLocked; }
+
+	// World position of the leaf's middle when it is shut. LockDoorsNear aims at this.
+	FVector ClosedMiddle() const;
 
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
@@ -35,6 +40,7 @@ public:
 
 private:
 	void Apply();
+	void PlayMoveSound();
 
 	TWeakObjectPtr<UStaticMeshComponent> LeafMesh;
 	FTransform Closed;
@@ -51,4 +57,12 @@ private:
 	float Side = 1.0f;       // swing away from the opener: +1 or -1
 	float NextLook = 0.0f;
 	float ClearFor = 0.0f;
+	float LastSound = -10.0f;
+
+	// Swing leaves use the heavier door, sliding leaves the whoosh. The packs have those two and no creak.
+	UPROPERTY(Transient)
+	TObjectPtr<USoundBase> SwingSound;
+
+	UPROPERTY(Transient)
+	TObjectPtr<USoundBase> SlideSound;
 };

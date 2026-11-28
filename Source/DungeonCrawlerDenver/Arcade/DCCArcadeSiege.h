@@ -96,10 +96,13 @@ public:
 	void DevCamp(int32 Index);
 	void DevPost();
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 protected:
 	virtual void BuildLocal() override;
 	virtual void ServerBegin() override;
 	virtual void ServerTick(float DeltaSeconds) override;
+	virtual void ClientTick(float DeltaSeconds) override;
 	virtual void GetStartTransforms(TArray<FTransform>& Out) const override;
 	virtual FSky GetSky() const override;
 	virtual bool CanUse(const ADCCCharacterBase* Who) const override;
@@ -127,6 +130,8 @@ private:
 	void SpawnNext();
 	ADCCEnemyCharacter* SpawnKind(const FString& Kind, const FVector& At, int32 Hp, const FString& Name, bool bMarcher);
 	void DriveMarchers(float DeltaSeconds);
+	void DriveLockdown(double Now);
+	void SyncRouteDoors();
 	void DriveCrystal(float DeltaSeconds);
 	void DriveCamps();
 	void UpdateBuffScales();
@@ -166,6 +171,14 @@ private:
 	bool bWallWarned = false;
 	bool bEnded = false;
 	int32 CampGrant = 0;
+
+	// A locked side door. Replicated so every machine shuts the same leaves. The timer and the latch are server-local.
+	UPROPERTY(Replicated)
+	bool bRouteLocked = false;
+	bool bDoorsLatched = false;
+	int32 LockdownWave = 0;
+	double LockdownUntil = 0.0;
+	float NextLockLook = 0.0f;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UNiagaraSystem> FxCharge;

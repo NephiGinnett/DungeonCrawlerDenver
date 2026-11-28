@@ -1963,3 +1963,27 @@ Git `433845f` is on `main` (tower defense, the Ring, the spell pass, set doors, 
 
 The first cook failed on one empty file, `Content/Polytope_Studio/Demo/Characters/Mannequins/Textures/Quinn/T_Quinn_01_CCRCCPlastic_MSK.uasset` (0 bytes, the same as the vault copy; the night log already called it unreadable). It was replaced from that pack's Modular Armors copy (12.4 MB, a real package). Nothing else in `Content` was empty. The second cook succeeded. Zip: `D:\Builds\DungeonCrawlerDenver-2026-11-25.1640.zip` (about 4.5 GB). EOS sign-in is in this build and still needs a friend on another PC.
 
+### 2026-11-25 (Grok): the Snick Tape, and Ring names
+
+Claude had the first Primetime short rendering when this session picked it up. Hiss interviews CJ and Vaughn about the snicks, they deny it, and the tape of the two of them plays. Capture finished at 1,737 frames. The cut is `D:\Builds\Primetime_SnickTape.mp4` (1080p, 57.9 s, voices, captions, the VHS look on the tape, end card). Captions that ran off the right edge now wrap. `Tools/snick_tape.py` passes the filter graphs on the command line, because this ffmpeg build has no `filter_complex_script`.
+
+The Drive folder can only take a small file from here, so the short is eight pieces in "Dungeon Crawler Denver - Trailers", named `Primetime - The Snick Tape (2026-11-25) part 1 of 8` through part 8, plus a read-me. Play them in order. The full file stayed on this PC.
+
+H5: the Ring ladder no longer says "Stage N". `Tools/gen_ring_ladder.py` names the forty-five ordinary stages (Late Notice through Breaker). The five champions keep their names. The title strip shows "Stage 12  Unpaid" and so on. Not played.
+
+### 2026-11-26 (Grok): door sounds and lockdowns
+
+Part I1 and I2. A set door plays when it starts to open and when it shuts. The packs have no creak, so a swinging leaf uses the sci-fi door close and a sliding leaf uses the sci-fi door open. It is quiet, at the door, and at most once a second. `DCCSets::LockDoorsNear` locks leaves near a point. In tower defense, waves 2, 6, 10, and 14 lock the annex side door. Bodies still outside walk back to the yard for 15 seconds. The line is "LOCKDOWN. The side door is staying shut." Then the door opens and they come on. Played in the Power Plant hall: six working doors, the side door locked, the banner up, the leaf shut. The test did not rewrite `Profile_Zoe.sav`.
+
+### 2026-11-26 (Grok): Ring pay, clear prizes, achievements
+
+A full Ring climb pays 958 tickets (10 + Stage/3 each card, plus 50 when the House falls). A two-player tournament pays 750 and the title. A solo exhibition pays 200 and the flare gun. The ladder, the champions, and the mallet are unchanged.
+
+The first clear of each minigame puts one existing piece of gear in the bag: fire axe, nail gun, complaint folder, ceremonial sword, sidearm, bar gun, shield, chef's knife. The Ring's prize is still the mallet at stage 50. Driving finds the crawler on the rover, so Repo Rally and Neon Mile can actually grant it.
+
+The OBJECTIVES card is ACHIEVEMENTS. It keeps the one clear you have left and adds rows from the crawler's own achievement table. The Prize Counter tab is Achievements too. The gold line names the prize and drops the word QUEST. It goes away once that clear is paid.
+
+Crafting is written up in `Docs/crafting-benches.md` and not built. Alchemy and Mechanics. Salvage is the material. The Prize Counter stays a ticket shop. The planning list for work is `Docs/planning-at-work-2026-11-26.md`.
+
+Editor DLL `UnrealEditor-DungeonCrawlerDenver.dll`, 9,873,408 bytes, 9:36 PM. No numbered hot-reload DLL. Not playtested. `Profile_Zoe.sav` was not rewritten.
+

@@ -45,4 +45,8 @@ namespace DCCSets
 
 	// Unloads a set loaded with Load.
 	void Unload(ULevelStreamingDynamic* Set);
+
+	// Lock or unlock every working door whose shut middle sits within Radius (cm, flat) of At.
+	// Does not change how a door opens. Returns how many it touched.
+	int32 LockDoorsNear(UWorld* World, const FVector& At, float Radius, bool bLock);
 }

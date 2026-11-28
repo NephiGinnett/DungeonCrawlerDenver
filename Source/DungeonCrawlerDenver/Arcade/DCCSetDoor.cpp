@@ -1,10 +1,13 @@
 #include "Arcade/DCCSetDoor.h"
 
 #include "Characters/DCCCharacterBase.h"
+#include "Characters/DCCSynthAudio.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundBase.h"
 
 namespace
 {
@@ -67,6 +70,8 @@ void UDCCSetDoorComponent::Setup(UStaticMeshComponent* Leaf)
 	Width = bAlongX ? Size.X : Size.Y;
 	Thickness = bAlongX ? Size.Y : Size.X;
 	bSlide = Width > 180.0f;
+	UE_LOG(LogTemp, Log, TEXT("[DCC Door] %s %s at %s"), bSlide ? TEXT("slide") : TEXT("swing"),
+		*Leaf->GetStaticMesh()->GetName(), *ClosedMiddle().ToCompactString());
 	// The hinge: the leaf's end at its low side along its width, at its middle through its thickness.
 	FVector HingeLocal = Local.GetCenter();
 	if (bAlongX) { HingeLocal.X = Local.Min.X; } else { HingeLocal.Y = Local.Min.Y; }
@@ -86,7 +91,8 @@ void UDCCSetDoorComponent::TickComponent(float DeltaTime, ELevelTick TickType, F
 	if (NextLook <= 0.0f)
 	{
 		NextLook = 0.15f;
-		const FVector Middle = Closed.TransformPosition(Leaf->GetStaticMesh()->GetBoundingBox().GetCenter());
+		const float Was = Target;
+		const FVector Middle = ClosedMiddle();
 		const ADCCCharacterBase* Nearest = nullptr;
 		float Best = OpenReach + Width * 0.5f;
 		for (TActorIterator<ADCCCharacterBase> It(World); It; ++It)
@@ -125,11 +131,71 @@ void UDCCSetDoorComponent::TickComponent(float DeltaTime, ELevelTick TickType, F
 				Target = 0.0f;
 			}
 		}
+		if ((Was < 0.5f && Target >= 0.5f) || (Was >= 0.5f && Target < 0.5f))
+		{
+			PlayMoveSound();
+		}
 	}
 	if (!FMath::IsNearlyEqual(Open, Target))
 	{
 		Open = FMath::FInterpConstantTo(Open, Target, DeltaTime, 1.0f / OpenSeconds);
 		Apply();
+	}
+}
+
+FVector UDCCSetDoorComponent::ClosedMiddle() const
+{
+	const UStaticMeshComponent* Leaf = LeafMesh.Get();
+	if (Leaf && Leaf->GetStaticMesh())
+	{
+		return Closed.TransformPosition(Leaf->GetStaticMesh()->GetBoundingBox().GetCenter());
+	}
+	return Closed.GetLocation();
+}
+
+void UDCCSetDoorComponent::PlayMoveSound()
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+	const float Now = World->GetTimeSeconds();
+	if (Now - LastSound < 1.0f)
+	{
+		return;
+	}
+	if (!SwingSound)
+	{
+		SwingSound = LoadObject<USoundBase>(nullptr, TEXT("/Game/SciFiWorld/Audio/S_SciFiDoorClose01.S_SciFiDoorClose01"));
+	}
+	if (!SlideSound)
+	{
+		SlideSound = LoadObject<USoundBase>(nullptr, TEXT("/Game/SciFiWorld/Audio/S_SciFiDoorOpen01.S_SciFiDoorOpen01"));
+	}
+	USoundBase* Sound = bSlide ? SlideSound.Get() : SwingSound.Get();
+	if (!Sound)
+	{
+		static bool bWarned = false;
+		if (!bWarned)
+		{
+			bWarned = true;
+			UE_LOG(LogTemp, Warning, TEXT("[DCC Door] no door sound loaded"));
+		}
+		return;
+	}
+	LastSound = Now;
+	static USoundAttenuation* Att = nullptr;
+	if (!Att)
+	{
+		Att = DCCSynth::Falloff(220.0f, 1200.0f);
+	}
+	UGameplayStatics::PlaySoundAtLocation(this, Sound, ClosedMiddle(), 0.32f, bSlide ? 1.12f : 0.78f, 0.0f, Att);
+	static int32 Heard = 0;
+	if (Heard < 6)
+	{
+		++Heard;
+		UE_LOG(LogTemp, Log, TEXT("[DCC Door] played %s"), bSlide ? TEXT("slide") : TEXT("swing"));
 	}
 }
 
